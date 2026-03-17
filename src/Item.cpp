@@ -54,5 +54,42 @@ bool addItem(Inventory& inventory, ItemID itemID, uint32_t quantity)
         }
     }
 
-    return false; // brak miejsca
+    return false;
+}
+
+
+ItemStack Inventory::addItemWithLeftover(ItemID itemID, uint32_t quantity)
+{
+    auto& data = itemDatabase[itemID];
+
+    for(auto& slot : slots)
+    {
+        if(slot.itemID == itemID && slot.quantity < data.maxStackSize)
+        {
+            uint32_t space = data.maxStackSize - slot.quantity;
+            uint32_t add = std::min(space, quantity);
+
+            slot.quantity += add;
+            quantity -= add;
+
+            if(quantity == 0)
+                return {ItemID::None, 0};
+        }
+    }
+
+    for(auto& slot : slots)
+    {
+        if(slot.empty())
+        {
+            slot.itemID = itemID;
+            slot.quantity = std::min(quantity, data.maxStackSize);
+
+            quantity -= slot.quantity;
+
+            if(quantity == 0)
+                return {ItemID::None, 0};
+        }
+    }
+
+    return {itemID, quantity};
 }

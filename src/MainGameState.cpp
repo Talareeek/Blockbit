@@ -9,6 +9,11 @@
 #include "../include/World.hpp"
 #include "../include/PauseScreenState.hpp"
 #include "../include/HealthComponent.hpp"
+#include "../include/ItemComponent.hpp"
+#include "../include/TransformComponent.hpp"
+#include "../include/InventorySystem.hpp"
+#include "../include/InventoryWidget.hpp"
+#include "../include/InputManager.hpp"
 
 #include <iostream>
 
@@ -30,13 +35,15 @@ MainGameState::MainGameState(Game* game) : GameState(game)
 
     entities.emplace_back(1);
 
-    entityWithID(1, world).addComponent(PhysicsComponent{{0.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
+    entityWithID(1, world).addComponent(TransformComponent{{0.0f, 0.0f}, {1.0f, 1.0f}, sf::degrees(0.0f)});
+    entityWithID(1, world).addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
+    entityWithID(1, world).addComponent(InventoryComponent(36));
 
     for(int i = 0; i < 255; i++)
     {
         if(world.getBlock(0, i) == BlockID::Air)
         {
-            entityWithID(1, world).getComponent<PhysicsComponent>().position.y = i + 1.0f;
+            entityWithID(1, world).getComponent<TransformComponent>().position.y = i + 1.0f;
             break;
         }
     }
@@ -46,6 +53,8 @@ MainGameState::MainGameState(Game* game) : GameState(game)
     entityWithID(1, world).addComponent(HealthComponent{100, 100});
 
     healthBar = HealthBar({10.0f, 10.0f}, {200.0f, 20.0f});
+
+    inventoryWidget = InventoryWidget(&entityWithID(1, world).getComponent<InventoryComponent>());
 }
 
 void MainGameState::handleEvent(const sf::Event& event)
@@ -66,7 +75,7 @@ void MainGameState::handleEvent(const sf::Event& event)
         {
             float unit_size = game->getWindow().getSize().y / 9.0f;
 
-            sf::View view({(entityWithID(1, world).getComponent<PhysicsComponent>().position.x + 0.5f) * unit_size, worldToScreenY(entityWithID(1, world).getComponent<PhysicsComponent>().position.y - 0.5f, unit_size, game->getWindow().getSize().y)},{static_cast<float>(game->getWindow().getSize().x), static_cast<float>(game->getWindow().getSize().y)});
+            sf::View view({(entityWithID(1, world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size, worldToScreenY(entityWithID(1, world).getComponent<TransformComponent>().position.y - 0.5f, unit_size, game->getWindow().getSize().y)},{static_cast<float>(game->getWindow().getSize().x), static_cast<float>(game->getWindow().getSize().y)});
 
             game->getWindow().setView(view);
 
@@ -74,6 +83,12 @@ void MainGameState::handleEvent(const sf::Event& event)
 
             if(world.getBlock(blockPos.x, blockPos.y) != BlockID::Air)
             {
+                world.getEntities().push_back(Entity(world.getEntities().size() + 1));
+                auto& newEntity = world.getEntities().back();
+                newEntity.addComponent(TransformComponent{{blockPos.x + 0.25f, blockPos.y - 0.25f}, {0.5f, 0.5f}, sf::degrees(0.0f)});
+                newEntity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
+                newEntity.addComponent(ItemComponent{{static_cast<ItemID>(world.getBlock(blockPos.x, blockPos.y)), 1}});
+                newEntity.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[newEntity.getComponent<ItemComponent>().item.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
                 world.setBlock(blockPos.x, blockPos.y, BlockID::Air);
             }
         }
@@ -81,7 +96,7 @@ void MainGameState::handleEvent(const sf::Event& event)
         {
             float unit_size = game->getWindow().getSize().y / 9.0f;
 
-            sf::View view({(entityWithID(1, world).getComponent<PhysicsComponent>().position.x + 0.5f) * unit_size, worldToScreenY(entityWithID(1, world).getComponent<PhysicsComponent>().position.y - 0.5f, unit_size, game->getWindow().getSize().y)},{static_cast<float>(game->getWindow().getSize().x), static_cast<float>(game->getWindow().getSize().y)});
+            sf::View view({(entityWithID(1, world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size, worldToScreenY(entityWithID(1, world).getComponent<TransformComponent>().position.y - 0.5f, unit_size, game->getWindow().getSize().y)},{static_cast<float>(game->getWindow().getSize().x), static_cast<float>(game->getWindow().getSize().y)});
 
             game->getWindow().setView(view);
 
@@ -130,12 +145,21 @@ void MainGameState::update(float dt)
     }
 
     PhysicsSystem(entities, world, dt);
+    InventorySystem(entities);
 
     healthBar.setHealth(entityWithID(1, world).getComponent<HealthComponent>());
 
     healthBar.update(dt);
 
-    inventoryWidget.update(dt);
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E))
+    {
+        inventoryWidget.setActive(!inventoryWidget.isActive());
+    }
+
+    if(inventoryWidget.isActive())
+    {
+        inventoryWidget.update(dt);
+    }
 
     world.tick(dt);
 }
@@ -149,7 +173,7 @@ void MainGameState::render(sf::RenderWindow& window)
     unsigned int unit_size = window.getSize().y / 9;
 
     sf::View view(
-        {(entityWithID(1, world).getComponent<PhysicsComponent>().position.x + 0.5f) * unit_size, worldToScreenY(entityWithID(1, world).getComponent<PhysicsComponent>().position.y - 0.5f, unit_size, window.getSize().y)},
+        {(entityWithID(1, world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size, worldToScreenY(entityWithID(1, world).getComponent<TransformComponent>().position.y - 0.5f, unit_size, window.getSize().y)},
         {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)}
     );
 
@@ -166,5 +190,8 @@ void MainGameState::render(sf::RenderWindow& window)
 
     healthBar.render(window);
 
-    inventoryWidget.render(window);
+    if(inventoryWidget.isActive())
+    {
+        inventoryWidget.render(window);
+    }
 }

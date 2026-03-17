@@ -2,6 +2,7 @@
 #include "../include/PhysicsComponent.hpp"
 #include "../include/World.hpp"
 #include "../include/HealthComponent.hpp"
+#include "../include/TransformComponent.hpp"
 
 #include <cmath>
 
@@ -27,16 +28,21 @@ void PhysicsSystem(std::vector<Entity>& entities, World& world, float deltaTime)
 
         c.onGround = false;
 
+        if(!entity.hasComponent<TransformComponent>()) continue;
+
+        auto& transform = entity.getComponent<TransformComponent>();
+
+
         // ======================================================
         // ===================== X AXIS =========================
         // ======================================================
 
-        c.position.x += c.velocity.x * deltaTime;
+        transform.position.x += c.velocity.x * deltaTime;
 
-        float left   = c.position.x;
-        float right  = c.position.x + c.size.x;
-        float bottom = c.position.y;
-        float top    = c.position.y + c.size.y;
+        float left   = transform.position.x;
+        float right  = transform.position.x + transform.size.x;
+        float bottom = transform.position.y;
+        float top    = transform.position.y + transform.size.y;
 
         if (c.velocity.x > 0) // RIGHT
         {
@@ -48,7 +54,7 @@ void PhysicsSystem(std::vector<Entity>& entities, World& world, float deltaTime)
 
                 if (blockDatabase[world.getBlock(tileX, y)].solid)
                 {
-                    c.position.x = tileX - c.size.x;
+                    transform.position.x = tileX - transform.size.x;
                     c.velocity.x = 0;
                     break;
                 }
@@ -64,7 +70,7 @@ void PhysicsSystem(std::vector<Entity>& entities, World& world, float deltaTime)
 
                 if (blockDatabase[world.getBlock(tileX, y)].solid)
                 {
-                    c.position.x = tileX + 1.0f;
+                    transform.position.x = tileX + 1.0f;
                     c.velocity.x = 0;
                     break;
                 }
@@ -75,12 +81,12 @@ void PhysicsSystem(std::vector<Entity>& entities, World& world, float deltaTime)
         // ===================== Y AXIS =========================
         // ======================================================
 
-        c.position.y += c.velocity.y * deltaTime;
+        transform.position.y += c.velocity.y * deltaTime;
 
-        left   = c.position.x;
-        right  = c.position.x + c.size.x;
-        bottom = c.position.y;
-        top    = c.position.y + c.size.y;
+        left   = transform.position.x;
+        right  = transform.position.x + transform.size.x;
+        bottom = transform.position.y;
+        top    = transform.position.y + transform.size.y;
 
         if (c.velocity.y > 0) // UP
         {
@@ -90,7 +96,7 @@ void PhysicsSystem(std::vector<Entity>& entities, World& world, float deltaTime)
             {
                 if (blockDatabase[world.getBlock(x, tileY)].solid)
                 {
-                    c.position.y = tileY - c.size.y;
+                    transform.position.y = tileY - transform.size.y;
                     c.velocity.y = 0;
                     break;
                 }
@@ -104,7 +110,7 @@ void PhysicsSystem(std::vector<Entity>& entities, World& world, float deltaTime)
             {
                 if (blockDatabase[world.getBlock(x, tileY)].solid)
                 {
-                    c.position.y = tileY + 1.0f;
+                    transform.position.y = tileY + 1.0f;
                     float fallVelocity = -c.velocity.y;
                     c.velocity.y = 0;
                     c.onGround = true;

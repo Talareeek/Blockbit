@@ -42,6 +42,8 @@ struct Inventory
     std::vector<ItemStack> slots;
 
     Inventory(size_t size);
+
+    ItemStack addItemWithLeftover(ItemID itemID, uint32_t quantity);
 };
 
 extern bool addItem(Inventory& inventory, ItemID itemID, uint32_t quantity);

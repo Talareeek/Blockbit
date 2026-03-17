@@ -1,6 +1,6 @@
 #include "../include/RenderSystem.hpp"
 #include "../include/RenderComponent.hpp"
-#include "../include/PhysicsComponent.hpp"
+#include "../include/TransformComponent.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/HealthComponent.hpp"
 
@@ -20,7 +20,7 @@ void RenderSystem(std::vector<Entity>& entities, sf::RenderWindow& window)
 
     for(auto& entity : entities)
     {
-        if(!entity.hasComponent<RenderComponent>() || !entity.hasComponent<PhysicsComponent>()) continue;
+        if(!entity.hasComponent<RenderComponent>() || !entity.hasComponent<TransformComponent>()) continue;
 
         auto& component = entity.getComponent<RenderComponent>();
 
@@ -31,13 +31,12 @@ void RenderSystem(std::vector<Entity>& entities, sf::RenderWindow& window)
         });
 
 
-        auto& pcomponent = entity.getComponent<PhysicsComponent>();
+        auto& transform = entity.getComponent<TransformComponent>();
 
         sprite.setPosition({
-            pcomponent.position.x * static_cast<float>(unit_size),
-            window.getSize().y - (pcomponent.position.y * static_cast<float>(unit_size))
+            transform.position.x * unit_size,
+            window.getSize().y - (transform.position.y * unit_size)
         });
-
         window.draw(sprite);
     }
 }

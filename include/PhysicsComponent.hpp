@@ -7,8 +7,6 @@
 
 struct PhysicsComponent
 {
-    sf::Vector2f position;
-    sf::Vector2f size{1.0f, 1.0f};
     sf::Vector2f velocity;
     sf::Vector2f force;
     sf::Vector2f acceleration;
@@ -23,8 +21,6 @@ struct PhysicsComponent
     {
         std::string output;
 
-        output += std::to_string(position.x) + ' ' + std::to_string(position.y) + '\n';
-        output += std::to_string(size.x) + ' ' + std::to_string(size.y) + '\n';
         output += std::to_string(velocity.x) + ' ' + std::to_string(velocity.y) + '\n';
         output += std::to_string(force.x) + ' ' + std::to_string(force.y) + '\n';
         output += std::to_string(mass) + '\n';
@@ -39,8 +35,6 @@ struct PhysicsComponent
     void deserialize(const std::string& data)
     {
         std::istringstream iss(data);
-        iss >> position.x >> position.y;
-        iss >> size.x >> size.y;
         iss >> velocity.x >> velocity.y;
         iss >> force.x >> force.y;
         iss >> mass;
