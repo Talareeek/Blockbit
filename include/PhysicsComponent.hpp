@@ -49,8 +49,8 @@ struct PhysicsComponent
     constexpr static sf::Vector2f damping{6.0f, 0.2f};
 
     constexpr static float SAFE_FALL_VELOCITY{18.0f};
-    constexpr static float FALL_DAMAGE_MULTIPLIER{1.6f};
-    constexpr static float TERMINAL_VELOCITY{55.0f};
+    constexpr static float FALL_DAMAGE_MULTIPLIER{1.75f};
+    constexpr static float TERMINAL_VELOCITY{60.0f};
 };
 
 #endif // PHYSICS_COMPONENT_HPP

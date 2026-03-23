@@ -13,7 +13,8 @@ enum class BlockID : uint32_t
     Dirt = 3,
     Cobblestone = 4,
     Obsidian = 5,
-    Bedrock = 6
+    Bedrock = 6,
+    Water = 7
 };
 
 struct BlockData
@@ -26,6 +27,12 @@ struct BlockData
     uint32_t texture;
 };
 
+struct Block
+{
+    BlockID id;
+    uint8_t metadata;
+};
+
 inline std::unordered_map<BlockID, BlockData> blockDatabase = 
 {
     { BlockID::Air, { false, true, false, 0.0f, INT_MAX}},
@@ -34,7 +41,15 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
     { BlockID::Dirt, { true, false, true, 0.5f, 3 }},
     { BlockID::Cobblestone, { true, false, true, 2.0f, 4 }},
     { BlockID::Obsidian, { true, false, true, 50.0f, 5 }},
-    { BlockID::Bedrock, { true, false, false, -1.0f, 6 }}
+    { BlockID::Bedrock, { true, false, false, -1.0f, 6 }},
+    { BlockID::Water, { false, true, false, 0.0f, 11 }}
+};
+
+
+enum class WaterLevel : uint8_t
+{
+    FULL = 8,
+    SOURCE = 9
 };
 
 #endif // BLOCK_HPP

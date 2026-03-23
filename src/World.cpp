@@ -2,7 +2,10 @@
 #include "../include/Block.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/RenderSystem.hpp"
+#include "../include/TransformComponent.hpp"
 #include <SFML/Graphics.hpp>
+
+#include <iostream>
 
 Chunk& World::getChunk(int chunk_position)
 {
@@ -18,7 +21,7 @@ Chunk& World::getChunk(int chunk_position)
 }
 
 
-BlockID World::getBlock(int wx, int wy)
+Block World::getBlock(int wx, int wy)
 {
     int chunk_position = (wx >= 0)
     ? wx / CHUNK_WIDTH
@@ -30,7 +33,7 @@ BlockID World::getBlock(int wx, int wy)
     return getChunk(chunk_position).blocks[local_y][local_x];
 }
 
-void World::setBlock(int wx, int wy, BlockID block_id)
+void World::setBlock(int wx, int wy, Block block)
 {
     int chunk_position = (wx >= 0)
     ? wx / CHUNK_WIDTH
@@ -39,7 +42,7 @@ void World::setBlock(int wx, int wy, BlockID block_id)
     int local_x = wx - chunk_position * CHUNK_WIDTH;
     int local_y = wy;
 
-    getChunk(chunk_position).blocks[local_y][local_x] = block_id;
+    getChunk(chunk_position).blocks[local_y][local_x] = block;
 }
 
 void World::generateFlatWorld()
@@ -61,15 +64,15 @@ void World::generateFlatChunk(int chunk_position)
         for (int x = 0; x < CHUNK_WIDTH; ++x)
         {
             if (y == 0)
-                chunk.blocks[y][x] = BlockID::Bedrock;
+                chunk.blocks[y][x] = {BlockID::Bedrock, 0};
             else if (y < 5)
-                chunk.blocks[y][x] = BlockID::Stone;
+                chunk.blocks[y][x] = {BlockID::Stone, 0};
             else if (y == 5)
-                chunk.blocks[y][x] = BlockID::Dirt;
+                chunk.blocks[y][x] = {BlockID::Dirt, 0};
             else if (y == 6)
-                chunk.blocks[y][x] = BlockID::Grass;
+                chunk.blocks[y][x] = {BlockID::Grass, 0};
             else
-                chunk.blocks[y][x] = BlockID::Air;
+                chunk.blocks[y][x] = {BlockID::Air, 0};
         }
     }
 }
@@ -86,15 +89,18 @@ void World::generateChunk(int chunk_position)
         for(int y = 0; y < CHUNK_HEIGHT; y++)
         {
             if(y == 0)
-                chunk.blocks[y][x] = BlockID::Bedrock;
+                chunk.blocks[y][x] = {BlockID::Bedrock, 0};
             else if(y < height - 4)
-                chunk.blocks[y][x] = BlockID::Stone;
+                chunk.blocks[y][x] = {BlockID::Stone, 0};
             else if(y < height - 1)
-                chunk.blocks[y][x] = BlockID::Dirt;
+                chunk.blocks[y][x] = {BlockID::Dirt, 0};
             else if(y == height - 1)
-                chunk.blocks[y][x] = BlockID::Grass;
+                if(y < SEA_LEVEL - 1) chunk.blocks[y][x] = {BlockID::Dirt, 0};
+                else chunk.blocks[y][x] = {BlockID::Grass, 0};
+            else if(y < SEA_LEVEL)
+                chunk.blocks[y][x] = {BlockID::Water, static_cast<uint8_t>(WaterLevel::SOURCE)};
             else
-                chunk.blocks[y][x] = BlockID::Air;
+                chunk.blocks[y][x] = {BlockID::Air, 0};
         }
     }
 
@@ -107,6 +113,14 @@ void World::generateWorld()
     for (int i = -100; i <= 100; ++i)
     {
         generateChunk(i);
+    }
+
+    for(int i = 0; i < 255; i++)
+    {
+        if(getBlock(0, i).id != BlockID::Air)
+        {
+            spawnPoint = {0.0f, static_cast<float>(i + 1)};
+        }
     }
 }
 
@@ -124,18 +138,52 @@ void RenderWorld(World& world, sf::RenderWindow& window)
         {
             for (int x = 0; x < CHUNK_WIDTH; ++x)
             {
-                BlockID block_id = world.getChunk(i).blocks[y][x];
-                if (block_id == BlockID::Air) continue;
+                Block block = world.getChunk(i).blocks[y][x];
+                if (block.id == BlockID::Air) continue;
 
-                sf::Sprite sprite(AssetManager::getTexture(blockDatabase[block_id].texture));
+                sf::Texture& texture = AssetManager::getTexture(blockDatabase[block.id].texture);
+
+                sf::Sprite sprite(texture);
+
+                float heightFactor = 1.0f;
+
+                if (block.id == BlockID::Water)
+                {
+                    uint8_t level = block.metadata;
+
+                    // 9 = source → traktujemy jak 8
+                    if(level == 9)
+                        level = 8;
+
+                    BlockID above = world.getBlock(i * CHUNK_WIDTH + x, y + 1).id;
+
+                    if (above == BlockID::Water)
+                    {
+                        heightFactor = 1.0f;
+                    }
+                    else
+                    {
+                        heightFactor = level / 9.0f;
+                    }
+
+                    int texHeight = texture.getSize().y * heightFactor;
+
+                    sprite.setTextureRect(sf::IntRect({
+                        {0,
+                        texture.getSize().y - texHeight},
+                        {texture.getSize().x,
+                        texHeight}
+                    }));
+                }
+
                 sprite.setPosition({
                     (i * CHUNK_WIDTH + x) * static_cast<float>(unit_size),
-                    worldToScreenY((y), unit_size, window.getSize().y)
+                    (y + 1) * static_cast<float>(unit_size) - unit_size * (1.0f - heightFactor)
                 });
 
                 sprite.setScale({
-                    (1 * static_cast<float>(unit_size)) / sprite.getTextureRect().size.x,
-                    (1 * static_cast<float>(unit_size)) / sprite.getTextureRect().size.y
+                    (float)unit_size / sprite.getTextureRect().size.x,
+                    -(float)(unit_size * heightFactor) / sprite.getTextureRect().size.y
                 });
                 window.draw(sprite);
             }
@@ -146,29 +194,29 @@ void RenderWorld(World& world, sf::RenderWindow& window)
 void RenderBlockOverlay(World& world, sf::RenderWindow& window)
 {
     unsigned int unit_size = window.getSize().y / 9;
-    /*
-    sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
-
-    int blockX = static_cast<int>(std::floor(mousePos.x / unit_size));
-    int blockY = screenToWorldY(mousePos.y, unit_size, window.getSize().y) + 1;
-    */
 
     sf::Vector2i blockPos = getMouseBlockPosition(world, window);
     int blockX = blockPos.x;
     int blockY = blockPos.y;
 
-    if(world.getBlock(blockX, blockY) != BlockID::Air)
+    if(world.getBlock(blockX, blockY).id != BlockID::Air)
     {
         sf::Sprite sprite(AssetManager::getTexture(8));
         sprite.setPosition({
             blockX * static_cast<float>(unit_size),
-            worldToScreenY(blockY, unit_size, window.getSize().y)
+            blockY * static_cast<float>(unit_size)
         });
 
         sprite.setScale({
             (1 * static_cast<float>(unit_size)) / sprite.getTextureRect().size.x,
-            (1 * static_cast<float>(unit_size)) / sprite.getTextureRect().size.y
+            -((1 * static_cast<float>(unit_size)) / sprite.getTextureRect().size.y)
         });
+
+        sprite.setOrigin({
+            0.f,
+            static_cast<float>(sprite.getTextureRect().size.y)
+        });
+
         window.draw(sprite);
     }
 }
@@ -176,7 +224,7 @@ void RenderBlockOverlay(World& world, sf::RenderWindow& window)
 float World::getHeightNoise(float x) const
 {
     float total = 0;
-    float frequency = 0.01f;
+    float frequency = 0.03f;
     float amplitude = 1.0f;
     float persistence = 0.5f;
 
@@ -193,8 +241,8 @@ float World::getHeightNoise(float x) const
 
 int World::getHeight(int worldX) const
 {
-    float baseHeight = 60.0f;
-    float heightScale = 50.0f;
+    float baseHeight = 45.0f;
+    float heightScale = 35.0f;
 
     return baseHeight + getHeightNoise((float)worldX) * heightScale;
 }
@@ -218,10 +266,11 @@ uint32_t World::getVersion() const
 sf::Vector2i getMouseBlockPosition(const World& world, const sf::RenderWindow& window)
 {
     unsigned int unit_size = window.getSize().y / 9;
+
     sf::Vector2f mouseWorldPos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
     int blockX = static_cast<int>(std::floor(mouseWorldPos.x / unit_size));
-    int blockY = static_cast<int>(std::ceil(screenToWorldY(mouseWorldPos.y, unit_size, window.getSize().y)));
+    int blockY = static_cast<int>(std::floor(mouseWorldPos.y / unit_size));
 
     return {blockX, blockY};
 }
@@ -265,5 +314,55 @@ void World::tick(float dt)
     {
         dayTime -= DAY_CYCLE_DURATION;
         days++;
+    }
+
+    fluidTimer += dt;
+    if(fluidTimer >= FLUID_TICK)
+    {
+        fluidTimer -= FLUID_TICK;
+        updateFluids(*this);
+    }
+}
+
+
+void updateFluids(World& world)
+{
+    int chunk = world.getEntities()[0].getComponent<TransformComponent>().position.x / (CHUNK_WIDTH);
+
+    for (int i = chunk - 5; i <= chunk + 5; ++i)
+    {
+        if (world.getChunk(i).generated == false) continue;
+
+        for (int y = 0; y < CHUNK_HEIGHT; ++y)
+        {
+            for (int x = 0; x < CHUNK_WIDTH; ++x)
+            {
+                Block block = world.getChunk(i).blocks[y][x];
+                if (block.id == BlockID::Water)
+                {
+                    int worldX = i * CHUNK_WIDTH + x;
+                    int worldY = y;
+
+                    if (world.getBlock(worldX, worldY - 1).id == BlockID::Air || world.getBlock(worldX, worldY - 1).id == BlockID::Water) // TRY TO FLOW DOWNWARDS
+                    {
+                        world.setBlock(worldX, worldY - 1, {BlockID::Water, static_cast<uint8_t>(WaterLevel::FULL)});
+                    }
+                    else // TRY TO FLOW SIDEWAYS
+                    {
+                        if(block.metadata > 1)
+                        {
+                            if (world.getBlock(worldX - 1, worldY).id == BlockID::Air || (world.getBlock(worldX - 1, worldY).id == BlockID::Water && world.getBlock(worldX - 1, worldY).metadata < block.metadata))
+                            {
+                                world.setBlock(worldX - 1, worldY, {BlockID::Water, static_cast<uint8_t>((block.metadata < 9) ? block.metadata - 1 : 7)});
+                            }
+                            if (world.getBlock(worldX + 1, worldY).id == BlockID::Air || (world.getBlock(worldX + 1, worldY).id == BlockID::Water && world.getBlock(worldX + 1, worldY).metadata < block.metadata))
+                            {
+                                world.setBlock(worldX + 1, worldY, {BlockID::Water, static_cast<uint8_t>((block.metadata < 9) ? block.metadata - 1 : 7)});
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

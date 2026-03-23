@@ -4,6 +4,8 @@
 #include "../include/AssetManager.hpp"
 #include "../include/HealthComponent.hpp"
 
+#include <cmath>
+
 float worldToScreenY(float worldY, float unit_size, float windowHeight)
 {
     return windowHeight - worldY * unit_size;
@@ -27,15 +29,19 @@ void RenderSystem(std::vector<Entity>& entities, sf::RenderWindow& window)
         sf::Sprite sprite(AssetManager::getTexture(component.textureID), component.uv);
         sprite.setScale({
             (component.size.x * unit_size) / sprite.getTextureRect().size.x,
-            (component.size.y * unit_size) / sprite.getTextureRect().size.y
+            -((component.size.y * unit_size) / sprite.getTextureRect().size.y)
         });
 
+        sprite.setOrigin({
+            0.f,
+            static_cast<float>(sprite.getTextureRect().size.y)
+        });
 
         auto& transform = entity.getComponent<TransformComponent>();
 
         sprite.setPosition({
             transform.position.x * unit_size,
-            window.getSize().y - (transform.position.y * unit_size)
+            transform.position.y * unit_size
         });
         window.draw(sprite);
     }

@@ -1,12 +1,13 @@
 #include "../include/AccountWidget.hpp"
 #include "../include/AssetManager.hpp"
 
-AccountWidget::AccountWidget() : UIElement({0, 0}, {200, 50})
+AccountWidget::AccountWidget() : UIElement(UIElement::ScreenRelative{{0.85f, 0}, {0.15f, 0.1f}, true, UIElement::ScreenRelative::Axis::Y})
 {
 
 }
 
-AccountWidget::AccountWidget(Account* account) : UIElement({0, 0}, {200, 50}), account(account)
+
+AccountWidget::AccountWidget(Account* account) : UIElement(UIElement::ScreenRelative{{0.85f, 0}, {0.15f, 0.1f}, true, UIElement::ScreenRelative::Axis::Y}), account(account)
 {
 
 }
@@ -27,11 +28,6 @@ void AccountWidget::update(float dt)
 
 void AccountWidget::render(sf::RenderWindow& window)
 {
-    window.setView(window.getDefaultView());
-
-    size = {window.getSize().x / 4.0f, window.getSize().y / 12.0f};
-    position = {static_cast<float>(window.getSize().x) - size.x, 0.0f};
-
     float padding = size.y / 6.0f;
 
     sf::RectangleShape background(size);

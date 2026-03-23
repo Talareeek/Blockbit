@@ -5,6 +5,8 @@
 #include "World.hpp"
 #include "HealthBar.hpp"
 #include "InventoryWidget.hpp"
+#include "Hotbar.hpp"
+#include "Button.hpp"
 
 class MainGameState : public GameState
 {
@@ -14,6 +16,7 @@ private:
     HealthBar healthBar;
 
     InventoryWidget inventoryWidget{nullptr};
+    Hotbar hotbar;
 
 public:
 

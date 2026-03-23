@@ -52,7 +52,7 @@ void PhysicsSystem(std::vector<Entity>& entities, World& world, float deltaTime)
             {
                 if (tileX < -10000) continue; // safety
 
-                if (blockDatabase[world.getBlock(tileX, y)].solid)
+                if (blockDatabase[world.getBlock(tileX, y).id].solid)
                 {
                     transform.position.x = tileX - transform.size.x;
                     c.velocity.x = 0;
@@ -68,7 +68,7 @@ void PhysicsSystem(std::vector<Entity>& entities, World& world, float deltaTime)
             {
                 if (tileX < -10000) continue;
 
-                if (blockDatabase[world.getBlock(tileX, y)].solid)
+                if (blockDatabase[world.getBlock(tileX, y).id].solid)
                 {
                     transform.position.x = tileX + 1.0f;
                     c.velocity.x = 0;
@@ -94,7 +94,7 @@ void PhysicsSystem(std::vector<Entity>& entities, World& world, float deltaTime)
 
             for (int x = (int)std::floor(left); x <= (int)std::floor(right - 0.001f); x++)
             {
-                if (blockDatabase[world.getBlock(x, tileY)].solid)
+                if (blockDatabase[world.getBlock(x, tileY).id].solid)
                 {
                     transform.position.y = tileY - transform.size.y;
                     c.velocity.y = 0;
@@ -108,7 +108,7 @@ void PhysicsSystem(std::vector<Entity>& entities, World& world, float deltaTime)
 
             for (int x = (int)std::floor(left); x <= (int)std::floor(right - 0.001f); x++)
             {
-                if (blockDatabase[world.getBlock(x, tileY)].solid)
+                if (blockDatabase[world.getBlock(x, tileY).id].solid)
                 {
                     transform.position.y = tileY + 1.0f;
                     float fallVelocity = -c.velocity.y;

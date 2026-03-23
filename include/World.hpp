@@ -26,11 +26,12 @@ private:
 
     uint64_t days{0};
 
-    //POLISH YAPPING
-    sf::Color night   {12, 18, 40};   // ciemny granat
-    sf::Color dawn    {90, 120, 180}; // chłodny niebiesko-fioletowy
-    sf::Color day     {120, 190, 255}; // jasne niebo
-    sf::Color sunset  {255, 170, 120}; // lekki pomarańcz
+    sf::Color night   {12, 18, 40};
+    sf::Color dawn    {90, 120, 180};
+    sf::Color day     {120, 190, 255};
+    sf::Color sunset  {255, 170, 120};  
+    
+    sf::Vector2f spawnPoint{0.0f, 0.0f};
 
 public:
 
@@ -38,8 +39,8 @@ public:
     World(unsigned int seed) : perlin(seed), version(0) {}
     
     Chunk& getChunk(int chunk_position);
-    BlockID getBlock(int wx, int wy);
-    void setBlock(int wx, int wy, BlockID block_id);
+    Block getBlock(int wx, int wy);
+    void setBlock(int wx, int wy, Block block);
 
     // Generation
     void generateFlatWorld();
@@ -63,9 +64,17 @@ public:
 
     static constexpr float DAY_CYCLE_DURATION = 1200.0f; // 20 MINUTES
 
+    static constexpr int SEA_LEVEL = 80;
+
+    static constexpr float FLUID_TICK = 0.5f;
+
+    float fluidTimer{0.0f};
+
     sf::Color getSkyColor(float t);
 
     float getDayTime() const { return dayTime; }
+
+    sf::Vector2f getSpawnPoint() const { return spawnPoint; }
 
 };
 
@@ -76,5 +85,7 @@ extern void RenderBlockOverlay(World& world, sf::RenderWindow& window);
 extern sf::Vector2i getMouseBlockPosition(const World& world, const sf::RenderWindow& window);
 
 extern sf::Color lerpColor(sf::Color a, sf::Color b, float t);
+
+extern void updateFluids(World& world);
 
 #endif // WORLD_HPP

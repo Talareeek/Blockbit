@@ -34,8 +34,6 @@ void InventoryWidget::render(sf::RenderWindow& window)
 {
     if(!active || !inventoryComponent) return;
 
-    window.setView(window.getDefaultView());
-
     size = {window.getSize().x * 0.75f, window.getSize().y * 0.75f};
     position = {window.getSize().x * 0.125f, window.getSize().y * 0.125f};
 

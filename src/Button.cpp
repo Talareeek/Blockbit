@@ -16,6 +16,13 @@ Button::Button(const sf::Vector2f& position, const sf::Vector2f& size, sf::Color
     this->onClick = onClick;
 }
 
+Button::Button(const UIElement::ScreenRelative& screenRelative, sf::Color color, const std::string& text, std::function<void()> onClick) : UIElement(screenRelative)
+{
+    this->text = text;
+    this->color = color;
+    this->onClick = onClick;
+}
+
 void Button::handleEvent(const sf::Event& event)
 {
     if(event.is<sf::Event::MouseButtonPressed>())
@@ -43,16 +50,6 @@ void Button::handleEvent(const sf::Event& event)
 
         cursorHovering = buttonRect.contains(mousePos);
     }
-
-    else if(event.is<sf::Event::Resized>())
-    {
-        if(is_screen_relative)
-        {
-            auto resize = event.getIf<sf::Event::Resized>();
-            updateScreenRelative(sf::IntRect({0, 0}, {resize->size.x, resize->size.y}));
-        }
-    }
-    
 }
 
 void Button::update(float dt)
@@ -62,44 +59,6 @@ void Button::update(float dt)
 
 void Button::render(sf::RenderWindow& window)
 {
-    /*
-    if(cursorHovering)
-    {
-        if(cursor.createFromSystem(sf::Cursor::Type::Hand))
-        {
-            window.setMouseCursor(cursor);
-        }
-    }
-    else
-    {
-        if(cursor.createFromSystem(sf::Cursor::Type::Arrow))
-        {
-            window.setMouseCursor(cursor);
-        }
-    }
-
-    sf::RectangleShape rect(size);
-    rect.setPosition(position);
-    rect.setFillColor(color);
-    window.draw(rect);
-
-    sf::RectangleShape outline(size - sf::Vector2f(10.0f, 10.0f));
-    outline.setPosition(position + sf::Vector2f(5.0f, 5.0f));
-    sf::Color outlineColor = color;
-    outlineColor.r = std::min(255, static_cast<int>(outlineColor.r) + 50);
-    outlineColor.g = std::min(255, static_cast<int>(outlineColor.g) + 50);
-    outlineColor.b = std::min(255, static_cast<int>(outlineColor.b) + 50);
-    outlineColor.a = 100; 
-    outline.setFillColor(outlineColor);
-    window.draw(outline);
-
-    sf::Font font = AssetManager::getFont(0);
-    sf::Text textObj(font, text, size.y / 2);
-    textObj.setPosition({position.x + size.x / 2 - textObj.getLocalBounds().size.x / 2, position.y + size.y / 2 - textObj.getLocalBounds().size.y / 2});
-    textObj.setFillColor(sf::Color::White);
-    window.draw(textObj);
-    */
-
     sf::RectangleShape button(size);
     button.setPosition(position);
     button.setFillColor(color);

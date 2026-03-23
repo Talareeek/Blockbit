@@ -134,6 +134,22 @@ void Game::loadingScreen()
     window.draw(text);
     window.display();
 
+    AssetManager::loadTexture(10, "resources/textures/hotbar.png");
+    text.setString("Loading texture: resources/textures/hotbars.png");
+    text.setPosition({window.getSize().x / 2.0f - text.getLocalBounds().size.x / 2.0f, window.getSize().y / 2.0f - text.getLocalBounds().size.y / 2.0f});
+    window.clear();
+    window.draw(background);
+    window.draw(text);
+    window.display();
+
+    AssetManager::loadTexture(11, "resources/textures/water.png");
+    text.setString("Loading texture: resources/textures/water.png");
+    text.setPosition({window.getSize().x / 2.0f - text.getLocalBounds().size.x / 2.0f, window.getSize().y / 2.0f - text.getLocalBounds().size.y / 2.0f});
+    window.clear();
+    window.draw(background);
+    window.draw(text);
+    window.display();
+
     world.generateWorld();
     text.setString("Generating world...");
     text.setPosition({window.getSize().x / 2.0f - text.getLocalBounds().size.x / 2.0f, window.getSize().y / 2.0f - text.getLocalBounds().size.y / 2.0f});
@@ -168,18 +184,13 @@ void Game::handleEvents()
 
         else if(event->is<sf::Event::Resized>())
         {
-            sf::View view(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)}));
+            sf::View view(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(event->getIf<sf::Event::Resized>()->size.x), static_cast<float>(event->getIf<sf::Event::Resized>()->size.y)}));
             window.setView(view);
-
-            unit_size = window.getSize().y / 9;
         }
-
-        else if (event->is<sf::Event::Closed>())
-        window.close();
 
         else if (event->is<sf::Event::KeyPressed>())
         {
-            if (event->getIf<sf::Event::KeyPressed>()->code == sf::Keyboard::Key::F3)
+            if (event->getIf<sf::Event::KeyPressed>()->code == sf::Keyboard::Key::F11)
             {
                 fullscreen = !fullscreen;
 
@@ -192,15 +203,15 @@ void Game::handleEvents()
                     fullscreen ? sf::State::Fullscreen
                             : sf::State::Windowed
                 );
+
+                sf::View view(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)}));
+                window.setView(view);
             }
         }
 
-        else
+        if(!gameStates.empty())
         {
-            if(!gameStates.empty())
-            {
-                gameStates.back()->handleEvent(*event);
-            }
+            gameStates.back()->handleEvent(*event);
         }
     }
 }
@@ -227,7 +238,6 @@ void Game::render()
     else
     {
         exit(0);
-
     }
 
     window.display();

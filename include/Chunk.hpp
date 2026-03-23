@@ -11,9 +11,9 @@ constexpr int CHUNK_HEIGHT = 256;
 struct Chunk
 {
     int chunk_position;
-    BlockID blocks[CHUNK_HEIGHT][CHUNK_WIDTH];
+    Block blocks[CHUNK_HEIGHT][CHUNK_WIDTH];
     bool dirty;
     bool generated;
 };
 
-#endif // CHUNK_HPPS
+#endif // CHUNK_HPP

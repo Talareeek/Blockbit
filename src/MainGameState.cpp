@@ -14,6 +14,7 @@
 #include "../include/InventorySystem.hpp"
 #include "../include/InventoryWidget.hpp"
 #include "../include/InputManager.hpp"
+#include "../include/DeathScreenState.hpp"
 
 #include <iostream>
 
@@ -28,6 +29,7 @@ Entity& entityWithID(uint32_t id, World& world)
 
 MainGameState::MainGameState(Game* game) : GameState(game)
 {
+    // WORLD GENERATION
     world = World(std::rand());
     world.generateWorld();    
 
@@ -41,7 +43,7 @@ MainGameState::MainGameState(Game* game) : GameState(game)
 
     for(int i = 0; i < 255; i++)
     {
-        if(world.getBlock(0, i) == BlockID::Air)
+        if(world.getBlock(0, i).id == BlockID::Air)
         {
             entityWithID(1, world).getComponent<TransformComponent>().position.y = i + 1.0f;
             break;
@@ -52,22 +54,19 @@ MainGameState::MainGameState(Game* game) : GameState(game)
 
     entityWithID(1, world).addComponent(HealthComponent{100, 100});
 
-    healthBar = HealthBar({10.0f, 10.0f}, {200.0f, 20.0f});
+    healthBar = HealthBar(UIElement::ScreenRelative{{0.05f, 0.05f}, {0.2f, 0.05f}, true, UIElement::ScreenRelative::Axis::Y});
+    healthBar.updateScreenRelative(game->getWindow().getSize());
 
     inventoryWidget = InventoryWidget(&entityWithID(1, world).getComponent<InventoryComponent>());
+    inventoryWidget.updateScreenRelative(game->getWindow().getSize());
+
+    hotbar = Hotbar(&entityWithID(1, world).getComponent<InventoryComponent>());
+    hotbar.updateScreenRelative(game->getWindow().getSize());
 }
 
 void MainGameState::handleEvent(const sf::Event& event)
 {
-    if(event.is<sf::Event::Resized>())
-    {
-        auto resized = event.getIf<sf::Event::Resized>();
-
-        healthBar.setSize({static_cast<float>(resized->size.x) / 5.0f, static_cast<float>(resized->size.y) / 20.0f});
-
-        healthBar.setPosition({static_cast<float>(resized->size.x) / 40.0f, static_cast<float>(resized->size.y) - (static_cast<float>(resized->size.y) / 40.0f) - healthBar.getSize().y});
-    }
-    else if(event.is<sf::Event::MouseButtonPressed>())
+    if(event.is<sf::Event::MouseButtonPressed>())
     {
         auto mouse = event.getIf<sf::Event::MouseButtonPressed>();
 
@@ -75,36 +74,56 @@ void MainGameState::handleEvent(const sf::Event& event)
         {
             float unit_size = game->getWindow().getSize().y / 9.0f;
 
-            sf::View view({(entityWithID(1, world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size, worldToScreenY(entityWithID(1, world).getComponent<TransformComponent>().position.y - 0.5f, unit_size, game->getWindow().getSize().y)},{static_cast<float>(game->getWindow().getSize().x), static_cast<float>(game->getWindow().getSize().y)});
+            sf::View view(
+            {
+                (entityWithID(1, world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size,
+                (entityWithID(1, world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size
+            },
+            {
+                (float)game->getWindow().getSize().x,
+                (float)game->getWindow().getSize().y
+            });
+
+            view.setSize({view.getSize().x, -view.getSize().y});            
 
             game->getWindow().setView(view);
 
             sf::Vector2i blockPos = getMouseBlockPosition(world, game->getWindow());
 
-            if(world.getBlock(blockPos.x, blockPos.y) != BlockID::Air)
+            if(world.getBlock(blockPos.x, blockPos.y).id != BlockID::Air && blockDatabase[world.getBlock(blockPos.x, blockPos.y).id].breakable)
             {
                 world.getEntities().push_back(Entity(world.getEntities().size() + 1));
                 auto& newEntity = world.getEntities().back();
                 newEntity.addComponent(TransformComponent{{blockPos.x + 0.25f, blockPos.y - 0.25f}, {0.5f, 0.5f}, sf::degrees(0.0f)});
                 newEntity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
-                newEntity.addComponent(ItemComponent{{static_cast<ItemID>(world.getBlock(blockPos.x, blockPos.y)), 1}});
+                newEntity.addComponent(ItemComponent{{static_cast<ItemID>(world.getBlock(blockPos.x, blockPos.y).id), 1}});
                 newEntity.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[newEntity.getComponent<ItemComponent>().item.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
-                world.setBlock(blockPos.x, blockPos.y, BlockID::Air);
+                world.setBlock(blockPos.x, blockPos.y, {BlockID::Air, 0});
             }
         }
         else if(mouse->button == sf::Mouse::Button::Right)
         {
             float unit_size = game->getWindow().getSize().y / 9.0f;
 
-            sf::View view({(entityWithID(1, world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size, worldToScreenY(entityWithID(1, world).getComponent<TransformComponent>().position.y - 0.5f, unit_size, game->getWindow().getSize().y)},{static_cast<float>(game->getWindow().getSize().x), static_cast<float>(game->getWindow().getSize().y)});
+            sf::View view(
+            {
+                (entityWithID(1, world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size,
+                (entityWithID(1, world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size
+            },
+            {
+                (float)game->getWindow().getSize().x,
+                (float)game->getWindow().getSize().y
+            });
+
+            view.setSize({view.getSize().x, -view.getSize().y});
 
             game->getWindow().setView(view);
 
             sf::Vector2i blockPos = getMouseBlockPosition(world, game->getWindow());
 
-            if(world.getBlock(blockPos.x, blockPos.y) == BlockID::Air)
+            if(world.getBlock(blockPos.x, blockPos.y).id == BlockID::Air || world.getBlock(blockPos.x, blockPos.y).id == BlockID::Water)
             {
-                world.setBlock(blockPos.x, blockPos.y, BlockID::Stone);
+                world.setBlock(blockPos.x, blockPos.y, {BlockID::Stone, 0});
             }
         }
     }
@@ -112,12 +131,16 @@ void MainGameState::handleEvent(const sf::Event& event)
     healthBar.handleEvent(event);
 
     inventoryWidget.handleEvent(event);
+
+    hotbar.handleEvent(event);
 }
 
 void MainGameState::update(float dt)
 {
     auto& entities = world.getEntities();
 
+
+    // PLAYER MOVEMENT
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space) && entityWithID(1, world).getComponent<PhysicsComponent>().onGround)
     {
         auto& component = entityWithID(1, world).getComponent<PhysicsComponent>();
@@ -144,12 +167,19 @@ void MainGameState::update(float dt)
         game->pushState(std::make_unique<PauseScreenState>(game));
     }
 
+    
+
     PhysicsSystem(entities, world, dt);
     InventorySystem(entities);
 
     healthBar.setHealth(entityWithID(1, world).getComponent<HealthComponent>());
 
+    healthBar.updateScreenRelative(game->getWindow().getSize());
+    inventoryWidget.updateScreenRelative(game->getWindow().getSize());
+    hotbar.updateScreenRelative(game->getWindow().getSize());
+
     healthBar.update(dt);
+    hotbar.update(dt);
 
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E))
     {
@@ -162,20 +192,37 @@ void MainGameState::update(float dt)
     }
 
     world.tick(dt);
+
+    if(entityWithID(1, world).getComponent<HealthComponent>().health <= 0)
+    {
+        game->pushState(std::make_unique<DeathScreenState>(game, world, 1));
+    }
 }
 
 void MainGameState::render(sf::RenderWindow& window)
 {
-    auto& entities = world.getEntities();
+    // DRAWING SKY
+    sf::RectangleShape sky({static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
+    sky.setPosition({0.0f, 0.0f});
+    sky.setFillColor(world.getSkyColor(world.getDayTime() / World::DAY_CYCLE_DURATION));
+    window.draw(sky);
 
-    window.clear(world.getSkyColor(world.getDayTime() / World::DAY_CYCLE_DURATION));
+
+    auto& entities = world.getEntities();
 
     unsigned int unit_size = window.getSize().y / 9;
 
     sf::View view(
-        {(entityWithID(1, world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size, worldToScreenY(entityWithID(1, world).getComponent<TransformComponent>().position.y - 0.5f, unit_size, window.getSize().y)},
-        {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)}
-    );
+    {
+        (entityWithID(1, world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size,
+        (entityWithID(1, world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size
+    },
+    {
+        (float)window.getSize().x,
+        (float)window.getSize().y
+    });
+
+    view.setSize({view.getSize().x, -view.getSize().y});
 
     window.setView(view);
     
@@ -185,10 +232,11 @@ void MainGameState::render(sf::RenderWindow& window)
 
     RenderBlockOverlay(world, window);
 
-    sf::View defaultView = window.getDefaultView();
-    window.setView(defaultView);
+    window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
 
     healthBar.render(window);
+
+    hotbar.render(window);
 
     if(inventoryWidget.isActive())
     {

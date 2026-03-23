@@ -13,6 +13,8 @@ private:
 
 public:
 
+    using UIElement::UIElement;
+
     HealthBar();
 
     HealthBar(const sf::Vector2f& position, const sf::Vector2f& size);

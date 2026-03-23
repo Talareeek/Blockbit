@@ -22,7 +22,7 @@ void WorldOutputStream::write(const World& world)
         {
             for(int x = 0; x < CHUNK_WIDTH; x++)
             {
-                output += std::to_string(static_cast<int>(chunk.blocks[y][x])) + ' ';
+                output += std::to_string(static_cast<int>(chunk.blocks[y][x].id)) + ' ';
             }
             output += '\n';
         }

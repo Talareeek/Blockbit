@@ -5,6 +5,8 @@
 #include "Button.hpp"
 #include "AccountWidget.hpp"
 
+#include "Hotbar.hpp"
+
 class MenuGameState : public GameState
 {
 private:

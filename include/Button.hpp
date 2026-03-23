@@ -20,6 +20,7 @@ private:
 public:
     Button();
     Button(const sf::Vector2f& position, const sf::Vector2f& size, sf::Color color, const std::string& text, std::function<void()> onClick = [](){});
+    Button(const UIElement::ScreenRelative& screenRelative, sf::Color color, const std::string& text, std::function<void()> onClick = [](){});
 
     void handleEvent(const sf::Event& event) override;
     void update(float dt) override;
