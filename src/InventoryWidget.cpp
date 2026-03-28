@@ -1,6 +1,7 @@
 #include "../include/InventoryWidget.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/InputManager.hpp"
+#include "../include/Slot.hpp"
 
 #include <iostream>
 #include <cmath>
@@ -77,6 +78,13 @@ void InventoryWidget::render(sf::RenderWindow& window)
             (slotSize - itemSize) / 2.0f
         );
 
+        Slot slot(slotPosition, {slotSize, slotSize});
+
+        slot.setItemStack(item);
+        slot.render(window);
+
+        /*
+
         sf::Sprite sprite(AssetManager::getTexture(itemDatabase[item.itemID].texture));
 
         sprite.setPosition({
@@ -90,5 +98,6 @@ void InventoryWidget::render(sf::RenderWindow& window)
         });
 
         window.draw(sprite);
+        */
     }
 }

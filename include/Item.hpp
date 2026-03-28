@@ -5,7 +5,11 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
+#include <functional>
 
+
+#include "../include/World.hpp"
+#include "../include/Entity.hpp"
 
 enum class ItemID : uint32_t
 {
@@ -15,7 +19,8 @@ enum class ItemID : uint32_t
     Dirt = 3,
     Cobblestone = 4,
     Obsidian = 5,
-    Bedrock = 6
+    Bedrock = 6,
+    Dynamite = 7
 };
 
 struct ItemData
@@ -23,6 +28,8 @@ struct ItemData
     std::string name;
     uint32_t texture;
     uint32_t maxStackSize;
+
+    std::function<void(World& world, sf::Vector2f mouse, uint32_t user)> onUse = [](World&, sf::Vector2f, uint32_t){};
 };
 
 extern std::unordered_map<ItemID, ItemData> itemDatabase;

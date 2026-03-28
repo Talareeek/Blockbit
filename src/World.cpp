@@ -77,7 +77,26 @@ void World::generateFlatChunk(int chunk_position)
     }
 }
 
+
+/*
+==================================================
+WORLD GENERATION
+==================================================
+*/
+
 void World::generateChunk(int chunk_position)
+{
+    Chunk& chunk = getChunk(chunk_position);
+
+    generateTerrain(chunk_position);
+    generateCaves(chunk_position);
+
+    chunk.generated = true;
+    chunk.dirty = true;
+}
+
+
+void World::generateTerrain(int chunk_position)
 {
     Chunk& chunk = getChunk(chunk_position);
 
@@ -90,23 +109,42 @@ void World::generateChunk(int chunk_position)
         {
             if(y == 0)
                 chunk.blocks[y][x] = {BlockID::Bedrock, 0};
+
             else if(y < height - 4)
                 chunk.blocks[y][x] = {BlockID::Stone, 0};
+
             else if(y < height - 1)
                 chunk.blocks[y][x] = {BlockID::Dirt, 0};
+
             else if(y == height - 1)
                 if(y < SEA_LEVEL - 1) chunk.blocks[y][x] = {BlockID::Dirt, 0};
                 else chunk.blocks[y][x] = {BlockID::Grass, 0};
+
             else if(y < SEA_LEVEL)
                 chunk.blocks[y][x] = {BlockID::Water, static_cast<uint8_t>(WaterLevel::SOURCE)};
+
             else
                 chunk.blocks[y][x] = {BlockID::Air, 0};
         }
     }
-
-    chunk.generated = true;
-    chunk.dirty = true;
 }
+
+void World::generateCaves(int chunk_position)
+{
+    for(int x = 0; x < CHUNK_WIDTH; x++)
+    {
+        int worldX = chunk_position * CHUNK_WIDTH + x;
+
+        for(int y = 5; y < CHUNK_HEIGHT; y++)
+        {
+            float n = perlin.noise(worldX * 0.05f, y * 0.05f);
+
+            if(n > 0.65f)
+                setBlock(worldX, y, {BlockID::Air, 0});
+        }
+    }
+}
+
 
 void World::generateWorld()
 {
@@ -115,9 +153,9 @@ void World::generateWorld()
         generateChunk(i);
     }
 
-    for(int i = 0; i < 255; i++)
+    for(int i = 60; i < 255; i++)
     {
-        if(getBlock(0, i).id != BlockID::Air)
+        if(getBlock(0, i).id != BlockID::Air && getBlock(0, i + 1).id == BlockID::Air)
         {
             spawnPoint = {0.0f, static_cast<float>(i + 1)};
         }
@@ -273,6 +311,15 @@ sf::Vector2i getMouseBlockPosition(const World& world, const sf::RenderWindow& w
     int blockY = static_cast<int>(std::floor(mouseWorldPos.y / unit_size));
 
     return {blockX, blockY};
+}
+
+sf::Vector2f getMouseWorldPosition(const World& world, const sf::RenderWindow& window)
+{
+    unsigned int unit_size = window.getSize().y / 9;
+
+    sf::Vector2f position = {window.mapPixelToCoords(sf::Mouse::getPosition(window)).x / static_cast<float>(unit_size), window.mapPixelToCoords(sf::Mouse::getPosition(window)).y / static_cast<float>(unit_size)};
+
+    return position;
 }
 
 sf::Color lerpColor(sf::Color a, sf::Color b, float t)

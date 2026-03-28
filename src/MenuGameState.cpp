@@ -23,6 +23,9 @@ MenuGameState::MenuGameState(Game* game) : GameState(game)
     quit.updateScreenRelative(game->getWindow().getSize());
 
     accountWidget = AccountWidget(game->getAccount());
+
+    slot = Slot({0.3f, 0.3f}, 0.1f);
+    slot.setItemStack({ItemID::Bedrock, 64});
 }
 
 void MenuGameState::handleEvent(const sf::Event& event)
@@ -30,18 +33,22 @@ void MenuGameState::handleEvent(const sf::Event& event)
     play.handleEvent(event);
     quit.handleEvent(event);
     accountWidget.handleEvent(event);
+    slot.handleEvent(event);
 }
 
 void MenuGameState::update(float dt)
 {
     auto size = game->getWindow().getSize();
+
     play.updateScreenRelative(size);
     quit.updateScreenRelative(size);
     accountWidget.updateScreenRelative(size);
+    slot.updateScreenRelative(size);
 
     play.update(dt);
     quit.update(dt);
     accountWidget.update(dt);
+    slot.update(dt);
 }
 
 void MenuGameState::render(sf::RenderWindow& window)
@@ -66,4 +73,5 @@ void MenuGameState::render(sf::RenderWindow& window)
     play.render(window);
     quit.render(window);
     accountWidget.render(window);
+    slot.render(window);
 }

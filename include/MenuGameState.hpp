@@ -4,6 +4,7 @@
 #include "GameState.hpp"
 #include "Button.hpp"
 #include "AccountWidget.hpp"
+#include "Slot.hpp"
 
 #include "Hotbar.hpp"
 
@@ -14,6 +15,7 @@ private:
     Button play;
     Button quit;
     AccountWidget accountWidget;
+    Slot slot;
 
 public:
 

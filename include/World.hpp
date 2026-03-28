@@ -37,17 +37,43 @@ public:
 
     World() : version(0) {}
     World(unsigned int seed) : perlin(seed), version(0) {}
+
+    uint32_t getPossibleID()
+    {
+        for(uint32_t i = 1; i < UINT32_MAX; i++)
+        {
+            bool exists = false;
+            for (const auto& entity : entities)
+            {
+                if (entity.getID() == i)
+                {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) return i;
+        }
+        throw std::runtime_error("No available entity ID found");
+    }
     
     Chunk& getChunk(int chunk_position);
     Block getBlock(int wx, int wy);
     void setBlock(int wx, int wy, Block block);
 
-    // Generation
+    // GENERATION
+
+    // flat world
     void generateFlatWorld();
     void generateFlatChunk(int chunk_position);
 
+    // normal world
     void generateWorld();
+
     void generateChunk(int chunk_position);
+
+    // phases
+    void generateTerrain(int chunk_position);
+    void generateCaves(int chunk_position);
 
     std::vector<Entity>& getEntities();
 
@@ -64,7 +90,7 @@ public:
 
     static constexpr float DAY_CYCLE_DURATION = 1200.0f; // 20 MINUTES
 
-    static constexpr int SEA_LEVEL = 80;
+    static constexpr int SEA_LEVEL = 75;
 
     static constexpr float FLUID_TICK = 0.5f;
 
@@ -83,6 +109,8 @@ extern void RenderWorld(World& world, sf::RenderWindow& window);
 extern void RenderBlockOverlay(World& world, sf::RenderWindow& window);
 
 extern sf::Vector2i getMouseBlockPosition(const World& world, const sf::RenderWindow& window);
+
+extern sf::Vector2f getMouseWorldPosition(const World& world, const sf::RenderWindow& window);
 
 extern sf::Color lerpColor(sf::Color a, sf::Color b, float t);
 

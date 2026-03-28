@@ -3,7 +3,7 @@
 
 #include <algorithm>
 
-void healthSystem(std::vector<Entity>& entities)
+void HealthSystem(std::vector<Entity>& entities)
 {
     for (auto& entity : entities)
     {

@@ -3,6 +3,8 @@
 
 #include "UIElement.hpp"
 #include "InventoryComponent.hpp"
+#include "Slot.hpp"
+
 #include <cstdint>
 
 

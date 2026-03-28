@@ -54,6 +54,14 @@ void Game::loadingScreen()
 
     window.display();
 
+    AssetManager::loadTexture(UINT32_MAX, "resources/textures/nothing.png");
+    text.setString("Loading texture: resources/textures/nothing.png WTF :)");
+    text.setPosition({window.getSize().x / 2.0f - text.getLocalBounds().size.x / 2.0f, window.getSize().y / 2.0f - text.getLocalBounds().size.y / 2.0f});
+    window.clear();
+    window.draw(background);
+    window.draw(text);
+    window.display();
+
     AssetManager::loadTexture(0, "resources/textures/player.png");
     text.setString("Loading texture: resources/textures/player.png");
     text.setPosition({window.getSize().x / 2.0f - text.getLocalBounds().size.x / 2.0f, window.getSize().y / 2.0f - text.getLocalBounds().size.y / 2.0f});
@@ -149,6 +157,15 @@ void Game::loadingScreen()
     window.draw(background);
     window.draw(text);
     window.display();
+
+    AssetManager::loadTexture(12, "resources/textures/dynamite.png");
+    text.setString("Loading texture: resources/textures/dynamite.png");
+    text.setPosition({window.getSize().x / 2.0f - text.getLocalBounds().size.x / 2.0f, window.getSize().y / 2.0f - text.getLocalBounds().size.y / 2.0f});
+    window.clear();
+    window.draw(background);
+    window.draw(text);
+    window.display();
+
 
     world.generateWorld();
     text.setString("Generating world...");

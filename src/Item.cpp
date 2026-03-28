@@ -1,14 +1,42 @@
 #include "../include/Item.hpp"
+#include "../include/World.hpp"
+#include "../include/Entity.hpp"
+#include "../include/ExplosiveComponent.hpp"
+#include "../include/TransformComponent.hpp"
 
 std::unordered_map<ItemID, ItemData> itemDatabase =
 {
-    {ItemID::None, {"None", 0, 0}},
+    {ItemID::None, {"None", UINT32_MAX, 0}},
     {ItemID::Stone, {"Stone", 1, 64}},
     {ItemID::Grass, {"Grass", 2, 64}},
     {ItemID::Dirt, {"Dirt", 3, 64}},
     {ItemID::Cobblestone, {"Cobblestone", 4, 64}},
     {ItemID::Obsidian, {"Obsidian", 5, 64}},
-    {ItemID::Bedrock, {"Bedrock", 6, 64}}
+    {ItemID::Bedrock, {"Bedrock", 6, 64}},
+    {ItemID::Dynamite, {"Dynamite", 12, 16, [](World& world, sf::Vector2f mouse, uint32_t user)
+        {
+            auto entityWithID = [&world](uint32_t id) -> Entity&
+            {
+                for(auto& entity : world.getEntities())
+                {
+                    if(entity.getID() == id)
+                        return entity;
+                }
+                throw std::runtime_error("Entity with ID " + std::to_string(id) + " does not exist(entityWithID(int, World&))");
+            };
+
+            Entity& player = entityWithID(user);
+
+            if(!player.hasComponent<TransformComponent>()) return;
+
+            world.getEntities().push_back(Entity(world.getPossibleID()));
+            auto& explosiveEntity = world.getEntities().back();
+            explosiveEntity.addComponent(TransformComponent{player.getComponent<TransformComponent>().position, {1.0f, 1.0f}, sf::degrees(0.0f)});
+            explosiveEntity.addComponent(ExplosiveComponent{3.0f});
+            explosiveEntity.addComponent(RenderComponent{12, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
+            explosiveEntity.addComponent(PhysicsComponent{mouse - player.getComponent<TransformComponent>().position, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
+            
+        }}}
 };
 
 bool ItemStack::empty() const

@@ -15,6 +15,8 @@
 #include "../include/InventoryWidget.hpp"
 #include "../include/InputManager.hpp"
 #include "../include/DeathScreenState.hpp"
+#include "../include/ExplosiveSystem.hpp"
+#include "../include/HealthSystem.hpp"
 
 #include <iostream>
 
@@ -40,6 +42,7 @@ MainGameState::MainGameState(Game* game) : GameState(game)
     entityWithID(1, world).addComponent(TransformComponent{{0.0f, 0.0f}, {1.0f, 1.0f}, sf::degrees(0.0f)});
     entityWithID(1, world).addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
     entityWithID(1, world).addComponent(InventoryComponent(36));
+    entityWithID(1, world).getComponent<InventoryComponent>().inventory.slots[0] = {ItemID::Dynamite, 16};
 
     for(int i = 0; i < 255; i++)
     {
@@ -168,7 +171,8 @@ void MainGameState::update(float dt)
     }
 
     
-
+    ExplosiveSystem(world, dt);
+    HealthSystem(entities);
     PhysicsSystem(entities, world, dt);
     InventorySystem(entities);
 
@@ -189,6 +193,56 @@ void MainGameState::update(float dt)
     if(inventoryWidget.isActive())
     {
         inventoryWidget.update(dt);
+    }
+
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q))
+    {
+        bool full_stack = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift);
+
+        auto& inventory = entityWithID(1, world).getComponent<InventoryComponent>().inventory;
+
+        ItemStack& stack = inventory.slots[hotbar.getSelectedSlot()];
+
+        if(stack.empty()) return;
+
+        float unit_size = game->getWindow().getSize().y / 9.0f;
+
+        sf::View view(
+        {
+            (entityWithID(1, world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size,
+            (entityWithID(1, world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size
+        },
+        {
+            (float)game->getWindow().getSize().x,
+            (float)game->getWindow().getSize().y
+        });
+
+        view.setSize({view.getSize().x, -view.getSize().y});
+
+        game->getWindow().setView(view);
+
+        Entity item(world.getPossibleID());
+        item.addComponent(TransformComponent{entityWithID(1, world).getComponent<TransformComponent>().position + sf::Vector2f(0.0f, 1.5f), {0.5f, 0.5f}, sf::degrees(0.0f)});
+        item.addComponent(PhysicsComponent{getMouseWorldPosition(world, game->getWindow()) - entityWithID(1, world).getComponent<TransformComponent>().position, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
+        item.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[stack.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
+
+        if(full_stack)
+        {            
+            item.addComponent(ItemComponent{stack});
+
+            stack = {ItemID::None, 0};
+        }
+        else
+        {
+            item.addComponent(ItemComponent{{stack.itemID, 1}});
+
+            if(--stack.quantity == 0)
+            {
+                stack.itemID = ItemID::None;
+            }
+        }
+
+        world.getEntities().push_back(std::move(item));
     }
 
     world.tick(dt);
@@ -225,11 +279,12 @@ void MainGameState::render(sf::RenderWindow& window)
     view.setSize({view.getSize().x, -view.getSize().y});
 
     window.setView(view);
-    
-    RenderWorld(world, window);
+       
 
     RenderSystem(entities, window);
 
+    RenderWorld(world, window); 
+    
     RenderBlockOverlay(world, window);
 
     window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
