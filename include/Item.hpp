@@ -7,9 +7,11 @@
 #include <vector>
 #include <functional>
 
+#include <SFML/System/Vector2.hpp>
 
-#include "../include/World.hpp"
 #include "../include/Entity.hpp"
+
+class World;
 
 enum class ItemID : uint32_t
 {
@@ -20,7 +22,12 @@ enum class ItemID : uint32_t
     Cobblestone = 4,
     Obsidian = 5,
     Bedrock = 6,
-    Dynamite = 7
+    Dynamite = 7,
+    Iron_Ore = 8,
+    Gold_Ore = 9,
+    Diamond_Ore = 10,
+    Oak_Log = 11,
+    Oak_Leaves = 12
 };
 
 struct ItemData

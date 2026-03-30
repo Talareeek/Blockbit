@@ -27,10 +27,6 @@ private:
 
     Entity& entityWithID(uint32_t id);
 
-    World world;
-
-    void loadingScreen();
-
     void handleEvents();
 
     void update();

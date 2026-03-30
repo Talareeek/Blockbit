@@ -15,6 +15,8 @@ class World
 {
 private:
 
+    unsigned int seed;
+
     std::unordered_map<int, Chunk> chunks;
     std::vector<Entity> entities;
 
@@ -36,7 +38,9 @@ private:
 public:
 
     World() : version(0) {}
-    World(unsigned int seed) : perlin(seed), version(0) {}
+    World(unsigned int seed) : perlin(seed), version(0), seed(seed) {}
+
+    unsigned int getSeed() const;
 
     uint32_t getPossibleID()
     {
@@ -74,6 +78,10 @@ public:
     // phases
     void generateTerrain(int chunk_position);
     void generateCaves(int chunk_position);
+    void generateVein(int x, int y, BlockID ore, int size);
+    void generateOres(int chunk_position);
+    void generateTree(int x, int y, int log_height, BlockID log_type, BlockID leaves_type);
+    void generateNature(int chunk_position);
 
     std::vector<Entity>& getEntities();
 

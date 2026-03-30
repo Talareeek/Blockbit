@@ -7,6 +7,11 @@
 
 #include <iostream>
 
+unsigned int World::getSeed() const
+{
+    return seed;
+}
+
 Chunk& World::getChunk(int chunk_position)
 {
     // lazy generation of chunks
@@ -23,6 +28,8 @@ Chunk& World::getChunk(int chunk_position)
 
 Block World::getBlock(int wx, int wy)
 {
+    if(wy < 0 || wy >= CHUNK_HEIGHT) return {BlockID::Air, 0};
+
     int chunk_position = (wx >= 0)
     ? wx / CHUNK_WIDTH
     : (wx - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
@@ -35,6 +42,8 @@ Block World::getBlock(int wx, int wy)
 
 void World::setBlock(int wx, int wy, Block block)
 {
+    if(wy < 0 || wy >= CHUNK_HEIGHT) return;
+
     int chunk_position = (wx >= 0)
     ? wx / CHUNK_WIDTH
     : (wx - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
@@ -90,6 +99,8 @@ void World::generateChunk(int chunk_position)
 
     generateTerrain(chunk_position);
     generateCaves(chunk_position);
+    generateOres(chunk_position);
+    generateNature(chunk_position);
 
     chunk.generated = true;
     chunk.dirty = true;
@@ -145,6 +156,82 @@ void World::generateCaves(int chunk_position)
     }
 }
 
+void World::generateVein(int x, int y, BlockID ore, int size)
+{
+    std::mt19937 rng(getSeed() ^ (x << 16) ^ y);
+
+    for(int i=0; i<size; i++)
+    {
+        if(getBlock(x, y).id == BlockID::Stone)
+            setBlock(x, y, {ore, 0});
+
+        x += rng() % 3 - 1;
+        y += rng() % 3 - 1; // suspicious
+    }
+}
+
+void World::generateOres(int chunk_position)
+{
+    std::mt19937 rng(getSeed() + chunk_position);
+
+    int diamond_height = rng() % 14 + 1; // DIAMONDS 0  -  15
+    int gold_height = rng() % 34 + 16;   // GOLD     16 -  50
+    int iron_height = rng() % 204 + 51;  // IRON     51 - 255
+
+    int x = chunk_position * CHUNK_WIDTH;
+
+    generateVein(x + rng() % CHUNK_WIDTH, diamond_height, BlockID::Diamond_Ore, 8);
+    generateVein(x + rng() % CHUNK_WIDTH, gold_height, BlockID::Gold_Ore, 10);
+    generateVein(x + rng() % CHUNK_WIDTH, iron_height, BlockID::Iron_Ore, 12);
+
+}
+
+void World::generateTree(int x, int y, int log_height, BlockID log_type, BlockID leaves_type)
+{
+    std::mt19937 rng(getSeed() ^ (x << 16) ^ y);
+
+    for(int i = 0; i < log_height; i++)
+    {
+        setBlock(x, y + i, {log_type, 0});
+    }
+
+    int crown_y = y + log_height - 2;
+
+    for(int dx = -2; dx <= 2; dx++)
+    {
+        for(int dy = -1; dy <= 1; dy++)
+        {
+            for(int dz = -2; dz <= 2; dz++)
+            {
+                if(abs(dx) + abs(dy) + abs(dz) <= 3)
+                {
+                    if(getBlock(x + dx, crown_y + dy).id == BlockID::Air)
+                        setBlock(x + dx, crown_y + dy, {leaves_type, 0});
+                }
+            }
+        }
+    }
+}
+
+void World::generateNature(int chunk_position)
+{
+    std::mt19937 rng(getSeed() + chunk_position * 31);
+
+    bool tree_spawns = rng() % 100 <= 35;
+
+    if(tree_spawns)
+    {
+        int x = chunk_position * CHUNK_WIDTH + rng() % CHUNK_WIDTH;
+        int y = 0;
+
+        while(getBlock(x, y).id != BlockID::Grass && y < CHUNK_HEIGHT)
+        {
+            y++;
+        }
+
+        generateTree(x, y, rng() % 5 + 3, BlockID::Oak_Log, BlockID::Oak_Leaves);
+    }
+}
 
 void World::generateWorld()
 {

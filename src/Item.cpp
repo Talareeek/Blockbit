@@ -36,7 +36,12 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             explosiveEntity.addComponent(RenderComponent{12, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
             explosiveEntity.addComponent(PhysicsComponent{mouse - player.getComponent<TransformComponent>().position, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
             
-        }}}
+        }}},
+    {ItemID::Iron_Ore, {"Iron Ore", 13, 64}},
+    {ItemID::Gold_Ore, {"Gold Ore", 14, 64}},
+    {ItemID::Diamond_Ore, {"Diamond Ore", 15, 64}},
+    {ItemID::Oak_Log, {"Oak Log", 16, 64}},
+    {ItemID::Oak_Leaves, {"Oak Leaves", 17, 64}}
 };
 
 bool ItemStack::empty() const
