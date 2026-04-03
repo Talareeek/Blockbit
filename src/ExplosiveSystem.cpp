@@ -34,14 +34,12 @@ void ExplosiveSystem(World& world, float dt)
             float factor = 1.f - dist / explosive.force;
             factor = std::clamp(factor, 0.f, 1.f);
 
-            // obrażenia
             float damage = factor * factor;
             if(other.hasComponent<HealthComponent>())
             {
                 other.getComponent<HealthComponent>().health -= damage;
             }
 
-            // knockback
             other.getComponent<PhysicsComponent>().velocity += sf::Vector2f(dir.x, dir.y - 0.4f) * (factor);
         }
 
@@ -68,11 +66,18 @@ void ExplosiveSystem(World& world, float dt)
         }
     }
 
-    entities.erase(std::remove_if(entities.begin(), entities.end(), [](Entity& e)
-    {
-        if (!e.hasComponent<ExplosiveComponent>()) return false;
+    std::vector<uint32_t> entitiesToDelete;
 
-        const auto& explosive = e.getComponent<ExplosiveComponent>();
-        return explosive.timer >= explosive.fuseTime;
-    }), entities.end());
+    for(auto& entity : entities)
+    {
+        if(entity.hasComponent<ExplosiveComponent>() && entity.getComponent<ExplosiveComponent>().timer >= entity.getComponent<ExplosiveComponent>().fuseTime)
+        {
+            entitiesToDelete.push_back(entity.getID());
+        }
+    }
+
+    for(uint32_t id : entitiesToDelete)
+    {
+        world.deleteEntity(id);
+    }
 }

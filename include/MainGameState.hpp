@@ -7,6 +7,9 @@
 #include "InventoryWidget.hpp"
 #include "Hotbar.hpp"
 #include "Button.hpp"
+#include "TransformComponent.hpp"
+
+extern Entity& entityWithID(uint32_t id, World& world);
 
 class MainGameState : public GameState
 {
@@ -26,6 +29,11 @@ public:
     void update(float dt) override;
     void render(sf::RenderWindow& window) override;
 
+    static constexpr unsigned int UNIT_SIZE_FACTOR = 9;
+
 };
+
+extern bool isInRange(TransformComponent& player, TransformComponent& target, float range);
+extern bool isBlockInRange(TransformComponent& player, sf::Vector2i& block, float range);
 
 #endif // MAIN_GAME_STATE_HPP

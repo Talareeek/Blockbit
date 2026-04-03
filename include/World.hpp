@@ -84,6 +84,8 @@ public:
     void generateNature(int chunk_position);
 
     std::vector<Entity>& getEntities();
+    void deleteEntity(uint32_t id);
+    void addEntity(Entity& entity);
 
     std::vector<Entity> getEntities() const;
 

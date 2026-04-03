@@ -3,20 +3,24 @@
 
 #include <algorithm>
 
-void HealthSystem(std::vector<Entity>& entities)
+void HealthSystem(World& world)
 {
-    for (auto& entity : entities)
+    std::vector<uint32_t> entitiesToDelete;
+
+    for (auto& entity : world.getEntities())
     {
         if (!entity.hasComponent<HealthComponent>()) continue;
 
         auto& health = entity.getComponent<HealthComponent>();
 
-        entities.erase(std::remove_if(entities.begin(), entities.end(), [](Entity& e)
+        if(health.killOnZero && health.health == 0)
         {
-            if (!e.hasComponent<HealthComponent>()) return false;
+            entitiesToDelete.push_back(entity.getID());
+        }
+    }
 
-            const auto& health = e.getComponent<HealthComponent>();
-            return health.killOnZero && health.health == 0;
-        }), entities.end());
+    for (uint32_t id : entitiesToDelete)
+    {
+        world.deleteEntity(id);
     }
 }

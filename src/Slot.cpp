@@ -36,12 +36,16 @@ void Slot::render(sf::RenderWindow& window)
 {
     sf::RectangleShape background(size * 0.9f);
     background.setPosition(position + size * 0.05f);
-    sf::Color color(255, 255, 255, 128);
+    sf::Color color(0, 0, 0, 128);
     background.setFillColor(color);
     background.setOutlineColor((hovered) ? sf::Color::White : sf::Color::Black);
     background.setOutlineThickness(size.x / 20.0f);
     window.draw(background);
 
+    if(item_stack.empty())
+    {
+        return;
+    }
 
     sf::Sprite sprite(AssetManager::getTexture(itemDatabase[item_stack.itemID].texture));
     sprite.setPosition(position + sf::Vector2f(size.x / 10.0f, size.y / 10.0f));

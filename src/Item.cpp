@@ -6,14 +6,14 @@
 
 std::unordered_map<ItemID, ItemData> itemDatabase =
 {
-    {ItemID::None, {"None", UINT32_MAX, 0}},
-    {ItemID::Stone, {"Stone", 1, 64}},
-    {ItemID::Grass, {"Grass", 2, 64}},
-    {ItemID::Dirt, {"Dirt", 3, 64}},
-    {ItemID::Cobblestone, {"Cobblestone", 4, 64}},
-    {ItemID::Obsidian, {"Obsidian", 5, 64}},
-    {ItemID::Bedrock, {"Bedrock", 6, 64}},
-    {ItemID::Dynamite, {"Dynamite", 12, 16, [](World& world, sf::Vector2f mouse, uint32_t user)
+    {ItemID::None, {"None", UINT32_MAX, 0, ItemCategory::Misc}},
+    {ItemID::Stone, {"Stone", 1, 64, ItemCategory::Block}},
+    {ItemID::Grass, {"Grass", 2, 64, ItemCategory::Block}},
+    {ItemID::Dirt, {"Dirt", 3, 64, ItemCategory::Block}},
+    {ItemID::Cobblestone, {"Cobblestone", 4, 64, ItemCategory::Block}},
+    {ItemID::Obsidian, {"Obsidian", 5, 64, ItemCategory::Block}},
+    {ItemID::Bedrock, {"Bedrock", 6, 64, ItemCategory::Block}},
+    {ItemID::Dynamite, {"Dynamite", 12, 16, ItemCategory::Misc, [](World& world, sf::Vector2f mouse, uint32_t user)
         {
             auto entityWithID = [&world](uint32_t id) -> Entity&
             {
@@ -37,11 +37,11 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             explosiveEntity.addComponent(PhysicsComponent{mouse - player.getComponent<TransformComponent>().position, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
             
         }}},
-    {ItemID::Iron_Ore, {"Iron Ore", 13, 64}},
-    {ItemID::Gold_Ore, {"Gold Ore", 14, 64}},
-    {ItemID::Diamond_Ore, {"Diamond Ore", 15, 64}},
-    {ItemID::Oak_Log, {"Oak Log", 16, 64}},
-    {ItemID::Oak_Leaves, {"Oak Leaves", 17, 64}}
+    {ItemID::Iron_Ore, {"Iron Ore", 13, 64, ItemCategory::Block}},
+    {ItemID::Gold_Ore, {"Gold Ore", 14, 64, ItemCategory::Block}},
+    {ItemID::Diamond_Ore, {"Diamond Ore", 15, 64, ItemCategory::Block}},
+    {ItemID::Oak_Log, {"Oak Log", 16, 64, ItemCategory::Block}},
+    {ItemID::Oak_Leaves, {"Oak Leaves", 17, 64, ItemCategory::Block}}
 };
 
 bool ItemStack::empty() const

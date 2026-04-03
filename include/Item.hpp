@@ -30,11 +30,22 @@ enum class ItemID : uint32_t
     Oak_Leaves = 12
 };
 
+enum class ItemCategory
+{
+    Block,
+    Tool,
+    Weapon,
+    Consumable,
+    Misc
+};
+
 struct ItemData
 {
     std::string name;
     uint32_t texture;
     uint32_t maxStackSize;
+
+    ItemCategory category;
 
     std::function<void(World& world, sf::Vector2f mouse, uint32_t user)> onUse = [](World&, sf::Vector2f, uint32_t){};
 };

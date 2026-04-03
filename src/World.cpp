@@ -3,6 +3,7 @@
 #include "../include/AssetManager.hpp"
 #include "../include/RenderSystem.hpp"
 #include "../include/TransformComponent.hpp"
+#include "../include/MainGameState.hpp"
 #include <SFML/Graphics.hpp>
 
 #include <iostream>
@@ -251,7 +252,7 @@ void World::generateWorld()
 
 void RenderWorld(World& world, sf::RenderWindow& window)
 {
-    unsigned int unit_size = window.getSize().y / 9;
+    unsigned int unit_size = window.getSize().y / MainGameState::UNIT_SIZE_FACTOR;
 
     int chunk = window.getView().getCenter().x / unit_size / CHUNK_WIDTH;
 
@@ -318,7 +319,7 @@ void RenderWorld(World& world, sf::RenderWindow& window)
 
 void RenderBlockOverlay(World& world, sf::RenderWindow& window)
 {
-    unsigned int unit_size = window.getSize().y / 9;
+    unsigned int unit_size = window.getSize().y / MainGameState::UNIT_SIZE_FACTOR;
 
     sf::Vector2i blockPos = getMouseBlockPosition(world, window);
     int blockX = blockPos.x;
@@ -378,6 +379,29 @@ std::vector<Entity>& World::getEntities()
     return entities;
 }
 
+void World::deleteEntity(uint32_t id)
+{
+    Entity& entity = entityWithID(id, *this);
+
+    if(entity.getAssignedChunk())
+    {
+        chunks[entity.getChunk()].removeEntity(entity, *this);
+    }
+
+    entities.erase(std::remove_if(entities.begin(), entities.end(), [id](const Entity& e) { return e.getID() == id; }), entities.end());
+}
+
+void World::addEntity(Entity& entity)
+{
+    entities.push_back(entity);
+
+    if(!entity.hasComponent<TransformComponent>()) return;
+
+    entity.setAssignedChunk(true);
+    int chunk_position = entity.getComponent<TransformComponent>().position.x / CHUNK_WIDTH;
+    chunks[chunk_position].addEntity(entity);
+}
+
 std::vector<Entity> World::getEntities() const
 {
     return entities;
@@ -390,19 +414,19 @@ uint32_t World::getVersion() const
 
 sf::Vector2i getMouseBlockPosition(const World& world, const sf::RenderWindow& window)
 {
-    unsigned int unit_size = window.getSize().y / 9;
+    unsigned int unit_size = window.getSize().y / MainGameState::UNIT_SIZE_FACTOR;
 
     sf::Vector2f mouseWorldPos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
-    int blockX = static_cast<int>(std::floor(mouseWorldPos.x / unit_size));
-    int blockY = static_cast<int>(std::floor(mouseWorldPos.y / unit_size));
+    int blockX = static_cast<int>(std::floor(mouseWorldPos.x / static_cast<float>(unit_size)));
+    int blockY = static_cast<int>(std::floor(mouseWorldPos.y / static_cast<float>(unit_size)));
 
     return {blockX, blockY};
 }
 
 sf::Vector2f getMouseWorldPosition(const World& world, const sf::RenderWindow& window)
 {
-    unsigned int unit_size = window.getSize().y / 9;
+    unsigned int unit_size = window.getSize().y / MainGameState::UNIT_SIZE_FACTOR;
 
     sf::Vector2f position = {window.mapPixelToCoords(sf::Mouse::getPosition(window)).x / static_cast<float>(unit_size), window.mapPixelToCoords(sf::Mouse::getPosition(window)).y / static_cast<float>(unit_size)};
 

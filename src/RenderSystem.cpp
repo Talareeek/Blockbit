@@ -3,6 +3,7 @@
 #include "../include/TransformComponent.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/HealthComponent.hpp"
+#include "../include/MainGameState.hpp"
 
 #include <cmath>
 
@@ -18,7 +19,7 @@ float screenToWorldY(float screenY, float unit_size, float windowHeight)
 
 void RenderSystem(std::vector<Entity>& entities, sf::RenderWindow& window)
 {
-    unsigned int unit_size = window.getSize().y / 9;
+    unsigned int unit_size = window.getSize().y / MainGameState::UNIT_SIZE_FACTOR;
 
     for(auto& entity : entities)
     {

@@ -17,6 +17,7 @@
 #include "../include/DeathScreenState.hpp"
 #include "../include/ExplosiveSystem.hpp"
 #include "../include/HealthSystem.hpp"
+#include "../include/TransformSystem.hpp"
 
 #include <iostream>
 
@@ -93,15 +94,16 @@ void MainGameState::handleEvent(const sf::Event& event)
 
             sf::Vector2i blockPos = getMouseBlockPosition(world, game->getWindow());
 
-            if(world.getBlock(blockPos.x, blockPos.y).id != BlockID::Air && blockDatabase[world.getBlock(blockPos.x, blockPos.y).id].breakable)
+            if(world.getBlock(blockPos.x, blockPos.y).id != BlockID::Air && blockDatabase[world.getBlock(blockPos.x, blockPos.y).id].breakable && isBlockInRange(entityWithID(1, world).getComponent<TransformComponent>(), blockPos, 4.0f))
             {
-                world.getEntities().push_back(Entity(world.getEntities().size() + 1));
-                auto& newEntity = world.getEntities().back();
+                Entity newEntity(world.getPossibleID());
                 newEntity.addComponent(TransformComponent{{blockPos.x + 0.25f, blockPos.y - 0.25f}, {0.5f, 0.5f}, sf::degrees(0.0f)});
                 newEntity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
                 newEntity.addComponent(ItemComponent{{static_cast<ItemID>(world.getBlock(blockPos.x, blockPos.y).id), 1}});
                 newEntity.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[newEntity.getComponent<ItemComponent>().item.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
                 world.setBlock(blockPos.x, blockPos.y, {BlockID::Air, 0});
+
+                world.addEntity(newEntity);
             }
         }
         else if(mouse->button == sf::Mouse::Button::Right)
@@ -124,9 +126,13 @@ void MainGameState::handleEvent(const sf::Event& event)
 
             sf::Vector2i blockPos = getMouseBlockPosition(world, game->getWindow());
 
-            if(world.getBlock(blockPos.x, blockPos.y).id == BlockID::Air || world.getBlock(blockPos.x, blockPos.y).id == BlockID::Water)
+            auto& inventory = entityWithID(1, world).getComponent<InventoryComponent>();
+
+            if((world.getBlock(blockPos.x, blockPos.y).id == BlockID::Air || world.getBlock(blockPos.x, blockPos.y).id == BlockID::Water) && isBlockInRange(entityWithID(1, world).getComponent<TransformComponent>(), blockPos, 4.0f) && itemDatabase[inventory.inventory.slots[hotbar.getSelectedSlot()].itemID].category == ItemCategory::Block && inventory.inventory.slots[hotbar.getSelectedSlot()].empty() == false)
             {
-                world.setBlock(blockPos.x, blockPos.y, {BlockID::Stone, 0});
+                inventory.inventory.slots[hotbar.getSelectedSlot()].quantity--;
+
+                world.setBlock(blockPos.x, blockPos.y, {itemToBlock(entityWithID(1, world).getComponent<InventoryComponent>().inventory.slots[hotbar.getSelectedSlot()].itemID), 0});
             }
         }
     }
@@ -170,9 +176,9 @@ void MainGameState::update(float dt)
         game->pushState(std::make_unique<PauseScreenState>(game));
     }
 
-    
+    TransformSystem(world);
     ExplosiveSystem(world, dt);
-    HealthSystem(entities);
+    HealthSystem(world);
     PhysicsSystem(entities, world, dt);
     InventorySystem(entities);
 
@@ -264,7 +270,7 @@ void MainGameState::render(sf::RenderWindow& window)
 
     auto& entities = world.getEntities();
 
-    unsigned int unit_size = window.getSize().y / 9;
+    unsigned int unit_size = window.getSize().y / UNIT_SIZE_FACTOR;
 
     sf::View view(
     {
@@ -297,4 +303,24 @@ void MainGameState::render(sf::RenderWindow& window)
     {
         inventoryWidget.render(window);
     }
+}
+
+
+bool isInRange(TransformComponent& player, TransformComponent& target, float range)
+{
+    sf::Vector2f player_closest = player.position + sf::Vector2f((target.position.x > player.position.x) ? player.size.x : 0.0f, (target.position.y > player.position.y) ? player.size.y : 0.0f);
+    sf::Vector2f target_closest = target.position + sf::Vector2f((player.position.x > target.position.x) ? target.size.x : 0.0f, (player.position.y > target.position.y) ? target.size.y : 0.0f);
+
+    float distance = std::sqrt(std::pow(player_closest.x - target_closest.x, 2) + std::pow(player_closest.y - target_closest.y, 2));
+
+    return distance <= range;
+}
+
+bool isBlockInRange(TransformComponent& player, sf::Vector2i& block, float range)
+{
+    sf::Vector2f player_closest = player.position + sf::Vector2f((block.x > player.position.x) ? player.size.x : 0.0f, (block.y > player.position.y) ? player.size.y : 0.0f);
+    sf::Vector2f block_closest = sf::Vector2f(block) + sf::Vector2f((player.position.x > static_cast<float>(block.x)) ? 1.0f : 0.0f, (player.position.y > static_cast<float>(block.y)) ? 1.0f : 0.0f);
+    float distance = std::sqrt(std::pow(player_closest.x - block_closest.x, 2) + std::pow(player_closest.y - block_closest.y, 2));
+
+    return distance <= range;
 }

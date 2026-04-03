@@ -7,6 +7,8 @@
 
 void InventorySystem(std::vector<Entity>& entities)
 {
+    std::vector<uint32_t> entitiesToDelete;
+
     for(auto& entity : entities)
     {
         if(!entity.hasComponent<ItemComponent>() || !entity.hasComponent<TransformComponent>()) continue;
@@ -34,13 +36,15 @@ void InventorySystem(std::vector<Entity>& entities)
         {
             entity.getComponent<ItemComponent>() = ItemComponent{{ItemID::None, 0}};
         }
+
+        if(item.item.empty())
+        {
+            entitiesToDelete.push_back(entity.getID());
+        }
     }
 
-    entities.erase(std::remove_if(entities.begin(), entities.end(), [](Entity& e)
+    for (uint32_t id : entitiesToDelete)
     {
-        if (!e.hasComponent<ItemComponent>()) return false;
-
-        const auto& item = e.getComponent<ItemComponent>();
-        return item.item.empty();
-    }), entities.end());
+        entities.erase(std::remove_if(entities.begin(), entities.end(), [id](const Entity& e) { return e.getID() == id; }), entities.end());
+    }
 }
