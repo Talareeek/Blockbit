@@ -56,9 +56,25 @@ Game::Game()
     AssetManager::loadTexture(17, "resources/textures/oak_leaves.png");
     AssetManager::loadTexture(UINT32_MAX, "resources/textures/nothing.png");
 
-    std::filesystem::path savePath(std::getenv("APPDATA"));
+    std::filesystem::path savePath;
+    
+    #ifdef _WIN32
+        const char* appdata = std::getenv("APPDATA");
+        if (appdata) {
+            savePath = appdata;
+        } else {
+            savePath = std::filesystem::temp_directory_path();
+        }
+    #else
+        const char* home = std::getenv("HOME");
+        savePath = (home ? home : std::filesystem::temp_directory_path());
+        savePath /= ".local/share";
+    #endif
+    
     savePath /= "Blockbit";
     savePath /= "account";
+    
+    std::filesystem::create_directories(savePath.parent_path());
     account = new Account(savePath);
 
 }

@@ -25,12 +25,19 @@ MenuGameState::MenuGameState(Game* game) : GameState(game)
     std::string home;
 
     #ifdef _WIN32
-        home = std::getenv("APPDATA");
+        const char* appdata = std::getenv("APPDATA");
+        home = appdata ? appdata : "";
     #elif __linux__
-        home = std::getenv("HOME");
+        const char* homeenv = std::getenv("HOME");
+        home = homeenv ? homeenv : "";
     #endif
 
-    worldList = WorldList(std::filesystem::path(home) / "Blockbit" / "saves");
+    std::filesystem::path savesPath = home.empty() ? std::filesystem::temp_directory_path() : std::filesystem::path(home);
+    savesPath /= "Blockbit";
+    savesPath /= "saves";
+    
+    std::filesystem::create_directories(savesPath);
+    worldList = WorldList(savesPath);
 }
 
 void MenuGameState::handleEvent(const sf::Event& event)
