@@ -16,7 +16,7 @@ void PhysicsSystem(std::vector<Entity>& entities, World& world, float deltaTime)
 
         // ---- GRAVITY ----
         if(c.isGravityActive)
-            c.force.y -= 32.0f * c.mass; // większa żeby było stabilniej
+            c.force.y -= 32.0f * c.mass;
 
         sf::Vector2f acceleration = c.force / c.mass;
         c.velocity += acceleration * deltaTime;

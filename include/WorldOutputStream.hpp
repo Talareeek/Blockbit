@@ -11,6 +11,8 @@
 
 #include "ComponentType.hpp"
 
+#include "Chunk.hpp"
+
 class World;
 
 class WorldOutputStream
@@ -60,6 +62,14 @@ public:
     WorldOutputStream(const std::filesystem::path filepath) : filepath{filepath}{}
 
     void write(const World& world);
+
+    void writeChunk(const Chunk& chunk);
+
+    void writeManifest(const World& world);
+
+    void writeEntities(const World& world);
+
+    void writeData(const World& world);
 
 };
 

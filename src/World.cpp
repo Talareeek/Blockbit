@@ -8,6 +8,16 @@
 
 #include <iostream>
 
+World::World(const std::filesystem::path path)
+{
+
+}
+
+World::World(const std::string name, const std::filesystem::path path, unsigned int seed) : name(name), path(path), seed(seed), perlin(seed)
+{
+    
+}
+
 unsigned int World::getSeed() const
 {
     return seed;
@@ -379,29 +389,6 @@ std::vector<Entity>& World::getEntities()
     return entities;
 }
 
-void World::deleteEntity(uint32_t id)
-{
-    Entity& entity = entityWithID(id, *this);
-
-    if(entity.getAssignedChunk())
-    {
-        chunks[entity.getChunk()].removeEntity(entity, *this);
-    }
-
-    entities.erase(std::remove_if(entities.begin(), entities.end(), [id](const Entity& e) { return e.getID() == id; }), entities.end());
-}
-
-void World::addEntity(Entity& entity)
-{
-    entities.push_back(entity);
-
-    if(!entity.hasComponent<TransformComponent>()) return;
-
-    entity.setAssignedChunk(true);
-    int chunk_position = entity.getComponent<TransformComponent>().position.x / CHUNK_WIDTH;
-    chunks[chunk_position].addEntity(entity);
-}
-
 std::vector<Entity> World::getEntities() const
 {
     return entities;
@@ -414,23 +401,17 @@ uint32_t World::getVersion() const
 
 sf::Vector2i getMouseBlockPosition(const World& world, const sf::RenderWindow& window)
 {
-    unsigned int unit_size = window.getSize().y / MainGameState::UNIT_SIZE_FACTOR;
-
-    sf::Vector2f mouseWorldPos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
-
-    int blockX = static_cast<int>(std::floor(mouseWorldPos.x / static_cast<float>(unit_size)));
-    int blockY = static_cast<int>(std::floor(mouseWorldPos.y / static_cast<float>(unit_size)));
-
-    return {blockX, blockY};
+    auto mousePos = getMouseWorldPosition(world, window);
+    return {static_cast<int>(std::floor(mousePos.x)), static_cast<int>(std::floor(mousePos.y))};
 }
 
-sf::Vector2f getMouseWorldPosition(const World& world, const sf::RenderWindow& window)
+sf::Vector2f getMouseWorldPosition(const World&, const sf::RenderWindow& window)
 {
-    unsigned int unit_size = window.getSize().y / MainGameState::UNIT_SIZE_FACTOR;
+    float unit_size = window.getView().getSize().y / static_cast<float>(MainGameState::UNIT_SIZE_FACTOR);
 
-    sf::Vector2f position = {window.mapPixelToCoords(sf::Mouse::getPosition(window)).x / static_cast<float>(unit_size), window.mapPixelToCoords(sf::Mouse::getPosition(window)).y / static_cast<float>(unit_size)};
+    sf::Vector2f mouseWorld = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
-    return position;
+    return {-(mouseWorld.x / unit_size), -(mouseWorld.y / unit_size)};
 }
 
 sf::Color lerpColor(sf::Color a, sf::Color b, float t)

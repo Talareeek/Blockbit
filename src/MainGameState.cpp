@@ -38,33 +38,35 @@ MainGameState::MainGameState(Game* game) : GameState(game)
 
     auto& entities = world.getEntities();
 
-    entities.emplace_back(1);
+    world.setPlayerID(world.getPossibleID());
 
-    entityWithID(1, world).addComponent(TransformComponent{{0.0f, 0.0f}, {1.0f, 1.0f}, sf::degrees(0.0f)});
-    entityWithID(1, world).addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
-    entityWithID(1, world).addComponent(InventoryComponent(36));
-    entityWithID(1, world).getComponent<InventoryComponent>().inventory.slots[0] = {ItemID::Dynamite, 16};
+    entities.emplace_back(world.getPlayerID());
+
+    entityWithID(world.getPlayerID(), world).addComponent(TransformComponent{{0.0f, 0.0f}, {1.0f, 1.0f}, sf::degrees(0.0f)});
+    entityWithID(world.getPlayerID(), world).addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
+    entityWithID(world.getPlayerID(), world).addComponent(InventoryComponent(36));
+    entityWithID(world.getPlayerID(), world).getComponent<InventoryComponent>().inventory.slots[0] = {ItemID::Dynamite, 16};
 
     for(int i = 0; i < 255; i++)
     {
         if(world.getBlock(0, i).id == BlockID::Air)
         {
-            entityWithID(1, world).getComponent<TransformComponent>().position.y = i + 1.0f;
+            entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y = i + 1.0f;
             break;
         }
     }
 
-    entityWithID(1, world).addComponent(RenderComponent{0, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
+    entityWithID(world.getPlayerID(), world).addComponent(RenderComponent{0, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
 
-    entityWithID(1, world).addComponent(HealthComponent{100, 100});
+    entityWithID(world.getPlayerID(), world).addComponent(HealthComponent{100, 100});
 
     healthBar = HealthBar(UIElement::ScreenRelative{{0.05f, 0.05f}, {0.2f, 0.05f}, true, UIElement::ScreenRelative::Axis::Y});
     healthBar.updateScreenRelative(game->getWindow().getSize());
 
-    inventoryWidget = InventoryWidget(&entityWithID(1, world).getComponent<InventoryComponent>());
+    inventoryWidget = InventoryWidget(&entityWithID(world.getPlayerID(), world).getComponent<InventoryComponent>());
     inventoryWidget.updateScreenRelative(game->getWindow().getSize());
 
-    hotbar = Hotbar(&entityWithID(1, world).getComponent<InventoryComponent>());
+    hotbar = Hotbar(&entityWithID(world.getPlayerID(), world).getComponent<InventoryComponent>());
     hotbar.updateScreenRelative(game->getWindow().getSize());
 }
 
@@ -76,12 +78,12 @@ void MainGameState::handleEvent(const sf::Event& event)
 
         if(mouse->button == sf::Mouse::Button::Left)
         {
-            float unit_size = game->getWindow().getSize().y / 9.0f;
+            float unit_size = game->getWindow().getView().getSize().y / static_cast<float>(MainGameState::UNIT_SIZE_FACTOR);
 
             sf::View view(
             {
-                (entityWithID(1, world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size,
-                (entityWithID(1, world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size
+                (entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size,
+                (entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size
             },
             {
                 (float)game->getWindow().getSize().x,
@@ -103,17 +105,17 @@ void MainGameState::handleEvent(const sf::Event& event)
                 newEntity.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[newEntity.getComponent<ItemComponent>().item.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
                 world.setBlock(blockPos.x, blockPos.y, {BlockID::Air, 0});
 
-                world.addEntity(newEntity);
+                world.getEntities().push_back(std::move(newEntity));
             }
         }
         else if(mouse->button == sf::Mouse::Button::Right)
         {
-            float unit_size = game->getWindow().getSize().y / 9.0f;
+            float unit_size = game->getWindow().getView().getSize().y / static_cast<float>(MainGameState::UNIT_SIZE_FACTOR);
 
             sf::View view(
             {
-                (entityWithID(1, world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size,
-                (entityWithID(1, world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size
+                (entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size,
+                (entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size
             },
             {
                 (float)game->getWindow().getSize().x,
@@ -126,13 +128,13 @@ void MainGameState::handleEvent(const sf::Event& event)
 
             sf::Vector2i blockPos = getMouseBlockPosition(world, game->getWindow());
 
-            auto& inventory = entityWithID(1, world).getComponent<InventoryComponent>();
+            auto& inventory = entityWithID(world.getPlayerID(), world).getComponent<InventoryComponent>();
 
             if((world.getBlock(blockPos.x, blockPos.y).id == BlockID::Air || world.getBlock(blockPos.x, blockPos.y).id == BlockID::Water) && isBlockInRange(entityWithID(1, world).getComponent<TransformComponent>(), blockPos, 4.0f) && itemDatabase[inventory.inventory.slots[hotbar.getSelectedSlot()].itemID].category == ItemCategory::Block && inventory.inventory.slots[hotbar.getSelectedSlot()].empty() == false)
             {
                 inventory.inventory.slots[hotbar.getSelectedSlot()].quantity--;
 
-                world.setBlock(blockPos.x, blockPos.y, {itemToBlock(entityWithID(1, world).getComponent<InventoryComponent>().inventory.slots[hotbar.getSelectedSlot()].itemID), 0});
+                world.setBlock(blockPos.x, blockPos.y, {itemToBlock(entityWithID(world.getPlayerID(), world).getComponent<InventoryComponent>().inventory.slots[hotbar.getSelectedSlot()].itemID), 0});
             }
         }
     }
@@ -150,25 +152,25 @@ void MainGameState::update(float dt)
 
 
     // PLAYER MOVEMENT
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space) && entityWithID(1, world).getComponent<PhysicsComponent>().onGround)
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space) && entityWithID(world.getPlayerID(), world).getComponent<PhysicsComponent>().onGround)
     {
-        auto& component = entityWithID(1, world).getComponent<PhysicsComponent>();
+        auto& component = entityWithID(world.getPlayerID(), world).getComponent<PhysicsComponent>();
         component.velocity.y += 10.0f;
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
     {
-        auto& component = entityWithID(1, world).getComponent<PhysicsComponent>();
+        auto& component = entityWithID(world.getPlayerID(), world).getComponent<PhysicsComponent>();
         component.force.x -= 45.0f;
 
-        auto& render = entityWithID(1, world).getComponent<RenderComponent>();
+        auto& render = entityWithID(world.getPlayerID(), world).getComponent<RenderComponent>();
         render.uv = {{0, 32}, {16, 16}};
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D))
     {
-        auto& component = entityWithID(1, world).getComponent<PhysicsComponent>();
+        auto& component = entityWithID(world.getPlayerID(), world).getComponent<PhysicsComponent>();
         component.force.x += 45.0f;
 
-        auto& render = entityWithID(1, world).getComponent<RenderComponent>();
+        auto& render = entityWithID(world.getPlayerID(), world).getComponent<RenderComponent>();
         render.uv = {{32, 32}, {16, 16}};
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
@@ -182,7 +184,7 @@ void MainGameState::update(float dt)
     PhysicsSystem(entities, world, dt);
     InventorySystem(entities);
 
-    healthBar.setHealth(entityWithID(1, world).getComponent<HealthComponent>());
+    healthBar.setHealth(entityWithID(world.getPlayerID(), world).getComponent<HealthComponent>());
 
     healthBar.updateScreenRelative(game->getWindow().getSize());
     inventoryWidget.updateScreenRelative(game->getWindow().getSize());
@@ -205,7 +207,7 @@ void MainGameState::update(float dt)
     {
         bool full_stack = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift);
 
-        auto& inventory = entityWithID(1, world).getComponent<InventoryComponent>().inventory;
+        auto& inventory = entityWithID(world.getPlayerID(), world).getComponent<InventoryComponent>().inventory;
 
         ItemStack& stack = inventory.slots[hotbar.getSelectedSlot()];
 
@@ -215,8 +217,8 @@ void MainGameState::update(float dt)
 
         sf::View view(
         {
-            (entityWithID(1, world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size,
-            (entityWithID(1, world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size
+            (entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size,
+            (entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size
         },
         {
             (float)game->getWindow().getSize().x,
@@ -228,8 +230,8 @@ void MainGameState::update(float dt)
         game->getWindow().setView(view);
 
         Entity item(world.getPossibleID());
-        item.addComponent(TransformComponent{entityWithID(1, world).getComponent<TransformComponent>().position + sf::Vector2f(0.0f, 1.5f), {0.5f, 0.5f}, sf::degrees(0.0f)});
-        item.addComponent(PhysicsComponent{getMouseWorldPosition(world, game->getWindow()) - entityWithID(1, world).getComponent<TransformComponent>().position, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
+        item.addComponent(TransformComponent{entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position + sf::Vector2f(0.0f, 1.5f), {0.5f, 0.5f}, sf::degrees(0.0f)});
+        item.addComponent(PhysicsComponent{getMouseWorldPosition(world, game->getWindow()) - entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
         item.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[stack.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
 
         if(full_stack)
@@ -253,7 +255,7 @@ void MainGameState::update(float dt)
 
     world.tick(dt);
 
-    if(entityWithID(1, world).getComponent<HealthComponent>().health <= 0)
+    if(entityWithID(world.getPlayerID(), world).getComponent<HealthComponent>().health <= 0)
     {
         game->pushState(std::make_unique<DeathScreenState>(game, world, 1));
     }
@@ -274,8 +276,8 @@ void MainGameState::render(sf::RenderWindow& window)
 
     sf::View view(
     {
-        (entityWithID(1, world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size,
-        (entityWithID(1, world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size
+        (entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size,
+        (entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size
     },
     {
         (float)window.getSize().x,
@@ -323,4 +325,9 @@ bool isBlockInRange(TransformComponent& player, sf::Vector2i& block, float range
     float distance = std::sqrt(std::pow(player_closest.x - block_closest.x, 2) + std::pow(player_closest.y - block_closest.y, 2));
 
     return distance <= range;
+}
+
+MainGameState::~MainGameState()
+{
+
 }

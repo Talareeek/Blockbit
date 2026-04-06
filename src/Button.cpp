@@ -13,14 +13,14 @@ Button::Button(const sf::Vector2f& position, const sf::Vector2f& size, sf::Color
 {
     this->text = text;
     this->color = color;
-    this->onClick = onClick;
+    this->onClick = std::move(onClick);
 }
 
 Button::Button(const UIElement::ScreenRelative& screenRelative, sf::Color color, const std::string& text, std::function<void()> onClick) : UIElement(screenRelative)
 {
     this->text = text;
     this->color = color;
-    this->onClick = onClick;
+    this->onClick = std::move(onClick);
 }
 
 void Button::handleEvent(const sf::Event& event)
@@ -36,6 +36,8 @@ void Button::handleEvent(const sf::Event& event)
             if(buttonRect.contains(mousePos))
             {
                 onClick();
+                
+                Clicked = true;
             }
         }
     }
@@ -45,7 +47,6 @@ void Button::handleEvent(const sf::Event& event)
 
         auto a = cursor.createFromSystem(sf::Cursor::Type::Arrow);
 
-
         sf::Vector2i mousePos = event.getIf<sf::Event::MouseMoved>()->position;
 
         cursorHovering = buttonRect.contains(mousePos);
@@ -54,7 +55,7 @@ void Button::handleEvent(const sf::Event& event)
 
 void Button::update(float dt)
 {
-
+    Clicked = false;
 }
 
 void Button::render(sf::RenderWindow& window)
@@ -74,9 +75,19 @@ void Button::render(sf::RenderWindow& window)
     button.setOutlineColor(outlineColor);
     window.draw(button);
     
-    sf::Font font = AssetManager::getFont(0);
-    sf::Text textObj(font, text, size.y / 2);
+    sf::Text textObj(AssetManager::getFont(0), text, size.y / 2);
     textObj.setPosition({position.x + size.x / 2 - textObj.getLocalBounds().size.x / 2, position.y + size.y / 2 - textObj.getLocalBounds().size.y / 2});
     textObj.setFillColor(sf::Color::White);
     window.draw(textObj);
+}
+
+
+void Button::setText(std::string text)
+{
+    this->text = text;
+}
+
+bool Button::clicked()
+{
+    return Clicked;
 }

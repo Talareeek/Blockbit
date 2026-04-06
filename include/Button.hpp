@@ -17,7 +17,10 @@ private:
 
     sf::Cursor cursor{sf::Cursor::Type::Arrow};
 
+    bool Clicked = false;
+
 public:
+
     Button();
     Button(const sf::Vector2f& position, const sf::Vector2f& size, sf::Color color, const std::string& text, std::function<void()> onClick = [](){});
     Button(const UIElement::ScreenRelative& screenRelative, sf::Color color, const std::string& text, std::function<void()> onClick = [](){});
@@ -25,6 +28,10 @@ public:
     void handleEvent(const sf::Event& event) override;
     void update(float dt) override;
     void render(sf::RenderWindow& window) override;
+
+    void setText(std::string text);
+
+    bool clicked();
 };
 
 #endif // BUTTON_HPP

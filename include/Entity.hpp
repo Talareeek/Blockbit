@@ -10,12 +10,6 @@ class Entity
 {
 private:
 
-    int chunk;
-
-    size_t index_in_chunk;
-
-    bool assigned_chunk;
-
     uint32_t id;
 
     std::unordered_map<std::type_index, std::any> components;
@@ -47,15 +41,6 @@ public:
     {
         return std::any_cast<T&>(components.at(typeid(T)));
     }
-
-    size_t getIndexInChunk() const;
-    int getChunk() const;
-    void setIndexInChunk(size_t index);
-    void setChunk(int chunk_position);
-
-    bool getAssignedChunk() const;
-    void setAssignedChunk(bool assigned);
-
 };
 
 #endif // ENTITY_HPP

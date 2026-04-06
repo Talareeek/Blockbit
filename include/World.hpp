@@ -8,12 +8,17 @@
 
 #include <unordered_map>
 #include <cstdlib>
+#include <filesystem>
 
 #include <SFML/Graphics.hpp>
 
 class World
 {
 private:
+
+    std::filesystem::path path;
+
+    std::string name = "world";
 
     unsigned int seed;
 
@@ -35,11 +40,21 @@ private:
     
     sf::Vector2f spawnPoint{0.0f, 0.0f};
 
+    uint32_t playerID{0};
+
 public:
 
     World() : version(0) {}
     World(unsigned int seed) : perlin(seed), version(0), seed(seed) {}
 
+    World(const std::filesystem::path path);
+    World(const std::string name, const std::filesystem::path path, unsigned int seed);
+
+    void setSeed(unsigned int seed)
+    {
+        this->seed = seed;
+        perlin = PerlinNoise(seed);
+    }
     unsigned int getSeed() const;
 
     uint32_t getPossibleID()
@@ -84,8 +99,6 @@ public:
     void generateNature(int chunk_position);
 
     std::vector<Entity>& getEntities();
-    void deleteEntity(uint32_t id);
-    void addEntity(Entity& entity);
 
     std::vector<Entity> getEntities() const;
 
@@ -111,6 +124,20 @@ public:
     float getDayTime() const { return dayTime; }
 
     sf::Vector2f getSpawnPoint() const { return spawnPoint; }
+
+    const std::string& getName() const { return name; }
+
+    void setName(const std::string& name) { this->name = name; }
+
+    uint32_t getPlayerID() const { return playerID; }
+    void setPlayerID(uint32_t id) { playerID = id; }
+
+    /*
+    void writeManifest();
+    void writeChunk(int chunk_position);
+    void writeEntities();
+    void writeData();
+    */
 
 };
 

@@ -5,22 +5,17 @@
 
 void HealthSystem(World& world)
 {
-    std::vector<uint32_t> entitiesToDelete;
-
-    for (auto& entity : world.getEntities())
+    world.getEntities().erase(std::remove_if(world.getEntities().begin(), world.getEntities().end(),
+    [](Entity& entity)
     {
-        if (!entity.hasComponent<HealthComponent>()) continue;
+        if(!entity.hasComponent<HealthComponent>()) return false;
 
         auto& health = entity.getComponent<HealthComponent>();
 
-        if(health.killOnZero && health.health == 0)
+        if(health.health <= 0 && health.killOnZero)
         {
-            entitiesToDelete.push_back(entity.getID());
+            return true;
         }
-    }
-
-    for (uint32_t id : entitiesToDelete)
-    {
-        world.deleteEntity(id);
-    }
+        return false;
+    }), world.getEntities().end());
 }

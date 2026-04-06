@@ -2,6 +2,8 @@
 #define HEALTH_COMPONENT_HPP
 
 #include <cstdint>
+#include <string>
+#include <sstream>
 
 struct HealthComponent
 {
@@ -19,6 +21,28 @@ struct HealthComponent
     {
 
     }
+
+    std::string serialize()
+    {
+        std::string output;
+
+        output += std::to_string(health) + ' ';
+        output += std::to_string(maxHealth) + ' ';
+        output += std::to_string(killOnZero ? 1 : 0) + '\n';
+
+        return output;
+    }
+
+    void deserialize(const std::string& data)
+    {
+        std::istringstream iss(data);
+        int killOnZeroInt;
+
+        iss >> health >> maxHealth >> killOnZeroInt;
+
+        killOnZero = (killOnZeroInt != 0);
+    }
+
 };
 
 #endif // HEALTH_COMPONENT_HPP

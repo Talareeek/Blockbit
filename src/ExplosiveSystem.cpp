@@ -66,18 +66,8 @@ void ExplosiveSystem(World& world, float dt)
         }
     }
 
-    std::vector<uint32_t> entitiesToDelete;
-
-    for(auto& entity : entities)
+    entities.erase(std::remove_if(entities.begin(), entities.end(), [](Entity& entity)
     {
-        if(entity.hasComponent<ExplosiveComponent>() && entity.getComponent<ExplosiveComponent>().timer >= entity.getComponent<ExplosiveComponent>().fuseTime)
-        {
-            entitiesToDelete.push_back(entity.getID());
-        }
-    }
-
-    for(uint32_t id : entitiesToDelete)
-    {
-        world.deleteEntity(id);
-    }
+        return entity.hasComponent<ExplosiveComponent>() && entity.getComponent<ExplosiveComponent>().timer >= entity.getComponent<ExplosiveComponent>().fuseTime;
+    }), entities.end());
 }

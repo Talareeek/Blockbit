@@ -17,11 +17,6 @@ struct Chunk
     Block blocks[CHUNK_HEIGHT][CHUNK_WIDTH];
     bool dirty;
     bool generated;
-
-    std::vector<uint32_t> entities;
-
-    void addEntity(Entity& entity);
-    void removeEntity(Entity& entity, World& world);
 };
 
 #endif // CHUNK_HPP

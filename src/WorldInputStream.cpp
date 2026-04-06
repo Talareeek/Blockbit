@@ -1,5 +1,15 @@
 #include "../include/WorldInputStream.hpp"
 #include "../include/World.hpp"
+#include "../include/Chunk.hpp"
+
+#include "../include/TransformComponent.hpp"
+#include "../include/InventoryComponent.hpp"
+#include "../include/HealthComponent.hpp"
+#include "../include/AnimationComponent.hpp"
+#include "../include/ItemComponent.hpp"
+#include "../include/PreserveComponent.hpp"
+#include "../include/ExplosiveComponent.hpp"
+
 
 #include <string>
 #include <fstream>
@@ -7,77 +17,177 @@
 
 void WorldInputStream::read(World& world)
 {
-    std::ifstream file_stream(file_path, std::ios::binary);
+    
+}
 
-    std::string file;
+void WorldInputStream::readChunk(Chunk& chunk)
+{
+    std::filesystem::path path = filepath / ("chunk_" + std::to_string(chunk.chunk_position));
+
+    std::ifstream file(path, std::ios::binary);
+
+    if (!file.is_open()) throw std::runtime_error("Failed to open chunk file: " + path.string());
+
+    for (int y = 0; y < CHUNK_HEIGHT; y++)
+    {
+        for (int x = 0; x < CHUNK_WIDTH; x++)
+        {
+            uint32_t blockID;
+            uint8_t metadata;
+            file.read(reinterpret_cast<char*>(&blockID), sizeof(blockID));
+            file.read(reinterpret_cast<char*>(&metadata), sizeof(metadata));
+            chunk.blocks[y][x] = Block{static_cast<BlockID>(blockID), metadata};
+        }
+    }
+}
+
+void WorldInputStream::readManifest(World& world)
+{
+    std::filesystem::path path = filepath / "manifest";
+
+    std::ifstream file(path);
+
+    if(!file) throw std::runtime_error("Failed to open file for reading: " + path.string());
+
+    std::string line;
+    while(std::getline(file, line))
+    {
+        if(line.substr(0, 5) == "Seed:")
+        {
+            world.setSeed(std::stoll(line.substr(6)));
+        }
+        else if(line.substr(0, 8) == "Version:")
+        {
+            //world.setVersion(line.substr(9));
+        }
+        else if(line.substr(0, 5) == "Name:")
+        {
+            world.setName(line.substr(6));
+        }
+    }
+
+    file.close();
+}
+
+void WorldInputStream::readEntities(World& world)
+{
+    std::filesystem::path path = filepath / "entities";
+
+    std::ifstream file(path, std::ios::in);
+
+    if(!file) throw std::runtime_error("Failed to open file for writing: " + path.string());
+
+
+    std::string line;
+    while(std::getline(file, line))
+    {
+        if(line.substr(0, 10) == "Entity ID:")
+        {
+            uint32_t entityID = std::stoll(line.substr(11));
+            Entity entity(entityID);
+
+            while(std::getline(file, line) && !line.empty())
+            {
+                if(line.substr(0, 15) == "Component Type:")
+                {
+                    std::string componentType = line.substr(16);
+
+                    std::string componentData;
+                    std::string componentLine;
+
+                    while(std::getline(file, componentLine) && !componentLine.empty() && componentLine.substr(0, 15) != "Component Type:")
+                    {
+                        componentData += componentLine + '\n';
+                    }
+
+                    if(componentType == "Physics")
+                    {
+                        PhysicsComponent physics;
+                        physics.deserialize(componentData);
+                        entity.addComponent<PhysicsComponent>(physics);
+                    }
+                    else if(componentType == "Render")
+                    {
+                        RenderComponent render;
+                        render.deserialize(componentData);
+                        entity.addComponent<RenderComponent>(render);
+                    }
+                    else if(componentType == "Animation")
+                    {
+                        AnimationComponent animation;
+                        animation.deserialize(componentData);
+                        entity.addComponent<AnimationComponent>(animation);
+                    }
+                    else if(componentType == "Inventory")
+                    {
+                        InventoryComponent inventory(1);
+                        inventory.deserialize(componentData);
+                        entity.addComponent<InventoryComponent>(inventory);
+                    }
+                    else if(componentType == "Health")
+                    {
+                        HealthComponent health;
+                        health.deserialize(componentData);
+                        entity.addComponent<HealthComponent>(health);
+                    }
+                    else if(componentType == "Item")
+                    {
+                        ItemComponent item;
+                        item.deserialize(componentData);
+                        entity.addComponent<ItemComponent>(item);
+                    }
+                    else if(componentType == "Preserve")
+                    {
+                        PreserveComponent preserve;
+                        std::string preserveStr;
+                        std::getline(file, preserveStr);
+                        preserve = (preserveStr == "Preserve" ? PreserveComponent::Preserve : PreserveComponent::Destroy);
+                        entity.addComponent<PreserveComponent>(preserve);
+                    }
+                    else if(componentType == "Explosive")
+                    {
+                        ExplosiveComponent explosive;
+                        explosive.deserialize(componentData);
+                        entity.addComponent<ExplosiveComponent>(explosive);
+                    }
+                    else if(componentType == "Transform")
+                    {
+                        TransformComponent transform;
+                        transform.deserialize(componentData);
+                        entity.addComponent<TransformComponent>(transform);
+                    }
+                }
+            }
+
+            world.getEntities().push_back(entity);
+        }
+    }
+}
+
+
+void WorldInputStream::readData(World& world)
+{
+    std::filesystem::path path = filepath / "data";
+
+    std::ifstream file(path);
+
+    if(!file) throw std::runtime_error("Failed to open file for reading: " + path.string());
+
+    
 }
 
 /*
-#include "../include/WorldOutputStream.hpp"
 
-#include "../include/World.hpp"
-
-void WorldOutputStream::write(const World& world)
+void WorldOutputStream::writeData(const World& world)
 {
-    std::string output;
+    std::filesystem::path path = filepath / "data";
 
-    output += "Blockbit World File\n";
-    output += "Version: " + std::to_string(world.getVersion()) + "\n";
+    std::ofstream file(path, std::ios::out);
 
-    output += '\n';
-
-    output += "Chunks:\n";
-
-    for(auto& [position, chunk] : world.chunks)
-    {
-        output += "Chunk: " + std::to_string(position) + "\n";
-        output += "Blocks:\n";
-        
-        for(int y = 0; y < CHUNK_HEIGHT; y++)
-        {
-            for(int x = 0; x < CHUNK_WIDTH; x++)
-            {
-                output += std::to_string(static_cast<int>(chunk.blocks[y][x])) + ' ';
-            }
-            output += '\n';
-        }
-        output += '\n';
-    }
-
-
-    // ENTITIES
-    output += "Entities:\n";
-
-    for(const auto& entity : world.entities)
-    {
-        output += "Entity ID: " + std::to_string(entity.getID()) + "\n";
-
-        for(const auto& [type, component] : entity.getComponents())
-        {
-            output += "Component Type: ";
-
-            if(type == typeid(PhysicsComponent))
-            {
-                output += std::to_string(static_cast<unsigned int>(ComponentType::Physics)) + '\n';
-                output += std::any_cast<PhysicsComponent>(component).serialize();
-            }
-            else if(type == typeid(RenderComponent))
-            {
-                output += std::to_string(static_cast<unsigned int>(ComponentType::Render)) + '\n';
-                output += std::any_cast<RenderComponent>(component).serialize();
-            }
-        }
-
-        output += '\n';
-    }
-
-    output += '\n';
-
-    output += "Footer\n";
-
-    std::ofstream file(filename, std::ios::binary);
-    if(!file) throw std::runtime_error("Failed to open file for writing: " + filename);
-
-    file << output;
+    file << "DayTime: " << world.getDayTime() << '\n';
+    file << "Days: " << world.days << '\n';
+    file << "Spawn Point: " << world.getSpawnPoint().x << ' ' << world.getSpawnPoint().y << '\n';
+    file << "Player ID: " << world.getPlayerID() << '\n';
 }
+
 */

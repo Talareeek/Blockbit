@@ -22,18 +22,22 @@ MenuGameState::MenuGameState(Game* game) : GameState(game)
 
     quit.updateScreenRelative(game->getWindow().getSize());
 
-    accountWidget = AccountWidget(game->getAccount());
+    std::string home;
 
-    slot = Slot({0.3f, 0.3f}, 0.1f);
-    slot.setItemStack({ItemID::Bedrock, 64});
+    #ifdef _WIN32
+        home = std::getenv("APPDATA");
+    #elif __linux__
+        home = std::getenv("HOME");
+    #endif
+
+    worldList = WorldList(std::filesystem::path(home) / "Blockbit" / "saves");
 }
 
 void MenuGameState::handleEvent(const sf::Event& event)
 {
     play.handleEvent(event);
     quit.handleEvent(event);
-    accountWidget.handleEvent(event);
-    slot.handleEvent(event);
+    worldList.handleEvent(event);
 }
 
 void MenuGameState::update(float dt)
@@ -42,13 +46,14 @@ void MenuGameState::update(float dt)
 
     play.updateScreenRelative(size);
     quit.updateScreenRelative(size);
-    accountWidget.updateScreenRelative(size);
-    slot.updateScreenRelative(size);
+    worldList.updateScreenRelative(size);
+
+    worldList.setPosition({size.x * 0.75f, 0.0f});
+    worldList.setSize({size.x * 0.25f, static_cast<float>(size.y)});
 
     play.update(dt);
     quit.update(dt);
-    accountWidget.update(dt);
-    slot.update(dt);
+    worldList.update(dt);
 }
 
 void MenuGameState::render(sf::RenderWindow& window)
@@ -70,8 +75,7 @@ void MenuGameState::render(sf::RenderWindow& window)
     overlay.setFillColor(sf::Color(0, 0, 0, 150));
     window.draw(overlay);
 
+    worldList.render(window);
     play.render(window);
-    quit.render(window);
-    accountWidget.render(window);
-    slot.render(window);
+    quit.render(window);    
 }
