@@ -1,0 +1,1 @@
+g++ src/*.cpp -o "Blockbit" -std=c++20 -lsfml-graphics -lsfml-system -lsfml-window -lsfml-audio

@@ -4,6 +4,11 @@
 #include "../include/RenderSystem.hpp"
 #include "../include/TransformComponent.hpp"
 #include "../include/MainGameState.hpp"
+#include "../include/PreserveComponent.hpp"
+#include "../include/AnimationComponent.hpp"
+#include "../include/MainGameState.hpp"
+#include "../include/ExplosiveComponent.hpp"
+#include "../include/ItemComponent.hpp"
 #include <SFML/Graphics.hpp>
 
 #include <iostream>
@@ -504,4 +509,250 @@ void updateFluids(World& world)
             }
         }
     }
+}
+
+
+void World::writeManifest() const
+{
+    std::ofstream file(path / "manifest");
+
+    if(!file) throw std::runtime_error("Cannot open file");
+
+    file << name << '\n';
+    file << seed << '\n';
+}
+
+void World::writeChunk(int chunk_position) const
+{
+    std::ofstream file(path / ("chunk_" + std::to_string(chunk_position)), std::ios::binary);
+
+    auto it = chunks.find(chunk_position);
+    if(it == chunks.end()) return;
+
+    for(int y = 0; y < CHUNK_HEIGHT; y++)
+    {
+        for(int x = 0; x < CHUNK_WIDTH; x++)
+        {
+            const Block& block = it->second.blocks[y][x];
+            file.write(reinterpret_cast<const char*>(&block.id), sizeof(BlockID));
+            file.write(reinterpret_cast<const char*>(&block.metadata), sizeof(uint8_t));
+        }
+    }
+}
+
+
+void World::writeEntities() const
+{
+    std::ofstream file(path / "entities", std::ios::out);
+
+    if(!file) throw std::runtime_error("Failed to open file for writing: " + path.string());
+
+
+    for(const auto& entity : entities)
+    {
+        file << "Entity ID: " << entity.getID() << '\n';
+
+        for(const auto& [type, component] : entity.getComponents())
+        {
+            file << "Component Type: ";
+
+            if(type == typeid(PhysicsComponent))
+            {
+                file << "Physics" << '\n';
+                file << std::any_cast<PhysicsComponent>(component).serialize();
+            }
+            else if(type == typeid(RenderComponent))
+            {
+                file << "Render" << '\n';
+                file << std::any_cast<RenderComponent>(component).serialize();
+            }
+            else if(type == typeid(AnimationComponent))
+            {
+                file << "Animation" << '\n';
+                file << std::any_cast<AnimationComponent>(component).serialize();
+            }
+            else if(type == typeid(InventoryComponent))
+            {
+                file << "Inventory" << '\n';
+                file << std::any_cast<InventoryComponent>(component).serialize();
+            }
+            else if(type == typeid(HealthComponent))
+            {
+                file << "Health" << '\n';
+                file << std::any_cast<HealthComponent>(component).serialize();
+            }
+            else if(type == typeid(ItemComponent))
+            {
+                file << "Item" << '\n';
+                file << std::any_cast<ItemComponent>(component).serialize();
+            }
+            else if(type == typeid(PreserveComponent))
+            {
+                file << "Preserve" << '\n';
+                file << (std::any_cast<PreserveComponent>(component) == PreserveComponent::Preserve ? "Preserve" : "Destroy") << '\n';
+            }
+            else if(type == typeid(ExplosiveComponent))
+            {
+                file << "Explosive" << '\n';
+                file << std::any_cast<ExplosiveComponent>(component).serialize();
+            }
+            else if(type == typeid(TransformComponent))
+            {
+                file << "Transform" << '\n';
+                file << std::any_cast<TransformComponent>(component).serialize();
+            }
+        }
+
+        file << '\n';
+    }
+}
+
+void World::writeData() const
+{
+    std::ofstream file(path / "data", std::ios::out);
+
+    file << "DayTime: " << getDayTime() << '\n';
+    file << "Days: " << days << '\n';
+    file << "Spawn Point: " << getSpawnPoint().x << ' ' << getSpawnPoint().y << '\n';
+    file << "Player ID: " << getPlayerID() << '\n';
+}
+
+
+void World::readManifest()
+{
+    std::ifstream file(path / "manifest");
+
+    if(!file) throw std::runtime_error("Cannot open file");
+
+    file >> name;
+    file >> seed;
+}
+
+void World::readChunk(int chunk_position)
+{
+    std::ifstream file(path / ("chunk_" + std::to_string(chunk_position)), std::ios::binary);
+
+    if(!file) throw std::runtime_error("Cannot open file");
+
+    Chunk c;
+
+    for(int y = 0; y < CHUNK_HEIGHT; y++)
+    {
+        for(int x = 0; x < CHUNK_WIDTH; x++)
+        {
+            Block block;
+
+            file.read(reinterpret_cast<char*>(&block.id), sizeof(BlockID));
+            file.read(reinterpret_cast<char*>(&block.metadata), sizeof(uint32_t));
+
+            c.blocks[y][x] = block;
+        }
+    }
+
+    chunks[chunk_position] = c;
+}
+
+void World::readEntities()
+{
+    std::ifstream file(path / "entities", std::ios::in);
+
+    if(!file) throw std::runtime_error("Failed to open file for reading: " + path.string());
+
+
+    std::string line;
+    while(std::getline(file, line))
+    {
+        if(line.substr(0, 10) == "Entity ID:")
+        {
+            uint32_t entityID = std::stoll(line.substr(11));
+            Entity entity(entityID);
+
+            while(std::getline(file, line) && !line.empty())
+            {
+                if(line.substr(0, 15) == "Component Type:")
+                {
+                    std::string componentType = line.substr(16);
+
+                    std::string componentData;
+                    std::string componentLine;
+
+                    while(std::getline(file, componentLine) && !componentLine.empty() && componentLine.substr(0, 15) != "Component Type:")
+                    {
+                        componentData += componentLine + '\n';
+                    }
+
+                    if(componentType == "Physics")
+                    {
+                        PhysicsComponent physics;
+                        physics.deserialize(componentData);
+                        entity.addComponent<PhysicsComponent>(physics);
+                    }
+                    else if(componentType == "Render")
+                    {
+                        RenderComponent render;
+                        render.deserialize(componentData);
+                        entity.addComponent<RenderComponent>(render);
+                    }
+                    else if(componentType == "Animation")
+                    {
+                        AnimationComponent animation;
+                        animation.deserialize(componentData);
+                        entity.addComponent<AnimationComponent>(animation);
+                    }
+                    else if(componentType == "Inventory")
+                    {
+                        InventoryComponent inventory(1);
+                        inventory.deserialize(componentData);
+                        entity.addComponent<InventoryComponent>(inventory);
+                    }
+                    else if(componentType == "Health")
+                    {
+                        HealthComponent health;
+                        health.deserialize(componentData);
+                        entity.addComponent<HealthComponent>(health);
+                    }
+                    else if(componentType == "Item")
+                    {
+                        ItemComponent item;
+                        item.deserialize(componentData);
+                        entity.addComponent<ItemComponent>(item);
+                    }
+                    else if(componentType == "Preserve")
+                    {
+                        PreserveComponent preserve;
+                        std::string preserveStr;
+                        std::getline(file, preserveStr);
+                        preserve = (preserveStr == "Preserve" ? PreserveComponent::Preserve : PreserveComponent::Destroy);
+                        entity.addComponent<PreserveComponent>(preserve);
+                    }
+                    else if(componentType == "Explosive")
+                    {
+                        ExplosiveComponent explosive;
+                        explosive.deserialize(componentData);
+                        entity.addComponent<ExplosiveComponent>(explosive);
+                    }
+                    else if(componentType == "Transform")
+                    {
+                        TransformComponent transform;
+                        transform.deserialize(componentData);
+                        entity.addComponent<TransformComponent>(transform);
+                    }
+                }
+            }
+
+            entities.push_back(entity);
+        }
+    }
+}
+
+void World::readData()
+{
+    std::ifstream file(path / "data", std::ios::out);
+
+    if(!file) throw std::runtime_error("");
+
+    file >> dayTime;
+    file >> days;
+    file >> spawnPoint.x >> spawnPoint.y;
+    file >> playerID;
 }
