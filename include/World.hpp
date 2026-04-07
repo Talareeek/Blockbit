@@ -33,10 +33,10 @@ private:
 
     uint64_t days{0};
 
-    sf::Color night   {12, 18, 40};
-    sf::Color dawn    {90, 120, 180};
-    sf::Color day     {120, 190, 255};
-    sf::Color sunset  {255, 170, 120};  
+    static constexpr sf::Color night   {12, 18, 40};
+    static constexpr sf::Color dawn    {90, 120, 180};
+    static constexpr sf::Color day     {120, 190, 255};
+    static constexpr sf::Color sunset  {255, 170, 120};  
     
     sf::Vector2f spawnPoint{0.0f, 0.0f};
 
@@ -132,12 +132,17 @@ public:
     uint32_t getPlayerID() const { return playerID; }
     void setPlayerID(uint32_t id) { playerID = id; }
 
-    /*
-    void writeManifest();
-    void writeChunk(int chunk_position);
-    void writeEntities();
-    void writeData();
-    */
+    
+    void writeManifest() const;
+    void writeChunk(int chunk_position) const;
+    void writeEntities() const;
+    void writeData() const;
+
+
+    void readManifest();
+    void readChunk(int chunk_position);
+    void readEntities();
+    void readData();
 
 };
 
