@@ -6,7 +6,7 @@
 
 #include "../include/MainGameState.hpp"
 
-#include "../include/MenuGameState.hpp"
+#include "../include/IntroGameState.hpp"
 
 #include <cstdlib>
 
@@ -18,7 +18,7 @@ int main()
 
     Game game;
 
-    game.pushState(std::make_unique<MenuGameState>(&game));
+    game.pushState(std::make_unique<IntroGameState>(&game));
 
     game.run();
 }

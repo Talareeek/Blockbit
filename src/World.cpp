@@ -311,8 +311,8 @@ void RenderWorld(World& world, sf::RenderWindow& window)
 
                     sprite.setTextureRect(sf::IntRect({
                         {0,
-                        texture.getSize().y - texHeight},
-                        {texture.getSize().x,
+                        static_cast<int>(texture.getSize().y) - texHeight},
+                        {static_cast<int>(texture.getSize().x),
                         texHeight}
                     }));
                 }

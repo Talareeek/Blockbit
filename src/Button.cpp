@@ -76,8 +76,11 @@ void Button::render(sf::RenderWindow& window)
     window.draw(button);
     
     sf::Text textObj(AssetManager::getFont(0), text, size.y / 2);
-    textObj.setPosition({position.x + size.x / 2 - textObj.getLocalBounds().size.x / 2, position.y + size.y / 2 - textObj.getLocalBounds().size.y / 2});
+    textObj.setScale({size.x / textObj.getLocalBounds().size.x, size.x / textObj.getLocalBounds().size.x});
+    textObj.setPosition({position.x + (size.x - textObj.getLocalBounds().size.x) / 2, position.y + (size.y - textObj.getLocalBounds().size.y) / 2});
     textObj.setFillColor(sf::Color::White);
+    textObj.setOutlineThickness(2.0f);
+    textObj.setOutlineColor(sf::Color::Black);
     window.draw(textObj);
 }
 

@@ -85,4 +85,13 @@ void MenuGameState::render(sf::RenderWindow& window)
     worldList.render(window);
     play.render(window);
     quit.render(window);    
+
+
+    sf::Text copyright(AssetManager::getFont(0), L"©2026 Talarek\n(github.com/Talareeek)", 10);
+    copyright.setPosition({5.0f, 5.0f});
+    copyright.setFillColor(sf::Color(0, 0, 0, 127));
+    copyright.setOutlineColor(sf::Color(255, 255, 255, 127));
+    copyright.setOutlineThickness(1.0f);
+
+    window.draw(copyright);
 }
