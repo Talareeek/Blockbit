@@ -21,6 +21,11 @@ private:
     InventoryWidget inventoryWidget{nullptr};
     Hotbar hotbar;
 
+    bool debug = false;
+
+    int fps = 0;
+    float last_fps_update = 1.0f;
+
 public:
 
     MainGameState(Game* game);

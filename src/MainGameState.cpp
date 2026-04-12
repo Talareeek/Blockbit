@@ -253,11 +253,25 @@ void MainGameState::update(float dt)
         world.getEntities().push_back(std::move(item));
     }
 
+    if(InputManager::isLazyKeyPressed(sf::Keyboard::Key::F3))
+    {
+        debug = !debug;
+    }
+
     world.tick(dt);
 
     if(entityWithID(world.getPlayerID(), world).getComponent<HealthComponent>().health <= 0)
     {
         game->pushState(std::make_unique<DeathScreenState>(game, world, 1));
+    }
+
+    last_fps_update += dt;
+
+    if(last_fps_update >= 1.0f)
+    {
+        last_fps_update -= 1.0f;
+
+        fps = 1.0f / dt;
     }
 }
 
@@ -284,10 +298,11 @@ void MainGameState::render(sf::RenderWindow& window)
         (float)window.getSize().y
     });
 
+
+
     view.setSize({view.getSize().x, -view.getSize().y});
 
     window.setView(view);
-       
 
     RenderSystem(entities, window);
 
@@ -304,6 +319,25 @@ void MainGameState::render(sf::RenderWindow& window)
     if(inventoryWidget.isActive())
     {
         inventoryWidget.render(window);
+    }
+
+
+    if(debug)
+    {
+        std::string debug_string = 
+        "FPS: " + std::to_string(fps) + '\n';
+
+        sf::Text debug_text(AssetManager::getFont(0), debug_string, 20);
+
+        debug_text.setPosition({50.0f, 50.0f});
+
+        debug_text.setFillColor(sf::Color::White);
+
+        debug_text.setOutlineThickness(2.0f);
+
+        debug_text.setOutlineColor(sf::Color::Black);
+
+        window.draw(debug_text);
     }
 }
 

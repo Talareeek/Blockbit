@@ -161,7 +161,7 @@ void Game::run()
 {
     while(window.isOpen())
     {
-        dt = std::min(clock.restart().asSeconds(), 0.05f);
+        dt = clock.restart().asSeconds();
 
         handleEvents();
         update();
