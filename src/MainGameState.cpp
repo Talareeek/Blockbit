@@ -34,7 +34,7 @@ MainGameState::MainGameState(Game* game) : GameState(game)
 {
     // WORLD GENERATION
     world = World(std::rand());
-    world.generateWorld();    
+    world.generateWorldSpawn();    
 
     auto& entities = world.getEntities();
 
@@ -325,7 +325,9 @@ void MainGameState::render(sf::RenderWindow& window)
     if(debug)
     {
         std::string debug_string = 
-        "FPS: " + std::to_string(fps) + '\n';
+        "FPS: " + std::to_string(fps) + '\n' +
+        "X: " + std::to_string(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x) +
+        " Y: " + std::to_string(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y) + '\n';
 
         sf::Text debug_text(AssetManager::getFont(0), debug_string, 20);
 

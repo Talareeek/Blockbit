@@ -13,14 +13,14 @@
 
 #include <iostream>
 
-World::World(const std::filesystem::path path)
+World::World(const std::filesystem::path path) : path{path}
 {
-
+    load();
 }
 
 World::World(const std::string name, const std::filesystem::path path, unsigned int seed) : name(name), path(path), seed(seed), perlin(seed)
 {
-    
+    save();
 }
 
 unsigned int World::getSeed() const
@@ -68,6 +68,11 @@ void World::setBlock(int wx, int wy, Block block)
     int local_y = wy;
 
     getChunk(chunk_position).blocks[local_y][local_x] = block;
+}
+
+std::unordered_map<int, Chunk>& World::getChunks()
+{
+    return chunks;
 }
 
 void World::generateFlatWorld()
@@ -249,9 +254,9 @@ void World::generateNature(int chunk_position)
     }
 }
 
-void World::generateWorld()
+void World::generateWorldSpawn()
 {
-    for (int i = -100; i <= 100; ++i)
+    for (int i = -2; i <= 2; ++i)
     {
         generateChunk(i);
     }
@@ -607,6 +612,21 @@ void World::writeEntities() const
     }
 }
 
+void World::save() const
+{
+    writeManifest();
+    writeEntities();
+    writeData();
+
+    for(auto& [chunk_position, chunk] : chunks)
+    {
+        if(chunk.dirty)
+        {
+            writeChunk(chunk_position);
+        }
+    }
+}
+
 void World::writeData() const
 {
     std::ofstream file(path / "data", std::ios::out);
@@ -615,6 +635,12 @@ void World::writeData() const
     file << "Days: " << days << '\n';
     file << "Spawn Point: " << getSpawnPoint().x << ' ' << getSpawnPoint().y << '\n';
     file << "Player ID: " << getPlayerID() << '\n';
+}
+
+
+bool World::hasChunkFile(int chunk_position) const
+{
+    return std::filesystem::exists(path / ("chunk_" + std::to_string(chunk_position)));
 }
 
 
@@ -755,4 +781,12 @@ void World::readData()
     file >> days;
     file >> spawnPoint.x >> spawnPoint.y;
     file >> playerID;
+}
+
+
+void World::load()
+{
+    readManifest();
+    readEntities();
+    readData();
 }

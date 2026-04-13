@@ -79,6 +79,8 @@ public:
     Block getBlock(int wx, int wy);
     void setBlock(int wx, int wy, Block block);
 
+    std::unordered_map<int, Chunk>& getChunks();
+
     // GENERATION
 
     // flat world
@@ -86,7 +88,7 @@ public:
     void generateFlatChunk(int chunk_position);
 
     // normal world
-    void generateWorld();
+    void generateWorldSpawn();
 
     void generateChunk(int chunk_position);
 
@@ -117,6 +119,8 @@ public:
 
     static constexpr float FLUID_TICK = 0.5f;
 
+    static constexpr int SIMULATION_DISTANCE = 10;
+
     float fluidTimer{0.0f};
 
     sf::Color getSkyColor(float t);
@@ -138,11 +142,17 @@ public:
     void writeEntities() const;
     void writeData() const;
 
+    void save() const;
+
+    bool hasChunkFile(int chunk_position) const;
+
 
     void readManifest();
     void readChunk(int chunk_position);
     void readEntities();
     void readData();
+
+    void load();
 
 };
 

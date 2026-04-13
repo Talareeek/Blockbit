@@ -8,7 +8,7 @@ MenuGameState::MenuGameState(Game* game) : GameState(game)
     UIElement::ScreenRelative playRelative{{0.3f, 0.25f}, {0.4f, 0.2f}, true, UIElement::ScreenRelative::Axis::Y};
     UIElement::ScreenRelative quitRelative{{0.3f, 0.55f}, {0.4f, 0.2f}, true, UIElement::ScreenRelative::Axis::Y};
 
-    play = Button(playRelative, sf::Color::Green, "Play", [this]()
+    play = Button(playRelative, sf::Color::Green, "Create World", [this]()
     {
         this->game->pushState(std::make_unique<MainGameState>(this->game));
     });
