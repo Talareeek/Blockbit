@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 MCP server exposing build tools for Blockbit.
-Tools: build, build_file, test_world
+Tools: build, build_cmake, build_file, test_world
 """
 
 import json
@@ -16,8 +16,23 @@ TOOLS = [
 	{
 		"name": "build",
 		"description": (
-			"Build the whole Blockbit project with CMake and Ninja. "
+			"Build the whole Blockbit project with Ninja. "
 			"Returns 'Build succeeded.' on success, or compiler errors on failure. "
+			"Auto-configures CMake if build/ doesn't exist yet."
+		),
+		"inputSchema": {
+			"type": "object",
+			"properties": {},
+			"required": []
+		}
+	},
+	{
+		"name": "build_cmake",
+		"description": (
+			"Regenerate CMake build files. "
+			"Use when CMakeLists.txt changes or when source files are added/removed "
+			"(the project uses GLOB_RECURSE so cmake must re-run to pick up new files). "
+			"Auto-creates build/ if it doesn't exist."
 		),
 		"inputSchema": {
 			"type": "object",
@@ -28,8 +43,9 @@ TOOLS = [
 	{
 		"name": "build_file",
 		"description": (
-			"Build a single source file. "
-			"Pass the path relative to the repo root, e.g. src/Game.cpp. "
+			"Build a single source file for quick error-checking. "
+			"Pass the path relative to repo root, e.g. src/Game.cpp. "
+			"Auto-configures CMake if build/ doesn't exist yet."
 		),
 		"inputSchema": {
 			"type": "object",
@@ -45,9 +61,9 @@ TOOLS = [
 	{
 		"name": "test_world",
 		"description": (
-			"Build and test Blockbit by loading a specific world. "
+			"Build Blockbit and run it loading a specific world. "
 			"Pass the world name, e.g. 'Swiat'. "
-			"World must exist in ~/Blockbit/saves/<world-name>"
+			"The world must exist in ~/Blockbit/saves/<world-name>."
 		),
 		"inputSchema": {
 			"type": "object",
@@ -69,14 +85,37 @@ def _format_failure(label, returncode, stdout, stderr):
 	return f"{label} FAILED (exit {returncode}):\n{output}"
 
 
-def run_build():
-	"""Build the entire project using build.sh"""
+def _ensure_configured():
+	"""Run CMake configure if build/ has no CMakeCache. Returns error string or None."""
+	cache = os.path.join(BUILD_DIR, "CMakeCache.txt")
+	if os.path.isfile(cache):
+		return None
+
+	os.makedirs(BUILD_DIR, exist_ok=True)
 	result = subprocess.run(
-		["bash", "build.sh"],
+		["cmake", "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Debug", REPO_ROOT],
 		stdout=subprocess.PIPE,
 		stderr=subprocess.PIPE,
 		text=True,
-		cwd=REPO_ROOT
+		cwd=BUILD_DIR
+	)
+
+	if result.returncode == 0:
+		return None
+
+	return _format_failure("CMake configure", result.returncode, result.stdout, result.stderr)
+
+
+def run_build():
+	err = _ensure_configured()
+	if err:
+		return err
+
+	result = subprocess.run(
+		["ninja", "-C", BUILD_DIR],
+		stdout=subprocess.PIPE,
+		stderr=subprocess.PIPE,
+		text=True
 	)
 
 	if result.returncode == 0:
@@ -85,26 +124,30 @@ def run_build():
 	return _format_failure("Build", result.returncode, result.stdout, result.stderr)
 
 
+def run_build_cmake():
+	os.makedirs(BUILD_DIR, exist_ok=True)
+	result = subprocess.run(
+		["cmake", "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Debug", REPO_ROOT],
+		stdout=subprocess.PIPE,
+		stderr=subprocess.PIPE,
+		text=True,
+		cwd=BUILD_DIR
+	)
+
+	if result.returncode == 0:
+		return "CMake configure succeeded."
+
+	return _format_failure("CMake configure", result.returncode, result.stdout, result.stderr)
+
+
 def run_build_file(path):
-	"""Build a single source file"""
+	err = _ensure_configured()
+	if err:
+		return err
+
 	path = path.lstrip("./")
-	
-	# Ensure build dir exists first
-	if not os.path.isdir(BUILD_DIR):
-		init_result = subprocess.run(
-			["bash", "build.sh"],
-			stdout=subprocess.PIPE,
-			stderr=subprocess.PIPE,
-			text=True,
-			cwd=REPO_ROOT
-		)
-		if init_result.returncode != 0:
-			return _format_failure("Initial build", init_result.returncode, init_result.stdout, init_result.stderr)
-	
-	# Build the single file - construct the target name
-	# For src/Game.cpp -> CMakeFiles/Blockbit.dir/src/Game.cpp.o
 	target = f"CMakeFiles/Blockbit.dir/{path}.o"
-	
+
 	result = subprocess.run(
 		["ninja", "-C", BUILD_DIR, target],
 		stdout=subprocess.PIPE,
@@ -119,29 +162,33 @@ def run_build_file(path):
 
 
 def run_test_world(world):
-	"""Build and test by loading a world"""
-	world = world.strip()
-	
-	result = subprocess.run(
-		["bash", "build.sh", "run-world", world],
-		stdout=subprocess.PIPE,
-		stderr=subprocess.PIPE,
-		text=True,
-		cwd=REPO_ROOT,
-		timeout=120  # Give it 2 minutes before timeout
-	)
+	build_result = run_build()
+	if "FAILED" in build_result:
+		return build_result
+
+	binary = os.path.join(BUILD_DIR, "bin", "Blockbit")
+	if not os.path.isfile(binary):
+		return f"Binary not found: {binary}"
+
+	try:
+		result = subprocess.run(
+			[binary, "--load", world],
+			stdout=subprocess.PIPE,
+			stderr=subprocess.PIPE,
+			text=True,
+			cwd=REPO_ROOT,
+			timeout=120
+		)
+	except subprocess.TimeoutExpired:
+		return f"World '{world}' ran for 120s (timeout). Likely started OK."
 
 	if result.returncode == 0:
-		return f"Built and loaded world '{world}' successfully."
+		return f"World '{world}' loaded and exited successfully."
 
-	# Even if the game runs, return success if build part succeeded
-	if "Build complete!" in result.stdout:
-		return f"Built successfully and attempted to load world '{world}'."
-
-	return _format_failure(f"Build/test of {world}", result.returncode, result.stdout, result.stderr)
+	return _format_failure(f"Run with world '{world}'", result.returncode, result.stdout, result.stderr)
 
 
-# ---------- MCP protocol helpers ----------
+# ---------- MCP protocol ----------
 
 def send(obj):
 	sys.stdout.write(json.dumps(obj) + "\n")
@@ -160,6 +207,8 @@ def handle_call(req_id, name, args):
 	try:
 		if name == "build":
 			text = run_build()
+		elif name == "build_cmake":
+			text = run_build_cmake()
 		elif name == "build_file":
 			path = args.get("path", "").strip()
 			if not path:
@@ -204,7 +253,7 @@ def main():
 				"serverInfo": {"name": "blockbit-build", "version": "1.0.0"}
 			})
 		elif method == "initialized":
-			pass  # notification — no response
+			pass
 		elif method == "ping":
 			send_response(req_id, {})
 		elif method == "tools/list":
