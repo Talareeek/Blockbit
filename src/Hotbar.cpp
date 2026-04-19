@@ -102,3 +102,9 @@ uint8_t Hotbar::getSelectedSlot() const
 {
     return selectedSlot;
 }
+
+void Hotbar::setSelectedSlot(uint8_t slot)
+{
+    selectedSlot = slot;
+    selectedSlot %= 9;
+}

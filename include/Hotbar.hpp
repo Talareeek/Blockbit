@@ -28,6 +28,8 @@ public:
     void render(sf::RenderWindow& window) override;
 
     uint8_t getSelectedSlot() const;
+
+    void setSelectedSlot(uint8_t slot); 
 };
 
 

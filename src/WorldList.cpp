@@ -30,9 +30,9 @@ WorldList::WorldList(std::filesystem::path path, Game* game) : path(path), game{
                     sf::Vector2f(size.x * 0.9f, size.x * 0.9f * 0.25), 
                     sf::Color::Green, 
                     name,
-                    [this, entry]()
+                    [game = this->game, worldPath = entry.path()]()
                     {
-                        this->game->pushState(std::make_unique<MainGameState>(this->game, World(entry)));
+                        game->pushState(std::make_unique<MainGameState>(game, World(worldPath)));
                     }
                 );
             }

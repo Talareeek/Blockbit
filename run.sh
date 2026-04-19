@@ -3,6 +3,8 @@
 # Helper script to run Blockbit, optionally loading a specific world
 # Usage: ./run.sh [world-name]
 
+./build.sh
+
 if [ $# -eq 0 ]; then
     ./build/bin/Blockbit
     exit $?

@@ -75,12 +75,29 @@ void Button::render(sf::RenderWindow& window)
     button.setOutlineColor(outlineColor);
     window.draw(button);
     
-    sf::Text textObj(AssetManager::getFont(0), text, size.y / 2);
-    textObj.setScale({size.x / textObj.getLocalBounds().size.x, size.x / textObj.getLocalBounds().size.x});
-    textObj.setPosition({position.x + (size.x - textObj.getLocalBounds().size.x) / 2, position.y + (size.y - textObj.getLocalBounds().size.y) / 2});
+    sf::Text textObj(AssetManager::getFont(0), text, static_cast<unsigned int>(size.y * 0.6f));
+    
+    sf::FloatRect bounds = textObj.getLocalBounds();
+    float scale = 1.0f;
+    
+    if(bounds.size.x > 0 && bounds.size.y > 0)
+    {
+        float scaleX = (size.x * 0.9f) / bounds.size.x;
+        float scaleY = (size.y * 0.7f) / bounds.size.y;
+        scale = std::min(scaleX, scaleY);
+    }
+    
+    textObj.setScale({scale, scale});
     textObj.setFillColor(sf::Color::White);
-    textObj.setOutlineThickness(2.0f);
+    textObj.setOutlineThickness(1.0f);
     textObj.setOutlineColor(sf::Color::Black);
+    
+    bounds = textObj.getLocalBounds();
+    textObj.setPosition({
+        position.x + (size.x - bounds.size.x * scale) / 2.0f - bounds.position.x * scale,
+        position.y + (size.y - bounds.size.y * scale) / 2.0f - bounds.position.y * scale
+    });
+    
     window.draw(textObj);
 }
 

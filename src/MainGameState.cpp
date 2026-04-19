@@ -251,6 +251,14 @@ void MainGameState::update(float dt)
         debug = !debug;
     }
 
+    for(auto i = sf::Keyboard::Key::Num1; i <= sf::Keyboard::Key::Num9; i = static_cast<sf::Keyboard::Key>(static_cast<int>(i) + 1))
+    {
+        if(InputManager::isLazyKeyPressed(i))
+        {
+            hotbar.setSelectedSlot(static_cast<uint8_t>(i) - static_cast<uint8_t>(sf::Keyboard::Key::Num1));
+        }
+    }
+
     world.tick(dt);
 
     if(entityWithID(world.getPlayerID(), world).getComponent<HealthComponent>().health <= 0)
