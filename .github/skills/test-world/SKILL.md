@@ -19,13 +19,13 @@ ninja -C build
 2. Run with the world:
 
 ```bash
-./build/bin/Blockbit --load <world-name>
+./run.sh <world-name>
 ```
 
 ### Example: test with world "Swiat"
 
 ```bash
-ninja -C build && ./build/bin/Blockbit --load Swiat
+ninja -C build && ./run.sh Swiat
 ```
 
 ## World locations
