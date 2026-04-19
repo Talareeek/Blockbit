@@ -7,7 +7,7 @@ void AssetManager::loadTexture(uint32_t id, const std::string& path)
 {
     sf::Texture texture;
     if(!texture.loadFromFile(path)) throw std::runtime_error(std::string("AssetManager:\n") + "Failed to load texture: " + path);
-
+    
     textures[id] = std::move(texture);
 }
 

@@ -3,6 +3,7 @@
 
 #include "UIElement.hpp"
 #include "Button.hpp"
+#include "Game.hpp"
 
 #include <iostream>
 #include <filesystem>
@@ -10,6 +11,8 @@
 class WorldList : public UIElement
 {
 private:
+
+    Game* game;
 
     std::filesystem::path path;
 
@@ -25,7 +28,7 @@ private:
 public:
 
     WorldList();
-    WorldList(std::filesystem::path path);
+    WorldList(std::filesystem::path path, Game* game);
 
     void handleEvent(const sf::Event& event) override;
     void update(float dt) override;

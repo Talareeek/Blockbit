@@ -30,44 +30,37 @@ Entity& entityWithID(uint32_t id, World& world)
     throw std::runtime_error("Entity with ID " + std::to_string(id) + " does not exist(entityWithID(int, World&))");
 }
 
-MainGameState::MainGameState(Game* game) : GameState(game)
+MainGameState::MainGameState(Game* game, World world) : GameState(game)
 {
-    // WORLD GENERATION
-    world = World(std::rand());
-    world.generateWorldSpawn();    
+    this->world = std::move(world);  
 
-    auto& entities = world.getEntities();
-
-    world.setPlayerID(world.getPossibleID());
-
-    entities.emplace_back(world.getPlayerID());
-
-    entityWithID(world.getPlayerID(), world).addComponent(TransformComponent{{0.0f, 0.0f}, {1.0f, 1.0f}, sf::degrees(0.0f)});
-    entityWithID(world.getPlayerID(), world).addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
-    entityWithID(world.getPlayerID(), world).addComponent(InventoryComponent(36));
-    entityWithID(world.getPlayerID(), world).getComponent<InventoryComponent>().inventory.slots[0] = {ItemID::Dynamite, 16};
-
-    for(int i = 0; i < 255; i++)
+    if(this->world.getEntities().empty())
     {
-        if(world.getBlock(0, i).id == BlockID::Air)
-        {
-            entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y = i + 1.0f;
-            break;
-        }
+        std::cerr << "No entities!" << std::endl;
+        throw std::runtime_error("World has no entities - cannot initialize MainGameState");
     }
-
-    entityWithID(world.getPlayerID(), world).addComponent(RenderComponent{0, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
-
-    entityWithID(world.getPlayerID(), world).addComponent(HealthComponent{100, 100});
 
     healthBar = HealthBar(UIElement::ScreenRelative{{0.05f, 0.05f}, {0.2f, 0.05f}, true, UIElement::ScreenRelative::Axis::Y});
     healthBar.updateScreenRelative(game->getWindow().getSize());
+    
+    try
+    {
+        inventoryWidget = InventoryWidget(&entityWithID(this->world.getPlayerID(), this->world).getComponent<InventoryComponent>());
+        inventoryWidget.updateScreenRelative(game->getWindow().getSize());
+        
+        hotbar = Hotbar(&entityWithID(this->world.getPlayerID(), this->world).getComponent<InventoryComponent>());
+        hotbar.updateScreenRelative(game->getWindow().getSize());
+    } catch(const std::exception& e)
+    {
+        std::cerr << "Failed to initialize inventory widgets: " << e.what() << std::endl;
+        throw;
+    }
+}
 
-    inventoryWidget = InventoryWidget(&entityWithID(world.getPlayerID(), world).getComponent<InventoryComponent>());
-    inventoryWidget.updateScreenRelative(game->getWindow().getSize());
-
-    hotbar = Hotbar(&entityWithID(world.getPlayerID(), world).getComponent<InventoryComponent>());
-    hotbar.updateScreenRelative(game->getWindow().getSize());
+MainGameState::~MainGameState()
+{
+    world.save();
+    std::cout << "MainGameState killed and world saved!" << std::endl;
 }
 
 void MainGameState::handleEvent(const sf::Event& event)
@@ -361,9 +354,4 @@ bool isBlockInRange(TransformComponent& player, sf::Vector2i& block, float range
     float distance = std::sqrt(std::pow(player_closest.x - block_closest.x, 2) + std::pow(player_closest.y - block_closest.y, 2));
 
     return distance <= range;
-}
-
-MainGameState::~MainGameState()
-{
-
 }

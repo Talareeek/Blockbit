@@ -2,25 +2,12 @@
 #include "../include/MainGameState.hpp"
 #include "../include/Game.hpp"
 #include "../include/AssetManager.hpp"
+#include "../include/CreateWorldState.hpp"
 
 MenuGameState::MenuGameState(Game* game) : GameState(game)
 {
     UIElement::ScreenRelative playRelative{{0.3f, 0.25f}, {0.4f, 0.2f}, true, UIElement::ScreenRelative::Axis::Y};
     UIElement::ScreenRelative quitRelative{{0.3f, 0.55f}, {0.4f, 0.2f}, true, UIElement::ScreenRelative::Axis::Y};
-
-    play = Button(playRelative, sf::Color::Green, "Create World", [this]()
-    {
-        this->game->pushState(std::make_unique<MainGameState>(this->game));
-    });
-
-    play.updateScreenRelative(game->getWindow().getSize());
-
-    quit = Button(quitRelative, sf::Color::Red, "Quit", [this]()
-    {
-        this->game->popState();
-    });
-
-    quit.updateScreenRelative(game->getWindow().getSize());
 
     std::string home;
 
@@ -37,7 +24,22 @@ MenuGameState::MenuGameState(Game* game) : GameState(game)
     savesPath /= "saves";
     
     std::filesystem::create_directories(savesPath);
-    worldList = WorldList(savesPath);
+    worldList = WorldList(savesPath, game);
+
+    play = Button(playRelative, sf::Color::Green, "Create World", [this]()
+    {
+        this->game->pushState(std::make_unique<CreateWorldState>(this->game));
+    });
+
+    play.updateScreenRelative(game->getWindow().getSize());
+
+    quit = Button(quitRelative, sf::Color::Red, "Quit", [this]()
+    {
+        this->game->popState();
+    });
+
+    quit.updateScreenRelative(game->getWindow().getSize());   
+    
 }
 
 void MenuGameState::handleEvent(const sf::Event& event)

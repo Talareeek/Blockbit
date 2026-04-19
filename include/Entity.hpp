@@ -5,6 +5,7 @@
 #include <typeindex>
 #include <cstdint>
 #include <any>
+#include <exception>
 
 class Entity
 {

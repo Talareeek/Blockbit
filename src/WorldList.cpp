@@ -1,5 +1,7 @@
 #include "../include/WorldList.hpp"
 #include "../include/Button.hpp"
+#include "../include/World.hpp"
+#include "../include/MainGameState.hpp"
 #include <fstream>
 
 WorldList::WorldList() : UIElement({0.0f, 0.0f}, {300.0f, 400.0f})
@@ -7,7 +9,7 @@ WorldList::WorldList() : UIElement({0.0f, 0.0f}, {300.0f, 400.0f})
 
 }
 
-WorldList::WorldList(std::filesystem::path path) : path(path), UIElement({0.0f, 0.0f}, {300.0f, 400.0f})
+WorldList::WorldList(std::filesystem::path path, Game* game) : path(path), game{game}, UIElement({0.0f, 0.0f}, {300.0f, 400.0f})
 {
     for (const auto& entry : std::filesystem::directory_iterator(path))
     {
@@ -27,7 +29,11 @@ WorldList::WorldList(std::filesystem::path path) : path(path), UIElement({0.0f, 
                     sf::Vector2f(position.x * 1.05f , position.y + worldPaths.size() * size.x * 0.9f * 0.3), 
                     sf::Vector2f(size.x * 0.9f, size.x * 0.9f * 0.25), 
                     sf::Color::Green, 
-                    name
+                    name,
+                    [this, entry]()
+                    {
+                        this->game->pushState(std::make_unique<MainGameState>(this->game, World(entry)));
+                    }
                 );
             }
         }

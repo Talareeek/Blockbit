@@ -28,13 +28,13 @@ private:
 
 public:
 
-    MainGameState(Game* game);
+    MainGameState(Game* game, World world);
 
-    ~MainGameState();
+    ~MainGameState() override;
 
     void handleEvent(const sf::Event& event) override;
     void update(float dt) override;
-    void render(sf::RenderWindow& window) override;
+    void render(sf::RenderWindow& window) override;    
 
     static constexpr unsigned int UNIT_SIZE_FACTOR = 12;
 

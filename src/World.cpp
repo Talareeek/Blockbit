@@ -20,6 +20,8 @@ World::World(const std::filesystem::path path) : path{path}
 
 World::World(const std::string name, const std::filesystem::path path, unsigned int seed) : name(name), path(path), seed(seed), perlin(seed)
 {
+    generateWorldSpawn();
+    createPlayer();
     save();
 }
 
@@ -33,7 +35,8 @@ Chunk& World::getChunk(int chunk_position)
     // lazy generation of chunks
     if (chunks.find(chunk_position) == chunks.end())
     {
-        Chunk c;
+        Chunk c{};
+        c.chunk_position = chunk_position;
         c.dirty = true;
         c.generated = false;
         chunks[chunk_position] = c;
@@ -67,7 +70,10 @@ void World::setBlock(int wx, int wy, Block block)
     int local_x = wx - chunk_position * CHUNK_WIDTH;
     int local_y = wy;
 
-    getChunk(chunk_position).blocks[local_y][local_x] = block;
+    Chunk& chunk = getChunk(chunk_position);
+    chunk.blocks[local_y][local_x] = block;
+    chunk.dirty = true;
+    chunk.generated = true;
 }
 
 std::unordered_map<int, Chunk>& World::getChunks()
@@ -179,7 +185,8 @@ void World::generateCaves(int chunk_position)
 
 void World::generateVein(int x, int y, BlockID ore, int size)
 {
-    std::mt19937 rng(getSeed() ^ (x << 16) ^ y);
+    uint32_t seed = getSeed() ^ (static_cast<uint32_t>(x) << 16) ^ static_cast<uint32_t>(y);
+    std::mt19937 rng(seed);
 
     for(int i=0; i<size; i++)
     {
@@ -209,7 +216,8 @@ void World::generateOres(int chunk_position)
 
 void World::generateTree(int x, int y, int log_height, BlockID log_type, BlockID leaves_type)
 {
-    std::mt19937 rng(getSeed() ^ (x << 16) ^ y);
+    uint32_t seed = getSeed() ^ (static_cast<uint32_t>(x) << 16) ^ static_cast<uint32_t>(y);
+    std::mt19937 rng(seed);
 
     for(int i = 0; i < log_height; i++)
     {
@@ -399,7 +407,7 @@ std::vector<Entity>& World::getEntities()
     return entities;
 }
 
-std::vector<Entity> World::getEntities() const
+const std::vector<Entity>& World::getEntities() const
 {
     return entities;
 }
@@ -661,6 +669,7 @@ void World::readChunk(int chunk_position)
     if(!file) throw std::runtime_error("Cannot open file");
 
     Chunk c;
+    c.chunk_position = chunk_position;
 
     for(int y = 0; y < CHUNK_HEIGHT; y++)
     {
@@ -669,124 +678,273 @@ void World::readChunk(int chunk_position)
             Block block;
 
             file.read(reinterpret_cast<char*>(&block.id), sizeof(BlockID));
-            file.read(reinterpret_cast<char*>(&block.metadata), sizeof(uint32_t));
+            file.read(reinterpret_cast<char*>(&block.metadata), sizeof(uint8_t));
 
             c.blocks[y][x] = block;
         }
     }
 
+    c.generated = true;
     chunks[chunk_position] = c;
 }
 
 void World::readEntities()
 {
-    std::ifstream file(path / "entities", std::ios::in);
+    std::cout << "Reading entities from: " << (path / "entities") << '\n';
 
-    if(!file) throw std::runtime_error("Failed to open file for reading: " + path.string());
-
+    std::ifstream file(path / "entities");
+    if (!file)
+        throw std::runtime_error("Failed to open file for reading: " + path.string());
 
     std::string line;
-    while(std::getline(file, line))
+    std::string bufferedLine;
+    bool hasBuffered = false;
+
+    auto getLine = [&](std::string& out) -> bool
     {
-        if(line.substr(0, 10) == "Entity ID:")
+        if (hasBuffered)
         {
-            uint32_t entityID = std::stoll(line.substr(11));
+            out = bufferedLine;
+            hasBuffered = false;
+            return true;
+        }
+        return static_cast<bool>(std::getline(file, out));
+    };
+
+    auto pushBackLine = [&](const std::string& l)
+    {
+        bufferedLine = l;
+        hasBuffered = true;
+    };
+
+    while (getLine(line))
+    {
+        if (line.empty())
+            continue;
+
+        if (line.rfind("Entity ID:", 0) == 0)
+        {
+            uint32_t entityID = std::stoul(line.substr(11));
             Entity entity(entityID);
 
-            while(std::getline(file, line) && !line.empty())
+            std::cout << "\tEntity ID: " << entityID << '\n';
+
+            while (getLine(line))
             {
-                if(line.substr(0, 15) == "Component Type:")
+                if (line.empty())
+                    continue;
+
+                if (line.rfind("Entity ID:", 0) == 0)
+                {
+                    pushBackLine(line);
+                    break;
+                }
+
+                if (line.rfind("Component Type:", 0) == 0)
                 {
                     std::string componentType = line.substr(16);
-
                     std::string componentData;
-                    std::string componentLine;
 
-                    while(std::getline(file, componentLine) && !componentLine.empty() && componentLine.substr(0, 15) != "Component Type:")
+                    while (getLine(line))
                     {
-                        componentData += componentLine + '\n';
+                        if (line.empty())
+                            break;
+
+                        if (line.rfind("Component Type:", 0) == 0 ||
+                            line.rfind("Entity ID:", 0) == 0)
+                        {
+                            pushBackLine(line);
+                            break;
+                        }
+
+                        componentData += line + '\n';
                     }
 
-                    if(componentType == "Physics")
+                    if (componentType == "Physics")
                     {
-                        PhysicsComponent physics;
-                        physics.deserialize(componentData);
-                        entity.addComponent<PhysicsComponent>(physics);
+                        PhysicsComponent c;
+                        c.deserialize(componentData);
+                        entity.addComponent<PhysicsComponent>(c);
+                        std::cout << "\t\tPhysicsComponent loaded\n";
                     }
-                    else if(componentType == "Render")
+                    else if (componentType == "Render")
                     {
-                        RenderComponent render;
-                        render.deserialize(componentData);
-                        entity.addComponent<RenderComponent>(render);
+                        RenderComponent c;
+                        c.deserialize(componentData);
+                        entity.addComponent<RenderComponent>(c);
+                        std::cout << "\t\tRenderComponent loaded\n";
                     }
-                    else if(componentType == "Animation")
+                    else if (componentType == "Animation")
                     {
-                        AnimationComponent animation;
-                        animation.deserialize(componentData);
-                        entity.addComponent<AnimationComponent>(animation);
+                        AnimationComponent c;
+                        c.deserialize(componentData);
+                        entity.addComponent<AnimationComponent>(c);
+                        std::cout << "\t\tAnimationComponent loaded\n";
                     }
-                    else if(componentType == "Inventory")
+                    else if (componentType == "Inventory")
                     {
-                        InventoryComponent inventory(1);
-                        inventory.deserialize(componentData);
-                        entity.addComponent<InventoryComponent>(inventory);
+                        InventoryComponent c(1);
+                        c.deserialize(componentData);
+                        entity.addComponent<InventoryComponent>(c);
+                        std::cout << "\t\tInventoryComponent loaded\n";
                     }
-                    else if(componentType == "Health")
+                    else if (componentType == "Health")
                     {
-                        HealthComponent health;
-                        health.deserialize(componentData);
-                        entity.addComponent<HealthComponent>(health);
+                        HealthComponent c;
+                        c.deserialize(componentData);
+                        entity.addComponent<HealthComponent>(c);
+                        std::cout << "\t\tHealthComponent loaded\n";
                     }
-                    else if(componentType == "Item")
+                    else if (componentType == "Item")
                     {
-                        ItemComponent item;
-                        item.deserialize(componentData);
-                        entity.addComponent<ItemComponent>(item);
+                        ItemComponent c;
+                        c.deserialize(componentData);
+                        entity.addComponent<ItemComponent>(c);
+                        std::cout << "\t\tItemComponent loaded\n";
                     }
-                    else if(componentType == "Preserve")
+                    else if (componentType == "Preserve")
                     {
                         PreserveComponent preserve;
-                        std::string preserveStr;
-                        std::getline(file, preserveStr);
-                        preserve = (preserveStr == "Preserve" ? PreserveComponent::Preserve : PreserveComponent::Destroy);
+                        preserve = (componentData.find("Preserve") != std::string::npos)
+                                   ? PreserveComponent::Preserve
+                                   : PreserveComponent::Destroy;
+
                         entity.addComponent<PreserveComponent>(preserve);
+                        std::cout << "\t\tPreserveComponent loaded\n";
                     }
-                    else if(componentType == "Explosive")
+                    else if (componentType == "Explosive")
                     {
-                        ExplosiveComponent explosive;
-                        explosive.deserialize(componentData);
-                        entity.addComponent<ExplosiveComponent>(explosive);
+                        ExplosiveComponent c;
+                        c.deserialize(componentData);
+                        entity.addComponent<ExplosiveComponent>(c);
+                        std::cout << "\t\tExplosiveComponent loaded\n";
                     }
-                    else if(componentType == "Transform")
+                    else if (componentType == "Transform")
                     {
-                        TransformComponent transform;
-                        transform.deserialize(componentData);
-                        entity.addComponent<TransformComponent>(transform);
+                        TransformComponent c;
+                        c.deserialize(componentData);
+                        entity.addComponent<TransformComponent>(c);
+                        std::cout << "\t\tTransformComponent loaded\n";
                     }
                 }
             }
 
             entities.push_back(entity);
+            std::cout << "\tEntity loaded succesfully\n";
         }
     }
+
+    std::cout << "Entities loaded succesfully\n";
+    std::cout << "Total entities: " << entities.size() << '\n' << '\n';
 }
 
 void World::readData()
 {
-    std::ifstream file(path / "data", std::ios::out);
+    std::ifstream file(path / "data", std::ios::in);
 
-    if(!file) throw std::runtime_error("");
+    if(!file) throw std::runtime_error("Failed to open data file");
 
-    file >> dayTime;
-    file >> days;
-    file >> spawnPoint.x >> spawnPoint.y;
-    file >> playerID;
+    std::string trash;
+
+    file >> trash >> dayTime;
+
+    file >> trash >> days;
+
+    file >> trash >> trash >> spawnPoint.x >> spawnPoint.y;
+
+    file >> trash >> trash >> playerID;
+
+    std::cout << "Data file: " << std::endl;
+    std::cout << "Daytime: " << dayTime << std::endl;
+    std::cout << "Days: " << days << std::endl;
+    std::cout << "Spawnpoint: " << spawnPoint.x << ' ' << spawnPoint.y << std::endl;
+    std::cout << "Player ID: " << playerID << std::endl;
 }
 
 
 void World::load()
 {
-    readManifest();
-    readEntities();
-    readData();
+    // Ensure world directory exists
+    if(!std::filesystem::exists(path)) {
+        std::filesystem::create_directories(path);
+    }
+
+    // Manifest
+    if(std::filesystem::exists(path / "manifest")) {
+        try {
+            readManifest();
+        } catch(const std::exception& e) {
+            std::cerr << "Warning: Failed to read manifest: " << e.what() << '\n';
+            name = path.filename().string();
+            seed = static_cast<unsigned int>(std::rand());
+            perlin = PerlinNoise(seed);
+        }
+    } else {
+        // No manifest -> initialize new world and persist
+        name = path.filename().string();
+        seed = static_cast<unsigned int>(std::rand());
+        perlin = PerlinNoise(seed);
+        generateWorldSpawn();
+        createPlayer();
+        try { save(); } catch(const std::exception& e) { std::cerr << "Warning: Failed to save new world: " << e.what() << '\n'; }
+        return;
+    }
+
+    // Entities
+    if(std::filesystem::exists(path / "entities")) {
+        try {
+            readEntities();
+        } catch(const std::exception& e) {
+            std::cerr << "Warning: Failed to read entities: " << e.what() << '\n';
+            entities.clear();
+            createPlayer();
+        }
+    } else {
+        // No entities file -> create default player
+        createPlayer();
+    }
+
+    // Data
+    if(std::filesystem::exists(path / "data")) {
+        try {
+            readData();
+        } catch(const std::exception& e) {
+            std::cerr << "Warning: Failed to read data: " << e.what() << '\n';
+            dayTime = 0.0f;
+            days = 0;
+            spawnPoint = {0.0f, 0.0f};
+        }
+    } else {
+        // No data file -> write defaults
+        try { writeData(); } catch(const std::exception& e) { std::cerr << "Warning: Failed to write data: " << e.what() << '\n'; }
+    }
+
+    // Persist any missing files
+    try { save(); } catch(const std::exception& e) { std::cerr << "Warning: Failed to save world: " << e.what() << '\n'; }
+}
+
+void World::createPlayer()
+{
+    setPlayerID(getPossibleID());
+
+    entities.emplace_back(getPlayerID());
+
+    entityWithID(getPlayerID(), *this).addComponent(TransformComponent{{0.0f, 0.0f}, {1.0f, 1.0f}, sf::degrees(0.0f)});
+    entityWithID(getPlayerID(), *this).addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
+    entityWithID(getPlayerID(), *this).addComponent(InventoryComponent(36));
+    entityWithID(getPlayerID(), *this).getComponent<InventoryComponent>().inventory.slots[0] = {ItemID::Dynamite, 16};
+
+    for(int i = 0; i < 255; i++)
+    {
+        if(getBlock(0, i).id == BlockID::Air)
+        {
+            entityWithID(getPlayerID(), *this).getComponent<TransformComponent>().position.y = i + 1.0f;
+            break;
+        }
+    }
+
+    entityWithID(getPlayerID(), *this).addComponent(RenderComponent{0, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
+
+    entityWithID(getPlayerID(), *this).addComponent(HealthComponent{100, 100});
+
 }

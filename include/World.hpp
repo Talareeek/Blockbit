@@ -90,6 +90,8 @@ public:
     // normal world
     void generateWorldSpawn();
 
+    void createPlayer();
+
     void generateChunk(int chunk_position);
 
     // phases
@@ -102,7 +104,7 @@ public:
 
     std::vector<Entity>& getEntities();
 
-    std::vector<Entity> getEntities() const;
+    const std::vector<Entity>& getEntities() const;
 
     uint32_t getVersion() const;
 
