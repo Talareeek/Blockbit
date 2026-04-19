@@ -32,3 +32,11 @@ Full debug symbols included: `-g3 -O0` (Debug), `-O3 -g` (Release)
 gdb ./build/bin/Blockbit
 (gdb) run --load Swiat
 ```
+
+## Copilot MCP Server
+
+For GitHub Copilot integration, the `mcp_build_server.py` provides these tools:
+
+- **build** - Build entire project
+- **build_file** - Build single source file (e.g. `src/Game.cpp`)
+- **test_world** - Build and test with world (e.g. `Swiat`)
