@@ -53,10 +53,13 @@ Block World::getBlock(int wx, int wy)
     ? wx / CHUNK_WIDTH
     : (wx - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
 
+    // Return Air if chunk doesn't exist
+    if(!chunks.contains(chunk_position)) return {BlockID::Air, 0};
+
     int local_x = wx - chunk_position * CHUNK_WIDTH;
     int local_y = wy;
 
-    return getChunk(chunk_position).blocks[local_y][local_x];
+    return chunks[chunk_position].blocks[local_y][local_x];
 }
 
 void World::setBlock(int wx, int wy, Block block)
@@ -70,7 +73,10 @@ void World::setBlock(int wx, int wy, Block block)
     int local_x = wx - chunk_position * CHUNK_WIDTH;
     int local_y = wy;
 
-    Chunk& chunk = getChunk(chunk_position);
+    // Only set block if chunk exists
+    if(!chunks.contains(chunk_position)) return;
+
+    Chunk& chunk = chunks[chunk_position];
     chunk.blocks[local_y][local_x] = block;
     chunk.dirty = true;
     chunk.generated = true;
@@ -154,9 +160,10 @@ void World::generateTerrain(int chunk_position)
             else if(y < height - 1)
                 chunk.blocks[y][x] = {BlockID::Dirt, 0};
 
-            else if(y == height - 1)
+            else if(y == height - 1) {
                 if(y < SEA_LEVEL - 1) chunk.blocks[y][x] = {BlockID::Dirt, 0};
                 else chunk.blocks[y][x] = {BlockID::Grass, 0};
+            }
 
             else if(y < SEA_LEVEL)
                 chunk.blocks[y][x] = {BlockID::Water, static_cast<uint8_t>(WaterLevel::SOURCE)};
@@ -251,14 +258,15 @@ void World::generateNature(int chunk_position)
     if(tree_spawns)
     {
         int x = chunk_position * CHUNK_WIDTH + rng() % CHUNK_WIDTH;
-        int y = 0;
+        int y = CHUNK_HEIGHT - 1;
 
-        while(getBlock(x, y).id != BlockID::Grass && y < CHUNK_HEIGHT)
+        while(getBlock(x, y).id != BlockID::Grass && y > 0)
         {
-            y++;
+            y--;
         }
 
-        generateTree(x, y, rng() % 5 + 3, BlockID::Oak_Log, BlockID::Oak_Leaves);
+        if(getBlock(x, y).id == BlockID::Grass)
+            generateTree(x, y, rng() % 5 + 3, BlockID::Oak_Log, BlockID::Oak_Leaves);
     }
 }
 

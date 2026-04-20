@@ -6,7 +6,7 @@ void TransformSystem(World& world)
 {
     auto player_position = entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position;
 
-    // UNLOADING CHUNKS
+    // LOADING CHUNKS
     int player_chunk_position = player_position.x / CHUNK_WIDTH;
 
     int chunk_lowest = player_chunk_position - World::SIMULATION_DISTANCE / 2;
@@ -14,8 +14,12 @@ void TransformSystem(World& world)
 
     for (int i = chunk_lowest; i <= chunk_highest; i++)
     {
-        if(world.getChunks().contains(i) && world.getChunk(i).generated) continue;
+        // Check if chunk exists and is already generated
+        if(world.getChunks().contains(i)) {
+            if(world.getChunks()[i].generated) continue;
+        }
 
+        // Load or generate chunk
         if(world.hasChunkFile(i)) world.readChunk(i);
         else world.generateChunk(i);
     }
