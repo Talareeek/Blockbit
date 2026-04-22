@@ -7,6 +7,7 @@
 #include "World.hpp"
 #include "GameState.hpp"
 #include "Account.hpp"
+#include "Console.hpp"
 
 class Game
 {
@@ -38,6 +39,8 @@ private:
     sf::Clock clock;
 
     float dt;
+
+    Console console{{100.0f, 100.0f}, {250.0f, 200.0f}};
 
 
 public:

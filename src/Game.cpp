@@ -127,6 +127,8 @@ void Game::handleEvents()
         {
             gameStates.back()->handleEvent(*event);
         }
+
+        console.handleEvent(*event);
     }
 }
 
@@ -136,6 +138,8 @@ void Game::update()
     {
         gameStates.back()->update(dt);
     }
+
+    console.update(dt);
 }
 
 void Game::render()
@@ -153,6 +157,8 @@ void Game::render()
     {
         exit(0);
     }
+
+    console.render(window);
 
     window.display();
 }

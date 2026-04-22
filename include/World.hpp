@@ -123,6 +123,10 @@ public:
 
     static constexpr int SIMULATION_DISTANCE = 10;
 
+    static constexpr int MAX_CHUNKS_LOADED = 24;
+
+    static constexpr int PREFFERED_CHUNKS_LOADED = 16;
+
     float fluidTimer{0.0f};
 
     sf::Color getSkyColor(float t);

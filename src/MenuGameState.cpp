@@ -60,9 +60,9 @@ void MenuGameState::update(float dt)
     worldList.setPosition({size.x * 0.75f, 0.0f});
     worldList.setSize({size.x * 0.25f, static_cast<float>(size.y)});
 
+    worldList.update(dt);
     play.update(dt);
     quit.update(dt);
-    worldList.update(dt);
 }
 
 void MenuGameState::render(sf::RenderWindow& window)
