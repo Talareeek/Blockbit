@@ -26,15 +26,19 @@ private:
 
     bool active = false;
 
-    std::vector<std::string> logs; 
+    std::vector<std::wstring> logs; 
+
+    std::wstring incomming;
 
 public:
 
-using UIElement::UIElement;
+    using UIElement::UIElement;
 
     void handleEvent(const sf::Event& event) override;
     void update(float dt) override;
     void render(sf::RenderWindow& window) override;
+
+    void writeLine(std::wstring string);
 };
 
 #endif // CONSOLE_HPP

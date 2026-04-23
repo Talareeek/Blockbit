@@ -35,6 +35,7 @@ Game::Game()
     window.draw(background);
 
     AssetManager::loadFont(0, "resources/fonts/PressStart2P-Regular.ttf");
+    AssetManager::loadFont(1, "resources/fonts/FiraCode-Regular.ttf");
 
     AssetManager::loadTexture(0, "resources/textures/player.png");
     AssetManager::loadTexture(1, "resources/textures/stone.png");
