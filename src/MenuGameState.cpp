@@ -44,9 +44,9 @@ MenuGameState::MenuGameState(Game* game) : GameState(game)
 
 void MenuGameState::handleEvent(const sf::Event& event)
 {
-    play.handleEvent(event);
-    quit.handleEvent(event);
     worldList.handleEvent(event);
+    play.handleEvent(event);
+    quit.handleEvent(event);    
 }
 
 void MenuGameState::update(float dt)

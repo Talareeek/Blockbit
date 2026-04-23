@@ -18,6 +18,7 @@
 #include "../include/ExplosiveSystem.hpp"
 #include "../include/HealthSystem.hpp"
 #include "../include/TransformSystem.hpp"
+#include "../include/ChunkUnloadSystem.hpp"
 
 #include <iostream>
 
@@ -176,6 +177,7 @@ void MainGameState::update(float dt)
     HealthSystem(world);
     PhysicsSystem(entities, world, dt);
     InventorySystem(entities);
+    ChunkUnloadSystem(world);
 
     healthBar.setHealth(entityWithID(world.getPlayerID(), world).getComponent<HealthComponent>());
 
@@ -328,7 +330,8 @@ void MainGameState::render(sf::RenderWindow& window)
         std::string debug_string = 
         "FPS: " + std::to_string(fps) + '\n' +
         "X: " + std::to_string(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x) +
-        " Y: " + std::to_string(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y) + '\n';
+        " Y: " + std::to_string(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y) + '\n' +
+        "CHUNKS LOADED: " + std::to_string(world.getChunks().size()) + '\n';
 
         sf::Text debug_text(AssetManager::getFont(0), debug_string, 20);
 
