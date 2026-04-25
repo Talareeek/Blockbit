@@ -78,6 +78,8 @@ Game::Game()
     std::filesystem::create_directories(savePath.parent_path());
     account = new Account(savePath);
 
+    console.assignGame(this);
+
 }
 
 Entity& Game::entityWithID(uint32_t id)
@@ -214,4 +216,9 @@ Account* Game::getAccount() const
 sf::RenderWindow& Game::getWindow()
 {
     return window;
+}
+
+Console& Game::getConsole()
+{
+    return console;
 }

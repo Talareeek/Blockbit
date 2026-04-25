@@ -113,9 +113,19 @@ void Console::handleEvent(const sf::Event& event)
 
             if(commandDatabase.contains(command))
             {
-                if(!commandDatabase[command].requires_game && !commandDatabase[command].requires_world)
+                if(commandDatabase[command].requires_world && world == nullptr) writeLine(L"No world assigned to console");
+                else if (commandDatabase[command].requires_game && game == nullptr) writeLine(L"No game assigned to console");
+                else
                 {
-                    commandDatabase[command].on_call(incomming, *this, nullptr, nullptr);
+                    try
+                    {
+                        commandDatabase[command].on_call(incomming, *this, game, world);
+                    }
+                    catch(std::exception& e)
+                    {
+                        writeLine(L"Command exception caught");
+                    }                   
+                    
                 }
             }
 
@@ -228,4 +238,14 @@ void Console::render(sf::RenderWindow& window)
 void Console::writeLine(std::wstring string)
 {
     logs.push_back(string);
+}
+
+void Console::assignWorld(World* world)
+{
+    this->world = world;
+}
+
+void Console::assignGame(Game* game)
+{
+    this->game = game;
 }

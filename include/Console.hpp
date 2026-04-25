@@ -4,6 +4,7 @@
 #include "UIElement.hpp"
 #include <vector>
 #include <string>
+#include "Command.hpp"
 
 class Console : public UIElement
 {
@@ -30,6 +31,10 @@ private:
 
     std::wstring incomming;
 
+    World* world = nullptr;
+
+    Game* game = nullptr;
+
 public:
 
     using UIElement::UIElement;
@@ -39,6 +44,10 @@ public:
     void render(sf::RenderWindow& window) override;
 
     void writeLine(std::wstring string);
+
+
+    void assignWorld(World* world);
+    void assignGame(Game* game);
 };
 
 #endif // CONSOLE_HPP

@@ -60,6 +60,8 @@ public:
 
     sf::RenderWindow& getWindow();
 
+    Console& getConsole();
+
 
 };
 

@@ -61,7 +61,7 @@ MainGameState::MainGameState(Game* game, World world) : GameState(game)
 MainGameState::~MainGameState()
 {
     world.save();
-    std::cout << "MainGameState killed and world saved!" << std::endl;
+    game->getConsole().assignWorld(nullptr);
 }
 
 void MainGameState::handleEvent(const sf::Event& event)
@@ -142,6 +142,8 @@ void MainGameState::handleEvent(const sf::Event& event)
 
 void MainGameState::update(float dt)
 {
+    game->getConsole().assignWorld(&world);
+
     auto& entities = world.getEntities();
 
 

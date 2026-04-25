@@ -361,7 +361,7 @@ void RenderBlockOverlay(World& world, sf::RenderWindow& window)
     int blockX = blockPos.x;
     int blockY = blockPos.y;
 
-    if(world.getBlock(blockX, blockY).id != BlockID::Air)
+    if(world.getBlock(blockX, blockY).id != BlockID::Air && isBlockInRange(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>(), blockPos, 4.0f))
     {
         sf::Sprite sprite(AssetManager::getTexture(8));
         sprite.setPosition({
