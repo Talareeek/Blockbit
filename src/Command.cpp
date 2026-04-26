@@ -94,5 +94,45 @@ std::unordered_map<std::wstring, Command> commandDatabase =
                 entityWithID(id, *world).getComponent<PhysicsComponent>().velocity += {x, y};
             }
         }
+    }},
+
+    {L"max-fps", {true, false,
+        [](std::wstring command, Console& console, Game* game, World* world)
+        {
+            std::wistringstream stream(command);
+
+            std::wstring trash;
+            stream >> trash;
+
+            int max_fps;
+
+            stream >> max_fps;
+
+            if(!stream) return;
+
+            game->getWindow().setFramerateLimit(max_fps);
+
+            console.writeLine(L"Framerate limit set to: " + std::to_wstring(max_fps));
+        }
+    }},
+
+    {L"v-sync", {true, false,
+        [](std::wstring command, Console& console, Game* game, World* world)
+        {
+            std::wistringstream stream(command);
+
+            std::wstring trash;
+            stream >> trash;
+
+            bool vsync;
+
+            stream >> vsync;
+
+            if(!stream) return;
+
+            game->getWindow().setVerticalSyncEnabled(vsync);
+
+            console.writeLine(L"V-Sync set to " + std::wstring((vsync) ? L"true" : L"false"));
+        }
     }}
 };
