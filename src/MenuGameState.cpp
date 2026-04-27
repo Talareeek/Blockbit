@@ -81,7 +81,7 @@ void MenuGameState::render(sf::RenderWindow& window)
     window.draw(background);
 
     sf::RectangleShape overlay({static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
-    overlay.setFillColor(sf::Color(0, 0, 0, 150));
+    overlay.setFillColor(sf::Color(255, 255, 255, 75));
     window.draw(overlay);
 
     worldList.render(window);

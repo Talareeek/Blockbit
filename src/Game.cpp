@@ -55,6 +55,7 @@ Game::Game()
     AssetManager::loadTexture(15, "resources/textures/diamond_ore.png");
     AssetManager::loadTexture(16, "resources/textures/oak_log.png");
     AssetManager::loadTexture(17, "resources/textures/oak_leaves.png");
+    AssetManager::loadTexture(18, "resources/textures/ui_background.png");
     AssetManager::loadTexture(UINT32_MAX, "resources/textures/nothing.png");
 
     std::filesystem::path savePath;

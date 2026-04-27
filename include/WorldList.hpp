@@ -21,21 +21,31 @@ private:
     std::vector<Button> buttons;
 
 
-    bool visible = false;
+    enum class Mode
+    {
+        HIDDEN,
+        ANIMATION,
+        VISIBLE
+    } mode = Mode::HIDDEN;
 
-    Button hide{{0.0f, 0.0f}, {0.0f, 0.0f}, sf::Color::Blue, ">"};
+    enum class AnimationDirection
+    {
+        LEFT,
+        RIGHT
+    } direction;
+
+    static constexpr float ANIMATION_TOTAL_LENGTH = 0.2f;
+
+    float animation_time = 0.0f;
 
 public:
 
-    WorldList();
+    WorldList() = default;
     WorldList(std::filesystem::path path, Game* game);
 
     void handleEvent(const sf::Event& event) override;
     void update(float dt) override;
     void render(sf::RenderWindow& window) override;
-
-    void setVisible(bool visible);
-    bool getVisible();
 };
 
 #endif // WORLD_LIST_HPP

@@ -31,9 +31,10 @@ protected:
 
 public:
 
+    UIElement() = default;
     UIElement(const sf::Vector2f& position, const sf::Vector2f& size) : position(position), size(size) {}
     UIElement(const ScreenRelative& screen_relative) : screen_relative(screen_relative), is_screen_relative(true) {}
-    UIElement(const ScreenRelative&& screen_relative) : screen_relative(screen_relative), is_screen_relative(true) {}
+    UIElement(ScreenRelative&& screen_relative) : screen_relative(screen_relative), is_screen_relative(true) {}
     virtual ~UIElement() = default;
 
     virtual void handleEvent(const sf::Event& event) = 0;

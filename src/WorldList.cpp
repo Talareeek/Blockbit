@@ -1,15 +1,11 @@
 #include "../include/WorldList.hpp"
 #include "../include/Button.hpp"
 #include "../include/World.hpp"
+#include "../include/AssetManager.hpp"
 #include "../include/MainGameState.hpp"
 #include <fstream>
 
-WorldList::WorldList() : UIElement({0.0f, 0.0f}, {300.0f, 400.0f})
-{
-
-}
-
-WorldList::WorldList(std::filesystem::path path, Game* game) : path(path), game{game}, UIElement({0.0f, 0.0f}, {300.0f, 400.0f})
+WorldList::WorldList(std::filesystem::path path, Game* game) : path(path), game{game}
 {
     for (const auto& entry : std::filesystem::directory_iterator(path))
     {
@@ -28,7 +24,7 @@ WorldList::WorldList(std::filesystem::path path, Game* game) : path(path), game{
                 buttons.emplace_back(
                     sf::Vector2f(position.x * 1.05f , position.y + worldPaths.size() * size.x * 0.9f * 0.3), 
                     sf::Vector2f(size.x * 0.9f, size.x * 0.9f * 0.25), 
-                    sf::Color::Green, 
+                    sf::Color(40, 40, 40), 
                     name,
                     [game = this->game, worldPath = entry.path()]()
                     {
@@ -42,17 +38,62 @@ WorldList::WorldList(std::filesystem::path path, Game* game) : path(path), game{
 
 void WorldList::handleEvent(const sf::Event& event)
 {
-    for(auto& button : buttons)
+    if(event.is<sf::Event::MouseMoved>())
     {
-        button.handleEvent(event);
+        auto mouse = event.getIf<sf::Event::MouseMoved>();
+
+        if(mode == WorldList::Mode::HIDDEN)
+        {
+            sf::FloatRect sidebar{{position.x + size.x - size.x / 10.0f, 0.0f}, {size.x / 10.0f, size.y}};
+
+            if(sidebar.contains({static_cast<float>(mouse->position.x), static_cast<float>(mouse->position.y)}))
+            {
+                mode = WorldList::Mode::ANIMATION;
+                direction = WorldList::AnimationDirection::LEFT;
+            }
+        }
+        else if(mode == WorldList::Mode::VISIBLE)
+        {
+            sf::FloatRect sidebar{position, size};
+
+            if(!sidebar.contains({static_cast<float>(mouse->position.x), static_cast<float>(mouse->position.y)}))
+            {
+                mode = WorldList::Mode::ANIMATION;
+                direction = WorldList::AnimationDirection::RIGHT;
+            }
+        }
     }
 
-    hide.handleEvent(event);
+    if(mode == WorldList::Mode::VISIBLE)
+    {
+        for(auto& button : buttons)
+        {
+            button.handleEvent(event);
+        }
+    }
 }
 
 void WorldList::update(float dt)
 {
-    if(hide.clicked()) visible = !visible;
+    if(mode == WorldList::Mode::ANIMATION)
+    {
+        animation_time += dt;
+        if(animation_time >= ANIMATION_TOTAL_LENGTH)
+        {
+            animation_time = 0.0f;
+
+            switch(direction)
+            {
+            case WorldList::AnimationDirection::LEFT:
+                mode = WorldList::Mode::VISIBLE;
+                break;
+
+            case WorldList::AnimationDirection::RIGHT:
+                mode = WorldList::Mode::HIDDEN;
+                break;
+            }
+        }
+    }
 
     for(int i = 0; i < buttons.size(); i++)
     {
@@ -61,30 +102,60 @@ void WorldList::update(float dt)
         buttons[i].setPosition(sf::Vector2f(position.x + size.x * 0.05f, position.y + i * size.x * 0.9f * 0.25 + i * size.x * 0.9f * 0.05));
         buttons[i].setSize(sf::Vector2f(size.x * 0.9f, size.x * 0.9f * 0.25));
     }
-
-    hide.setSize({size.x / 20.0f, size.y / 10.0f});
-    hide.update(dt);
-
-    if(visible)
-    {
-        hide.setPosition({position.x - size.x / 20.0f, size.y * 0.45f});
-        hide.setText(">");
-    }
-    else
-    {
-        hide.setPosition({position.x + size.x - size.x / 20.0f, size.y * 0.45f});
-        hide.setText("<");
-    }
 }
 
 void WorldList::render(sf::RenderWindow& window)
 {
-    if(visible)
+    sf::Texture& background_texture = AssetManager::getTexture(18);
+    background_texture.setRepeated(true);
+
+    sf::Vector2u texSize = background_texture.getSize();
+
+    auto makeTexRect = [&](sf::Vector2f areaSize)
+    {
+        return sf::IntRect({0, 0}, {static_cast<int>(areaSize.x / texSize.x * texSize.x), static_cast<int>(areaSize.y / texSize.y * texSize.y)});
+    };
+
+    if(mode == WorldList::Mode::HIDDEN)
+    {
+        sf::Vector2f sidebarSize = {size.x / 10.0f, size.y};
+
+        sf::RectangleShape sidebar(sidebarSize);
+        sidebar.setPosition({position.x + size.x - sidebarSize.x, 0.0f});
+        sidebar.setTexture(&background_texture);
+        sidebar.setTextureRect(makeTexRect(sidebarSize));
+
+        window.draw(sidebar);
+    }
+    else if(mode == WorldList::Mode::ANIMATION)
+    {
+        float t = animation_time / ANIMATION_TOTAL_LENGTH;
+        float width = 0.0f;
+
+        if(direction == WorldList::AnimationDirection::LEFT)
+        {
+            width = size.x / 10.0f + t * (size.x * 0.9f);
+        }
+        else
+        {
+            width = size.x - t * (size.x * 0.9f);
+        }
+
+        sf::Vector2f animatedSize = {width, size.y};
+
+        sf::RectangleShape animated_sidebar(animatedSize);
+        animated_sidebar.setPosition({position.x + size.x - width, 0.0f});
+        animated_sidebar.setTexture(&background_texture);
+        animated_sidebar.setTextureRect(makeTexRect(animatedSize));
+
+        window.draw(animated_sidebar);
+    }
+    else if(mode == WorldList::Mode::VISIBLE)
     {
         sf::RectangleShape background(size);
         background.setPosition(position);
-
-        background.setFillColor(sf::Color::Blue);
+        background.setTexture(&background_texture);
+        background.setTextureRect(makeTexRect(size));
 
         window.draw(background);
 
@@ -99,16 +170,4 @@ void WorldList::render(sf::RenderWindow& window)
             }
         }
     }
-
-    hide.render(window);
-}
-
-void WorldList::setVisible(bool visible)
-{
-    this->visible = visible;
-}
-
-bool WorldList::getVisible()
-{
-    return visible;
 }
