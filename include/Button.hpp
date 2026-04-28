@@ -5,6 +5,9 @@
 #include <functional>
 
 #include "UIElement.hpp"
+#include "AssetManager.hpp"
+
+#include <SFML/Audio.hpp>
 
 class Button : public UIElement
 {
@@ -18,6 +21,8 @@ private:
     sf::Cursor cursor{sf::Cursor::Type::Arrow};
 
     bool Clicked = false;
+
+    sf::Sound sound{AssetManager::getSound(AssetManager::SoundID::Click)};
 
 public:
 

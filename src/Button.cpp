@@ -35,6 +35,10 @@ void Button::handleEvent(const sf::Event& event)
 
             if(buttonRect.contains(mousePos))
             {
+                sound.setVolume(100);
+
+                sound.play();
+
                 onClick();
                 
                 Clicked = true;

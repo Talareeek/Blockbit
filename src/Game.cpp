@@ -58,6 +58,8 @@ Game::Game()
     AssetManager::loadTexture(18, "resources/textures/ui_background.png");
     AssetManager::loadTexture(UINT32_MAX, "resources/textures/nothing.png");
 
+    AssetManager::loadSound(AssetManager::SoundID::Click, "resources/sounds/click.wav");
+
     std::filesystem::path savePath;
     
     #ifdef _WIN32
