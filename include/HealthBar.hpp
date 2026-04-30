@@ -8,16 +8,13 @@ class HealthBar : public UIElement
 {
 private:
 
-    uint32_t hp;
-    uint32_t maxHp;
+    HealthComponent* health;
 
 public:
 
-    using UIElement::UIElement;
+    HealthBar() = default;
 
-    HealthBar();
-
-    HealthBar(const sf::Vector2f& position, const sf::Vector2f& size);
+    HealthBar(HealthComponent* health);
 
     void handleEvent(const sf::Event& event) override;
 
@@ -25,7 +22,7 @@ public:
 
     void render(sf::RenderWindow& window) override;
 
-    void setHealth(const HealthComponent& health);
+    void setHealth(HealthComponent* health);
 };
 
 #endif // HEALTH_BAR_HPP

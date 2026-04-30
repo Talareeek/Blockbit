@@ -41,7 +41,7 @@ MainGameState::MainGameState(Game* game, World world) : GameState(game)
         throw std::runtime_error("World has no entities - cannot initialize MainGameState");
     }
 
-    healthBar = HealthBar(UIElement::ScreenRelative{{0.05f, 0.05f}, {0.2f, 0.05f}, true, UIElement::ScreenRelative::Axis::Y});
+    healthBar = HealthBar(&entityWithID(this->world.getPlayerID(), this->world).getComponent<HealthComponent>());
     healthBar.updateScreenRelative(game->getWindow().getSize());
     
     try
@@ -181,9 +181,8 @@ void MainGameState::update(float dt)
     InventorySystem(entities);
     ChunkUnloadSystem(world);
 
-    healthBar.setHealth(entityWithID(world.getPlayerID(), world).getComponent<HealthComponent>());
+    healthBar.setHealth(&entityWithID(world.getPlayerID(), world).getComponent<HealthComponent>());
 
-    healthBar.updateScreenRelative(game->getWindow().getSize());
     inventoryWidget.updateScreenRelative(game->getWindow().getSize());
     hotbar.updateScreenRelative(game->getWindow().getSize());
 
