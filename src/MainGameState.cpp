@@ -19,6 +19,7 @@
 #include "../include/HealthSystem.hpp"
 #include "../include/TransformSystem.hpp"
 #include "../include/ChunkUnloadSystem.hpp"
+#include "../include/PlayerInputSystem.hpp"
 
 #include <iostream>
 
@@ -145,35 +146,13 @@ void MainGameState::update(float dt)
     game->getConsole().assignWorld(&world);
 
     auto& entities = world.getEntities();
-
-
-    // PLAYER MOVEMENT
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space) && entityWithID(world.getPlayerID(), world).getComponent<PhysicsComponent>().onGround)
-    {
-        auto& component = entityWithID(world.getPlayerID(), world).getComponent<PhysicsComponent>();
-        component.velocity.y += 10.0f;
-    }
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
-    {
-        auto& component = entityWithID(world.getPlayerID(), world).getComponent<PhysicsComponent>();
-        component.force.x -= 45.0f;
-
-        auto& render = entityWithID(world.getPlayerID(), world).getComponent<RenderComponent>();
-        render.uv = {{0, 32}, {16, 16}};
-    }
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D))
-    {
-        auto& component = entityWithID(world.getPlayerID(), world).getComponent<PhysicsComponent>();
-        component.force.x += 45.0f;
-
-        auto& render = entityWithID(world.getPlayerID(), world).getComponent<RenderComponent>();
-        render.uv = {{32, 32}, {16, 16}};
-    }
+    
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
     {
         game->pushState(std::make_unique<PauseScreenState>(game));
     }
 
+    PlayerInputSystem(world, dt);
     TransformSystem(world);
     ExplosiveSystem(world, dt);
     HealthSystem(world);
