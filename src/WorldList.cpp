@@ -64,7 +64,25 @@ void WorldList::handleEvent(const sf::Event& event)
         }
     }
 
-    if(mode == WorldList::Mode::VISIBLE)
+    if(event.is<sf::Event::MouseButtonPressed>() && mode == WorldList::Mode::VISIBLE)
+    {
+        auto mouse = event.getIf<sf::Event::MouseButtonPressed>();
+
+        if(mouse->button == sf::Mouse::Button::Left)
+        {
+            sf::Vector2f buttonSize = {size.x * 0.45f, size.y * 0.05f};
+
+            sf::FloatRect singleplayer{{position.x + size.x * 0.1f, 0.0f}, {buttonSize}};
+            sf::FloatRect multiplayer{{position.x + size.x * 0.55f, 0.0f}, {buttonSize}};
+
+            sf::Vector2f mouse_position = {static_cast<float>(mouse->position.x), static_cast<float>(mouse->position.y)};
+
+            if(singleplayer.contains(mouse_position)) selection = Selection::SINGLEPLAYER;
+            else if(multiplayer.contains(mouse_position)) selection = Selection::MULTIPLAYER;
+        }
+    }
+
+    if(mode == WorldList::Mode::VISIBLE && selection == Selection::SINGLEPLAYER)
     {
         for(auto& button : buttons)
         {
@@ -99,7 +117,7 @@ void WorldList::update(float dt)
     {
         buttons[i].update(dt);
 
-        buttons[i].setPosition(sf::Vector2f(position.x + size.x * 0.05f, position.y + i * size.x * 0.9f * 0.25 + i * size.x * 0.9f * 0.05));
+        buttons[i].setPosition(sf::Vector2f(position.x + size.x * 0.05f, position.y + i * size.x * 0.9f * 0.25 + i * size.x * 0.9f * 0.05 + size.y * 0.1f));
         buttons[i].setSize(sf::Vector2f(size.x * 0.9f, size.x * 0.9f * 0.25));
     }
 }
@@ -125,7 +143,12 @@ void WorldList::render(sf::RenderWindow& window)
         sidebar.setTexture(&background_texture);
         sidebar.setTextureRect(makeTexRect(sidebarSize));
 
+        sf::RectangleShape overlay(sidebarSize);
+        overlay.setPosition({position.x + size.x - sidebarSize.x, 0.0f});
+        overlay.setFillColor(sf::Color(0, 0, 0, 150));
+
         window.draw(sidebar);
+        window.draw(overlay);
     }
     else if(mode == WorldList::Mode::ANIMATION)
     {
@@ -148,7 +171,22 @@ void WorldList::render(sf::RenderWindow& window)
         animated_sidebar.setTexture(&background_texture);
         animated_sidebar.setTextureRect(makeTexRect(animatedSize));
 
+
+        sf::Vector2f sidebarSize = {size.x / 10.0f, size.y};
+
+        sf::RectangleShape sidebar(sidebarSize);
+        sidebar.setPosition({position.x + size.x - width, 0.0f});
+        sidebar.setTexture(&background_texture);
+        sidebar.setTextureRect(makeTexRect(sidebarSize));
+
         window.draw(animated_sidebar);
+
+        sf::RectangleShape overlay(sidebarSize);
+        overlay.setPosition({position.x + size.x - width, 0.0f});
+        overlay.setFillColor(sf::Color(0, 0, 0, 150));
+
+        window.draw(sidebar);
+        window.draw(overlay);
     }
     else if(mode == WorldList::Mode::VISIBLE)
     {
@@ -159,15 +197,44 @@ void WorldList::render(sf::RenderWindow& window)
 
         window.draw(background);
 
-        for(auto& button : buttons)
+        if(selection == Selection::SINGLEPLAYER)
         {
-            sf::FloatRect buttonBounds = {button.getPosition(), button.getSize()};
-            sf::FloatRect thisBounds = {position, size};
-
-            if(buttonBounds.findIntersection(thisBounds))
+            for(auto& button : buttons)
             {
-                button.render(window);
+                sf::FloatRect buttonBounds = {button.getPosition(), button.getSize()};
+                sf::FloatRect thisBounds = {position, size};
+
+                if(buttonBounds.findIntersection(thisBounds))
+                {
+                    button.render(window);
+                }
             }
         }
+
+        sf::Vector2f sidebarSize = {size.x / 10.0f, size.y};
+
+        sf::RectangleShape sidebar(sidebarSize);
+        sidebar.setPosition({position.x, 0.0f});
+        sidebar.setTexture(&background_texture);
+        sidebar.setTextureRect(makeTexRect(sidebarSize));
+
+        sf::RectangleShape overlay(sidebarSize);
+        overlay.setPosition({position.x, 0.0f});
+        overlay.setFillColor(sf::Color(0, 0, 0, 150));
+
+        window.draw(sidebar);
+        window.draw(overlay);
+
+        sf::Vector2f buttonSize = {size.x * 0.45f, size.y * 0.05f};
+
+        sf::RectangleShape singleplayerButton(buttonSize);
+        singleplayerButton.setPosition({position.x + size.x * 0.1f, 0.0f});
+        singleplayerButton.setFillColor(selection == Selection::SINGLEPLAYER ? sf::Color(0, 0, 0, 75) : sf::Color(0, 0, 0, 150));
+        window.draw(singleplayerButton);
+
+        sf::RectangleShape multiplayerButton(buttonSize);
+        multiplayerButton.setPosition({position.x + size.x * 0.55f, 0.0f});
+        multiplayerButton.setFillColor(selection == Selection::MULTIPLAYER ? sf::Color(0, 0, 0, 75) : sf::Color(0, 0, 0, 150));
+        window.draw(multiplayerButton);
     }
 }

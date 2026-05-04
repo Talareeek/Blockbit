@@ -38,6 +38,12 @@ private:
 
     float animation_time = 0.0f;
 
+    enum class Selection
+    {
+        SINGLEPLAYER,
+        MULTIPLAYER
+    } selection = Selection::SINGLEPLAYER;
+
 public:
 
     WorldList() = default;
