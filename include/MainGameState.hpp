@@ -26,6 +26,9 @@ private:
     int fps = 0;
     float last_fps_update = 1.0f;
 
+    float music_interval = std::rand() % 60 + 60.0f;
+    float music_timer = 0.0f;
+
 public:
 
     MainGameState(Game* game, World world);

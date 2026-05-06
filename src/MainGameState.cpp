@@ -256,6 +256,30 @@ void MainGameState::update(float dt)
 
         fps = 1.0f / dt;
     }
+
+    bool music_playing;
+
+    for(auto& music : AssetManager::musics)
+    {
+        if(music.second.getStatus() == sf::Music::Status::Playing)
+        {
+            music_playing = true;
+            break;
+        }
+    }
+
+    if(!music_playing)
+    {
+        music_timer += dt;
+
+        if(music_timer >= music_interval)
+        {
+            music_timer = 0.0f;
+            music_interval = std::rand() % 420 + 180.0f;
+
+            AssetManager::getMusic(static_cast<AssetManager::MusicID>(std::rand() % AssetManager::musics.size())).play();
+        }
+    }
 }
 
 void MainGameState::render(sf::RenderWindow& window)
@@ -311,7 +335,8 @@ void MainGameState::render(sf::RenderWindow& window)
         "FPS: " + std::to_string(fps) + '\n' +
         "X: " + std::to_string(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x) +
         " Y: " + std::to_string(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y) + '\n' +
-        "CHUNKS LOADED: " + std::to_string(world.getChunks().size()) + '\n';
+        "CHUNKS LOADED: " + std::to_string(world.getChunks().size()) + '\n' +
+        "MUSIC: " + std::to_string(music_timer) + " / " + std::to_string(music_interval) + '\n';
 
         sf::Text debug_text(AssetManager::getFont(0), debug_string, 20);
 
