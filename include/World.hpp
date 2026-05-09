@@ -5,6 +5,7 @@
 #include "Entity.hpp"
 #include "PerlinNoise.hpp"
 #include "WorldOutputStream.hpp"
+#include "ChunkMesh.hpp"
 
 #include <unordered_map>
 #include <cstdlib>
@@ -121,7 +122,7 @@ public:
 
     static constexpr float FLUID_TICK = 0.5f;
 
-    static constexpr int SIMULATION_DISTANCE = 10;
+    static constexpr int SIMULATION_DISTANCE = 4;
 
     static constexpr int MAX_CHUNKS_LOADED = 24;
 
@@ -159,6 +160,12 @@ public:
     void readData();
 
     void load();
+
+    std::pair<float, float> getSimulationRangeForEntity(const uint32_t entity);
+
+    void rebuildChunkMesh(int chunk_position, unsigned int unit_size);
+
+    std::unordered_map<int, ChunkMesh> chunkMeshes;
 
 };
 

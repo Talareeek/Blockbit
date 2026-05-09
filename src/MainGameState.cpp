@@ -134,6 +134,11 @@ void MainGameState::handleEvent(const sf::Event& event)
         }
     }
 
+    if(event.is<sf::Event::Resized>())
+    {
+        world.chunkMeshes.clear();
+    }
+
     healthBar.handleEvent(event);
 
     inventoryWidget.handleEvent(event);
@@ -268,6 +273,7 @@ void MainGameState::update(float dt)
         }
     }
 
+    /*
     if(!music_playing)
     {
         music_timer += dt;
@@ -280,6 +286,7 @@ void MainGameState::update(float dt)
             AssetManager::getMusic(static_cast<AssetManager::MusicID>(std::rand() % AssetManager::musics.size())).play();
         }
     }
+    */
 }
 
 void MainGameState::render(sf::RenderWindow& window)
@@ -331,12 +338,15 @@ void MainGameState::render(sf::RenderWindow& window)
 
     if(debug)
     {
+        auto simulationRange = world.getSimulationRangeForEntity(world.getPlayerID());
+
         std::string debug_string = 
         "FPS: " + std::to_string(fps) + '\n' +
         "X: " + std::to_string(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x) +
         " Y: " + std::to_string(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y) + '\n' +
         "CHUNKS LOADED: " + std::to_string(world.getChunks().size()) + '\n' +
-        "MUSIC: " + std::to_string(music_timer) + " / " + std::to_string(music_interval) + '\n';
+        "MUSIC: " + std::to_string(music_timer) + " / " + std::to_string(music_interval) + '\n' +
+        "SIMULATION RANGE: " + std::to_string(simulationRange.first) + " - " + std::to_string(simulationRange.second) + '\n';
 
         sf::Text debug_text(AssetManager::getFont(0), debug_string, 20);
 

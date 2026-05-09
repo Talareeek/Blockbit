@@ -10,6 +10,7 @@
 #include "../include/ExplosiveComponent.hpp"
 #include "../include/ItemComponent.hpp"
 #include "../include/PlayerComponent.hpp"
+#include "../include/BlockAtlas.hpp"
 #include <SFML/Graphics.hpp>
 
 #include <iostream>
@@ -291,66 +292,25 @@ void RenderWorld(World& world, sf::RenderWindow& window)
 {
     unsigned int unit_size = window.getSize().y / MainGameState::UNIT_SIZE_FACTOR;
 
-    int chunk = window.getView().getCenter().x / unit_size / CHUNK_WIDTH;
+    int centerChunk = window.getView().getCenter().x / unit_size / CHUNK_WIDTH;
 
-    for (int i = chunk - 2; i <= chunk + 2; ++i)
+    sf::RenderStates states;
+    states.texture = &BlockAtlas::getTexture();
+
+    for (int i = centerChunk - 2; i <= centerChunk + 2; ++i)
     {
-        if (world.getChunk(i).generated == false) continue; //temoprary
+        Chunk& chunk = world.getChunk(i);
 
-        for (int y = 0; y < CHUNK_HEIGHT; ++y)
+        if (!chunk.generated) continue;
+
+        ChunkMesh& mesh = world.chunkMeshes[i];
+
+        if (chunk.dirty || !mesh.built)
         {
-            for (int x = 0; x < CHUNK_WIDTH; ++x)
-            {
-                Block block = world.getChunk(i).blocks[y][x];
-                if (block.id == BlockID::Air) continue;
-
-                sf::Texture& texture = AssetManager::getTexture(blockDatabase[block.id].texture);
-
-                sf::Sprite sprite(texture);
-
-                float heightFactor = 1.0f;
-
-                if (block.id == BlockID::Water)
-                {
-                    uint8_t level = block.metadata;
-
-                    // 9 = source → traktujemy jak 8
-                    if(level == 9)
-                        level = 8;
-
-                    BlockID above = world.getBlock(i * CHUNK_WIDTH + x, y + 1).id;
-
-                    if (above == BlockID::Water)
-                    {
-                        heightFactor = 1.0f;
-                    }
-                    else
-                    {
-                        heightFactor = level / 9.0f;
-                    }
-
-                    int texHeight = texture.getSize().y * heightFactor;
-
-                    sprite.setTextureRect(sf::IntRect({
-                        {0,
-                        static_cast<int>(texture.getSize().y) - texHeight},
-                        {static_cast<int>(texture.getSize().x),
-                        texHeight}
-                    }));
-                }
-
-                sprite.setPosition({
-                    (i * CHUNK_WIDTH + x) * static_cast<float>(unit_size),
-                    (y + 1) * static_cast<float>(unit_size) - unit_size * (1.0f - heightFactor)
-                });
-
-                sprite.setScale({
-                    (float)unit_size / sprite.getTextureRect().size.x,
-                    -(float)(unit_size * heightFactor) / sprite.getTextureRect().size.y
-                });
-                window.draw(sprite);
-            }
+            world.rebuildChunkMesh(i, unit_size);
         }
+
+        window.draw(mesh.vertices, states);
     }
 }
 
@@ -969,4 +929,107 @@ void World::createPlayer()
     entityWithID(getPlayerID(), *this).addComponent(HealthComponent{100, 100});
     entityWithID(getPlayerID(), *this).addComponent(PlayerComponent{});
 
+}
+
+std::pair<float, float> World::getSimulationRangeForEntity(const uint32_t entity)
+{
+    auto& transform = entityWithID(entity, *this).getComponent<TransformComponent>();
+
+    int entity_chunk = transform.position.x / CHUNK_WIDTH;
+
+    return
+    {
+        static_cast<float>((entity_chunk - SIMULATION_DISTANCE) * CHUNK_WIDTH),
+        static_cast<float>((entity_chunk + SIMULATION_DISTANCE) * CHUNK_WIDTH + CHUNK_WIDTH)
+    };
+}
+
+static void appendQuad(sf::VertexArray& va, const sf::Vector2f& pos, const sf::Vector2f& size, const sf::IntRect& uv)
+{
+    sf::Vertex v0, v1, v2, v3;
+
+    const sf::Vector2f uvPos  = sf::Vector2f(static_cast<float>(uv.position.x), static_cast<float>(uv.position.y));
+    const sf::Vector2f uvSize = sf::Vector2f(static_cast<float>(uv.size.x), static_cast<float>(uv.size.y));
+
+    const float u0 = uvPos.x;
+    const float v0y = uvPos.y;
+    const float u1 = uvPos.x + uvSize.x;
+    const float v1y = uvPos.y + uvSize.y;
+
+    v0.position = {pos.x, pos.y};
+    v1.position = {pos.x + size.x, pos.y};
+    v2.position = {pos.x + size.x, pos.y + size.y};
+    v3.position = {pos.x, pos.y + size.y};
+
+    v0.texCoords = {u0, v1y};
+    v1.texCoords = {u1, v1y};
+    v2.texCoords = {u1, v0y};
+    v3.texCoords = {u0, v0y};
+
+    va.append(v0);
+    va.append(v1);
+    va.append(v2);
+
+    va.append(v0);
+    va.append(v2);
+    va.append(v3);
+}
+
+void World::rebuildChunkMesh(int chunk_position, unsigned int unit_size)
+{
+    Chunk& chunk = getChunk(chunk_position);
+    ChunkMesh& mesh = chunkMeshes[chunk_position];
+
+    mesh.vertices.clear();
+
+    const float size = (float)unit_size;
+
+    for (int y = 0; y < CHUNK_HEIGHT; y++)
+    {
+        for (int x = 0; x < CHUNK_WIDTH; x++)
+        {
+            Block& block = chunk.blocks[y][x];
+
+            if (block.id == BlockID::Air)
+                continue;
+
+            uint32_t texID =
+                blockDatabase[block.id].texture;
+
+            const sf::IntRect& uv =
+                BlockAtlas::getUV(texID);
+
+            float worldX =
+                (chunk_position * CHUNK_WIDTH + x) * size;
+
+            float worldY =
+                y * size;
+
+            float heightFactor = 1.0f;
+
+            if (block.id == BlockID::Water)
+            {
+                uint8_t level = block.metadata;
+
+                if (level == 9)
+                    level = 8;
+
+                BlockID above =
+                    getBlock(
+                        chunk_position * CHUNK_WIDTH + x,
+                        y + 1).id;
+
+                if (above != BlockID::Water)
+                    heightFactor = level / 9.0f;
+            }
+
+            sf::Vector2f pos(worldX, worldY);
+
+            sf::Vector2f blockSize(size, size * heightFactor);
+
+            appendQuad(mesh.vertices, pos, blockSize, uv);
+        }
+    }
+
+    mesh.built = true;
 }

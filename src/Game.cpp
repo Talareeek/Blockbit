@@ -10,6 +10,7 @@
 #include "../include/RenderComponent.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/World.hpp"
+#include "../include/BlockAtlas.hpp"
 
 Game::Game()
 {
@@ -61,6 +62,20 @@ Game::Game()
     AssetManager::loadSound(AssetManager::SoundID::Click, "resources/sounds/click.wav");
 
     AssetManager::loadMusic(AssetManager::MusicID::Alpha, "resources/sounds/music/alpha.wav");
+
+    BlockAtlas::add(1);
+    BlockAtlas::add(2);
+    BlockAtlas::add(3);
+    BlockAtlas::add(4);
+    BlockAtlas::add(5);
+    BlockAtlas::add(6);
+    BlockAtlas::add(11);
+    BlockAtlas::add(13);
+    BlockAtlas::add(14);
+    BlockAtlas::add(15);
+    BlockAtlas::add(16);
+    BlockAtlas::add(17);
+    BlockAtlas::build();
 
     std::filesystem::path savePath;
     
