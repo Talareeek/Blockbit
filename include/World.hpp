@@ -122,7 +122,7 @@ public:
 
     static constexpr float FLUID_TICK = 0.5f;
 
-    static constexpr int SIMULATION_DISTANCE = 4;
+    static constexpr int SIMULATION_DISTANCE = 10;
 
     static constexpr int MAX_CHUNKS_LOADED = 24;
 
