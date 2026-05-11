@@ -3,37 +3,69 @@
 #include "../include/World.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/MainGameState.hpp"
+
+#include <algorithm>
 #include <fstream>
+#include <iostream>
 
-WorldList::WorldList(std::filesystem::path path, Game* game) : path(path), game{game}
+namespace
 {
-    for (const auto& entry : std::filesystem::directory_iterator(path))
+    constexpr float STRIP_WIDTH_FACTOR        = 0.1f;
+    constexpr float TAB_BAR_HEIGHT_FACTOR     = 0.07f;
+    constexpr float HEADER_HEIGHT_FACTOR      = 0.05f;
+    constexpr float ENTRY_HEIGHT_FACTOR       = 0.22f;
+    constexpr float ENTRY_GAP_FACTOR          = 0.04f;
+    constexpr float HORIZONTAL_PADDING_FACTOR = 0.04f;
+    constexpr float SCROLL_STEP               = 40.0f;
+}
+
+WorldList::WorldList(std::filesystem::path path, Game* game) : game{game}, path(path)
+{
+    loadEntries();
+
+    ipField      = InputField(InputField({0.0f, 0.0f}, {0.0f, 0.0f}), "", "Server IP");
+    connectButton = Button({0.0f, 0.0f}, {0.0f, 0.0f}, sf::Color(55, 90, 130), "Connect", [this]()
     {
-        if(entry.is_directory())
-        {
-            std::filesystem::path manifest = entry.path() / "manifest";
-            if(std::filesystem::exists(manifest))
-            {
-                std::ifstream file(manifest);
+        std::cout << "[Multiplayer] Connect to: " << ipField.getText() << '\n';
+    });
+}
 
-                std::string name;
-                std::getline(file, name);
+void WorldList::loadEntries()
+{
+    entries.clear();
 
-                worldPaths.push_back(entry.path());
+    if(!std::filesystem::exists(path)) return;
 
-                buttons.emplace_back(
-                    sf::Vector2f(position.x * 1.05f , position.y + worldPaths.size() * size.x * 0.9f * 0.3), 
-                    sf::Vector2f(size.x * 0.9f, size.x * 0.9f * 0.25), 
-                    sf::Color(40, 40, 40), 
-                    name,
-                    [game = this->game, worldPath = entry.path()]()
-                    {
-                        game->pushState(std::make_unique<MainGameState>(game, World(worldPath)));
-                    }
-                );
-            }
-        }
+    for(const auto& entry : std::filesystem::directory_iterator(path))
+    {
+        if(!entry.is_directory()) continue;
+
+        std::filesystem::path manifest = entry.path() / "manifest";
+        if(!std::filesystem::exists(manifest)) continue;
+
+        std::ifstream file(manifest);
+        std::string name;
+        std::getline(file, name);
+
+        entries.emplace_back(name, entry.path());
     }
+}
+
+sf::FloatRect WorldList::getTabBarArea() const
+{
+    float strip_w = size.x * STRIP_WIDTH_FACTOR;
+    float bar_h   = size.y * TAB_BAR_HEIGHT_FACTOR;
+    return sf::FloatRect({position.x + strip_w, position.y}, {size.x - strip_w, bar_h});
+}
+
+sf::FloatRect WorldList::getListArea() const
+{
+    float strip_w  = size.x * STRIP_WIDTH_FACTOR;
+    float bar_h    = size.y * TAB_BAR_HEIGHT_FACTOR;
+    float header_h = size.y * HEADER_HEIGHT_FACTOR;
+    float top      = position.y + bar_h + header_h;
+    float padding  = size.x * HORIZONTAL_PADDING_FACTOR;
+    return sf::FloatRect({position.x + strip_w + padding, top}, {size.x - strip_w - 2.0f * padding, position.y + size.y - top - padding});
 }
 
 void WorldList::handleEvent(const sf::Event& event)
@@ -41,59 +73,80 @@ void WorldList::handleEvent(const sf::Event& event)
     if(event.is<sf::Event::MouseMoved>())
     {
         auto mouse = event.getIf<sf::Event::MouseMoved>();
+        sf::Vector2f mouse_pos{static_cast<float>(mouse->position.x), static_cast<float>(mouse->position.y)};
 
-        if(mode == WorldList::Mode::HIDDEN)
+        if(mode == Mode::HIDDEN)
         {
             sf::FloatRect sidebar{{position.x + size.x - size.x / 10.0f, 0.0f}, {size.x / 10.0f, size.y}};
-
-            if(sidebar.contains({static_cast<float>(mouse->position.x), static_cast<float>(mouse->position.y)}))
+            if(sidebar.contains(mouse_pos))
             {
-                mode = WorldList::Mode::ANIMATION;
-                direction = WorldList::AnimationDirection::LEFT;
+                mode = Mode::ANIMATION;
+                direction = AnimationDirection::LEFT;
             }
         }
-        else if(mode == WorldList::Mode::VISIBLE)
+        else if(mode == Mode::VISIBLE)
         {
             sf::FloatRect sidebar{position, size};
-
-            if(!sidebar.contains({static_cast<float>(mouse->position.x), static_cast<float>(mouse->position.y)}))
+            if(!sidebar.contains(mouse_pos))
             {
-                mode = WorldList::Mode::ANIMATION;
-                direction = WorldList::AnimationDirection::RIGHT;
+                mode = Mode::ANIMATION;
+                direction = AnimationDirection::RIGHT;
             }
         }
     }
 
-    if(event.is<sf::Event::MouseButtonPressed>() && mode == WorldList::Mode::VISIBLE)
+    if(mode != Mode::VISIBLE) return;
+
+    if(event.is<sf::Event::MouseButtonPressed>())
     {
         auto mouse = event.getIf<sf::Event::MouseButtonPressed>();
-
         if(mouse->button == sf::Mouse::Button::Left)
         {
-            sf::Vector2f buttonSize = {size.x * 0.45f, size.y * 0.05f};
+            sf::FloatRect tab_bar = getTabBarArea();
+            sf::Vector2f mouse_pos{static_cast<float>(mouse->position.x), static_cast<float>(mouse->position.y)};
 
-            sf::FloatRect singleplayer{{position.x + size.x * 0.1f, 0.0f}, {buttonSize}};
-            sf::FloatRect multiplayer{{position.x + size.x * 0.55f, 0.0f}, {buttonSize}};
+            if(tab_bar.contains(mouse_pos))
+            {
+                float half_x = tab_bar.position.x + tab_bar.size.x * 0.5f;
 
-            sf::Vector2f mouse_position = {static_cast<float>(mouse->position.x), static_cast<float>(mouse->position.y)};
+                Selection prev = selection;
+                if(mouse_pos.x < half_x) selection = Selection::SINGLEPLAYER;
+                else                     selection = Selection::MULTIPLAYER;
 
-            if(singleplayer.contains(mouse_position)) selection = Selection::SINGLEPLAYER;
-            else if(multiplayer.contains(mouse_position)) selection = Selection::MULTIPLAYER;
+                if(prev != selection) scroll_offset = 0.0f;
+            }
         }
     }
 
-    if(mode == WorldList::Mode::VISIBLE && selection == Selection::SINGLEPLAYER)
+    if(selection == Selection::SINGLEPLAYER)
     {
-        for(auto& button : buttons)
+        if(event.is<sf::Event::MouseWheelScrolled>())
         {
-            button.handleEvent(event);
+            auto wheel = event.getIf<sf::Event::MouseWheelScrolled>();
+            sf::Vector2f mouse_pos{static_cast<float>(wheel->position.x), static_cast<float>(wheel->position.y)};
+
+            sf::FloatRect list_area = getListArea();
+            if(list_area.contains(mouse_pos))
+            {
+                scroll_offset -= wheel->delta * SCROLL_STEP;
+            }
         }
+
+        for(auto& entry : entries)
+        {
+            entry.handleEvent(event);
+        }
+    }
+    else
+    {
+        ipField.handleEvent(event);
+        connectButton.handleEvent(event);
     }
 }
 
 void WorldList::update(float dt)
 {
-    if(mode == WorldList::Mode::ANIMATION)
+    if(mode == Mode::ANIMATION)
     {
         animation_time += dt;
         if(animation_time >= ANIMATION_TOTAL_LENGTH)
@@ -102,24 +155,73 @@ void WorldList::update(float dt)
 
             switch(direction)
             {
-            case WorldList::AnimationDirection::LEFT:
-                mode = WorldList::Mode::VISIBLE;
-                break;
-
-            case WorldList::AnimationDirection::RIGHT:
-                mode = WorldList::Mode::HIDDEN;
-                break;
+            case AnimationDirection::LEFT:  mode = Mode::VISIBLE; break;
+            case AnimationDirection::RIGHT: mode = Mode::HIDDEN;  break;
             }
         }
     }
 
-    for(int i = 0; i < buttons.size(); i++)
-    {
-        buttons[i].update(dt);
+    sf::FloatRect list_area = getListArea();
 
-        buttons[i].setPosition(sf::Vector2f(position.x + size.x * 0.05f, position.y + i * size.x * 0.9f * 0.25 + i * size.x * 0.9f * 0.05 + size.y * 0.1f));
-        buttons[i].setSize(sf::Vector2f(size.x * 0.9f, size.x * 0.9f * 0.25));
+    float entry_h = size.x * ENTRY_HEIGHT_FACTOR;
+    float gap     = size.x * ENTRY_GAP_FACTOR;
+
+    content_height = entries.empty() ? 0.0f : entries.size() * entry_h + (entries.size() - 1) * gap;
+
+    float max_scroll = std::max(0.0f, content_height - list_area.size.y);
+    scroll_offset = std::clamp(scroll_offset, 0.0f, max_scroll);
+
+    for(std::size_t i = 0; i < entries.size(); ++i)
+    {
+        auto& entry = entries[i];
+
+        float y = list_area.position.y + i * (entry_h + gap) - scroll_offset;
+
+        entry.setPosition({list_area.position.x, y});
+        entry.setSize({list_area.size.x, entry_h});
+
+        entry.update(dt);
     }
+
+    std::vector<std::size_t> to_delete;
+    for(std::size_t i = 0; i < entries.size(); ++i)
+    {
+        if(entries[i].wasPlayRequested())
+        {
+            auto world_path = entries[i].getPath();
+            entries[i].clearRequests();
+            game->pushState(std::make_unique<MainGameState>(game, World(world_path)));
+            return;
+        }
+        if(entries[i].wasDeleteRequested())
+        {
+            to_delete.push_back(i);
+        }
+    }
+
+    for(auto it = to_delete.rbegin(); it != to_delete.rend(); ++it)
+    {
+        std::error_code ec;
+        std::filesystem::remove_all(entries[*it].getPath(), ec);
+        if(ec) std::cerr << "Failed to delete world: " << ec.message() << '\n';
+        entries.erase(entries.begin() + *it);
+    }
+
+    float strip_w = size.x * STRIP_WIDTH_FACTOR;
+    float content_w = size.x - strip_w;
+    float field_w = content_w * 0.85f;
+    float field_h = size.y * 0.06f;
+    float field_x = position.x + strip_w + (content_w - field_w) * 0.5f;
+    float field_y = list_area.position.y + size.y * 0.04f;
+
+    ipField.setPosition({field_x, field_y});
+    ipField.setSize({field_w, field_h});
+
+    connectButton.setPosition({field_x, field_y + field_h + size.y * 0.025f});
+    connectButton.setSize({field_w, field_h * 1.2f});
+
+    ipField.update(dt);
+    connectButton.update(dt);
 }
 
 void WorldList::render(sf::RenderWindow& window)
@@ -134,107 +236,180 @@ void WorldList::render(sf::RenderWindow& window)
         return sf::IntRect({0, 0}, {static_cast<int>(areaSize.x / texSize.x * texSize.x), static_cast<int>(areaSize.y / texSize.y * texSize.y)});
     };
 
-    if(mode == WorldList::Mode::HIDDEN)
+    auto drawTexturedPanel = [&](sf::Vector2f pos, sf::Vector2f sz, sf::Color overlay)
     {
-        sf::Vector2f sidebarSize = {size.x / 10.0f, size.y};
+        sf::RectangleShape bg(sz);
+        bg.setPosition(pos);
+        bg.setTexture(&background_texture);
+        bg.setTextureRect(makeTexRect(sz));
+        window.draw(bg);
 
-        sf::RectangleShape sidebar(sidebarSize);
-        sidebar.setPosition({position.x + size.x - sidebarSize.x, 0.0f});
-        sidebar.setTexture(&background_texture);
-        sidebar.setTextureRect(makeTexRect(sidebarSize));
+        sf::RectangleShape ov(sz);
+        ov.setPosition(pos);
+        ov.setFillColor(overlay);
+        window.draw(ov);
+    };
 
-        sf::RectangleShape overlay(sidebarSize);
-        overlay.setPosition({position.x + size.x - sidebarSize.x, 0.0f});
-        overlay.setFillColor(sf::Color(0, 0, 0, 150));
+    if(mode == Mode::HIDDEN)
+    {
+        sf::Vector2f sidebar_size{size.x / 10.0f, size.y};
+        sf::Vector2f sidebar_pos{position.x + size.x - sidebar_size.x, 0.0f};
 
-        window.draw(sidebar);
-        window.draw(overlay);
+        drawTexturedPanel(sidebar_pos, sidebar_size, sf::Color(0, 0, 0, 150));
+
+        sf::FloatRect arrow_box{sidebar_pos, {sidebar_size.x, sidebar_size.x}};
+        arrow_box.position.y = sidebar_pos.y + (sidebar_size.y - arrow_box.size.y) * 0.5f;
+        drawFitText(window, "<", arrow_box, true, sf::Color(230, 230, 230), 1.0f, sf::Color::Black);
+        return;
     }
-    else if(mode == WorldList::Mode::ANIMATION)
+
+    if(mode == Mode::ANIMATION)
     {
         float t = animation_time / ANIMATION_TOTAL_LENGTH;
-        float width = 0.0f;
+        float width = (direction == AnimationDirection::LEFT)
+                      ? size.x / 10.0f + t * (size.x * 0.9f)
+                      : size.x - t * (size.x * 0.9f);
 
-        if(direction == WorldList::AnimationDirection::LEFT)
-        {
-            width = size.x / 10.0f + t * (size.x * 0.9f);
-        }
-        else
-        {
-            width = size.x - t * (size.x * 0.9f);
-        }
+        sf::Vector2f anim_size{width, size.y};
+        sf::Vector2f anim_pos{position.x + size.x - width, 0.0f};
 
-        sf::Vector2f animatedSize = {width, size.y};
-
-        sf::RectangleShape animated_sidebar(animatedSize);
-        animated_sidebar.setPosition({position.x + size.x - width, 0.0f});
-        animated_sidebar.setTexture(&background_texture);
-        animated_sidebar.setTextureRect(makeTexRect(animatedSize));
-
-
-        sf::Vector2f sidebarSize = {size.x / 10.0f, size.y};
-
-        sf::RectangleShape sidebar(sidebarSize);
-        sidebar.setPosition({position.x + size.x - width, 0.0f});
-        sidebar.setTexture(&background_texture);
-        sidebar.setTextureRect(makeTexRect(sidebarSize));
-
-        window.draw(animated_sidebar);
-
-        sf::RectangleShape overlay(sidebarSize);
-        overlay.setPosition({position.x + size.x - width, 0.0f});
-        overlay.setFillColor(sf::Color(0, 0, 0, 150));
-
-        window.draw(sidebar);
-        window.draw(overlay);
+        drawTexturedPanel(anim_pos, anim_size, sf::Color(0, 0, 0, 150));
+        return;
     }
-    else if(mode == WorldList::Mode::VISIBLE)
+
+    drawTexturedPanel(position, size, sf::Color(0, 0, 0, 120));
+
+    sf::FloatRect tab_bar = getTabBarArea();
+    float half_w = tab_bar.size.x * 0.5f;
+
+    auto drawTab = [&](sf::Vector2f tab_pos, sf::Vector2f tab_size, const std::string& label, bool active)
     {
-        sf::RectangleShape background(size);
-        background.setPosition(position);
-        background.setTexture(&background_texture);
-        background.setTextureRect(makeTexRect(size));
+        sf::RectangleShape tab(tab_size);
+        tab.setPosition(tab_pos);
+        tab.setFillColor(active ? sf::Color(0, 0, 0, 60) : sf::Color(0, 0, 0, 160));
+        window.draw(tab);
 
-        window.draw(background);
+        drawFitText(window, label, sf::FloatRect(tab_pos, tab_size), true,
+                    active ? sf::Color(255, 255, 255) : sf::Color(200, 200, 200),
+                    1.0f, sf::Color::Black);
 
-        if(selection == Selection::SINGLEPLAYER)
+        if(active)
         {
-            for(auto& button : buttons)
-            {
-                sf::FloatRect buttonBounds = {button.getPosition(), button.getSize()};
-                sf::FloatRect thisBounds = {position, size};
+            sf::RectangleShape underline({tab_size.x * 0.6f, tab_size.y * 0.07f});
+            underline.setPosition({tab_pos.x + tab_size.x * 0.2f, tab_pos.y + tab_size.y - underline.getSize().y});
+            underline.setFillColor(sf::Color(120, 200, 255));
+            window.draw(underline);
+        }
+    };
 
-                if(buttonBounds.findIntersection(thisBounds))
+    drawTab({tab_bar.position.x, tab_bar.position.y}, {half_w, tab_bar.size.y}, "Worlds",      selection == Selection::SINGLEPLAYER);
+    drawTab({tab_bar.position.x + half_w, tab_bar.position.y}, {half_w, tab_bar.size.y}, "Multiplayer", selection == Selection::MULTIPLAYER);
+
+    sf::RectangleShape separator({tab_bar.size.x, 2.0f});
+    separator.setPosition({tab_bar.position.x, tab_bar.position.y + tab_bar.size.y});
+    separator.setFillColor(sf::Color(255, 255, 255, 60));
+    window.draw(separator);
+
+    float strip_w_local = size.x * STRIP_WIDTH_FACTOR;
+    sf::FloatRect header_box{
+        {position.x + strip_w_local, position.y + tab_bar.size.y},
+        {size.x - strip_w_local, size.y * HEADER_HEIGHT_FACTOR}
+    };
+
+    if(selection == Selection::SINGLEPLAYER)
+    {
+        sf::FloatRect list_area = getListArea();
+
+        std::string header_text = entries.empty() ? "No worlds yet" : "Select a world";
+        drawFitText(window, header_text, header_box, true, sf::Color(220, 220, 220), 1.0f, sf::Color::Black);
+
+        if(!entries.empty())
+        {
+            sf::Vector2u win_size = window.getSize();
+            sf::View saved_view = window.getView();
+
+            sf::View clip_view(sf::FloatRect({list_area.position.x, list_area.position.y}, {list_area.size.x, list_area.size.y}));
+            clip_view.setViewport(sf::FloatRect(
+                {list_area.position.x / win_size.x, list_area.position.y / win_size.y},
+                {list_area.size.x / win_size.x, list_area.size.y / win_size.y}
+            ));
+            window.setView(clip_view);
+
+            for(auto& entry : entries)
+            {
+                sf::FloatRect ebounds{entry.getPosition(), entry.getSize()};
+                if(ebounds.findIntersection(list_area))
                 {
-                    button.render(window);
+                    entry.render(window);
                 }
             }
+
+            window.setView(saved_view);
+
+            if(content_height > list_area.size.y)
+            {
+                float track_w = 4.0f;
+                float track_x = list_area.position.x + list_area.size.x - track_w;
+
+                sf::RectangleShape track({track_w, list_area.size.y});
+                track.setPosition({track_x, list_area.position.y});
+                track.setFillColor(sf::Color(0, 0, 0, 80));
+                window.draw(track);
+
+                float thumb_h = list_area.size.y * (list_area.size.y / content_height);
+                float thumb_y = list_area.position.y + (scroll_offset / content_height) * list_area.size.y;
+
+                sf::RectangleShape thumb({track_w, thumb_h});
+                thumb.setPosition({track_x, thumb_y});
+                thumb.setFillColor(sf::Color(200, 200, 200, 180));
+                window.draw(thumb);
+            }
         }
-
-        sf::Vector2f sidebarSize = {size.x / 10.0f, size.y};
-
-        sf::RectangleShape sidebar(sidebarSize);
-        sidebar.setPosition({position.x, 0.0f});
-        sidebar.setTexture(&background_texture);
-        sidebar.setTextureRect(makeTexRect(sidebarSize));
-
-        sf::RectangleShape overlay(sidebarSize);
-        overlay.setPosition({position.x, 0.0f});
-        overlay.setFillColor(sf::Color(0, 0, 0, 150));
-
-        window.draw(sidebar);
-        window.draw(overlay);
-
-        sf::Vector2f buttonSize = {size.x * 0.45f, size.y * 0.05f};
-
-        sf::RectangleShape singleplayerButton(buttonSize);
-        singleplayerButton.setPosition({position.x + size.x * 0.1f, 0.0f});
-        singleplayerButton.setFillColor(selection == Selection::SINGLEPLAYER ? sf::Color(0, 0, 0, 75) : sf::Color(0, 0, 0, 150));
-        window.draw(singleplayerButton);
-
-        sf::RectangleShape multiplayerButton(buttonSize);
-        multiplayerButton.setPosition({position.x + size.x * 0.55f, 0.0f});
-        multiplayerButton.setFillColor(selection == Selection::MULTIPLAYER ? sf::Color(0, 0, 0, 75) : sf::Color(0, 0, 0, 150));
-        window.draw(multiplayerButton);
     }
+    else
+    {
+        drawFitText(window, "Connect to server", header_box, true, sf::Color(220, 220, 220), 1.0f, sf::Color::Black);
+
+        float label_h = ipField.getSize().y * 0.6f;
+        sf::FloatRect label_box{
+            {ipField.getPosition().x, ipField.getPosition().y - label_h - 4.0f},
+            {ipField.getSize().x, label_h}
+        };
+        drawFitText(window, "Server IP", label_box, false, sf::Color(220, 220, 220), 1.0f, sf::Color::Black);
+
+        sf::RectangleShape field_bg(ipField.getSize());
+        field_bg.setPosition(ipField.getPosition());
+        field_bg.setFillColor(sf::Color(20, 20, 20, 200));
+        field_bg.setOutlineColor(sf::Color(120, 200, 255, 180));
+        field_bg.setOutlineThickness(1.5f);
+        window.draw(field_bg);
+
+        ipField.render(window);
+        connectButton.render(window);
+
+        if(ipField.getText().empty())
+        {
+            drawFitText(window, "e.g. 127.0.0.1:25565",
+                        sf::FloatRect(ipField.getPosition(), ipField.getSize()),
+                        false, sf::Color(180, 180, 180, 140), 0.0f, sf::Color::Transparent);
+        }
+    }
+
+    float strip_w = size.x * STRIP_WIDTH_FACTOR;
+
+    sf::RectangleShape collapse_strip({strip_w, size.y});
+    collapse_strip.setPosition({position.x, 0.0f});
+    collapse_strip.setFillColor(sf::Color(0, 0, 0, 110));
+    window.draw(collapse_strip);
+
+    sf::RectangleShape divider({2.0f, size.y});
+    divider.setPosition({position.x + strip_w, 0.0f});
+    divider.setFillColor(sf::Color(255, 255, 255, 35));
+    window.draw(divider);
+
+    sf::FloatRect arrow_box{
+        {position.x, position.y + (size.y - strip_w) * 0.5f},
+        {strip_w, strip_w}
+    };
+    drawFitText(window, ">", arrow_box, true, sf::Color(230, 230, 230), 1.0f, sf::Color::Black);
 }

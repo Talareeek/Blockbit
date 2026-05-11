@@ -3,6 +3,8 @@
 
 #include "UIElement.hpp"
 #include "Button.hpp"
+#include "InputField.hpp"
+#include "WorldEntry.hpp"
 #include "Game.hpp"
 
 #include <iostream>
@@ -12,13 +14,17 @@ class WorldList : public UIElement
 {
 private:
 
-    Game* game;
+    Game* game = nullptr;
 
     std::filesystem::path path;
 
-    std::vector<std::filesystem::path> worldPaths;
+    std::vector<WorldEntry> entries;
 
-    std::vector<Button> buttons;
+    InputField ipField;
+    Button connectButton;
+
+    float scroll_offset = 0.0f;
+    float content_height = 0.0f;
 
 
     enum class Mode
@@ -43,6 +49,12 @@ private:
         SINGLEPLAYER,
         MULTIPLAYER
     } selection = Selection::SINGLEPLAYER;
+
+
+    sf::FloatRect getListArea() const;
+    sf::FloatRect getTabBarArea() const;
+
+    void loadEntries();
 
 public:
 
