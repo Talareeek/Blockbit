@@ -167,6 +167,8 @@ public:
 
     std::unordered_map<int, ChunkMesh> chunkMeshes;
 
+    bool trackBlockChanges = false;
+    std::vector<std::tuple<int, int, Block>> pendingBlockUpdates;
 };
 
 extern void RenderWorld(World& world, sf::RenderWindow& window);

@@ -17,9 +17,11 @@ private:
     std::filesystem::path path;
 
     bool hovering_play   = false;
+    bool hovering_host   = false;
     bool hovering_delete = false;
 
     bool play_requested   = false;
+    bool host_requested   = false;
     bool delete_requested = false;
 
     sf::Sound click_sound{AssetManager::getSound(AssetManager::SoundID::Click)};
@@ -33,6 +35,7 @@ public:
     const std::filesystem::path& getPath() const;
 
     bool wasPlayRequested() const;
+    bool wasHostRequested() const;
     bool wasDeleteRequested() const;
     void clearRequests();
 

@@ -3,10 +3,13 @@
 #include "../include/World.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/MainGameState.hpp"
+#include "../include/HostGameState.hpp"
+#include "../include/ClientGameState.hpp"
 
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 namespace
 {
@@ -26,7 +29,23 @@ WorldList::WorldList(std::filesystem::path path, Game* game) : game{game}, path(
     ipField      = InputField(InputField({0.0f, 0.0f}, {0.0f, 0.0f}), "", "Server IP");
     connectButton = Button({0.0f, 0.0f}, {0.0f, 0.0f}, sf::Color(55, 90, 130), "Connect", [this]()
     {
-        std::cout << "[Multiplayer] Connect to: " << ipField.getText() << '\n';
+        std::string text = ipField.getText();
+        if (text.empty()) return;
+
+        std::string host = text;
+        uint16_t port = 25565;
+
+        auto colon = text.find(':');
+        if (colon != std::string::npos)
+        {
+            host = text.substr(0, colon);
+            std::string port_str = text.substr(colon + 1);
+            try { port = static_cast<uint16_t>(std::stoi(port_str)); }
+            catch (...) { port = 25565; }
+        }
+
+        std::cout << "[Multiplayer] Connect to: " << host << ':' << port << '\n';
+        this->game->pushState(std::make_unique<ClientGameState>(this->game, host, port));
     });
 }
 
@@ -191,6 +210,13 @@ void WorldList::update(float dt)
             auto world_path = entries[i].getPath();
             entries[i].clearRequests();
             game->pushState(std::make_unique<MainGameState>(game, World(world_path)));
+            return;
+        }
+        if(entries[i].wasHostRequested())
+        {
+            auto world_path = entries[i].getPath();
+            entries[i].clearRequests();
+            game->pushState(std::make_unique<HostGameState>(game, World(world_path)));
             return;
         }
         if(entries[i].wasDeleteRequested())

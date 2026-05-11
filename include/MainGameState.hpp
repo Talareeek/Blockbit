@@ -13,7 +13,7 @@ extern Entity& entityWithID(uint32_t id, World& world);
 
 class MainGameState : public GameState
 {
-private:
+protected:
 
     World world;
     HealthBar healthBar;
@@ -30,6 +30,8 @@ private:
     float music_timer = 0.0f;
 
 public:
+
+    World& getWorld() { return world; }
 
     MainGameState(Game* game, World world);
 

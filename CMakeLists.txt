@@ -22,6 +22,9 @@ endif()
 # Find SFML
 find_package(SFML REQUIRED COMPONENTS Graphics Window System Audio)
 
+# Threads (asio)
+find_package(Threads REQUIRED)
+
 # Source files
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
@@ -31,12 +34,16 @@ add_executable(Blockbit ${SOURCES})
 # Include directories
 target_include_directories(Blockbit PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
+# asio standalone (no Boost)
+target_compile_definitions(Blockbit PRIVATE ASIO_STANDALONE)
+
 # Link libraries
-target_link_libraries(Blockbit PRIVATE 
+target_link_libraries(Blockbit PRIVATE
     SFML::Graphics
     SFML::Window
     SFML::System
     SFML::Audio
+    Threads::Threads
 )
 
 # Enable debug info in Release mode as well

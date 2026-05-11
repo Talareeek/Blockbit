@@ -82,6 +82,11 @@ void World::setBlock(int wx, int wy, Block block)
     chunk.blocks[local_y][local_x] = block;
     chunk.dirty = true;
     chunk.generated = true;
+
+    if (trackBlockChanges)
+    {
+        pendingBlockUpdates.emplace_back(wx, wy, block);
+    }
 }
 
 std::unordered_map<int, Chunk>& World::getChunks()

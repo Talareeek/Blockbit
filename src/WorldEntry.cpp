@@ -54,18 +54,22 @@ WorldEntry::WorldEntry(const std::string& name, const std::filesystem::path& pat
 const std::string& WorldEntry::getName() const     { return name; }
 const std::filesystem::path& WorldEntry::getPath() const { return path; }
 bool WorldEntry::wasPlayRequested() const   { return play_requested; }
+bool WorldEntry::wasHostRequested() const   { return host_requested; }
 bool WorldEntry::wasDeleteRequested() const { return delete_requested; }
 void WorldEntry::clearRequests()
 {
     play_requested = false;
+    host_requested = false;
     delete_requested = false;
 }
 
 void WorldEntry::handleEvent(const sf::Event& event)
 {
     float delete_w = size.y * DELETE_AREA_FACTOR;
+    float host_w   = size.y * DELETE_AREA_FACTOR;
 
-    sf::FloatRect play_area{position, {size.x - delete_w, size.y}};
+    sf::FloatRect play_area{position, {size.x - delete_w - host_w, size.y}};
+    sf::FloatRect host_area{{position.x + size.x - delete_w - host_w, position.y}, {host_w, size.y}};
     sf::FloatRect delete_area{{position.x + size.x - delete_w, position.y}, {delete_w, size.y}};
 
     if(event.is<sf::Event::MouseMoved>())
@@ -73,6 +77,7 @@ void WorldEntry::handleEvent(const sf::Event& event)
         auto mouse = event.getIf<sf::Event::MouseMoved>();
         sf::Vector2f m{static_cast<float>(mouse->position.x), static_cast<float>(mouse->position.y)};
         hovering_play   = play_area.contains(m);
+        hovering_host   = host_area.contains(m);
         hovering_delete = delete_area.contains(m);
     }
     else if(event.is<sf::Event::MouseButtonPressed>())
@@ -87,6 +92,12 @@ void WorldEntry::handleEvent(const sf::Event& event)
             click_sound.setVolume(100);
             click_sound.play();
             delete_requested = true;
+        }
+        else if(host_area.contains(m))
+        {
+            click_sound.setVolume(100);
+            click_sound.play();
+            host_requested = true;
         }
         else if(play_area.contains(m))
         {
@@ -104,9 +115,12 @@ void WorldEntry::update(float dt)
 void WorldEntry::render(sf::RenderWindow& window)
 {
     float delete_w = size.y * DELETE_AREA_FACTOR;
+    float host_w   = size.y * DELETE_AREA_FACTOR;
 
     sf::Color base_play    (55, 80, 55);
     sf::Color hover_play   (75, 110, 75);
+    sf::Color base_host    (55, 90, 130);
+    sf::Color hover_host   (75, 120, 170);
     sf::Color base_delete  (140, 45, 45);
     sf::Color hover_delete (185, 60, 60);
     sf::Color outline_col  (255, 255, 255, 90);
@@ -118,6 +132,14 @@ void WorldEntry::render(sf::RenderWindow& window)
     frame.setOutlineColor(outline_col);
     window.draw(frame);
 
+    sf::Vector2f host_size{host_w, size.y};
+    sf::Vector2f host_pos{position.x + size.x - delete_w - host_w, position.y};
+
+    sf::RectangleShape host(host_size);
+    host.setPosition(host_pos);
+    host.setFillColor(hovering_host ? hover_host : base_host);
+    window.draw(host);
+
     sf::Vector2f del_size{delete_w, size.y};
     sf::Vector2f del_pos{position.x + size.x - delete_w, position.y};
 
@@ -126,16 +148,22 @@ void WorldEntry::render(sf::RenderWindow& window)
     del.setFillColor(hovering_delete ? hover_delete : base_delete);
     window.draw(del);
 
-    sf::RectangleShape divider({2.0f, size.y});
-    divider.setPosition({del_pos.x, position.y});
-    divider.setFillColor(outline_col);
-    window.draw(divider);
+    sf::RectangleShape divider1({2.0f, size.y});
+    divider1.setPosition({host_pos.x, position.y});
+    divider1.setFillColor(outline_col);
+    window.draw(divider1);
+
+    sf::RectangleShape divider2({2.0f, size.y});
+    divider2.setPosition({del_pos.x, position.y});
+    divider2.setFillColor(outline_col);
+    window.draw(divider2);
 
     sf::FloatRect name_box{
         {position.x + size.x * 0.04f, position.y},
-        {size.x - delete_w - size.x * 0.04f - 4.0f, size.y}
+        {size.x - delete_w - host_w - size.x * 0.04f - 4.0f, size.y}
     };
 
     drawFitText(window, name, name_box, false, sf::Color::White, 1.0f, sf::Color::Black);
+    drawFitText(window, "H", {host_pos, host_size}, true, sf::Color::White, 1.0f, sf::Color::Black);
     drawFitText(window, "X", {del_pos, del_size}, true, sf::Color::White, 1.0f, sf::Color::Black);
 }
