@@ -74,6 +74,8 @@ bool Client::connect(const std::string& host, uint16_t port, std::chrono::millis
             return false;
         }
 
+        io.restart();
+
         connected = true;
         readHeader();
 

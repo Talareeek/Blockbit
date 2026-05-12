@@ -9,6 +9,10 @@
 
 #include <iostream>
 #include <filesystem>
+#include <optional>
+#include <utility>
+#include <string>
+#include <cstdint>
 
 class WorldList : public UIElement
 {
@@ -22,6 +26,8 @@ private:
 
     InputField ipField;
     Button connectButton;
+
+    std::optional<std::pair<std::string, uint16_t>> pendingConnect;
 
     float scroll_offset = 0.0f;
     float content_height = 0.0f;

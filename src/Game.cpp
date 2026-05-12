@@ -1,6 +1,7 @@
 #include <thread>
 #include <chrono>
 #include <map>
+#include <iostream>
 
 #include "../include/Game.hpp"
 #include "../include/Entity.hpp"
@@ -114,44 +115,55 @@ void Game::handleEvents()
 {
     while(auto event = window.pollEvent())
     {
-        if(event->is<sf::Event::Closed>())
+        try
         {
-            window.close();
-        }
-
-        else if(event->is<sf::Event::Resized>())
-        {
-            sf::View view(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(event->getIf<sf::Event::Resized>()->size.x), static_cast<float>(event->getIf<sf::Event::Resized>()->size.y)}));
-            window.setView(view);
-        }
-
-        else if (event->is<sf::Event::KeyPressed>())
-        {
-            if (event->getIf<sf::Event::KeyPressed>()->code == sf::Keyboard::Key::F11)
+            if(event->is<sf::Event::Closed>())
             {
-                fullscreen = !fullscreen;
-
                 window.close();
+            }
 
-                window.create(
-                    fullscreen ? sf::VideoMode::getDesktopMode()
-                            : sf::VideoMode({1280, 720}),
-                    "Blockbit",
-                    fullscreen ? sf::State::Fullscreen
-                            : sf::State::Windowed
-                );
-
-                sf::View view(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)}));
+            else if(event->is<sf::Event::Resized>())
+            {
+                sf::View view(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(event->getIf<sf::Event::Resized>()->size.x), static_cast<float>(event->getIf<sf::Event::Resized>()->size.y)}));
                 window.setView(view);
             }
-        }
 
-        if(!gameStates.empty())
+            else if (event->is<sf::Event::KeyPressed>())
+            {
+                if (event->getIf<sf::Event::KeyPressed>()->code == sf::Keyboard::Key::F11)
+                {
+                    fullscreen = !fullscreen;
+
+                    window.close();
+
+                    window.create(
+                        fullscreen ? sf::VideoMode::getDesktopMode()
+                                : sf::VideoMode({1280, 720}),
+                        "Blockbit",
+                        fullscreen ? sf::State::Fullscreen
+                                : sf::State::Windowed
+                    );
+
+                    sf::View view(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)}));
+                    window.setView(view);
+                }
+            }
+
+            if(!gameStates.empty())
+            {
+                gameStates.back()->handleEvent(*event);
+            }
+
+            console.handleEvent(*event);
+        }
+        catch (const std::bad_alloc&)
         {
-            gameStates.back()->handleEvent(*event);
+            std::cerr << "[Game] bad_alloc handling event\n";
         }
-
-        console.handleEvent(*event);
+        catch (const std::exception& e)
+        {
+            std::cerr << "[Game] exception handling event: " << e.what() << '\n';
+        }
     }
 }
 

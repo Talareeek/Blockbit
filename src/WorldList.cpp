@@ -27,26 +27,7 @@ WorldList::WorldList(std::filesystem::path path, Game* game) : game{game}, path(
     loadEntries();
 
     ipField      = InputField(InputField({0.0f, 0.0f}, {0.0f, 0.0f}), "", "Server IP");
-    connectButton = Button({0.0f, 0.0f}, {0.0f, 0.0f}, sf::Color(55, 90, 130), "Connect", [this]()
-    {
-        std::string text = ipField.getText();
-        if (text.empty()) return;
-
-        std::string host = text;
-        uint16_t port = 25565;
-
-        auto colon = text.find(':');
-        if (colon != std::string::npos)
-        {
-            host = text.substr(0, colon);
-            std::string port_str = text.substr(colon + 1);
-            try { port = static_cast<uint16_t>(std::stoi(port_str)); }
-            catch (...) { port = 25565; }
-        }
-
-        std::cout << "[Multiplayer] Connect to: " << host << ':' << port << '\n';
-        this->game->pushState(std::make_unique<ClientGameState>(this->game, host, port));
-    });
+    connectButton = Button({0.0f, 0.0f}, {0.0f, 0.0f}, sf::Color(55, 90, 130), "Connect");
 }
 
 void WorldList::loadEntries()
@@ -233,6 +214,25 @@ void WorldList::update(float dt)
         entries.erase(entries.begin() + *it);
     }
 
+    if (pendingConnect.has_value())
+    {
+        auto [host, port] = *pendingConnect;
+        pendingConnect.reset();
+        try
+        {
+            game->pushState(std::make_unique<ClientGameState>(game, host, port));
+        }
+        catch (const std::bad_alloc&)
+        {
+            std::cerr << "[Multiplayer] bad_alloc constructing ClientGameState\n";
+        }
+        catch (const std::exception& e)
+        {
+            std::cerr << "[Multiplayer] exception constructing ClientGameState: " << e.what() << '\n';
+        }
+        return;
+    }
+
     float strip_w = size.x * STRIP_WIDTH_FACTOR;
     float content_w = size.x - strip_w;
     float field_w = content_w * 0.85f;
@@ -245,6 +245,28 @@ void WorldList::update(float dt)
 
     connectButton.setPosition({field_x, field_y + field_h + size.y * 0.025f});
     connectButton.setSize({field_w, field_h * 1.2f});
+
+    if (connectButton.clicked() && !pendingConnect.has_value())
+    {
+        std::string text = ipField.getText();
+        if (!text.empty())
+        {
+            std::string host = text;
+            uint16_t port = 25565;
+
+            auto colon = text.find(':');
+            if (colon != std::string::npos)
+            {
+                host = text.substr(0, colon);
+                std::string port_str = text.substr(colon + 1);
+                try { port = static_cast<uint16_t>(std::stoi(port_str)); }
+                catch (...) { port = 25565; }
+            }
+
+            std::cerr << "[Multiplayer] Connect to: " << host << ':' << port << '\n';
+            pendingConnect = std::make_pair(host, port);
+        }
+    }
 
     ipField.update(dt);
     connectButton.update(dt);
