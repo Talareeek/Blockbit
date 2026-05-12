@@ -14,13 +14,10 @@
 ClientGameState::ClientGameState(Game* game, const std::string& host, uint16_t port)
     : GameState(game)
 {
-    if (!client.connect(host, port))
-    {
-        std::cerr << "[Client] Failed to connect to " << host << ':' << port << '\n';
-        connectionFailed = true;
-        return;
-    }
-    std::cout << "[Client] Connected to " << host << ':' << port << '\n';
+    pendingHost = host;
+    pendingPort = port;
+    remoteAddress = host + ":" + std::to_string(port);
+    std::cerr << "[Client] Will attempt connection to " << remoteAddress << '\n';
 }
 
 ClientGameState::~ClientGameState()
@@ -56,7 +53,10 @@ void ClientGameState::rebuildEntitiesFromSnapshot(const SnapshotPacket& snap)
 
 void ClientGameState::processIncoming()
 {
-    auto packets = client.poll();
+    std::vector<ReceivedPacket> packets;
+    try { packets = client.poll(); }
+    catch (const std::bad_alloc&) { errorMessage = "Out of memory"; connectionFailed = true; return; }
+
     for (auto& pkt : packets)
     {
         try
@@ -68,11 +68,8 @@ void ClientGameState::processIncoming()
                 case PacketType::Initialization:
                 {
                     auto init = deserializeInitialization(r);
-                    for (auto& chunk : init.chunks)
-                    {
-                        world.getChunks()[chunk.chunk_position] = chunk;
-                        world.chunkMeshes.erase(chunk.chunk_position);
-                    }
+                    world.getChunks()[init.chunk.chunk_position] = init.chunk;
+                    world.chunkMeshes.erase(init.chunk.chunk_position);
                     initialized = true;
                     break;
                 }
@@ -109,6 +106,13 @@ void ClientGameState::processIncoming()
                     break;
             }
         }
+        catch (const std::bad_alloc&)
+        {
+            std::cerr << "[Client] bad_alloc decoding packet (type " << static_cast<int>(pkt.type) << ", size " << pkt.payload.size() << ")\n";
+            errorMessage = "Out of memory";
+            connectionFailed = true;
+            return;
+        }
         catch (const std::exception& e)
         {
             std::cerr << "[Client] Bad packet: " << e.what() << '\n';
@@ -139,28 +143,121 @@ void ClientGameState::handleEvent(const sf::Event& event)
     {
         world.chunkMeshes.clear();
     }
+
+    if (event.is<sf::Event::KeyPressed>())
+    {
+        auto key = event.getIf<sf::Event::KeyPressed>();
+        if (key->code == sf::Keyboard::Key::Escape && (connectionFailed || !client.isConnected()))
+        {
+            game->popState();
+            return;
+        }
+    }
 }
 
 void ClientGameState::update(float dt)
 {
-    if (connectionFailed || !client.isConnected())
+    try
     {
-        game->popState();
-        return;
+        if (!connectAttempted && !connectionFailed)
+        {
+            connectAttempted = true;
+            if (!client.connect(pendingHost, pendingPort, std::chrono::seconds(3)))
+            {
+                connectionFailed = true;
+                errorMessage = client.getLastError();
+                if (errorMessage.empty()) errorMessage = "Connection failed";
+                std::cerr << "[Client] connect failed: " << errorMessage << '\n';
+                return;
+            }
+            wasConnected = true;
+            std::cerr << "[Client] connected to " << remoteAddress << '\n';
+        }
+
+        if (!connectionFailed && wasConnected && !client.isConnected())
+        {
+            connectionFailed = true;
+            if (errorMessage.empty())
+            {
+                errorMessage = client.getLastError();
+                if (errorMessage.empty()) errorMessage = "Disconnected from server";
+            }
+        }
+
+        if (connectionFailed) return;
+
+        processIncoming();
+
+        sendTimer += dt;
+        if (sendTimer >= INPUT_INTERVAL)
+        {
+            sendTimer = 0.0f;
+            sendInput();
+        }
     }
-
-    processIncoming();
-
-    sendTimer += dt;
-    if (sendTimer >= INPUT_INTERVAL)
+    catch (const std::bad_alloc&)
     {
-        sendTimer = 0.0f;
-        sendInput();
+        std::cerr << "[Client] bad_alloc caught in update\n";
+        connectionFailed = true;
+        errorMessage = "Out of memory while updating";
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "[Client] exception in update: " << e.what() << '\n';
+        connectionFailed = true;
+        errorMessage = e.what();
     }
 }
 
 void ClientGameState::render(sf::RenderWindow& window)
 {
+    window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
+
+    if (connectionFailed)
+    {
+        sf::RectangleShape bg({static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
+        bg.setFillColor(sf::Color(18, 22, 30));
+        window.draw(bg);
+
+        std::string title = wasConnected ? "Disconnected" : "Cannot connect to server";
+        std::string detail = remoteAddress.empty() ? "" : remoteAddress;
+        std::string reason = errorMessage.empty() ? "" : ("Reason: " + errorMessage);
+        std::string hint = "Press ESC to go back";
+
+        sf::Text titleText(AssetManager::getFont(0), title, 36);
+        titleText.setFillColor(sf::Color(230, 80, 80));
+        titleText.setOutlineColor(sf::Color::Black);
+        titleText.setOutlineThickness(2.0f);
+        auto tb = titleText.getLocalBounds();
+        titleText.setPosition({(window.getSize().x - tb.size.x) * 0.5f, window.getSize().y * 0.35f});
+        window.draw(titleText);
+
+        if (!detail.empty())
+        {
+            sf::Text detailText(AssetManager::getFont(0), detail, 22);
+            detailText.setFillColor(sf::Color(220, 220, 220));
+            auto db = detailText.getLocalBounds();
+            detailText.setPosition({(window.getSize().x - db.size.x) * 0.5f, window.getSize().y * 0.35f + 50.0f});
+            window.draw(detailText);
+        }
+
+        if (!reason.empty())
+        {
+            sf::Text reasonText(AssetManager::getFont(0), reason, 20);
+            reasonText.setFillColor(sf::Color(200, 200, 200));
+            auto rb = reasonText.getLocalBounds();
+            reasonText.setPosition({(window.getSize().x - rb.size.x) * 0.5f, window.getSize().y * 0.35f + 85.0f});
+            window.draw(reasonText);
+        }
+
+        sf::Text hintText(AssetManager::getFont(0), hint, 18);
+        hintText.setFillColor(sf::Color(180, 180, 180));
+        auto hb = hintText.getLocalBounds();
+        hintText.setPosition({(window.getSize().x - hb.size.x) * 0.5f, window.getSize().y * 0.55f});
+        window.draw(hintText);
+        return;
+    }
+
     sf::RectangleShape sky({static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
     sky.setPosition({0.0f, 0.0f});
     sky.setFillColor(world.getSkyColor(world.getDayTime() / World::DAY_CYCLE_DURATION));
@@ -168,9 +265,12 @@ void ClientGameState::render(sf::RenderWindow& window)
 
     if (!initialized)
     {
-        sf::Text waiting(AssetManager::getFont(0), "Connecting...", 30);
-        waiting.setPosition({window.getSize().x * 0.5f - 100.0f, window.getSize().y * 0.5f});
+        sf::Text waiting(AssetManager::getFont(0), "Connecting to " + remoteAddress + "...", 28);
         waiting.setFillColor(sf::Color::White);
+        waiting.setOutlineColor(sf::Color::Black);
+        waiting.setOutlineThickness(2.0f);
+        auto wb = waiting.getLocalBounds();
+        waiting.setPosition({(window.getSize().x - wb.size.x) * 0.5f, window.getSize().y * 0.5f});
         window.draw(waiting);
         return;
     }
@@ -196,9 +296,23 @@ void ClientGameState::render(sf::RenderWindow& window)
     view.setSize({view.getSize().x, -view.getSize().y});
     window.setView(view);
 
-    RenderSystem(entities, window);
-
-    RenderWorld(world, window);
+    try
+    {
+        RenderSystem(entities, window);
+        RenderWorld(world, window);
+    }
+    catch (const std::bad_alloc&)
+    {
+        std::cerr << "[Client] bad_alloc in render\n";
+        connectionFailed = true;
+        errorMessage = "Out of memory while rendering";
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "[Client] exception in render: " << e.what() << '\n';
+        connectionFailed = true;
+        errorMessage = e.what();
+    }
 
     window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
 }

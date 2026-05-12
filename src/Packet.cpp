@@ -42,8 +42,7 @@ std::string PacketReader::readString()
 std::vector<char> serializePacket(const InitializationPacket& p)
 {
     PacketWriter w(PacketType::Initialization);
-    for (const auto& c : p.chunks)
-        w.write(c);
+    w.write(p.chunk);
     return w.release();
 }
 
@@ -124,8 +123,7 @@ std::vector<char> serializePacket(const InputPacket& p)
 InitializationPacket deserializeInitialization(PacketReader& r)
 {
     InitializationPacket p;
-    for (auto& c : p.chunks)
-        c = r.read<Chunk>();
+    p.chunk = r.read<Chunk>();
     return p;
 }
 
@@ -142,6 +140,8 @@ SnapshotPacket deserializeSnapshot(PacketReader& r)
 {
     SnapshotPacket p;
     uint32_t count = r.read<uint32_t>();
+    if (count > 100000) throw std::runtime_error("Snapshot: entity count too large");
+
     p.entities.reserve(count);
     for (uint32_t i = 0; i < count; i++)
     {
@@ -160,6 +160,8 @@ SnapshotPacket deserializeSnapshot(PacketReader& r)
         e.maxHealth = r.read<uint32_t>();
 
         uint32_t invCount = r.read<uint32_t>();
+        if (invCount > 1024) throw std::runtime_error("Snapshot: inventory size too large");
+
         e.inventory.resize(invCount);
         for (uint32_t j = 0; j < invCount; j++)
         {

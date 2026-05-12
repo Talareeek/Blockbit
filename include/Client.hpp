@@ -12,6 +12,7 @@
 #include <vector>
 #include <string>
 #include <cstdint>
+#include <chrono>
 
 #include "Packet.hpp"
 
@@ -50,13 +51,18 @@ public:
     Client();
     ~Client();
 
-    bool connect(const std::string& host, uint16_t port);
+    bool connect(const std::string& host, uint16_t port, std::chrono::milliseconds timeout = std::chrono::seconds(5));
     void disconnect();
 
     void send(std::vector<char> buf);
     std::vector<ReceivedPacket> poll();
 
     bool isConnected() const { return connected; }
+    const std::string& getLastError() const { return last_error; }
+
+private:
+
+    std::string last_error;
 };
 
 #endif // CLIENT_HPP

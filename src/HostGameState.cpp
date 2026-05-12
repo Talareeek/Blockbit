@@ -70,8 +70,6 @@ void HostGameState::despawnRemotePlayer(uint32_t clientId)
 
 void HostGameState::sendInitializationTo(uint32_t clientId, int aroundChunkPos)
 {
-    InitializationPacket init{};
-
     constexpr int N = World::SIMULATION_DISTANCE + 1;
     int start = aroundChunkPos - N / 2;
 
@@ -82,10 +80,11 @@ void HostGameState::sendInitializationTo(uint32_t clientId, int aroundChunkPos)
         {
             world.generateChunk(cp);
         }
-        init.chunks[i] = world.getChunk(cp);
-    }
 
-    server.send(clientId, serializePacket(init));
+        InitializationPacket init;
+        init.chunk = world.getChunk(cp);
+        server.send(clientId, serializePacket(init));
+    }
 }
 
 void HostGameState::syncConnections()
@@ -250,18 +249,29 @@ void HostGameState::handleEvent(const sf::Event& event)
 
 void HostGameState::update(float dt)
 {
-    syncConnections();
-    processIncoming();
-    applyRemoteInputs(dt);
-
-    MainGameState::update(dt);
-
-    broadcastBlockUpdates();
-
-    snapshotTimer += dt;
-    if (snapshotTimer >= SNAPSHOT_INTERVAL)
+    try
     {
-        snapshotTimer = 0.0f;
-        broadcastSnapshot();
+        syncConnections();
+        processIncoming();
+        applyRemoteInputs(dt);
+
+        MainGameState::update(dt);
+
+        broadcastBlockUpdates();
+
+        snapshotTimer += dt;
+        if (snapshotTimer >= SNAPSHOT_INTERVAL)
+        {
+            snapshotTimer = 0.0f;
+            broadcastSnapshot();
+        }
+    }
+    catch (const std::bad_alloc&)
+    {
+        std::cerr << "[Host] bad_alloc in update\n";
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "[Host] exception in update: " << e.what() << '\n';
     }
 }

@@ -18,6 +18,13 @@ private:
     uint32_t myEntityId = 0;
     bool     initialized = false;
     bool     connectionFailed = false;
+    bool     wasConnected = false;
+    bool     connectAttempted = false;
+
+    std::string errorMessage;
+    std::string remoteAddress;
+    std::string pendingHost;
+    uint16_t    pendingPort = 0;
 
     InputPacket lastSent{};
 

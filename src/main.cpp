@@ -21,6 +21,10 @@
 
 #include "../include/IntroGameState.hpp"
 
+#include "../include/ClientGameState.hpp"
+
+#include "../include/HostGameState.hpp"
+
 #include <cstdlib>
 
 #include <thread>
@@ -29,36 +33,111 @@
 
 #include <filesystem>
 
+#include <iostream>
+
 int main(int argc, char* argv[])
 {
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
-    Game game;
-
-    // Check for --load argument
     std::string loadWorld;
-    if(argc >= 3 && std::string(argv[1]) == "--load") {
-        loadWorld = argv[2];
+    std::string joinAddress;
+    std::string hostWorld;
+
+    for (int i = 1; i < argc; i++)
+    {
+        std::string arg = argv[i];
+        if (arg == "--load" && i + 1 < argc)
+        {
+            loadWorld = argv[++i];
+        }
+        else if (arg == "--join" && i + 1 < argc)
+        {
+            joinAddress = argv[++i];
+        }
+        else if (arg == "--host" && i + 1 < argc)
+        {
+            hostWorld = argv[++i];
+        }
     }
 
-    if(!loadWorld.empty()) {
-        // Load specific world
-        std::filesystem::path worldPath = std::filesystem::path(std::getenv("HOME")) / "Blockbit" / "saves" / loadWorld;
-        if(std::filesystem::exists(worldPath)) {
-            try {
-                game.pushState(std::make_unique<MainGameState>(&game, World(worldPath)));
-            } catch(const std::exception& e) {
-                std::cerr << "Failed to load world: " << e.what() << std::endl;
+    try
+    {
+        Game game;
+
+        if (!joinAddress.empty())
+        {
+            std::string host = joinAddress;
+            uint16_t port = 25565;
+
+            auto colon = joinAddress.find(':');
+            if (colon != std::string::npos)
+            {
+                host = joinAddress.substr(0, colon);
+                std::string port_str = joinAddress.substr(colon + 1);
+                try { port = static_cast<uint16_t>(std::stoi(port_str)); }
+                catch (...) { port = 25565; }
+            }
+
+            std::cerr << "[main] --join " << host << ":" << port << std::endl;
+            game.pushState(std::make_unique<ClientGameState>(&game, host, port));
+        }
+        else if (!hostWorld.empty())
+        {
+            std::filesystem::path worldPath = std::filesystem::path(std::getenv("HOME")) / "Blockbit" / "saves" / hostWorld;
+            if (std::filesystem::exists(worldPath))
+            {
+                std::cerr << "[main] --host " << hostWorld << " on 25565" << std::endl;
+                game.pushState(std::make_unique<HostGameState>(&game, World(worldPath)));
+            }
+            else
+            {
+                std::cerr << "World not found at: " << worldPath << std::endl;
                 game.pushState(std::make_unique<IntroGameState>(&game));
             }
-        } else {
-            std::cerr << "World not found at: " << worldPath << std::endl;
+        }
+        else if (!loadWorld.empty())
+        {
+            std::filesystem::path worldPath = std::filesystem::path(std::getenv("HOME")) / "Blockbit" / "saves" / loadWorld;
+            if (std::filesystem::exists(worldPath))
+            {
+                try
+                {
+                    game.pushState(std::make_unique<MainGameState>(&game, World(worldPath)));
+                }
+                catch (const std::exception& e)
+                {
+                    std::cerr << "Failed to load world: " << e.what() << std::endl;
+                    game.pushState(std::make_unique<IntroGameState>(&game));
+                }
+            }
+            else
+            {
+                std::cerr << "World not found at: " << worldPath << std::endl;
+                game.pushState(std::make_unique<IntroGameState>(&game));
+            }
+        }
+        else
+        {
             game.pushState(std::make_unique<IntroGameState>(&game));
         }
-    } else {
-        // Default: show intro
-        game.pushState(std::make_unique<IntroGameState>(&game));
+
+        game.run();
+    }
+    catch (const std::bad_alloc& e)
+    {
+        std::cerr << "[FATAL] bad_alloc reached main: " << e.what() << std::endl;
+        return 1;
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "[FATAL] uncaught exception in main: " << e.what() << std::endl;
+        return 1;
+    }
+    catch (...)
+    {
+        std::cerr << "[FATAL] unknown uncaught exception in main" << std::endl;
+        return 1;
     }
 
-    game.run();
+    return 0;
 }

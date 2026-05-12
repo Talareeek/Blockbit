@@ -24,7 +24,7 @@ enum class PacketType : uint8_t
 
 struct InitializationPacket
 {
-    Chunk chunks[World::SIMULATION_DISTANCE + 1];
+    Chunk chunk;
 };
 
 struct BlockUpdatePacket

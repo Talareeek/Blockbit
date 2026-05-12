@@ -10,30 +10,112 @@ Client::~Client()
     disconnect();
 }
 
-bool Client::connect(const std::string& host, uint16_t port)
+bool Client::connect(const std::string& host, uint16_t port, std::chrono::milliseconds timeout)
 {
     if (connected) return true;
+
+    last_error.clear();
 
     try
     {
         asio::ip::tcp::resolver resolver(io);
-        auto endpoints = resolver.resolve(host, std::to_string(port));
-        asio::connect(socket, endpoints);
+        asio::ip::tcp::resolver::results_type endpoints;
+
+        try
+        {
+            endpoints = resolver.resolve(host, std::to_string(port));
+        }
+        catch (const asio::system_error& e)
+        {
+            last_error = "DNS: " + std::string(e.code().message());
+            std::cerr << "Client resolve failed: " << last_error << '\n';
+            io.restart();
+            return false;
+        }
+
+        struct ConnectState
+        {
+            std::atomic<bool> done{false};
+            asio::error_code err = asio::error::would_block;
+        };
+        auto state = std::make_shared<ConnectState>();
+
+        asio::async_connect(socket, endpoints,
+            [state](const asio::error_code& ec, const asio::ip::tcp::endpoint&)
+            {
+                state->err = ec;
+                state->done = true;
+            });
+
+        auto deadline = std::chrono::steady_clock::now() + timeout;
+        while (!state->done && std::chrono::steady_clock::now() < deadline)
+        {
+            io.run_for(std::chrono::milliseconds(50));
+        }
+
+        if (!state->done)
+        {
+            asio::error_code ec;
+            socket.close(ec);
+            io.run();
+            io.restart();
+            last_error = "Connection timed out";
+            std::cerr << "Client connect failed: " << last_error << '\n';
+            return false;
+        }
+
+        if (state->err)
+        {
+            asio::error_code ec;
+            socket.close(ec);
+            io.restart();
+            last_error = state->err.message();
+            std::cerr << "Client connect failed: " << last_error << '\n';
+            return false;
+        }
 
         connected = true;
         readHeader();
 
         ioThread = std::thread([this]()
         {
-            try { io.run(); }
-            catch (const std::exception& e) { std::cerr << "Client io error: " << e.what() << '\n'; }
+            try
+            {
+                io.run();
+            }
+            catch (const std::bad_alloc& e)
+            {
+                std::cerr << "Client io thread bad_alloc: " << e.what() << '\n';
+                last_error = "Out of memory in io thread";
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr << "Client io error: " << e.what() << '\n';
+                last_error = e.what();
+            }
+            catch (...)
+            {
+                std::cerr << "Client io thread: unknown exception\n";
+                last_error = "Unknown io thread exception";
+            }
+            connected = false;
         });
 
         return true;
     }
+    catch (const asio::system_error& e)
+    {
+        last_error = e.code().message();
+        std::cerr << "Client connect failed: " << last_error << '\n';
+        asio::error_code ec;
+        socket.close(ec);
+        io.restart();
+        return false;
+    }
     catch (const std::exception& e)
     {
-        std::cerr << "Client connect failed: " << e.what() << '\n';
+        last_error = e.what();
+        std::cerr << "Client connect failed: " << last_error << '\n';
         asio::error_code ec;
         socket.close(ec);
         io.restart();
@@ -43,14 +125,22 @@ bool Client::connect(const std::string& host, uint16_t port)
 
 void Client::disconnect()
 {
-    if (!connected.exchange(false)) return;
+    bool wasConnected = connected.exchange(false);
 
-    asio::post(io, [this]()
+    if (wasConnected)
+    {
+        asio::post(io, [this]()
+        {
+            asio::error_code ec;
+            socket.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
+            socket.close(ec);
+        });
+    }
+    else
     {
         asio::error_code ec;
-        socket.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
         socket.close(ec);
-    });
+    }
 
     if (ioThread.joinable()) ioThread.join();
     io.restart();

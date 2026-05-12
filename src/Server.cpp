@@ -138,29 +138,46 @@ void Server::start()
     doAccept();
     ioThread = std::thread([this]()
     {
-        try { io.run(); }
-        catch (const std::exception& e) { std::cerr << "Server io error: " << e.what() << '\n'; }
+        try
+        {
+            io.run();
+        }
+        catch (const std::bad_alloc& e)
+        {
+            std::cerr << "Server io thread bad_alloc: " << e.what() << '\n';
+        }
+        catch (const std::exception& e)
+        {
+            std::cerr << "Server io error: " << e.what() << '\n';
+        }
+        catch (...)
+        {
+            std::cerr << "Server io thread: unknown exception\n";
+        }
     });
 }
 
 void Server::stop()
 {
-    if (!running.exchange(false)) return;
+    bool wasRunning = running.exchange(false);
 
-    asio::post(io, [this]()
+    if (wasRunning)
     {
-        asio::error_code ec;
-        acceptor.close(ec);
-
-        std::vector<std::shared_ptr<ServerSession>> toClose;
+        asio::post(io, [this]()
         {
-            std::lock_guard<std::mutex> lock(sessionsMutex);
-            toClose.reserve(sessions.size());
-            for (auto& [id, sess] : sessions) toClose.push_back(sess);
-            sessions.clear();
-        }
-        for (auto& s : toClose) s->close();
-    });
+            asio::error_code ec;
+            acceptor.close(ec);
+
+            std::vector<std::shared_ptr<ServerSession>> toClose;
+            {
+                std::lock_guard<std::mutex> lock(sessionsMutex);
+                toClose.reserve(sessions.size());
+                for (auto& [id, sess] : sessions) toClose.push_back(sess);
+                sessions.clear();
+            }
+            for (auto& s : toClose) s->close();
+        });
+    }
 
     if (ioThread.joinable()) ioThread.join();
     io.restart();
