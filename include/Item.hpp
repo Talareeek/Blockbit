@@ -39,6 +39,25 @@ enum class ItemCategory
     Misc
 };
 
+enum class RecyclingCategory
+{
+    None,
+    Wood,
+    Stone,
+    Organic,
+    Ore
+};
+
+struct CraftMaterials
+{
+    uint32_t wood;
+    uint32_t stone;
+    uint32_t iron;
+    uint32_t gold;
+    uint32_t diamond;
+};
+
+
 struct ItemData
 {
     std::string name;
@@ -48,6 +67,10 @@ struct ItemData
     ItemCategory category;
 
     std::function<void(World& world, sf::Vector2f mouse, uint32_t user)> onUse = [](World&, sf::Vector2f, uint32_t){};
+
+    RecyclingCategory recycling_category = RecyclingCategory::None;
+
+    CraftMaterials materials = {0, 0, 0, 0, 0};
 };
 
 extern std::unordered_map<ItemID, ItemData> itemDatabase;
@@ -60,7 +83,6 @@ struct ItemStack
 
     bool empty() const;
 };
-
 
 struct Inventory
 {

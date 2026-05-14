@@ -16,7 +16,17 @@ private:
         Top,
         Bottom,
         Left,
-        Right
+        Right,
+        TopLeft,
+        TopRight,
+        BottomLeft,
+        BottomRight
+    };
+
+    struct LogEntry
+    {
+        std::wstring text;
+        sf::Color color;
     };
 
     ResizeEdge currentEdge = ResizeEdge::None;
@@ -27,9 +37,11 @@ private:
 
     bool active = false;
 
-    std::vector<std::wstring> logs; 
+    std::vector<LogEntry> logs;
 
     std::wstring incomming;
+
+    float cursorTimer = 0.0f;
 
     World* world = nullptr;
 
@@ -44,6 +56,7 @@ public:
     void render(sf::RenderWindow& window) override;
 
     void writeLine(std::wstring string);
+    void writeLine(std::wstring string, sf::Color color);
 
 
     void assignWorld(World* world);
