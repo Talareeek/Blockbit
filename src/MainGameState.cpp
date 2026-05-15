@@ -148,22 +148,32 @@ void MainGameState::handleEvent(const sf::Event& event)
 
 void MainGameState::update(float dt)
 {
-    game->getConsole().assignWorld(&world);
+    float tick_step = 1.0f / static_cast<float>(MainGameState::TICKS_PER_SECOND);
+
+    since_last_tick += dt;
 
     auto& entities = world.getEntities();
+
+    // DEPENDANT BY TICK-RATE
+    while(since_last_tick >= tick_step)
+    {
+        PlayerInputSystem(world, tick_step);
+        TransformSystem(world);
+        ExplosiveSystem(world, tick_step);
+        HealthSystem(world);
+        PhysicsSystem(entities, world, tick_step);
+        InventorySystem(entities);
+        ChunkUnloadSystem(world);
+
+        since_last_tick -= tick_step;
+    }
+
+    game->getConsole().assignWorld(&world);
     
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
     {
         game->pushState(std::make_unique<PauseScreenState>(game));
-    }
-
-    PlayerInputSystem(world, dt);
-    TransformSystem(world);
-    ExplosiveSystem(world, dt);
-    HealthSystem(world);
-    PhysicsSystem(entities, world, dt);
-    InventorySystem(entities);
-    ChunkUnloadSystem(world);
+    }    
 
     healthBar.setHealth(&entityWithID(world.getPlayerID(), world).getComponent<HealthComponent>());
 

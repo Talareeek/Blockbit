@@ -29,6 +29,8 @@ protected:
     float music_interval = std::rand() % 60 + 60.0f;
     float music_timer = 0.0f;
 
+    float since_last_tick = 0.0f;
+
 public:
 
     World& getWorld() { return world; }
@@ -42,6 +44,8 @@ public:
     void render(sf::RenderWindow& window) override;    
 
     static constexpr unsigned int UNIT_SIZE_FACTOR = 12;
+
+    static constexpr uint8_t TICKS_PER_SECOND = 60;
 
 };
 
