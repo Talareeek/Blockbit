@@ -30,6 +30,15 @@ enum class ItemID : uint32_t
     Oak_Leaves = 12
 };
 
+enum class ItemRarity
+{
+    Common,
+    Rare,
+    Super_Rare,
+    Epic,
+    Mythic
+};
+
 enum class ItemCategory
 {
     Block,
