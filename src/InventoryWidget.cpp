@@ -9,26 +9,31 @@
 InventoryWidget::InventoryWidget(InventoryComponent* inventoryComponent) : UIElement({0.0f, 0.0f}, {0.0f, 0.0f})
 {
     this->inventoryComponent = inventoryComponent;
+
+    if(!inventoryComponent) return;
+
+    for(int i = 0; i < 36; i++)
+    {
+        slots[i].setItemStack(inventoryComponent->inventory.slots[i]);
+    }
 }
 
 void InventoryWidget::handleEvent(const sf::Event& event)
 {
-    /*
-    if(event.is<sf::Event::KeyPressed>())
+    for(int i = 0; i < 36; i++)
     {
-        auto key = event.getIf<sf::Event::KeyPressed>();
-
-        if(key->code == sf::Keyboard::Key::E)
-        {
-            visible = !visible;
-        }
+        slots[i].handleEvent(event);
     }
-    */
 }
 
 void InventoryWidget::update(float dt)
 {
+    if(!inventoryComponent) return;
 
+    for(int i = 0; i < 36; i++)
+    {
+        slots[i].setItemStack(inventoryComponent->inventory.slots[i]);
+    }
 }
 
 void InventoryWidget::render(sf::RenderWindow& window)
@@ -60,10 +65,10 @@ void InventoryWidget::render(sf::RenderWindow& window)
 
     float itemSize = slotSize * (16.0f / 20.0f);
 
-    for(size_t i = 0; i < component.inventory.slots.size(); i++)
+    for(int i = 35; i >= 0; i--)
     {
-        size_t col = i % 9;
-        size_t row = i / 9;
+        int col = i % 9;
+        int row = i / 9;
 
         auto& item = component.inventory.slots[i];
         if(item.itemID == ItemID::None) continue;
@@ -78,26 +83,9 @@ void InventoryWidget::render(sf::RenderWindow& window)
             (slotSize - itemSize) / 2.0f
         );
 
-        Slot slot(slotPosition, {slotSize, slotSize});
+        slots[i].setPosition(slotPosition);
+        slots[i].setSize({slotSize, slotSize});
 
-        slot.setItemStack(item);
-        slot.render(window);
-
-        /*
-
-        sf::Sprite sprite(AssetManager::getTexture(itemDatabase[item.itemID].texture));
-
-        sprite.setPosition({
-            std::round(itemPosition.x),
-            std::round(itemPosition.y)
-        });
-
-        sprite.setScale({
-            itemSize / sprite.getTextureRect().size.x,
-            itemSize / sprite.getTextureRect().size.y
-        });
-
-        window.draw(sprite);
-        */
+        slots[i].render(window);
     }
 }

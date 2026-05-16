@@ -75,24 +75,7 @@ void Hotbar::render(sf::RenderWindow& window)
 
         slot.setItemStack(stack);
 
-        slot.setHovered(i == selectedSlot);
-
-        /*
-
-        sf::Sprite itemSprite(AssetManager::getTexture(itemDatabase[stack.itemID].texture));
-
-        itemSprite.setPosition(
-            position + sf::Vector2f(
-                slotStart + (slotWidth + slotSpacing) * i + slotSpacing/2,
-                verticalOffset + slotSpacing/2
-            )
-        );
-
-        itemSprite.setScale({itemSize / 16.f, itemSize / 16.f});
-
-        */
-
-        
+        slot.setHovered(i == selectedSlot);        
 
         slot.render(window);
     }

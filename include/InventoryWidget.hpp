@@ -3,6 +3,7 @@
 
 #include "UIElement.hpp"
 #include "InventoryComponent.hpp"
+#include "Slot.hpp"
 
 #include <iostream>
 
@@ -12,6 +13,8 @@ private:
 
     InventoryComponent* inventoryComponent;
     bool active = false;
+
+    Slot slots[36] = {};
 
 public:
 

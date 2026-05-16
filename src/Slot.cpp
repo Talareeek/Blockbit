@@ -2,13 +2,14 @@
 #include "../include/AssetManager.hpp"
 
 #include <string>
+#include <algorithm>
 
 Slot::Slot() : UIElement(sf::Vector2f(0.0f, 0.0f), sf::Vector2f(20.0f, 20.0f))
 {
     
 }
 
-Slot::Slot(const sf::Vector2f& relative_position, const float size) : UIElement(UIElement::ScreenRelative{relative_position, sf::Vector2f(size, size), true, UIElement::ScreenRelative::Axis::X})
+Slot::Slot(const sf::Vector2f& relative_position, const float size, bool show_item_info) : UIElement(UIElement::ScreenRelative{relative_position, sf::Vector2f(size, size), true, UIElement::ScreenRelative::Axis::X}), show_item_info{show_item_info}
 {
     
 }
@@ -24,6 +25,8 @@ void Slot::handleEvent(const sf::Event& event)
     {
         sf::FloatRect bounds = {position, size};
         hovered = bounds.contains(static_cast<sf::Vector2f>(event.getIf<sf::Event::MouseMoved>()->position));
+
+        mouse_pos = static_cast<sf::Vector2f>(event.getIf<sf::Event::MouseMoved>()->position);
     }
 }
 
@@ -61,6 +64,55 @@ void Slot::render(sf::RenderWindow& window)
 
     window.draw(text);
 
+    if(hovered && show_item_info)
+    {
+        const auto& itemData = itemDatabase[item_stack.itemID];
+
+        std::string nameStr = itemData.name;
+        std::string idStr = "ID: " + std::to_string(static_cast<uint32_t>(item_stack.itemID));
+
+        unsigned int charSize = static_cast<unsigned int>(size.x / 5.0f);
+
+        sf::Text nameText(AssetManager::getFont(0), nameStr, charSize);
+        sf::Text idText(AssetManager::getFont(0), idStr, charSize);
+
+        nameText.setFillColor(sf::Color::White);
+        idText.setFillColor(sf::Color::White);
+
+        float padding = static_cast<float>(charSize) * 0.4f;
+        float lineSpacing = static_cast<float>(charSize) * 0.3f;
+
+        sf::FloatRect nameBounds = nameText.getLocalBounds();
+        sf::FloatRect idBounds = idText.getLocalBounds();
+
+        float frameWidth = std::max(nameBounds.size.x, idBounds.size.x) + padding * 2.0f;
+        float frameHeight = nameBounds.size.y + idBounds.size.y + lineSpacing + padding * 2.0f;
+
+        sf::Vector2f framePos = mouse_pos + sf::Vector2f(15.0f, 15.0f);
+
+        sf::Vector2u windowSize = window.getSize();
+        if(framePos.x + frameWidth > windowSize.x)
+        {
+            framePos.x = windowSize.x - frameWidth;
+        }
+        if(framePos.y + frameHeight > windowSize.y)
+        {
+            framePos.y = windowSize.y - frameHeight;
+        }
+
+        sf::RectangleShape frame({frameWidth, frameHeight});
+        frame.setPosition(framePos);
+        frame.setFillColor(sf::Color(0, 0, 0, 200));
+        frame.setOutlineColor(sf::Color::White);
+        frame.setOutlineThickness(1.0f);
+        window.draw(frame);
+
+        nameText.setPosition(framePos + sf::Vector2f(padding, padding));
+        idText.setPosition(framePos + sf::Vector2f(padding, padding + nameBounds.size.y + lineSpacing));
+
+        window.draw(nameText);
+        window.draw(idText);
+    }
 }
 
 

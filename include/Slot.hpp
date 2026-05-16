@@ -13,12 +13,16 @@ private:
 
     bool hovered = false;
 
+    bool show_item_info = true;
+
+    sf::Vector2f mouse_pos;
+
 public:
 
     using UIElement::UIElement;
 
     Slot();
-    Slot(const sf::Vector2f& relative_position, const float size);
+    Slot(const sf::Vector2f& relative_position, const float size, bool show_item_info = true);
 
     void setItemStack(const ItemStack& stack);
 

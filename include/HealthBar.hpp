@@ -8,7 +8,7 @@ class HealthBar : public UIElement
 {
 private:
 
-    HealthComponent* health;
+    HealthComponent* health = nullptr;
 
 public:
 

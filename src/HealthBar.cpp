@@ -1,6 +1,6 @@
 #include "../include/HealthBar.hpp"
 
-HealthBar::HealthBar(HealthComponent* health) : UIElement({0.0f, 0.0f}, {0.0f, 0.0f})
+HealthBar::HealthBar(HealthComponent* health) : UIElement({0.0f, 0.0f}, {0.0f, 0.0f}), health(health)
 {
 
 }
@@ -17,6 +17,8 @@ void HealthBar::update(float dt)
 
 void HealthBar::render(sf::RenderWindow& window)
 {
+    if(!health) return;
+
     position = {
         window.getSize().x * 0.05f,
         window.getSize().y * 0.05f

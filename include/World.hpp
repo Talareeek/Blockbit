@@ -175,6 +175,10 @@ extern void RenderWorld(World& world, sf::RenderWindow& window);
 
 extern void RenderBlockOverlay(World& world, sf::RenderWindow& window);
 
+extern sf::Vector2f getSunWorldPosition(const World& world, sf::Vector2f cameraCenter);
+
+extern void RenderLightRays(World& world, sf::RenderWindow& window);
+
 extern sf::Vector2i getMouseBlockPosition(const World& world, const sf::RenderWindow& window);
 
 extern sf::Vector2f getMouseWorldPosition(const World& world, const sf::RenderWindow& window);

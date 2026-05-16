@@ -330,8 +330,10 @@ void MainGameState::render(sf::RenderWindow& window)
 
     RenderSystem(entities, window);
 
-    RenderWorld(world, window); 
-    
+    RenderWorld(world, window);
+
+    //RenderLightRays(world, window);
+
     RenderBlockOverlay(world, window);
 
     window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
