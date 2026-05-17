@@ -27,7 +27,9 @@ enum class ItemID : uint32_t
     Gold_Ore = 9,
     Diamond_Ore = 10,
     Oak_Log = 11,
-    Oak_Leaves = 12
+    Oak_Leaves = 12,
+    Bucket = 13,
+    Water_Bucket = 14
 };
 
 enum class ItemRarity
@@ -73,9 +75,11 @@ struct ItemData
     uint32_t texture;
     uint32_t maxStackSize;
 
+    ItemRarity rarity;
+
     ItemCategory category;
 
-    std::function<void(World& world, sf::Vector2f mouse, uint32_t user)> onUse = [](World&, sf::Vector2f, uint32_t){};
+    std::function<bool(World& world, sf::Vector2f mouse, uint32_t user)> onUse = [](World&, sf::Vector2f, uint32_t) -> bool {return false;};
 
     RecyclingCategory recycling_category = RecyclingCategory::None;
 
@@ -100,6 +104,8 @@ struct Inventory
     Inventory(size_t size);
 
     ItemStack addItemWithLeftover(ItemID itemID, uint32_t quantity);
+
+    ItemStack removeItemWithLeftover(ItemID itemID, uint32_t quantity);
 };
 
 extern bool addItem(Inventory& inventory, ItemID itemID, uint32_t quantity);

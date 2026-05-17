@@ -60,84 +60,66 @@ int main(int argc, char* argv[])
         }
     }
 
-    try
+    Game game;
+
+    if (!joinAddress.empty())
     {
-        Game game;
+        std::string host = joinAddress;
+        uint16_t port = 25565;
 
-        if (!joinAddress.empty())
+        auto colon = joinAddress.find(':');
+        if (colon != std::string::npos)
         {
-            std::string host = joinAddress;
-            uint16_t port = 25565;
-
-            auto colon = joinAddress.find(':');
-            if (colon != std::string::npos)
-            {
-                host = joinAddress.substr(0, colon);
-                std::string port_str = joinAddress.substr(colon + 1);
-                try { port = static_cast<uint16_t>(std::stoi(port_str)); }
-                catch (...) { port = 25565; }
-            }
-
-            std::cerr << "[main] --join " << host << ":" << port << std::endl;
-            game.pushState(std::make_unique<ClientGameState>(&game, host, port));
+            host = joinAddress.substr(0, colon);
+            std::string port_str = joinAddress.substr(colon + 1);
+            try { port = static_cast<uint16_t>(std::stoi(port_str)); }
+            catch (...) { port = 25565; }
         }
-        else if (!hostWorld.empty())
+
+        std::cerr << "[main] --join " << host << ":" << port << std::endl;
+        game.pushState(std::make_unique<ClientGameState>(&game, host, port));
+    }
+    else if (!hostWorld.empty())
+    {
+        std::filesystem::path worldPath = std::filesystem::path(std::getenv("HOME")) / "Blockbit" / "saves" / hostWorld;
+        if (std::filesystem::exists(worldPath))
         {
-            std::filesystem::path worldPath = std::filesystem::path(std::getenv("HOME")) / "Blockbit" / "saves" / hostWorld;
-            if (std::filesystem::exists(worldPath))
-            {
-                std::cerr << "[main] --host " << hostWorld << " on 25565" << std::endl;
-                game.pushState(std::make_unique<HostGameState>(&game, World(worldPath)));
-            }
-            else
-            {
-                std::cerr << "World not found at: " << worldPath << std::endl;
-                game.pushState(std::make_unique<IntroGameState>(&game));
-            }
+            std::cerr << "[main] --host " << hostWorld << " on 25565" << std::endl;
+            game.pushState(std::make_unique<HostGameState>(&game, World(worldPath)));
         }
-        else if (!loadWorld.empty())
+        else
         {
-            std::filesystem::path worldPath = std::filesystem::path(std::getenv("HOME")) / "Blockbit" / "saves" / loadWorld;
-            if (std::filesystem::exists(worldPath))
+            std::cerr << "World not found at: " << worldPath << std::endl;
+            game.pushState(std::make_unique<IntroGameState>(&game));
+        }
+    }
+    else if (!loadWorld.empty())
+    {
+        std::filesystem::path worldPath = std::filesystem::path(std::getenv("HOME")) / "Blockbit" / "saves" / loadWorld;
+        if (std::filesystem::exists(worldPath))
+        {
+            try
             {
-                try
-                {
-                    game.pushState(std::make_unique<MainGameState>(&game, World(worldPath)));
-                }
-                catch (const std::exception& e)
-                {
-                    std::cerr << "Failed to load world: " << e.what() << std::endl;
-                    game.pushState(std::make_unique<IntroGameState>(&game));
-                }
+                game.pushState(std::make_unique<MainGameState>(&game, World(worldPath)));
             }
-            else
+            catch (const std::exception& e)
             {
-                std::cerr << "World not found at: " << worldPath << std::endl;
+                std::cerr << "Failed to load world: " << e.what() << std::endl;
                 game.pushState(std::make_unique<IntroGameState>(&game));
             }
         }
         else
         {
+            std::cerr << "World not found at: " << worldPath << std::endl;
             game.pushState(std::make_unique<IntroGameState>(&game));
         }
+    }
+    else
+    {
+        game.pushState(std::make_unique<IntroGameState>(&game));
+    }
 
-        game.run();
-    }
-    catch (const std::bad_alloc& e)
-    {
-        std::cerr << "[FATAL] bad_alloc reached main: " << e.what() << std::endl;
-        return 1;
-    }
-    catch (const std::exception& e)
-    {
-        std::cerr << "[FATAL] uncaught exception in main: " << e.what() << std::endl;
-        return 1;
-    }
-    catch (...)
-    {
-        std::cerr << "[FATAL] unknown uncaught exception in main" << std::endl;
-        return 1;
-    }
+    game.run();
 
     return 0;
 }

@@ -1186,6 +1186,7 @@ void World::createPlayer()
     entityWithID(getPlayerID(), *this).addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
     entityWithID(getPlayerID(), *this).addComponent(InventoryComponent(36));
     entityWithID(getPlayerID(), *this).getComponent<InventoryComponent>().inventory.slots[0] = {ItemID::Dynamite, 16};
+    entityWithID(getPlayerID(), *this).getComponent<InventoryComponent>().inventory.slots[1] = {ItemID::Bucket, 1};
 
     for(int i = 0; i < 255; i++)
     {

@@ -3,17 +3,18 @@
 #include "../include/Entity.hpp"
 #include "../include/ExplosiveComponent.hpp"
 #include "../include/TransformComponent.hpp"
+#include "../include/InventoryComponent.hpp"
 
 std::unordered_map<ItemID, ItemData> itemDatabase =
 {
-    {ItemID::None, {"None", UINT32_MAX, 0, ItemCategory::Misc}},
-    {ItemID::Stone, {"Stone", 1, 64, ItemCategory::Block}},
-    {ItemID::Grass, {"Grass", 2, 64, ItemCategory::Block}},
-    {ItemID::Dirt, {"Dirt", 3, 64, ItemCategory::Block}},
-    {ItemID::Cobblestone, {"Cobblestone", 4, 64, ItemCategory::Block}},
-    {ItemID::Obsidian, {"Obsidian", 5, 64, ItemCategory::Block}},
-    {ItemID::Bedrock, {"Bedrock", 6, 64, ItemCategory::Block}},
-    {ItemID::Dynamite, {"Dynamite", 12, 16, ItemCategory::Misc, [](World& world, sf::Vector2f mouse, uint32_t user)
+    {ItemID::None, {"None", UINT32_MAX, 0, ItemRarity::Common, ItemCategory::Misc}},
+    {ItemID::Stone, {"Stone", 1, 64, ItemRarity::Common, ItemCategory::Block}},
+    {ItemID::Grass, {"Grass", 2, 64, ItemRarity::Common, ItemCategory::Block}},
+    {ItemID::Dirt, {"Dirt", 3, 64, ItemRarity::Common, ItemCategory::Block}},
+    {ItemID::Cobblestone, {"Cobblestone", 4, 64, ItemRarity::Common, ItemCategory::Block}},
+    {ItemID::Obsidian, {"Obsidian", 5, 64, ItemRarity::Common, ItemCategory::Block}},
+    {ItemID::Bedrock, {"Bedrock", 6, 64, ItemRarity::Common, ItemCategory::Block}},
+    {ItemID::Dynamite, {"Dynamite", 12, 16, ItemRarity::Rare, ItemCategory::Misc, [](World& world, sf::Vector2f mouse, uint32_t user) -> bool
         {
             auto entityWithID = [&world](uint32_t id) -> Entity&
             {
@@ -27,21 +28,87 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
 
             Entity& player = entityWithID(user);
 
-            if(!player.hasComponent<TransformComponent>()) return;
+            if(!player.hasComponent<TransformComponent>()) return false;
+
+            sf::Vector2f playerPos = player.getComponent<TransformComponent>().position;
 
             world.getEntities().push_back(Entity(world.getPossibleID()));
             auto& explosiveEntity = world.getEntities().back();
-            explosiveEntity.addComponent(TransformComponent{player.getComponent<TransformComponent>().position, {1.0f, 1.0f}, sf::degrees(0.0f)});
+            explosiveEntity.addComponent(TransformComponent{playerPos, {1.0f, 1.0f}, sf::degrees(0.0f)});
             explosiveEntity.addComponent(ExplosiveComponent{3.0f});
             explosiveEntity.addComponent(RenderComponent{12, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
-            explosiveEntity.addComponent(PhysicsComponent{mouse - player.getComponent<TransformComponent>().position, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
+            explosiveEntity.addComponent(PhysicsComponent{(mouse - playerPos) * 3.0f, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
+
+            return true;
             
         }}},
-    {ItemID::Iron_Ore, {"Iron Ore", 13, 64, ItemCategory::Block}},
-    {ItemID::Gold_Ore, {"Gold Ore", 14, 64, ItemCategory::Block}},
-    {ItemID::Diamond_Ore, {"Diamond Ore", 15, 64, ItemCategory::Block}},
-    {ItemID::Oak_Log, {"Oak Log", 16, 64, ItemCategory::Block}},
-    {ItemID::Oak_Leaves, {"Oak Leaves", 17, 64, ItemCategory::Block}}
+    {ItemID::Iron_Ore, {"Iron Ore", 13, 64, ItemRarity::Common, ItemCategory::Block}},
+    {ItemID::Gold_Ore, {"Gold Ore", 14, 64, ItemRarity::Common, ItemCategory::Block}},
+    {ItemID::Diamond_Ore, {"Diamond Ore", 15, 64, ItemRarity::Common, ItemCategory::Block}},
+    {ItemID::Oak_Log, {"Oak Log", 16, 64, ItemRarity::Common, ItemCategory::Block}},
+    {ItemID::Oak_Leaves, {"Oak Leaves", 17, 64, ItemRarity::Common, ItemCategory::Block}},
+    {ItemID::Bucket, {"Bucket", 19, 1, ItemRarity::Rare, ItemCategory::Misc, [](World& world, sf::Vector2f mouse, uint32_t user) -> bool
+        {
+            auto entityWithID = [&world](uint32_t id) -> Entity&
+            {
+                for(auto& entity : world.getEntities())
+                {
+                    if(entity.getID() == id)
+                        return entity;
+                }
+                throw std::runtime_error("Entity with ID " + std::to_string(id) + " does not exist(entityWithID(int, World&))");
+            };
+
+            Entity& player = entityWithID(user);
+
+            if(!player.hasComponent<InventoryComponent>()) return false;
+
+            auto& inventory = player.getComponent<InventoryComponent>().inventory;
+
+            sf::Vector2i block_pos = {static_cast<int>(std::floor(mouse.x)), static_cast<int>(std::floor(mouse.y))};
+
+            if(world.getBlock(block_pos.x, block_pos.y).id == BlockID::Water && world.getBlock(block_pos.x, block_pos.y).metadata == static_cast<uint8_t>(WaterLevel::SOURCE))
+            {
+                world.setBlock(block_pos.x, block_pos.y, {BlockID::Air, 0});
+
+                inventory.removeItemWithLeftover(ItemID::Bucket, 1);
+
+                inventory.addItemWithLeftover(ItemID::Water_Bucket, 1);
+            }
+
+            return false;
+        }}},
+    {ItemID::Water_Bucket, {"Water Bucket", 20, 1, ItemRarity::Rare, ItemCategory::Misc, [](World& world, sf::Vector2f mouse, uint32_t user)
+        {
+            auto entityWithID = [&world](uint32_t id) -> Entity&
+            {
+                for(auto& entity : world.getEntities())
+                {
+                    if(entity.getID() == id)
+                        return entity;
+                }
+                throw std::runtime_error("Entity with ID " + std::to_string(id) + " does not exist(entityWithID(int, World&))");
+            };
+
+            Entity& player = entityWithID(user);
+
+            if(!player.hasComponent<InventoryComponent>()) return false;
+
+            auto& inventory = player.getComponent<InventoryComponent>().inventory;
+
+            sf::Vector2i block_pos = {static_cast<int>(std::floor(mouse.x)), static_cast<int>(std::floor(mouse.y))};
+
+            if(world.getBlock(block_pos.x, block_pos.y).id == BlockID::Air || (world.getBlock(block_pos.x, block_pos.y).id == BlockID::Water && world.getBlock(block_pos.x, block_pos.y).metadata < static_cast<uint8_t>(WaterLevel::SOURCE)))
+            {
+                world.setBlock(block_pos.x, block_pos.y, {BlockID::Water, static_cast<uint8_t>(WaterLevel::SOURCE)});
+
+                inventory.removeItemWithLeftover(ItemID::Water_Bucket, 1);
+
+                inventory.addItemWithLeftover(ItemID::Bucket, 1);
+            }
+
+            return false;
+        }}}
 };
 
 bool ItemStack::empty() const
@@ -90,7 +157,6 @@ bool addItem(Inventory& inventory, ItemID itemID, uint32_t quantity)
     return false;
 }
 
-
 ItemStack Inventory::addItemWithLeftover(ItemID itemID, uint32_t quantity)
 {
     auto& data = itemDatabase[itemID];
@@ -123,6 +189,28 @@ ItemStack Inventory::addItemWithLeftover(ItemID itemID, uint32_t quantity)
                 return {ItemID::None, 0};
         }
     }
+
+    return {itemID, quantity};
+}
+
+ItemStack Inventory::removeItemWithLeftover(ItemID itemID, uint32_t quantity)
+{
+    for(auto& slot : slots)
+    {
+        if(quantity == 0) return {ItemID::None, 0};
+
+        if(slot.itemID == itemID)
+        {
+            uint32_t remove = std::min(slot.quantity, quantity);
+
+            slot.quantity -= remove;
+            quantity -= remove;
+
+            if(slot.quantity == 0) slot.itemID = ItemID::None;
+        }
+    }
+
+    if(quantity == 0) return {ItemID::None, 0};
 
     return {itemID, quantity};
 }

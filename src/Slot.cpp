@@ -76,7 +76,37 @@ void Slot::render(sf::RenderWindow& window)
         sf::Text nameText(AssetManager::getFont(0), nameStr, charSize);
         sf::Text idText(AssetManager::getFont(0), idStr, charSize);
 
-        nameText.setFillColor(sf::Color::White);
+        sf::Color rarityColor;
+
+        switch(itemDatabase[item_stack.itemID].rarity)
+        {
+        case ItemRarity::Common:
+
+            rarityColor = sf::Color::White;
+            break;
+
+        case ItemRarity::Rare:
+
+            rarityColor = sf::Color::Green;
+            break;
+
+        case ItemRarity::Super_Rare:
+
+            rarityColor = sf::Color::Blue;
+            break;
+
+        case ItemRarity::Epic:
+
+            rarityColor = sf::Color(128, 0, 128);
+            break;
+
+        case ItemRarity::Mythic:
+
+            rarityColor = sf::Color::Red;
+            break;
+        }
+
+        nameText.setFillColor(rarityColor);
         idText.setFillColor(sf::Color::White);
 
         float padding = static_cast<float>(charSize) * 0.4f;

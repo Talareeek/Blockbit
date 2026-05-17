@@ -58,6 +58,8 @@ Game::Game()
     AssetManager::loadTexture(16, "resources/textures/oak_log.png");
     AssetManager::loadTexture(17, "resources/textures/oak_leaves.png");
     AssetManager::loadTexture(18, "resources/textures/ui_background.png");
+    AssetManager::loadTexture(19, "resources/textures/bucket.png");
+    AssetManager::loadTexture(20, "resources/textures/water_bucket.png");
     AssetManager::loadTexture(UINT32_MAX, "resources/textures/nothing.png");
 
     AssetManager::loadSound(AssetManager::SoundID::Click, "resources/sounds/click.wav");

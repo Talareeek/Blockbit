@@ -125,11 +125,22 @@ void MainGameState::handleEvent(const sf::Event& event)
 
             auto& inventory = entityWithID(world.getPlayerID(), world).getComponent<InventoryComponent>();
 
-            if((world.getBlock(blockPos.x, blockPos.y).id == BlockID::Air || world.getBlock(blockPos.x, blockPos.y).id == BlockID::Water) && isBlockInRange(entityWithID(1, world).getComponent<TransformComponent>(), blockPos, 4.0f) && itemDatabase[inventory.inventory.slots[hotbar.getSelectedSlot()].itemID].category == ItemCategory::Block && inventory.inventory.slots[hotbar.getSelectedSlot()].empty() == false)
-            {
-                inventory.inventory.slots[hotbar.getSelectedSlot()].quantity--;
 
-                world.setBlock(blockPos.x, blockPos.y, {itemToBlock(entityWithID(world.getPlayerID(), world).getComponent<InventoryComponent>().inventory.slots[hotbar.getSelectedSlot()].itemID), 0});
+            if(inventory.inventory.slots[hotbar.getSelectedSlot()].empty() == false)
+            {
+                if((world.getBlock(blockPos.x, blockPos.y).id == BlockID::Air || world.getBlock(blockPos.x, blockPos.y).id == BlockID::Water) && isBlockInRange(entityWithID(1, world).getComponent<TransformComponent>(), blockPos, 4.0f) && itemDatabase[inventory.inventory.slots[hotbar.getSelectedSlot()].itemID].category == ItemCategory::Block && inventory.inventory.slots[hotbar.getSelectedSlot()].empty() == false)
+                {
+                    inventory.inventory.slots[hotbar.getSelectedSlot()].quantity--;
+
+                    world.setBlock(blockPos.x, blockPos.y, {itemToBlock(entityWithID(world.getPlayerID(), world).getComponent<InventoryComponent>().inventory.slots[hotbar.getSelectedSlot()].itemID), 0});
+                }
+                else if(itemDatabase[inventory.inventory.slots[hotbar.getSelectedSlot()].itemID].category != ItemCategory::Block)
+                {
+                    if(itemDatabase[inventory.inventory.slots[hotbar.getSelectedSlot()].itemID].onUse(world, getMouseWorldPosition(world, game->getWindow()), world.getPlayerID()))
+                    {
+                        inventory.inventory.slots[hotbar.getSelectedSlot()].quantity--;
+                    }
+                }
             }
         }
     }
