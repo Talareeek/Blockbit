@@ -1199,7 +1199,7 @@ void World::createPlayer()
 
     entityWithID(getPlayerID(), *this).addComponent(RenderComponent{0, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
 
-    entityWithID(getPlayerID(), *this).addComponent(HealthComponent{100, 100});
+    entityWithID(getPlayerID(), *this).addComponent(HealthComponent{100, 100, false});
     entityWithID(getPlayerID(), *this).addComponent(PlayerComponent{});
 
 }

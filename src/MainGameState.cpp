@@ -20,6 +20,7 @@
 #include "../include/TransformSystem.hpp"
 #include "../include/ChunkUnloadSystem.hpp"
 #include "../include/PlayerInputSystem.hpp"
+#include "../include/AISystem.hpp"
 
 #include <iostream>
 
@@ -169,6 +170,7 @@ void MainGameState::update(float dt)
     while(since_last_tick >= tick_step)
     {
         PlayerInputSystem(world, tick_step);
+        AISystem(world, tick_step);
         TransformSystem(world);
         ExplosiveSystem(world, tick_step);
         HealthSystem(world);

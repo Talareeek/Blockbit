@@ -4,6 +4,10 @@
 #include "../include/World.hpp"
 #include "../include/Game.hpp"
 #include "../include/MainGameState.hpp"
+#include "../include/AIComponent.hpp"
+#include "../include/HealthComponent.hpp"
+#include "../include/RenderComponent.hpp"
+#include "../include/PhysicsComponent.hpp"
 
 #include <sstream>
 
@@ -113,6 +117,46 @@ std::unordered_map<std::wstring, Command> commandDatabase =
             game->getWindow().setFramerateLimit(max_fps);
 
             console.writeLine(L"Framerate limit set to: " + std::to_wstring(max_fps));
+        }
+    }},
+
+    {L"spawn-ai", {false, true,
+        [](std::wstring command, Console& console, Game* game, World* world)
+        {
+            std::wistringstream stream(command);
+
+            std::wstring trash;
+            stream >> trash;
+
+            float x;
+            stream >> x;
+
+            float y;
+            stream >> y;
+
+            if(!stream)
+            {
+                console.writeLine(L"Usage: spawn-ai <x> <y>");
+                return;
+            }
+
+            uint32_t id = world->getPossibleID();
+            world->getEntities().emplace_back(id);
+
+            Entity& e = entityWithID(id, *world);
+
+            e.addComponent(TransformComponent{{x, y}, {1.0f, 1.0f}, sf::degrees(0.0f)});
+            e.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
+            e.addComponent(RenderComponent{0, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
+            e.addComponent(HealthComponent{100, 100});
+
+            AIComponent ai;
+            ai.personality = AIComponent::Personality::Aggressive;
+            ai.state       = AIComponent::State::Idle;
+            e.addComponent(ai);
+
+            console.writeLine(L"Spawned AI entity " + std::to_wstring(id) +
+                              L" at (" + std::to_wstring(x) + L", " + std::to_wstring(y) + L")");
         }
     }},
 
