@@ -6,6 +6,7 @@
 #include "AccountWidget.hpp"
 #include "Slot.hpp"
 #include "WorldList.hpp"
+#include "LobbyPlayerElement.hpp"
 
 #include "Hotbar.hpp"
 
@@ -13,9 +14,9 @@ class MenuGameState : public GameState
 {
 private:
 
-    Button play;
     Button quit;
     WorldList worldList;
+    LobbyPlayerElement player;
 
 public:
 

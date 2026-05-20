@@ -5,6 +5,7 @@
 #include "../include/MainGameState.hpp"
 #include "../include/HostGameState.hpp"
 #include "../include/ClientGameState.hpp"
+#include "../include/CreateWorldState.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -16,6 +17,8 @@ namespace
     constexpr float STRIP_WIDTH_FACTOR        = 0.1f;
     constexpr float TAB_BAR_HEIGHT_FACTOR     = 0.07f;
     constexpr float HEADER_HEIGHT_FACTOR      = 0.05f;
+    constexpr float CREATE_BUTTON_HEIGHT_FACTOR = 0.07f;
+    constexpr float CREATE_BUTTON_GAP_FACTOR    = 0.02f;
     constexpr float ENTRY_HEIGHT_FACTOR       = 0.22f;
     constexpr float ENTRY_GAP_FACTOR          = 0.04f;
     constexpr float HORIZONTAL_PADDING_FACTOR = 0.04f;
@@ -28,6 +31,11 @@ WorldList::WorldList(std::filesystem::path path, Game* game) : game{game}, path(
 
     ipField      = InputField(InputField({0.0f, 0.0f}, {0.0f, 0.0f}), "", "Server IP");
     connectButton = Button({0.0f, 0.0f}, {0.0f, 0.0f}, sf::Color(55, 90, 130), "Connect");
+
+    createButton = Button({0.0f, 0.0f}, {0.0f, 0.0f}, sf::Color(60, 140, 70), "Create World", [this]()
+    {
+        this->game->pushState(std::make_unique<CreateWorldState>(this->game));
+    });
 }
 
 void WorldList::loadEntries()
@@ -60,12 +68,24 @@ sf::FloatRect WorldList::getTabBarArea() const
 
 sf::FloatRect WorldList::getListArea() const
 {
+    float strip_w   = size.x * STRIP_WIDTH_FACTOR;
+    float bar_h     = size.y * TAB_BAR_HEIGHT_FACTOR;
+    float header_h  = size.y * HEADER_HEIGHT_FACTOR;
+    float create_h  = size.y * CREATE_BUTTON_HEIGHT_FACTOR;
+    float create_g  = size.y * CREATE_BUTTON_GAP_FACTOR;
+    float top       = position.y + bar_h + header_h + create_h + create_g;
+    float padding   = size.x * HORIZONTAL_PADDING_FACTOR;
+    return sf::FloatRect({position.x + strip_w + padding, top}, {size.x - strip_w - 2.0f * padding, position.y + size.y - top - padding});
+}
+
+sf::FloatRect WorldList::getCreateButtonArea() const
+{
     float strip_w  = size.x * STRIP_WIDTH_FACTOR;
     float bar_h    = size.y * TAB_BAR_HEIGHT_FACTOR;
     float header_h = size.y * HEADER_HEIGHT_FACTOR;
-    float top      = position.y + bar_h + header_h;
+    float create_h = size.y * CREATE_BUTTON_HEIGHT_FACTOR;
     float padding  = size.x * HORIZONTAL_PADDING_FACTOR;
-    return sf::FloatRect({position.x + strip_w + padding, top}, {size.x - strip_w - 2.0f * padding, position.y + size.y - top - padding});
+    return sf::FloatRect({position.x + strip_w + padding, position.y + bar_h + header_h}, {size.x - strip_w - 2.0f * padding, create_h});
 }
 
 void WorldList::handleEvent(const sf::Event& event)
@@ -132,6 +152,8 @@ void WorldList::handleEvent(const sf::Event& event)
             }
         }
 
+        createButton.handleEvent(event);
+
         for(auto& entry : entries)
         {
             entry.handleEvent(event);
@@ -162,6 +184,11 @@ void WorldList::update(float dt)
     }
 
     sf::FloatRect list_area = getListArea();
+
+    sf::FloatRect create_area = getCreateButtonArea();
+    createButton.setPosition(create_area.position);
+    createButton.setSize(create_area.size);
+    createButton.update(dt);
 
     float entry_h = size.x * ENTRY_HEIGHT_FACTOR;
     float gap     = size.x * ENTRY_GAP_FACTOR;
@@ -370,6 +397,8 @@ void WorldList::render(sf::RenderWindow& window)
 
         std::string header_text = entries.empty() ? "No worlds yet" : "Select a world";
         drawFitText(window, header_text, header_box, true, sf::Color(220, 220, 220), 1.0f, sf::Color::Black);
+
+        createButton.render(window);
 
         if(!entries.empty())
         {

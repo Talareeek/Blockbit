@@ -27,6 +27,8 @@ private:
     InputField ipField;
     Button connectButton;
 
+    Button createButton;
+
     std::optional<std::pair<std::string, uint16_t>> pendingConnect;
 
     float scroll_offset = 0.0f;
@@ -59,6 +61,7 @@ private:
 
     sf::FloatRect getListArea() const;
     sf::FloatRect getTabBarArea() const;
+    sf::FloatRect getCreateButtonArea() const;
 
     void loadEntries();
 

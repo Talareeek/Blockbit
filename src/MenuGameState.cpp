@@ -2,12 +2,10 @@
 #include "../include/MainGameState.hpp"
 #include "../include/Game.hpp"
 #include "../include/AssetManager.hpp"
-#include "../include/CreateWorldState.hpp"
 
 MenuGameState::MenuGameState(Game* game) : GameState(game)
 {
-    UIElement::ScreenRelative playRelative{{0.3f, 0.25f}, {0.4f, 0.2f}, true, UIElement::ScreenRelative::Axis::Y};
-    UIElement::ScreenRelative quitRelative{{0.3f, 0.55f}, {0.4f, 0.2f}, true, UIElement::ScreenRelative::Axis::Y};
+    UIElement::ScreenRelative quitRelative{{0.01f, 0.92f}, {0.12f, 0.06f}, true, UIElement::ScreenRelative::Axis::Y};
 
     std::string home;
 
@@ -22,38 +20,30 @@ MenuGameState::MenuGameState(Game* game) : GameState(game)
     std::filesystem::path savesPath = home.empty() ? std::filesystem::temp_directory_path() : std::filesystem::path(home);
     savesPath /= "Blockbit";
     savesPath /= "saves";
-    
+
     std::filesystem::create_directories(savesPath);
     worldList = WorldList(savesPath, game);
-
-    play = Button(playRelative, sf::Color::Green, "Create World", [this]()
-    {
-        this->game->pushState(std::make_unique<CreateWorldState>(this->game));
-    });
-
-    play.updateScreenRelative(game->getWindow().getSize());
 
     quit = Button(quitRelative, sf::Color::Red, "Quit", [this]()
     {
         this->game->popState();
     });
 
-    quit.updateScreenRelative(game->getWindow().getSize());   
-    
+    quit.updateScreenRelative(game->getWindow().getSize());
+
 }
 
 void MenuGameState::handleEvent(const sf::Event& event)
 {
     worldList.handleEvent(event);
-    play.handleEvent(event);
-    quit.handleEvent(event);    
+    quit.handleEvent(event);
+    player.handleEvent(event);
 }
 
 void MenuGameState::update(float dt)
 {
     auto size = game->getWindow().getSize();
 
-    play.updateScreenRelative(size);
     quit.updateScreenRelative(size);
     worldList.updateScreenRelative(size);
 
@@ -61,8 +51,9 @@ void MenuGameState::update(float dt)
     worldList.setSize({size.x * 0.25f, static_cast<float>(size.y)});
 
     worldList.update(dt);
-    play.update(dt);
     quit.update(dt);
+
+    player.update(dt);
 }
 
 void MenuGameState::render(sf::RenderWindow& window)
@@ -85,8 +76,8 @@ void MenuGameState::render(sf::RenderWindow& window)
     window.draw(overlay);
 
     worldList.render(window);
-    play.render(window);
-    quit.render(window);    
+    quit.render(window);
+    player.render(window);
 
 
     sf::Text copyright(AssetManager::getFont(0), L"©2026 Talarek\n(github.com/Talareeek)", 10);
