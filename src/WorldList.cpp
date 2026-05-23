@@ -32,10 +32,7 @@ WorldList::WorldList(std::filesystem::path path, Game* game) : game{game}, path(
     ipField      = InputField(InputField({0.0f, 0.0f}, {0.0f, 0.0f}), "", "Server IP");
     connectButton = Button({0.0f, 0.0f}, {0.0f, 0.0f}, sf::Color(55, 90, 130), "Connect");
 
-    createButton = Button({0.0f, 0.0f}, {0.0f, 0.0f}, sf::Color(60, 140, 70), "Create World", [this]()
-    {
-        this->game->pushState(std::make_unique<CreateWorldState>(this->game));
-    });
+    createButton = Button({0.0f, 0.0f}, {0.0f, 0.0f}, sf::Color(60, 140, 70), "Create World");
 }
 
 void WorldList::loadEntries()
@@ -188,6 +185,14 @@ void WorldList::update(float dt)
     sf::FloatRect create_area = getCreateButtonArea();
     createButton.setPosition(create_area.position);
     createButton.setSize(create_area.size);
+
+    if(selection == Selection::SINGLEPLAYER && createButton.clicked())
+    {
+        createButton.update(dt);
+        game->pushState(std::make_unique<CreateWorldState>(game));
+        return;
+    }
+
     createButton.update(dt);
 
     float entry_h = size.x * ENTRY_HEIGHT_FACTOR;

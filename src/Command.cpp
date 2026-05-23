@@ -8,6 +8,7 @@
 #include "../include/HealthComponent.hpp"
 #include "../include/RenderComponent.hpp"
 #include "../include/PhysicsComponent.hpp"
+#include "../include/AnimationComponent.hpp"
 
 #include <sstream>
 
@@ -145,9 +146,9 @@ std::unordered_map<std::wstring, Command> commandDatabase =
 
             Entity& e = entityWithID(id, *world);
 
-            e.addComponent(TransformComponent{{x, y}, {1.0f, 1.0f}, sf::degrees(0.0f)});
+            e.addComponent(TransformComponent{{x, y}, {1.0f, 0.75f}, sf::degrees(0.0f)});
             e.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
-            e.addComponent(RenderComponent{0, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
+            e.addComponent(RenderComponent{21, {{0, 0}, {16, 12}}, {1.0f, 0.75f}});
             e.addComponent(HealthComponent{100, 100});
 
             AIComponent ai;
@@ -155,8 +156,19 @@ std::unordered_map<std::wstring, Command> commandDatabase =
             ai.state       = AIComponent::State::Idle;
             e.addComponent(ai);
 
-            console.writeLine(L"Spawned AI entity " + std::to_wstring(id) +
-                              L" at (" + std::to_wstring(x) + L", " + std::to_wstring(y) + L")");
+            AnimationComponent animation;
+
+            animation.animations =
+            {
+                {AnimationState::Idle, AnimationClip{0, 2, 0.5f, true}},
+                {AnimationState::Walking, AnimationClip{2, 2, 0.5f, true}}
+            };
+
+            animation.frameSize = {16, 12};
+
+            e.addComponent(animation);
+
+            console.writeLine(L"Spawned AI entity " + std::to_wstring(id) + L" at (" + std::to_wstring(x) + L", " + std::to_wstring(y) + L")");
         }
     }},
 

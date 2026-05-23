@@ -4,6 +4,7 @@
 #include "../include/PhysicsComponent.hpp"
 #include "../include/HealthComponent.hpp"
 #include "../include/PlayerComponent.hpp"
+#include "../include/AnimationComponent.hpp"
 #include "../include/Block.hpp"
 
 #include <cmath>
@@ -163,6 +164,36 @@ void AISystem(World& world, float dt)
                         physics.velocity.y += AI_JUMP_VELOCITY;
                 }
                 break;
+            }
+        }
+
+        if (entity.hasComponent<AnimationComponent>())
+        {
+            auto& animation = entity.getComponent<AnimationComponent>();
+
+            int moveDir = 0;
+            if (ai.state == AIComponent::State::Wandering)
+            {
+                moveDir = ai.wanderDir;
+            }
+            else if (ai.state == AIComponent::State::Chasing && player != nullptr)
+            {
+                if (ai.personality == AIComponent::Personality::Aggressive)
+                    moveDir = (toPlayer.x >= 0.0f) ? 1 : -1;
+                else
+                    moveDir = (toPlayer.x >= 0.0f) ? -1 : 1;
+            }
+
+            if (moveDir != 0)
+            {
+                animation.currentState = AnimationState::Walking;
+                animation.direction = (moveDir > 0)
+                    ? AnimationComponent::Direction::Right
+                    : AnimationComponent::Direction::Left;
+            }
+            else
+            {
+                animation.currentState = AnimationState::Idle;
             }
         }
     }

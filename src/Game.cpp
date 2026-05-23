@@ -60,6 +60,7 @@ Game::Game()
     AssetManager::loadTexture(18, "resources/textures/ui_background.png");
     AssetManager::loadTexture(19, "resources/textures/bucket.png");
     AssetManager::loadTexture(20, "resources/textures/water_bucket.png");
+    AssetManager::loadTexture(21, "resources/textures/pig.png");
     AssetManager::loadTexture(UINT32_MAX, "resources/textures/nothing.png");
 
     AssetManager::loadSound(AssetManager::SoundID::Click, "resources/sounds/click.wav");

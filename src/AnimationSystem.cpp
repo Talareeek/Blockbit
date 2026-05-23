@@ -27,14 +27,14 @@ void AnimationSystem(World& world, float dt)
                 else
                     animation.currentFrame = clip.frameCount - 1;
             }
-
-            uint32_t frame = clip.startFrame + animation.currentFrame;
-
-            render.uv =
-            {
-                {int(frame * animation.frameSize.x), 0},
-                animation.frameSize
-            };
         }
+
+        uint32_t frame = clip.startFrame + animation.currentFrame;
+
+        render.uv =
+        {
+            {int(frame * animation.frameSize.x), 0},
+            animation.frameSize
+        };
     }
 }

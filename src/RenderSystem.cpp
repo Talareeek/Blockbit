@@ -1,6 +1,7 @@
 #include "../include/RenderSystem.hpp"
 #include "../include/RenderComponent.hpp"
 #include "../include/TransformComponent.hpp"
+#include "../include/AnimationComponent.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/HealthComponent.hpp"
 #include "../include/MainGameState.hpp"
@@ -28,22 +29,23 @@ void RenderSystem(std::vector<Entity>& entities, sf::RenderWindow& window)
         auto& component = entity.getComponent<RenderComponent>();
 
         sf::Sprite sprite(AssetManager::getTexture(component.textureID), component.uv);
-        sprite.setScale({
-            (component.size.x * unit_size) / sprite.getTextureRect().size.x,
-            -((component.size.y * unit_size) / sprite.getTextureRect().size.y)
-        });
 
-        sprite.setOrigin({
-            0.f,
-            static_cast<float>(sprite.getTextureRect().size.y)
-        });
+        const float scaleX = (component.size.x * unit_size) / sprite.getTextureRect().size.x;
+        const float scaleY = -((component.size.y * unit_size) / sprite.getTextureRect().size.y);
+
+        bool flipX = false;
+        if(entity.hasComponent<AnimationComponent>())
+        {
+            flipX = entity.getComponent<AnimationComponent>().direction == AnimationComponent::Direction::Right;
+        }
+
+        sprite.setScale({flipX ? -scaleX : scaleX, scaleY});
+
+        sprite.setOrigin({flipX ? static_cast<float>(sprite.getTextureRect().size.x) : 0.f, static_cast<float>(sprite.getTextureRect().size.y)});
 
         auto& transform = entity.getComponent<TransformComponent>();
 
-        sprite.setPosition({
-            transform.position.x * unit_size,
-            transform.position.y * unit_size
-        });
+        sprite.setPosition({transform.position.x * unit_size, transform.position.y * unit_size});
         window.draw(sprite);
     }
 }

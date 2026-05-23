@@ -20,7 +20,6 @@ struct AnimationClip
 enum class AnimationState
 {
     Idle,
-    Looking,
     Walking,
     Running,
     Jumping,
@@ -49,6 +48,8 @@ struct AnimationComponent
     {
         std::string output;
 
+        output += std::to_string(animations.size()) + '\n';
+
         for(const auto& [state, clip] : animations)
         {
             output += std::to_string(static_cast<uint32_t>(state)) + ' ';
@@ -72,7 +73,10 @@ struct AnimationComponent
         std::istringstream iss(data);
         animations.clear();
 
-        while(iss.peek() != EOF)
+        size_t count = 0;
+        iss >> count;
+
+        for(size_t i = 0; i < count; i++)
         {
             uint32_t stateInt, startFrame, frameCount;
             float frameTime;

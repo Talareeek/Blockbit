@@ -11,6 +11,7 @@
 #include "../include/ItemComponent.hpp"
 #include "../include/PlayerComponent.hpp"
 #include "../include/BlockAtlas.hpp"
+#include "../include/AIComponent.hpp"
 #include <SFML/Graphics.hpp>
 
 #include <iostream>
@@ -860,6 +861,16 @@ void World::writeEntities() const
                 file << "Player" << '\n';
                 file << std::any_cast<PlayerComponent>(component).serialize();
             }
+            else if(type == typeid(AnimationComponent))
+            {
+                file << "Animation" << '\n';
+                file << std::any_cast<PlayerComponent>(component).serialize();
+            }
+            else if(type == typeid(AIComponent))
+            {
+                file << "AI" << "\n";
+                file << std::any_cast<AIComponent>(component).serialize();
+            }
         }
 
         file << '\n';
@@ -1078,6 +1089,20 @@ void World::readEntities()
                         c.deserialize(componentData);
                         entity.addComponent<PlayerComponent>(c);
                         std::cout << "\t\tPlayerComponent loaded\n";
+                    }
+                    else if (componentType == "Animation")
+                    {
+                        AnimationComponent c;
+                        c.deserialize(componentData);
+                        entity.addComponent<AnimationComponent>(c);
+                        std::cout << "\t\tAnimationComponent loaded\n";
+                    }
+                    else if (componentType == "AI")
+                    {
+                        AIComponent c;
+                        c.deserialize(componentData);
+                        entity.addComponent<AIComponent>(c);
+                        std::cout << "\t\tAIComponent loaded\n";
                     }
                 }
             }

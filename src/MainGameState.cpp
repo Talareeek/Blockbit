@@ -21,6 +21,7 @@
 #include "../include/ChunkUnloadSystem.hpp"
 #include "../include/PlayerInputSystem.hpp"
 #include "../include/AISystem.hpp"
+#include "../include/AnimationSystem.hpp"
 
 #include <iostream>
 
@@ -180,6 +181,8 @@ void MainGameState::update(float dt)
 
         since_last_tick -= tick_step;
     }
+
+    AnimationSystem(world, dt);
 
     game->getConsole().assignWorld(&world);
     
