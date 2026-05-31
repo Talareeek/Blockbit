@@ -26,7 +26,7 @@ bool BlockAtlas::build()
 
         sf::Image img = tex.copyToImage();
 
-        atlasImage.copy(img, {x, 0});
+        atlasImage.copy(img, {x, 0}, sf::IntRect({0, 0}, {(int)tileSize, (int)tileSize}));
 
         uvMap[id] = {{(int)x, 0}, {(int)tileSize, (int)tileSize}};
 

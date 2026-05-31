@@ -15,6 +15,7 @@ ItemID blockToItem(BlockID block)
         case BlockID::Diamond_Ore: return ItemID::Diamond_Ore;
         case BlockID::Oak_Log: return ItemID::Oak_Log;
         case BlockID::Oak_Leaves: return ItemID::Oak_Leaves;
+        case BlockID::Woodcutter: return ItemID::Woodcutter;
         default: return ItemID::None;
     }
 }
@@ -34,6 +35,7 @@ BlockID itemToBlock(ItemID item)
         case ItemID::Diamond_Ore: return BlockID::Diamond_Ore;
         case ItemID::Oak_Log: return BlockID::Oak_Log;
         case ItemID::Oak_Leaves: return BlockID::Oak_Leaves;
+        case ItemID::Woodcutter: return BlockID::Woodcutter;
         default: return BlockID::Air;
     }
 }

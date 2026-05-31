@@ -171,19 +171,13 @@ public:
     std::vector<std::tuple<int, int, Block>> pendingBlockUpdates;
 };
 
-extern void RenderWorld(World& world, sf::RenderWindow& window);
-
-extern void RenderBlockOverlay(World& world, sf::RenderWindow& window);
-
-extern sf::Vector2f getSunWorldPosition(const World& world, sf::Vector2f cameraCenter);
-
-extern void RenderLightRays(World& world, sf::RenderWindow& window);
-
 extern sf::Vector2i getMouseBlockPosition(const World& world, const sf::RenderWindow& window);
 
 extern sf::Vector2f getMouseWorldPosition(const World& world, const sf::RenderWindow& window);
 
-extern sf::Color lerpColor(sf::Color a, sf::Color b, float t);
+extern sf::Vector2f getSunWorldPosition(const World& world, sf::Vector2f cameraCenter);
+
+extern void renderSunAndMoon(float daytime, sf::RenderWindow& window);
 
 extern void updateFluids(World& world);
 

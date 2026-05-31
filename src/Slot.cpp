@@ -51,8 +51,9 @@ void Slot::render(sf::RenderWindow& window)
     }
 
     sf::Sprite sprite(AssetManager::getTexture(itemDatabase[item_stack.itemID].texture));
+    sprite.setTextureRect({{0, 0}, {16, 16}});
     sprite.setPosition(position + sf::Vector2f(size.x / 10.0f, size.y / 10.0f));
-    sprite.setScale({size.x * 0.8f / sprite.getTexture().getSize().x, size.y * 0.8f / sprite.getTexture().getSize().y});
+    sprite.setScale({size.x * 0.8f / sprite.getLocalBounds().size.x, size.y * 0.8f / sprite.getLocalBounds().size.y});
     window.draw(sprite);
 
 

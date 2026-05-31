@@ -29,7 +29,8 @@ enum class ItemID : uint32_t
     Oak_Log = 11,
     Oak_Leaves = 12,
     Bucket = 13,
-    Water_Bucket = 14
+    Water_Bucket = 14,
+    Woodcutter = 15
 };
 
 enum class ItemRarity

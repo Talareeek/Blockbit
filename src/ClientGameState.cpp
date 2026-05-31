@@ -7,6 +7,7 @@
 #include "../include/RenderSystem.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/Chunk.hpp"
+#include "../include/Render.hpp"
 
 #include <iostream>
 #include <algorithm>

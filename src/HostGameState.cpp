@@ -7,6 +7,7 @@
 #include "../include/HealthComponent.hpp"
 #include "../include/InventoryComponent.hpp"
 #include "../include/Chunk.hpp"
+#include "../include/Render.hpp"
 
 #include <iostream>
 

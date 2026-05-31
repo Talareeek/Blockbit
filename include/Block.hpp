@@ -20,7 +20,8 @@ enum class BlockID : uint32_t
     Gold_Ore = 9,
     Diamond_Ore = 10,
     Oak_Log = 11,
-    Oak_Leaves = 12
+    Oak_Leaves = 12,
+    Woodcutter = 13
 };
 
 struct BlockData
@@ -53,7 +54,8 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
     { BlockID::Gold_Ore, { true, false, true, 3.0f, 14 }},
     { BlockID::Diamond_Ore, { true, false, true, 5.0f, 15 }},
     { BlockID::Oak_Log, { true, false, true, 2.0f, 16 }},
-    { BlockID::Oak_Leaves, { true, true, true, 0.2f, 17 }}
+    { BlockID::Oak_Leaves, { true, true, true, 0.2f, 17 }},
+    { BlockID::Woodcutter, { true, false, true, 2.0f, 22}}
 };
 
 

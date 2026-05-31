@@ -22,6 +22,7 @@
 #include "../include/PlayerInputSystem.hpp"
 #include "../include/AISystem.hpp"
 #include "../include/AnimationSystem.hpp"
+#include "../include/Render.hpp"
 
 #include <iostream>
 
@@ -98,7 +99,7 @@ void MainGameState::handleEvent(const sf::Event& event)
                 Entity newEntity(world.getPossibleID());
                 newEntity.addComponent(TransformComponent{{blockPos.x + 0.25f, blockPos.y - 0.25f}, {0.5f, 0.5f}, sf::degrees(0.0f)});
                 newEntity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
-                newEntity.addComponent(ItemComponent{{static_cast<ItemID>(world.getBlock(blockPos.x, blockPos.y).id), 1}});
+                newEntity.addComponent(ItemComponent{{blockToItem(world.getBlock(blockPos.x, blockPos.y).id), 1}});
                 newEntity.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[newEntity.getComponent<ItemComponent>().item.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
                 world.setBlock(blockPos.x, blockPos.y, {BlockID::Air, 0});
 
@@ -323,6 +324,7 @@ void MainGameState::render(sf::RenderWindow& window)
     sky.setFillColor(world.getSkyColor(world.getDayTime() / World::DAY_CYCLE_DURATION));
     window.draw(sky);
 
+    renderSunAndMoon(world.getDayTime(), window);
 
     auto& entities = world.getEntities();
 
