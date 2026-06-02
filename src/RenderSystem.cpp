@@ -45,7 +45,7 @@ void RenderSystem(std::vector<Entity>& entities, sf::RenderWindow& window)
 
         auto& transform = entity.getComponent<TransformComponent>();
 
-        sprite.setPosition({transform.position.x * unit_size, transform.position.y * unit_size});
+        sprite.setPosition({static_cast<float>(transform.position.x * unit_size), static_cast<float>(transform.position.y * unit_size)});
         window.draw(sprite);
     }
 }

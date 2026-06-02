@@ -39,16 +39,16 @@ void PhysicsSystem(std::vector<Entity>& entities, World& world, float deltaTime)
 
         transform.position.x += c.velocity.x * deltaTime;
 
-        float left   = transform.position.x;
-        float right  = transform.position.x + transform.size.x;
-        float bottom = transform.position.y;
-        float top    = transform.position.y + transform.size.y;
+        double left   = transform.position.x;
+        double right  = transform.position.x + transform.size.x;
+        double bottom = transform.position.y;
+        double top    = transform.position.y + transform.size.y;
 
         if (c.velocity.x > 0) // RIGHT
         {
-            int tileX = (int)std::floor(right - 0.001f);
+            int tileX = (int)std::floor(right - 0.001);
 
-            for (int y = (int)std::floor(bottom); y <= (int)std::floor(top - 0.001f); y++)
+            for (int y = (int)std::floor(bottom); y <= (int)std::floor(top - 0.001); y++)
             {
                 if (tileX < -10000) continue; // safety
 
@@ -64,13 +64,13 @@ void PhysicsSystem(std::vector<Entity>& entities, World& world, float deltaTime)
         {
             int tileX = (int)std::floor(left);
 
-            for (int y = (int)std::floor(bottom); y <= (int)std::floor(top - 0.001f); y++)
+            for (int y = (int)std::floor(bottom); y <= (int)std::floor(top - 0.001); y++)
             {
                 if (tileX < -10000) continue;
 
                 if (blockDatabase[world.getBlock(tileX, y).id].solid)
                 {
-                    transform.position.x = tileX + 1.0f;
+                    transform.position.x = tileX + 1.0;
                     c.velocity.x = 0;
                     break;
                 }
@@ -90,9 +90,9 @@ void PhysicsSystem(std::vector<Entity>& entities, World& world, float deltaTime)
 
         if (c.velocity.y > 0) // UP
         {
-            int tileY = (int)std::floor(top - 0.001f);
+            int tileY = (int)std::floor(top - 0.001);
 
-            for (int x = (int)std::floor(left); x <= (int)std::floor(right - 0.001f); x++)
+            for (int x = (int)std::floor(left); x <= (int)std::floor(right - 0.001); x++)
             {
                 if (blockDatabase[world.getBlock(x, tileY).id].solid)
                 {
@@ -106,11 +106,11 @@ void PhysicsSystem(std::vector<Entity>& entities, World& world, float deltaTime)
         {
             int tileY = (int)std::floor(bottom);
 
-            for (int x = (int)std::floor(left); x <= (int)std::floor(right - 0.001f); x++)
+            for (int x = (int)std::floor(left); x <= (int)std::floor(right - 0.001); x++)
             {
                 if (blockDatabase[world.getBlock(x, tileY).id].solid)
                 {
-                    transform.position.y = tileY + 1.0f;
+                    transform.position.y = tileY + 1.0;
                     float fallVelocity = -c.velocity.y;
                     c.velocity.y = 0;
                     c.onGround = true;

@@ -70,7 +70,7 @@ void AISystem(World& world, float dt)
         if (player != nullptr)
         {
             const auto& pt = player->getComponent<TransformComponent>();
-            sf::Vector2f diff = pt.position - transform.position;
+            sf::Vector2f diff = sf::Vector2f(pt.position - transform.position);
             distToPlayer = std::sqrt(diff.x * diff.x + diff.y * diff.y);
             if (distToPlayer > 0.0001f) toPlayer = diff / distToPlayer;
         }

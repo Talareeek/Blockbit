@@ -30,7 +30,7 @@ void HostGameState::spawnRemotePlayer(uint32_t clientId)
 
     sf::Vector2f spawn = world.getSpawnPoint();
 
-    remote.addComponent(TransformComponent{spawn, {1.0f, 1.0f}, sf::degrees(0.0f)});
+    remote.addComponent(TransformComponent{sf::Vector2<double>(spawn), {1.0, 1.0}, sf::degrees(0.0f)});
     remote.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
     remote.addComponent(RenderComponent{0, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
     remote.addComponent(HealthComponent{100, 100});

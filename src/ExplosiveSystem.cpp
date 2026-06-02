@@ -19,11 +19,11 @@ void ExplosiveSystem(World& world, float dt)
 
         if(explosive.timer < explosive.fuseTime) continue;
 
-        sf::Vector2f center = entity.getComponent<TransformComponent>().position;
+        sf::Vector2f center = sf::Vector2f(entity.getComponent<TransformComponent>().position);
 
         for(auto& other : entities)
         {
-            sf::Vector2f diff = other.getComponent<TransformComponent>().position - center;
+            sf::Vector2f diff = sf::Vector2f(other.getComponent<TransformComponent>().position) - center;
 
             float dist = std::sqrt(diff.x * diff.x + diff.y * diff.y);
 

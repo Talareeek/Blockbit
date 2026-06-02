@@ -37,6 +37,8 @@ Entity& entityWithID(uint32_t id, World& world)
 
 MainGameState::MainGameState(Game* game, World world) : GameState(game)
 {
+    game->getWindow().setTitle("Blockbit - Singleplayer");
+
     this->world = std::move(world);  
 
     if(this->world.getEntities().empty())
@@ -64,6 +66,8 @@ MainGameState::MainGameState(Game* game, World world) : GameState(game)
 
 MainGameState::~MainGameState()
 {
+    game->getWindow().setTitle("Blockbit");
+
     world.save();
     game->getConsole().assignWorld(nullptr);
 }
@@ -80,8 +84,8 @@ void MainGameState::handleEvent(const sf::Event& event)
 
             sf::View view(
             {
-                (entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size,
-                (entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size
+                static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
+                static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
             },
             {
                 (float)game->getWindow().getSize().x,
@@ -112,8 +116,8 @@ void MainGameState::handleEvent(const sf::Event& event)
 
             sf::View view(
             {
-                (entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size,
-                (entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size
+                static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
+                static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
             },
             {
                 (float)game->getWindow().getSize().x,
@@ -224,8 +228,8 @@ void MainGameState::update(float dt)
 
         sf::View view(
         {
-            (entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size,
-            (entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size
+            static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
+            static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
         },
         {
             (float)game->getWindow().getSize().x,
@@ -237,8 +241,8 @@ void MainGameState::update(float dt)
         game->getWindow().setView(view);
 
         Entity item(world.getPossibleID());
-        item.addComponent(TransformComponent{entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position + sf::Vector2f(0.0f, 1.5f), {0.5f, 0.5f}, sf::degrees(0.0f)});
-        item.addComponent(PhysicsComponent{getMouseWorldPosition(world, game->getWindow()) - entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
+        item.addComponent(TransformComponent{entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position + sf::Vector2<double>(0.0, 1.5), {0.5, 0.5}, sf::degrees(0.0f)});
+        item.addComponent(PhysicsComponent{getMouseWorldPosition(world, game->getWindow()) - sf::Vector2f(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position), {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
         item.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[stack.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
 
         if(full_stack)
@@ -332,8 +336,8 @@ void MainGameState::render(sf::RenderWindow& window)
 
     sf::View view(
     {
-        (entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size,
-        (entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size
+        static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
+        static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
     },
     {
         (float)window.getSize().x,
@@ -395,8 +399,8 @@ void MainGameState::render(sf::RenderWindow& window)
 
 bool isInRange(TransformComponent& player, TransformComponent& target, float range)
 {
-    sf::Vector2f player_closest = player.position + sf::Vector2f((target.position.x > player.position.x) ? player.size.x : 0.0f, (target.position.y > player.position.y) ? player.size.y : 0.0f);
-    sf::Vector2f target_closest = target.position + sf::Vector2f((player.position.x > target.position.x) ? target.size.x : 0.0f, (player.position.y > target.position.y) ? target.size.y : 0.0f);
+    sf::Vector2f player_closest = sf::Vector2f(player.position) + sf::Vector2f((target.position.x > player.position.x) ? static_cast<float>(player.size.x) : 0.0f, (target.position.y > player.position.y) ? static_cast<float>(player.size.y) : 0.0f);
+    sf::Vector2f target_closest = sf::Vector2f(target.position) + sf::Vector2f((player.position.x > target.position.x) ? static_cast<float>(target.size.x) : 0.0f, (player.position.y > target.position.y) ? static_cast<float>(target.size.y) : 0.0f);
 
     float distance = std::sqrt(std::pow(player_closest.x - target_closest.x, 2) + std::pow(player_closest.y - target_closest.y, 2));
 
@@ -405,7 +409,7 @@ bool isInRange(TransformComponent& player, TransformComponent& target, float ran
 
 bool isBlockInRange(TransformComponent& player, sf::Vector2i& block, float range)
 {
-    sf::Vector2f player_closest = player.position + sf::Vector2f((block.x > player.position.x) ? player.size.x : 0.0f, (block.y > player.position.y) ? player.size.y : 0.0f);
+    sf::Vector2f player_closest = sf::Vector2f(player.position) + sf::Vector2f((block.x > player.position.x) ? static_cast<float>(player.size.x) : 0.0f, (block.y > player.position.y) ? static_cast<float>(player.size.y) : 0.0f);
     sf::Vector2f block_closest = sf::Vector2f(block) + sf::Vector2f((player.position.x > static_cast<float>(block.x)) ? 1.0f : 0.0f, (player.position.y > static_cast<float>(block.y)) ? 1.0f : 0.0f);
     float distance = std::sqrt(std::pow(player_closest.x - block_closest.x, 2) + std::pow(player_closest.y - block_closest.y, 2));
 

@@ -21,8 +21,8 @@ void InventorySystem(std::vector<Entity>& entities)
             auto& inventory = other.getComponent<InventoryComponent>();
             auto& inventoryTransform = other.getComponent<TransformComponent>();
             
-            sf::FloatRect itemRect(itemTransform.position, itemTransform.size);
-            sf::FloatRect inventoryRect(inventoryTransform.position, inventoryTransform.size);
+            sf::FloatRect itemRect(sf::Vector2f(itemTransform.position), sf::Vector2f(itemTransform.size));
+            sf::FloatRect inventoryRect(sf::Vector2f(inventoryTransform.position), sf::Vector2f(inventoryTransform.size));
 
             if(itemRect.findIntersection(inventoryRect))
             {

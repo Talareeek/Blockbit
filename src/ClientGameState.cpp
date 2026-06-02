@@ -286,7 +286,7 @@ void ClientGameState::render(sf::RenderWindow& window)
             [this](const Entity& e) { return e.getID() == myEntityId; });
         if (it != entities.end() && it->hasComponent<TransformComponent>())
         {
-            camPos = it->getComponent<TransformComponent>().position;
+            camPos = sf::Vector2f(it->getComponent<TransformComponent>().position);
         }
     }
 

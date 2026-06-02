@@ -8,12 +8,12 @@
 
 struct TransformComponent
 {
-    sf::Vector2f position;
-    sf::Vector2f size;
+    sf::Vector2<double> position;
+    sf::Vector2<double> size;
     sf::Angle rotation;
 
-    void teleport(const sf::Vector2f& position);
-    void move(const sf::Vector2f& offset);
+    void teleport(const sf::Vector2<double>& position);
+    void move(const sf::Vector2<double>& offset);
 
 
     std::string serialize()

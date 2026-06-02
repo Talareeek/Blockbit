@@ -30,14 +30,14 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
 
             if(!player.hasComponent<TransformComponent>()) return false;
 
-            sf::Vector2f playerPos = player.getComponent<TransformComponent>().position;
+            sf::Vector2<double> playerPos = player.getComponent<TransformComponent>().position;
 
             world.getEntities().push_back(Entity(world.getPossibleID()));
             auto& explosiveEntity = world.getEntities().back();
-            explosiveEntity.addComponent(TransformComponent{playerPos, {1.0f, 1.0f}, sf::degrees(0.0f)});
+            explosiveEntity.addComponent(TransformComponent{playerPos, {1.0, 1.0}, sf::degrees(0.0f)});
             explosiveEntity.addComponent(ExplosiveComponent{3.0f});
             explosiveEntity.addComponent(RenderComponent{12, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
-            explosiveEntity.addComponent(PhysicsComponent{(mouse - playerPos) * 3.0f, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
+            explosiveEntity.addComponent(PhysicsComponent{(mouse - sf::Vector2f(playerPos)) * 3.0f, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
 
             return true;
             
