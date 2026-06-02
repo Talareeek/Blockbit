@@ -58,7 +58,7 @@ void ExplosiveSystem(World& world, float dt)
 
                 float dist = std::sqrt(dx*dx + dy*dy);
 
-                if(dist <= explosive.force)
+                if(dist <= explosive.force && blockDatabase[world.getBlock(x, y).id].breakable != false)
                 {
                     world.setBlock(x, y, {BlockID::Air});
                 }

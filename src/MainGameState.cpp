@@ -372,17 +372,7 @@ void MainGameState::render(sf::RenderWindow& window)
 
     if(debug)
     {
-        auto simulationRange = world.getSimulationRangeForEntity(world.getPlayerID());
-
-        std::string debug_string = 
-        "FPS: " + std::to_string(fps) + '\n' +
-        "X: " + std::to_string(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x) +
-        " Y: " + std::to_string(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y) + '\n' +
-        "CHUNKS LOADED: " + std::to_string(world.getChunks().size()) + '\n' +
-        "MUSIC: " + std::to_string(music_timer) + " / " + std::to_string(music_interval) + '\n' +
-        "SIMULATION RANGE: " + std::to_string(simulationRange.first) + " - " + std::to_string(simulationRange.second) + '\n';
-
-        sf::Text debug_text(AssetManager::getFont(0), debug_string, 20);
+        sf::Text debug_text(AssetManager::getFont(0), debugString(), 20);
 
         debug_text.setPosition({50.0f, 50.0f});
 
@@ -394,6 +384,21 @@ void MainGameState::render(sf::RenderWindow& window)
 
         window.draw(debug_text);
     }
+}
+
+std::string MainGameState::debugString()
+{
+    auto simulationRange = world.getSimulationRangeForEntity(world.getPlayerID());
+
+    std::string debug_string = 
+    "FPS: " + std::to_string(fps) + '\n' +
+    "X: " + std::to_string(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x) +
+    " Y: " + std::to_string(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y) + '\n' +
+    "CHUNKS LOADED: " + std::to_string(world.getChunks().size()) + '\n' +
+    "MUSIC: " + std::to_string(music_timer) + " / " + std::to_string(music_interval) + '\n' +
+    "SIMULATION RANGE: " + std::to_string(simulationRange.first) + " - " + std::to_string(simulationRange.second) + '\n';
+
+    return debug_string;
 }
 
 

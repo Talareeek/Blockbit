@@ -43,6 +43,8 @@ public:
     void update(float dt) override;
     void render(sf::RenderWindow& window) override;    
 
+    std::string debugString();
+
     static constexpr unsigned int UNIT_SIZE_FACTOR = 12;
 
     static constexpr uint8_t TICKS_PER_SECOND = 60;
