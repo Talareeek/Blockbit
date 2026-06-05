@@ -13,18 +13,8 @@ Hotbar::Hotbar(InventoryComponent* inventory) : UIElement(UIElement::ScreenRelat
 
 }
 
-void Hotbar::handleEvent(const sf::Event& event)
+void Hotbar::handleEvent(const sf::Event& /*event*/)
 {
-    if(!inventory) return;
-
-    if(event.is<sf::Event::MouseWheelScrolled>())
-    {
-        auto mouse = event.getIf<sf::Event::MouseWheelScrolled>();
-
-        int delta = -(static_cast<int>(mouse->delta));
-
-        inventory->selectedSlot = (inventory->selectedSlot + delta + 9) % 9;
-    }
 }
 
 void Hotbar::update(float dt)

@@ -5,6 +5,10 @@
 
 #include <cstdint>
 #include <variant>
+#include <vector>
+
+namespace sf { class Event; class RenderWindow; }
+class World;
 
 enum class InputType
 {
@@ -28,5 +32,8 @@ struct Input
 
     std::variant<std::monostate, sf::Vector2f, uint8_t, bool, DropInfo> value;
 };
+
+std::vector<Input> getInputs(const World& world, const sf::RenderWindow& window);
+std::vector<Input> getInputsFromEvent(const sf::Event& event, const World& world, const sf::RenderWindow& window, uint8_t& selectedSlot);
 
 #endif // INPUT_HPP

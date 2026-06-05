@@ -34,6 +34,8 @@ protected:
 
     std::vector<Input> inputs;
 
+    virtual void onTick(float tick_step) {}
+
 public:
 
     World& getWorld() { return world; }
@@ -47,9 +49,6 @@ public:
     void render(sf::RenderWindow& window) override;
 
     std::string debugString();
-
-    std::vector<Input> getInputs();
-    std::vector<Input> getInputsFromEvent(const sf::Event& event);
 
     void processInputs(std::vector<Input> inputs, uint32_t id);
 

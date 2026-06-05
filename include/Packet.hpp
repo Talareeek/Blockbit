@@ -10,6 +10,7 @@
 
 #include "Chunk.hpp"
 #include "World.hpp"
+#include "Input.hpp"
 
 enum class PacketType : uint8_t
 {
@@ -85,10 +86,7 @@ struct InputPacket
 {
     uint32_t id;
 
-    bool left;
-    bool right;
-
-    bool jump;
+    std::vector<Input> inputs;
 };
 
 

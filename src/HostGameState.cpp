@@ -40,7 +40,7 @@ void HostGameState::spawnRemotePlayer(uint32_t clientId)
     world.getEntities().push_back(std::move(remote));
 
     clientToEntity[clientId] = entityId;
-    remoteInputs[clientId] = {};
+    remoteInputQueues[clientId] = {};
 
     std::cout << "[Host] Client " << clientId << " joined, spawned as entity " << entityId << '\n';
 
@@ -64,7 +64,7 @@ void HostGameState::despawnRemotePlayer(uint32_t clientId)
     server.broadcast(serializePacket(DespawnPacket{entityId}));
 
     clientToEntity.erase(it);
-    remoteInputs.erase(clientId);
+    remoteInputQueues.erase(clientId);
 
     std::cout << "[Host] Client " << clientId << " left, despawned entity " << entityId << '\n';
 }
@@ -128,13 +128,9 @@ void HostGameState::processIncoming()
                 case PacketType::Input:
                 {
                     InputPacket in = deserializeInput(r);
-                    auto it = remoteInputs.find(pkt.clientId);
-                    if (it == remoteInputs.end()) break;
-                    bool prevHeld = it->second.jumpHeld;
-                    it->second.left  = in.left;
-                    it->second.right = in.right;
-                    it->second.jumpHeld = in.jump;
-                    if (in.jump && !prevHeld) it->second.jumpPressed = true;
+                    auto it = remoteInputQueues.find(pkt.clientId);
+                    if (it == remoteInputQueues.end()) break;
+                    it->second.push_back(std::move(in.inputs));
                     break;
                 }
                 case PacketType::BlockUpdate:
@@ -154,41 +150,19 @@ void HostGameState::processIncoming()
     }
 }
 
-void HostGameState::applyRemoteInputs(float /*dt*/)
+void HostGameState::onTick(float /*tick_step*/)
 {
-    for (auto& [clientId, input] : remoteInputs)
+    for (auto& [clientId, queue] : remoteInputQueues)
     {
         auto it = clientToEntity.find(clientId);
         if (it == clientToEntity.end()) continue;
+        if (queue.empty()) continue;
 
-        uint32_t entityId = it->second;
-
-        auto& entities = world.getEntities();
-        auto eit = std::find_if(entities.begin(), entities.end(),
-            [entityId](const Entity& e) { return e.getID() == entityId; });
-        if (eit == entities.end()) continue;
-
-        if (!eit->hasComponent<PhysicsComponent>() || !eit->hasComponent<RenderComponent>()) continue;
-
-        auto& physics = eit->getComponent<PhysicsComponent>();
-        auto& render = eit->getComponent<RenderComponent>();
-
-        if (input.left)
-        {
-            physics.force.x -= 45.0f;
-            render.uv = {{0, 32}, {16, 16}};
-        }
-        if (input.right)
-        {
-            physics.force.x += 45.0f;
-            render.uv = {{32, 32}, {16, 16}};
-        }
-        if (input.jumpPressed && physics.onGround)
-        {
-            physics.velocity.y += 10.0f;
-        }
-        input.jumpPressed = false;
+        processInputs(std::move(queue.front()), it->second);
+        queue.pop_front();
     }
+
+    broadcastSnapshot();
 }
 
 void HostGameState::broadcastBlockUpdates()
@@ -254,18 +228,10 @@ void HostGameState::update(float dt)
     {
         syncConnections();
         processIncoming();
-        applyRemoteInputs(dt);
 
         MainGameState::update(dt);
 
         broadcastBlockUpdates();
-
-        snapshotTimer += dt;
-        if (snapshotTimer >= SNAPSHOT_INTERVAL)
-        {
-            snapshotTimer = 0.0f;
-            broadcastSnapshot();
-        }
     }
     catch (const std::bad_alloc&)
     {

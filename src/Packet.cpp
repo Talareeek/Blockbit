@@ -106,13 +106,75 @@ std::vector<char> serializePacket(const DespawnPacket& p)
     return w.release();
 }
 
+static void writeInput(PacketWriter& w, const Input& in)
+{
+    w.write<uint8_t>(static_cast<uint8_t>(in.type));
+
+    switch (in.type)
+    {
+        case InputType::MOVE:
+        case InputType::USE:
+        case InputType::ATTACK:
+            w.write(std::get<sf::Vector2f>(in.value));
+            break;
+        case InputType::JUMP:
+            break;
+        case InputType::CHANGE_SLOT:
+            w.write<uint8_t>(std::get<uint8_t>(in.value));
+            break;
+        case InputType::DROP:
+        {
+            const auto& d = std::get<DropInfo>(in.value);
+            w.write(d.mousePosition);
+            w.write<uint8_t>(d.fullStack ? 1 : 0);
+            break;
+        }
+    }
+}
+
+static Input readInput(PacketReader& r)
+{
+    Input in{};
+    in.type = static_cast<InputType>(r.read<uint8_t>());
+
+    switch (in.type)
+    {
+        case InputType::MOVE:
+        case InputType::USE:
+        case InputType::ATTACK:
+            in.value = r.read<sf::Vector2f>();
+            break;
+        case InputType::JUMP:
+            in.value = std::monostate{};
+            break;
+        case InputType::CHANGE_SLOT:
+            in.value = r.read<uint8_t>();
+            break;
+        case InputType::DROP:
+        {
+            DropInfo d{};
+            d.mousePosition = r.read<sf::Vector2f>();
+            d.fullStack = r.read<uint8_t>() != 0;
+            in.value = d;
+            break;
+        }
+        default:
+            throw std::runtime_error("readInput: unknown InputType");
+    }
+
+    return in;
+}
+
 std::vector<char> serializePacket(const InputPacket& p)
 {
     PacketWriter w(PacketType::Input);
     w.write(p.id);
-    w.write<uint8_t>(p.left  ? 1 : 0);
-    w.write<uint8_t>(p.right ? 1 : 0);
-    w.write<uint8_t>(p.jump  ? 1 : 0);
+
+    uint32_t count = static_cast<uint32_t>(p.inputs.size());
+    w.write(count);
+
+    for (const auto& in : p.inputs) writeInput(w, in);
+
     return w.release();
 }
 
@@ -195,9 +257,13 @@ DespawnPacket deserializeDespawn(PacketReader& r)
 InputPacket deserializeInput(PacketReader& r)
 {
     InputPacket p;
-    p.id    = r.read<uint32_t>();
-    p.left  = r.read<uint8_t>() != 0;
-    p.right = r.read<uint8_t>() != 0;
-    p.jump  = r.read<uint8_t>() != 0;
+    p.id = r.read<uint32_t>();
+
+    uint32_t count = r.read<uint32_t>();
+    if (count > 1024) throw std::runtime_error("InputPacket: input batch too large");
+
+    p.inputs.reserve(count);
+    for (uint32_t i = 0; i < count; i++) p.inputs.push_back(readInput(r));
+
     return p;
 }

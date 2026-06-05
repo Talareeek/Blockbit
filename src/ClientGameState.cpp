@@ -121,21 +121,25 @@ void ClientGameState::processIncoming()
     }
 }
 
-void ClientGameState::sendInput()
+void ClientGameState::sendTickInputs()
 {
-    if (!client.isConnected() || myEntityId == 0) return;
-
-    InputPacket in{};
-    in.id    = myEntityId;
-    in.left  = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A);
-    in.right = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D);
-    in.jump  = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space);
-
-    if (in.left != lastSent.left || in.right != lastSent.right || in.jump != lastSent.jump)
+    if (!client.isConnected() || myEntityId == 0)
     {
-        client.send(serializePacket(in));
-        lastSent = in;
+        inputs.clear();
+        return;
     }
+
+    auto polled = ::getInputs(world, game->getWindow());
+    inputs.insert(inputs.end(),
+        std::make_move_iterator(polled.begin()),
+        std::make_move_iterator(polled.end()));
+
+    InputPacket pkt;
+    pkt.id = myEntityId;
+    pkt.inputs = std::move(inputs);
+    inputs.clear();
+
+    client.send(serializePacket(pkt));
 }
 
 void ClientGameState::handleEvent(const sf::Event& event)
@@ -154,6 +158,11 @@ void ClientGameState::handleEvent(const sf::Event& event)
             return;
         }
     }
+
+    auto new_inputs = ::getInputsFromEvent(event, world, game->getWindow(), localSelectedSlot);
+    inputs.insert(inputs.end(),
+        std::make_move_iterator(new_inputs.begin()),
+        std::make_move_iterator(new_inputs.end()));
 }
 
 void ClientGameState::update(float dt)
@@ -189,11 +198,12 @@ void ClientGameState::update(float dt)
 
         processIncoming();
 
-        sendTimer += dt;
-        if (sendTimer >= INPUT_INTERVAL)
+        const float tick_step = 1.0f / static_cast<float>(TICKS_PER_SECOND);
+        since_last_tick += dt;
+        while (since_last_tick >= tick_step)
         {
-            sendTimer = 0.0f;
-            sendInput();
+            sendTickInputs();
+            since_last_tick -= tick_step;
         }
     }
     catch (const std::bad_alloc&)

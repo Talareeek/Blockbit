@@ -4,8 +4,10 @@
 #include "GameState.hpp"
 #include "Client.hpp"
 #include "World.hpp"
+#include "Input.hpp"
 
 #include <string>
+#include <vector>
 #include <cstdint>
 
 class ClientGameState : public GameState
@@ -26,12 +28,12 @@ private:
     std::string pendingHost;
     uint16_t    pendingPort = 0;
 
-    InputPacket lastSent{};
-
-    float sendTimer = 0.0f;
+    std::vector<Input> inputs;
+    float since_last_tick = 0.0f;
+    uint8_t localSelectedSlot = 0;
 
     void processIncoming();
-    void sendInput();
+    void sendTickInputs();
     void rebuildEntitiesFromSnapshot(const SnapshotPacket& snap);
 
 public:
@@ -44,7 +46,7 @@ public:
     void render(sf::RenderWindow& window) override;
 
     static constexpr unsigned int UNIT_SIZE_FACTOR = 12;
-    static constexpr float        INPUT_INTERVAL   = 0.05f;
+    static constexpr uint8_t      TICKS_PER_SECOND = 60;
 };
 
 #endif // CLIENT_GAME_STATE_HPP

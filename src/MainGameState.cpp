@@ -103,7 +103,8 @@ void MainGameState::handleEvent(const sf::Event& event)
 
     hotbar.handleEvent(event);
 
-    auto new_inputs = getInputsFromEvent(event);
+    auto& selectedSlot = entityWithID(world.getPlayerID(), world).getComponent<InventoryComponent>().selectedSlot;
+    auto new_inputs = ::getInputsFromEvent(event, world, game->getWindow(), selectedSlot);
 
     inputs.insert(inputs.end(), std::make_move_iterator(new_inputs.begin()), std::make_move_iterator(new_inputs.end()));
 }
@@ -135,11 +136,13 @@ void MainGameState::update(float dt)
 
         game->getWindow().setView(view);
 
-        auto new_inputs = getInputs();
+        auto new_inputs = ::getInputs(world, game->getWindow());
         inputs.insert(inputs.end(), std::make_move_iterator(new_inputs.begin()), std::make_move_iterator(new_inputs.end()));
 
         processInputs(std::move(inputs), world.getPlayerID());
         inputs.clear();
+
+        onTick(tick_step);
 
         AISystem(world, tick_step);
         TransformSystem(world);
@@ -309,72 +312,6 @@ std::string MainGameState::debugString()
     return debug_string;
 }
 
-std::vector<Input> MainGameState::getInputs()
-{
-    std::vector<Input> inputs;
-
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
-    {
-        inputs.push_back(Input{InputType::MOVE, sf::Vector2f{-1.0f, 0.0f}});
-    }
-
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D))
-    {
-        inputs.push_back(Input{InputType::MOVE, sf::Vector2f{1.0f, 0.0f}});
-    }
-
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space))
-    {
-        inputs.push_back({InputType::JUMP, std::monostate{}});
-    }
-
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q))
-    {
-        inputs.push_back({InputType::DROP, DropInfo{getMouseWorldPosition(world, game->getWindow()), sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)}});
-    }
-
-    return inputs;
-}
-
-std::vector<Input> MainGameState::getInputsFromEvent(const sf::Event& event)
-{
-    std::vector<Input> inputs;
-
-    if(event.is<sf::Event::MouseButtonPressed>())
-    {
-        auto mouse = event.getIf<sf::Event::MouseButtonPressed>();
-
-        if(mouse->button == sf::Mouse::Button::Left)
-        {
-            inputs.push_back({InputType::ATTACK, getMouseWorldPosition(world, game->getWindow())});
-        }
-        else if(mouse->button == sf::Mouse::Button::Right)
-        {
-            inputs.push_back({InputType::USE, getMouseWorldPosition(world, game->getWindow())});
-        }
-    }
-
-    else if(event.is<sf::Event::MouseWheelScrolled>())
-    {
-        auto& inventory = entityWithID(world.getPlayerID(), world).getComponent<InventoryComponent>();
-        inputs.push_back({InputType::CHANGE_SLOT, inventory.selectedSlot});
-    }
-
-    else if(event.is<sf::Event::KeyPressed>())
-    {
-        auto key = event.getIf<sf::Event::KeyPressed>();
-
-        if(key->code >= sf::Keyboard::Key::Num1 && key->code <= sf::Keyboard::Key::Num9)
-        {
-            uint8_t slot = static_cast<uint8_t>(static_cast<int>(key->code) - static_cast<int>(sf::Keyboard::Key::Num1));
-            inputs.push_back({InputType::CHANGE_SLOT, slot});
-        }
-    }
-
-    return inputs;
-}
-
-
 void MainGameState::processInputs(std::vector<Input> inputs, uint32_t id)
 {
     auto& entity = entityWithID(id, world);
@@ -441,7 +378,7 @@ void MainGameState::processInputs(std::vector<Input> inputs, uint32_t id)
                 auto worldPos = std::get<sf::Vector2f>(input.value);
                 sf::Vector2i blockPos = {static_cast<int>(std::floor(worldPos.x)), static_cast<int>(std::floor(worldPos.y))};
 
-                auto& selected = inventory.inventory.slots[hotbar.getSelectedSlot()];
+                auto& selected = inventory.inventory.slots[inventory.selectedSlot];
 
                 if(selected.empty()) break;
 
@@ -464,7 +401,7 @@ void MainGameState::processInputs(std::vector<Input> inputs, uint32_t id)
             case InputType::DROP:
             {
                 auto& info = std::get<DropInfo>(input.value);
-                auto& stack = inventory.inventory.slots[hotbar.getSelectedSlot()];
+                auto& stack = inventory.inventory.slots[inventory.selectedSlot];
 
                 if(stack.empty()) break;
 
@@ -496,7 +433,7 @@ void MainGameState::processInputs(std::vector<Input> inputs, uint32_t id)
             case InputType::CHANGE_SLOT:
             {
                 uint8_t slot = std::get<uint8_t>(input.value);
-                hotbar.setSelectedSlot(slot);
+                inventory.selectedSlot = slot % 9;
 
                 break;
             }

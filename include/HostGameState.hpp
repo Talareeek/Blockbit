@@ -6,6 +6,8 @@
 
 #include <unordered_map>
 #include <unordered_set>
+#include <deque>
+#include <vector>
 #include <cstdint>
 
 class HostGameState : public MainGameState
@@ -17,16 +19,7 @@ private:
     std::unordered_map<uint32_t, uint32_t> clientToEntity;
     std::unordered_set<uint32_t> knownClients;
 
-    struct RemoteInput
-    {
-        bool left = false;
-        bool right = false;
-        bool jumpHeld = false;
-        bool jumpPressed = false;
-    };
-    std::unordered_map<uint32_t, RemoteInput> remoteInputs;
-
-    float snapshotTimer = 0.0f;
+    std::unordered_map<uint32_t, std::deque<std::vector<Input>>> remoteInputQueues;
 
     void spawnRemotePlayer(uint32_t clientId);
     void despawnRemotePlayer(uint32_t clientId);
@@ -35,9 +28,12 @@ private:
 
     void syncConnections();
     void processIncoming();
-    void applyRemoteInputs(float dt);
     void broadcastBlockUpdates();
     void broadcastSnapshot();
+
+protected:
+
+    void onTick(float tick_step) override;
 
 public:
 
@@ -47,8 +43,7 @@ public:
     void handleEvent(const sf::Event& event) override;
     void update(float dt) override;
 
-    static constexpr float    SNAPSHOT_INTERVAL = 0.05f;
-    static constexpr uint16_t DEFAULT_PORT      = 25565;
+    static constexpr uint16_t DEFAULT_PORT = 25565;
 };
 
 #endif // HOST_GAME_STATE_HPP
