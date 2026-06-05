@@ -19,7 +19,6 @@
 #include "../include/HealthSystem.hpp"
 #include "../include/TransformSystem.hpp"
 #include "../include/ChunkUnloadSystem.hpp"
-#include "../include/PlayerInputSystem.hpp"
 #include "../include/AISystem.hpp"
 #include "../include/AnimationSystem.hpp"
 #include "../include/Render.hpp"
@@ -76,80 +75,21 @@ void MainGameState::handleEvent(const sf::Event& event)
 {
     if(event.is<sf::Event::MouseButtonPressed>())
     {
-        auto mouse = event.getIf<sf::Event::MouseButtonPressed>();
+        float unit_size = game->getWindow().getView().getSize().y / static_cast<float>(MainGameState::UNIT_SIZE_FACTOR);
 
-        if(mouse->button == sf::Mouse::Button::Left)
+        sf::View view(
         {
-            float unit_size = game->getWindow().getView().getSize().y / static_cast<float>(MainGameState::UNIT_SIZE_FACTOR);
-
-            sf::View view(
-            {
-                static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
-                static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
-            },
-            {
-                (float)game->getWindow().getSize().x,
-                (float)game->getWindow().getSize().y
-            });
-
-            view.setSize({view.getSize().x, -view.getSize().y});            
-
-            game->getWindow().setView(view);
-
-            sf::Vector2i blockPos = getMouseBlockPosition(world, game->getWindow());
-
-            if(world.getBlock(blockPos.x, blockPos.y).id != BlockID::Air && blockDatabase[world.getBlock(blockPos.x, blockPos.y).id].breakable && isBlockInRange(entityWithID(1, world).getComponent<TransformComponent>(), blockPos, 4.0f))
-            {
-                Entity newEntity(world.getPossibleID());
-                newEntity.addComponent(TransformComponent{{blockPos.x + 0.25f, blockPos.y - 0.25f}, {0.5f, 0.5f}, sf::degrees(0.0f)});
-                newEntity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
-                newEntity.addComponent(ItemComponent{{blockToItem(world.getBlock(blockPos.x, blockPos.y).id), 1}});
-                newEntity.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[newEntity.getComponent<ItemComponent>().item.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
-                world.setBlock(blockPos.x, blockPos.y, {BlockID::Air, 0});
-
-                world.getEntities().push_back(std::move(newEntity));
-            }
-        }
-        else if(mouse->button == sf::Mouse::Button::Right)
+            static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
+            static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
+        },
         {
-            float unit_size = game->getWindow().getView().getSize().y / static_cast<float>(MainGameState::UNIT_SIZE_FACTOR);
+            (float)game->getWindow().getSize().x,
+            (float)game->getWindow().getSize().y
+        });
 
-            sf::View view(
-            {
-                static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
-                static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
-            },
-            {
-                (float)game->getWindow().getSize().x,
-                (float)game->getWindow().getSize().y
-            });
+        view.setSize({view.getSize().x, -view.getSize().y});
 
-            view.setSize({view.getSize().x, -view.getSize().y});
-
-            game->getWindow().setView(view);
-
-            sf::Vector2i blockPos = getMouseBlockPosition(world, game->getWindow());
-
-            auto& inventory = entityWithID(world.getPlayerID(), world).getComponent<InventoryComponent>();
-
-
-            if(inventory.inventory.slots[hotbar.getSelectedSlot()].empty() == false)
-            {
-                if((world.getBlock(blockPos.x, blockPos.y).id == BlockID::Air || world.getBlock(blockPos.x, blockPos.y).id == BlockID::Water) && isBlockInRange(entityWithID(1, world).getComponent<TransformComponent>(), blockPos, 4.0f) && itemDatabase[inventory.inventory.slots[hotbar.getSelectedSlot()].itemID].category == ItemCategory::Block && inventory.inventory.slots[hotbar.getSelectedSlot()].empty() == false)
-                {
-                    inventory.inventory.slots[hotbar.getSelectedSlot()].quantity--;
-
-                    world.setBlock(blockPos.x, blockPos.y, {itemToBlock(entityWithID(world.getPlayerID(), world).getComponent<InventoryComponent>().inventory.slots[hotbar.getSelectedSlot()].itemID), 0});
-                }
-                else if(itemDatabase[inventory.inventory.slots[hotbar.getSelectedSlot()].itemID].category != ItemCategory::Block)
-                {
-                    if(itemDatabase[inventory.inventory.slots[hotbar.getSelectedSlot()].itemID].onUse(world, getMouseWorldPosition(world, game->getWindow()), world.getPlayerID()))
-                    {
-                        inventory.inventory.slots[hotbar.getSelectedSlot()].quantity--;
-                    }
-                }
-            }
-        }
+        game->getWindow().setView(view);
     }
 
     if(event.is<sf::Event::Resized>())
@@ -162,6 +102,10 @@ void MainGameState::handleEvent(const sf::Event& event)
     inventoryWidget.handleEvent(event);
 
     hotbar.handleEvent(event);
+
+    auto new_inputs = getInputsFromEvent(event);
+
+    inputs.insert(inputs.end(), std::make_move_iterator(new_inputs.begin()), std::make_move_iterator(new_inputs.end()));
 }
 
 void MainGameState::update(float dt)
@@ -175,7 +119,28 @@ void MainGameState::update(float dt)
     // DEPENDANT BY TICK-RATE
     while(since_last_tick >= tick_step)
     {
-        PlayerInputSystem(world, tick_step);
+        float unit_size = game->getWindow().getView().getSize().y / static_cast<float>(MainGameState::UNIT_SIZE_FACTOR);
+
+        sf::View view(
+        {
+            static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
+            static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
+        },
+        {
+            (float)game->getWindow().getSize().x,
+            (float)game->getWindow().getSize().y
+        });
+
+        view.setSize({view.getSize().x, -view.getSize().y});
+
+        game->getWindow().setView(view);
+
+        auto new_inputs = getInputs();
+        inputs.insert(inputs.end(), std::make_move_iterator(new_inputs.begin()), std::make_move_iterator(new_inputs.end()));
+
+        processInputs(std::move(inputs), world.getPlayerID());
+        inputs.clear();
+
         AISystem(world, tick_step);
         TransformSystem(world);
         ExplosiveSystem(world, tick_step);
@@ -214,67 +179,9 @@ void MainGameState::update(float dt)
         inventoryWidget.update(dt);
     }
 
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q))
-    {
-        bool full_stack = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift);
-
-        auto& inventory = entityWithID(world.getPlayerID(), world).getComponent<InventoryComponent>().inventory;
-
-        ItemStack& stack = inventory.slots[hotbar.getSelectedSlot()];
-
-        if(stack.empty()) return;
-
-        float unit_size = game->getWindow().getSize().y / 9.0f;
-
-        sf::View view(
-        {
-            static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
-            static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
-        },
-        {
-            (float)game->getWindow().getSize().x,
-            (float)game->getWindow().getSize().y
-        });
-
-        view.setSize({view.getSize().x, -view.getSize().y});
-
-        game->getWindow().setView(view);
-
-        Entity item(world.getPossibleID());
-        item.addComponent(TransformComponent{entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position + sf::Vector2<double>(0.0, 1.5), {0.5, 0.5}, sf::degrees(0.0f)});
-        item.addComponent(PhysicsComponent{getMouseWorldPosition(world, game->getWindow()) - sf::Vector2f(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position), {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
-        item.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[stack.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
-
-        if(full_stack)
-        {            
-            item.addComponent(ItemComponent{stack});
-
-            stack = {ItemID::None, 0};
-        }
-        else
-        {
-            item.addComponent(ItemComponent{{stack.itemID, 1}});
-
-            if(--stack.quantity == 0)
-            {
-                stack.itemID = ItemID::None;
-            }
-        }
-
-        world.getEntities().push_back(std::move(item));
-    }
-
     if(InputManager::isLazyKeyPressed(sf::Keyboard::Key::F3))
     {
         debug = !debug;
-    }
-
-    for(auto i = sf::Keyboard::Key::Num1; i <= sf::Keyboard::Key::Num9; i = static_cast<sf::Keyboard::Key>(static_cast<int>(i) + 1))
-    {
-        if(InputManager::isLazyKeyPressed(i))
-        {
-            hotbar.setSelectedSlot(static_cast<uint8_t>(i) - static_cast<uint8_t>(sf::Keyboard::Key::Num1));
-        }
     }
 
     world.tick(dt);
@@ -396,11 +303,206 @@ std::string MainGameState::debugString()
     " Y: " + std::to_string(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y) + '\n' +
     "CHUNKS LOADED: " + std::to_string(world.getChunks().size()) + '\n' +
     "MUSIC: " + std::to_string(music_timer) + " / " + std::to_string(music_interval) + '\n' +
-    "SIMULATION RANGE: " + std::to_string(simulationRange.first) + " - " + std::to_string(simulationRange.second) + '\n';
+    "SIMULATION RANGE: " + std::to_string(simulationRange.first) + " - " + std::to_string(simulationRange.second) + '\n' +
+    "INPUTS: " + std::to_string(inputs.size()) + '\n';
 
     return debug_string;
 }
 
+std::vector<Input> MainGameState::getInputs()
+{
+    std::vector<Input> inputs;
+
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
+    {
+        inputs.push_back(Input{InputType::MOVE, sf::Vector2f{-1.0f, 0.0f}});
+    }
+
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D))
+    {
+        inputs.push_back(Input{InputType::MOVE, sf::Vector2f{1.0f, 0.0f}});
+    }
+
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space))
+    {
+        inputs.push_back({InputType::JUMP, std::monostate{}});
+    }
+
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q))
+    {
+        inputs.push_back({InputType::DROP, DropInfo{getMouseWorldPosition(world, game->getWindow()), sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)}});
+    }
+
+    return inputs;
+}
+
+std::vector<Input> MainGameState::getInputsFromEvent(const sf::Event& event)
+{
+    std::vector<Input> inputs;
+
+    if(event.is<sf::Event::MouseButtonPressed>())
+    {
+        auto mouse = event.getIf<sf::Event::MouseButtonPressed>();
+
+        if(mouse->button == sf::Mouse::Button::Left)
+        {
+            inputs.push_back({InputType::ATTACK, getMouseWorldPosition(world, game->getWindow())});
+        }
+        else if(mouse->button == sf::Mouse::Button::Right)
+        {
+            inputs.push_back({InputType::USE, getMouseWorldPosition(world, game->getWindow())});
+        }
+    }
+
+    else if(event.is<sf::Event::MouseWheelScrolled>())
+    {
+        auto& inventory = entityWithID(world.getPlayerID(), world).getComponent<InventoryComponent>();
+        inputs.push_back({InputType::CHANGE_SLOT, inventory.selectedSlot});
+    }
+
+    else if(event.is<sf::Event::KeyPressed>())
+    {
+        auto key = event.getIf<sf::Event::KeyPressed>();
+
+        if(key->code >= sf::Keyboard::Key::Num1 && key->code <= sf::Keyboard::Key::Num9)
+        {
+            uint8_t slot = static_cast<uint8_t>(static_cast<int>(key->code) - static_cast<int>(sf::Keyboard::Key::Num1));
+            inputs.push_back({InputType::CHANGE_SLOT, slot});
+        }
+    }
+
+    return inputs;
+}
+
+
+void MainGameState::processInputs(std::vector<Input> inputs, uint32_t id)
+{
+    auto& entity = entityWithID(id, world);
+
+    if(!entity.hasComponent<PhysicsComponent>() || !entity.hasComponent<RenderComponent>() || !entity.hasComponent<TransformComponent>() || !entity.hasComponent<InventoryComponent>()) return;
+
+
+    auto& physics = entity.getComponent<PhysicsComponent>();
+    auto& render = entity.getComponent<RenderComponent>();
+    auto& transform = entity.getComponent<TransformComponent>();
+    auto& inventory = entity.getComponent<InventoryComponent>();
+
+    for(const auto& input : inputs)
+    {
+        switch(input.type)
+        {
+            case InputType::MOVE:
+            {
+                auto direction = std::get<sf::Vector2f>(input.value);
+
+                physics.force.x += 45.0f * direction.x;
+
+                if(direction.x < 0.0f)
+                {
+                    render.uv = {{0, 32}, {16, 16}};
+                }
+                else if(direction.x > 0.0f)
+                {
+                    render.uv = {{32, 32}, {16, 16}};
+                }
+
+                break;
+            }
+            case InputType::JUMP:
+            {
+                if(physics.onGround)
+                {
+                    physics.velocity.y += 10.0f;
+                }
+
+                break;
+            }
+            case InputType::ATTACK:
+            {
+                auto worldPos = std::get<sf::Vector2f>(input.value);
+                sf::Vector2i blockPos = {static_cast<int>(std::floor(worldPos.x)), static_cast<int>(std::floor(worldPos.y))};
+
+                if(world.getBlock(blockPos.x, blockPos.y).id != BlockID::Air && blockDatabase[world.getBlock(blockPos.x, blockPos.y).id].breakable && isBlockInRange(transform, blockPos, 4.0f))
+                {
+                    Entity newEntity(world.getPossibleID());
+                    newEntity.addComponent(TransformComponent{{blockPos.x + 0.25f, blockPos.y - 0.25f}, {0.5f, 0.5f}, sf::degrees(0.0f)});
+                    newEntity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
+                    newEntity.addComponent(ItemComponent{{blockToItem(world.getBlock(blockPos.x, blockPos.y).id), 1}});
+                    newEntity.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[newEntity.getComponent<ItemComponent>().item.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
+                    world.setBlock(blockPos.x, blockPos.y, {BlockID::Air, 0});
+
+                    world.getEntities().push_back(std::move(newEntity));
+                }
+
+                break;
+            }
+            case InputType::USE:
+            {
+                auto worldPos = std::get<sf::Vector2f>(input.value);
+                sf::Vector2i blockPos = {static_cast<int>(std::floor(worldPos.x)), static_cast<int>(std::floor(worldPos.y))};
+
+                auto& selected = inventory.inventory.slots[hotbar.getSelectedSlot()];
+
+                if(selected.empty()) break;
+
+                if((world.getBlock(blockPos.x, blockPos.y).id == BlockID::Air || world.getBlock(blockPos.x, blockPos.y).id == BlockID::Water) && isBlockInRange(transform, blockPos, 4.0f) && itemDatabase[selected.itemID].category == ItemCategory::Block)
+                {
+                    selected.quantity--;
+
+                    world.setBlock(blockPos.x, blockPos.y, {itemToBlock(selected.itemID), 0});
+                }
+                else if(itemDatabase[selected.itemID].category != ItemCategory::Block)
+                {
+                    if(itemDatabase[selected.itemID].onUse(world, worldPos, id))
+                    {
+                        selected.quantity--;
+                    }
+                }
+
+                break;
+            }
+            case InputType::DROP:
+            {
+                auto& info = std::get<DropInfo>(input.value);
+                auto& stack = inventory.inventory.slots[hotbar.getSelectedSlot()];
+
+                if(stack.empty()) break;
+
+                Entity item(world.getPossibleID());
+                item.addComponent(TransformComponent{transform.position + sf::Vector2<double>(0.0, 1.5), {0.5, 0.5}, sf::degrees(0.0f)});
+                item.addComponent(PhysicsComponent{info.mousePosition - sf::Vector2f(transform.position), {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
+                item.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[stack.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
+
+                if(info.fullStack)
+                {
+                    item.addComponent(ItemComponent{stack});
+
+                    stack = {ItemID::None, 0};
+                }
+                else
+                {
+                    item.addComponent(ItemComponent{{stack.itemID, 1}});
+
+                    if(--stack.quantity == 0)
+                    {
+                        stack.itemID = ItemID::None;
+                    }
+                }
+
+                world.getEntities().push_back(std::move(item));
+
+                break;
+            }
+            case InputType::CHANGE_SLOT:
+            {
+                uint8_t slot = std::get<uint8_t>(input.value);
+                hotbar.setSelectedSlot(slot);
+
+                break;
+            }
+        }
+    }
+}
 
 bool isInRange(TransformComponent& player, TransformComponent& target, float range)
 {

@@ -8,6 +8,7 @@
 #include "Hotbar.hpp"
 #include "Button.hpp"
 #include "TransformComponent.hpp"
+#include "Input.hpp"
 
 extern Entity& entityWithID(uint32_t id, World& world);
 
@@ -31,6 +32,8 @@ protected:
 
     float since_last_tick = 0.0f;
 
+    std::vector<Input> inputs;
+
 public:
 
     World& getWorld() { return world; }
@@ -41,13 +44,20 @@ public:
 
     void handleEvent(const sf::Event& event) override;
     void update(float dt) override;
-    void render(sf::RenderWindow& window) override;    
+    void render(sf::RenderWindow& window) override;
 
     std::string debugString();
+
+    std::vector<Input> getInputs();
+    std::vector<Input> getInputsFromEvent(const sf::Event& event);
+
+    void processInputs(std::vector<Input> inputs, uint32_t id);
 
     static constexpr unsigned int UNIT_SIZE_FACTOR = 12;
 
     static constexpr uint8_t TICKS_PER_SECOND = 60;
+
+    
 
 };
 

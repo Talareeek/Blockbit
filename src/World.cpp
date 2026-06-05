@@ -9,7 +9,6 @@
 #include "../include/MainGameState.hpp"
 #include "../include/ExplosiveComponent.hpp"
 #include "../include/ItemComponent.hpp"
-#include "../include/PlayerComponent.hpp"
 #include "../include/BlockAtlas.hpp"
 #include "../include/AIComponent.hpp"
 #include "../include/Render.hpp"
@@ -599,15 +598,10 @@ void World::writeEntities() const
                 file << "Transform" << '\n';
                 file << std::any_cast<TransformComponent>(component).serialize();
             }
-            else if(type == typeid(PlayerComponent))
-            {
-                file << "Player" << '\n';
-                file << std::any_cast<PlayerComponent>(component).serialize();
-            }
             else if(type == typeid(AnimationComponent))
             {
                 file << "Animation" << '\n';
-                file << std::any_cast<PlayerComponent>(component).serialize();
+                file << std::any_cast<AnimationComponent>(component).serialize();
             }
             else if(type == typeid(AIComponent))
             {
@@ -826,13 +820,6 @@ void World::readEntities()
                         entity.addComponent<TransformComponent>(c);
                         std::cout << "\t\tTransformComponent loaded\n";
                     }
-                    else if (componentType == "Player")
-                    {
-                        PlayerComponent c;
-                        c.deserialize(componentData);
-                        entity.addComponent<PlayerComponent>(c);
-                        std::cout << "\t\tPlayerComponent loaded\n";
-                    }
                     else if (componentType == "Animation")
                     {
                         AnimationComponent c;
@@ -969,7 +956,6 @@ void World::createPlayer()
     entityWithID(getPlayerID(), *this).addComponent(RenderComponent{0, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
 
     entityWithID(getPlayerID(), *this).addComponent(HealthComponent{100, 100, false});
-    entityWithID(getPlayerID(), *this).addComponent(PlayerComponent{});
 
 }
 

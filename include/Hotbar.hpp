@@ -13,7 +13,6 @@ class Hotbar : public UIElement
 private:
 
     InventoryComponent* inventory = nullptr;
-    uint8_t selectedSlot = 0;
 
 public:
 

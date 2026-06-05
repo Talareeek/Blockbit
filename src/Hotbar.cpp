@@ -15,13 +15,15 @@ Hotbar::Hotbar(InventoryComponent* inventory) : UIElement(UIElement::ScreenRelat
 
 void Hotbar::handleEvent(const sf::Event& event)
 {
+    if(!inventory) return;
+
     if(event.is<sf::Event::MouseWheelScrolled>())
     {
         auto mouse = event.getIf<sf::Event::MouseWheelScrolled>();
 
         int delta = -(static_cast<int>(mouse->delta));
 
-        selectedSlot = (selectedSlot + delta + 9) % 9;
+        inventory->selectedSlot = (inventory->selectedSlot + delta + 9) % 9;
     }
 }
 
@@ -43,24 +45,6 @@ void Hotbar::render(sf::RenderWindow& window)
     float slotStart = size.x * (3.f / 202.f);
     float verticalOffset = size.y * (3.f / 26.f);
 
-    /*
-
-    sf::RectangleShape selector({slotWidth, slotWidth});
-    selector.setFillColor(sf::Color::Transparent);
-    selector.setOutlineColor(sf::Color::White);
-    selector.setOutlineThickness(2.f);
-
-    selector.setPosition(
-        position + sf::Vector2f(
-            slotStart + (slotWidth + slotSpacing) * selectedSlot,
-            verticalOffset
-        )
-    );
-
-    window.draw(selector);
-
-    */
-
     if(!inventory) return;
 
     float itemSize = slotWidth - slotSpacing;
@@ -69,13 +53,11 @@ void Hotbar::render(sf::RenderWindow& window)
     {
         ItemStack& stack = inventory->inventory.slots[i];
 
-        //if(stack.itemID == ItemID::None) continue;
-
         Slot slot(position + sf::Vector2f(slotStart + (slotWidth + slotSpacing) * i,verticalOffset), {slotWidth, slotWidth});
 
         slot.setItemStack(stack);
 
-        slot.setHovered(i == selectedSlot);        
+        slot.setHovered(i == inventory->selectedSlot);
 
         slot.render(window);
     }
@@ -83,11 +65,11 @@ void Hotbar::render(sf::RenderWindow& window)
 
 uint8_t Hotbar::getSelectedSlot() const
 {
-    return selectedSlot;
+    return inventory ? inventory->selectedSlot : 0;
 }
 
 void Hotbar::setSelectedSlot(uint8_t slot)
 {
-    selectedSlot = slot;
-    selectedSlot %= 9;
+    if(!inventory) return;
+    inventory->selectedSlot = slot % 9;
 }

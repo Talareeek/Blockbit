@@ -3,7 +3,6 @@
 #include "../include/TransformComponent.hpp"
 #include "../include/PhysicsComponent.hpp"
 #include "../include/HealthComponent.hpp"
-#include "../include/PlayerComponent.hpp"
 #include "../include/AnimationComponent.hpp"
 #include "../include/Block.hpp"
 
@@ -44,7 +43,7 @@ void AISystem(World& world, float dt)
     Entity* player = nullptr;
     for (auto& e : entities)
     {
-        if (e.hasComponent<PlayerComponent>() && e.hasComponent<TransformComponent>())
+        if (e.hasComponent<TransformComponent>())
         {
             player = &e;
             break;

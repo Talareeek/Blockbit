@@ -3,19 +3,21 @@
 
 #include "Item.hpp"
 
+#include <cstdint>
 #include <string>
 #include <sstream>
 
 struct InventoryComponent
 {
     Inventory inventory;
+    uint8_t selectedSlot = 0;
 
     InventoryComponent(size_t size) : inventory(size) {}
 
     std::string serialize()
     {
         std::string output;
-        output += std::to_string(inventory.slots.size()) + '\n';
+        output += std::to_string(inventory.slots.size()) + ' ' + std::to_string(static_cast<uint32_t>(selectedSlot)) + '\n';
 
         for(const auto& slot : inventory.slots)
         {
@@ -30,17 +32,20 @@ struct InventoryComponent
     {
         std::istringstream iss(data);
         std::string line;
-        
-        // Read size first
+
         if(std::getline(iss, line))
         {
-            size_t size = std::stoul(line);
+            std::istringstream firstLine(line);
+            size_t size = 0;
+            uint32_t slot = 0;
+            firstLine >> size >> slot;
+            selectedSlot = static_cast<uint8_t>(slot);
             if(inventory.slots.size() != size)
             {
                 inventory.slots.resize(size, {ItemID::None, 0});
             }
         }
-        
+
         size_t index = 0;
         while(std::getline(iss, line) && index < inventory.slots.size())
         {
