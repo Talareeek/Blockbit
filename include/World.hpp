@@ -30,10 +30,6 @@ private:
 
     uint32_t version;
 
-    float dayTime{0.0f};
-
-    uint64_t days{0};
-
     static constexpr sf::Color night   {12, 18, 40};
     static constexpr sf::Color dawn    {90, 120, 180};
     static constexpr sf::Color day     {120, 190, 255};
@@ -169,6 +165,10 @@ public:
 
     bool trackBlockChanges = false;
     std::vector<std::tuple<int, int, Block>> pendingBlockUpdates;
+
+    float dayTime{0.0f};
+
+    uint64_t days{0};
 };
 
 extern sf::Vector2i getMouseBlockPosition(const World& world, const sf::RenderWindow& window);

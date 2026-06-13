@@ -22,6 +22,7 @@
 #include "../include/AISystem.hpp"
 #include "../include/AnimationSystem.hpp"
 #include "../include/Render.hpp"
+#include "../include/DaycycleSystem.hpp"
 
 #include <iostream>
 
@@ -151,6 +152,7 @@ void MainGameState::update(float dt)
         PhysicsSystem(entities, world, tick_step);
         InventorySystem(entities);
         ChunkUnloadSystem(world);
+        DaycycleSystem(world, tick_step);
 
         since_last_tick -= tick_step;
     }

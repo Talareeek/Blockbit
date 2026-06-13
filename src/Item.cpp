@@ -7,14 +7,14 @@
 
 std::unordered_map<ItemID, ItemData> itemDatabase =
 {
-    {ItemID::None, {"None", UINT32_MAX, 0, ItemRarity::Common, ItemCategory::Misc}},
-    {ItemID::Stone, {"Stone", 1, 64, ItemRarity::Common, ItemCategory::Block}},
-    {ItemID::Grass, {"Grass", 2, 64, ItemRarity::Common, ItemCategory::Block}},
-    {ItemID::Dirt, {"Dirt", 3, 64, ItemRarity::Common, ItemCategory::Block}},
-    {ItemID::Cobblestone, {"Cobblestone", 4, 64, ItemRarity::Common, ItemCategory::Block}},
-    {ItemID::Obsidian, {"Obsidian", 5, 64, ItemRarity::Common, ItemCategory::Block}},
-    {ItemID::Bedrock, {"Bedrock", 6, 64, ItemRarity::Common, ItemCategory::Block}},
-    {ItemID::Dynamite, {"Dynamite", 12, 16, ItemRarity::Rare, ItemCategory::Misc, [](World& world, sf::Vector2f mouse, uint32_t user) -> bool
+    {ItemID::None, {"None", UINT32_MAX, 0, ItemRarity::Common, ItemCategory::Misc, false}},
+    {ItemID::Stone, {"Stone", 1, 64, ItemRarity::Common, ItemCategory::Block, true}},
+    {ItemID::Grass, {"Grass", 2, 64, ItemRarity::Common, ItemCategory::Block, false}},
+    {ItemID::Dirt, {"Dirt", 3, 64, ItemRarity::Common, ItemCategory::Block, false}},
+    {ItemID::Cobblestone, {"Cobblestone", 4, 64, ItemRarity::Common, ItemCategory::Block, true}},
+    {ItemID::Obsidian, {"Obsidian", 5, 64, ItemRarity::Common, ItemCategory::Block, false}},
+    {ItemID::Bedrock, {"Bedrock", 6, 64, ItemRarity::Common, ItemCategory::Block, false}},
+    {ItemID::Dynamite, {"Dynamite", 12, 16, ItemRarity::Rare, ItemCategory::Misc, false, [](World& world, sf::Vector2f mouse, uint32_t user) -> bool
         {
             auto entityWithID = [&world](uint32_t id) -> Entity&
             {
@@ -42,12 +42,12 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             return true;
             
         }}},
-    {ItemID::Iron_Ore, {"Iron Ore", 13, 64, ItemRarity::Common, ItemCategory::Block}},
-    {ItemID::Gold_Ore, {"Gold Ore", 14, 64, ItemRarity::Common, ItemCategory::Block}},
-    {ItemID::Diamond_Ore, {"Diamond Ore", 15, 64, ItemRarity::Common, ItemCategory::Block}},
-    {ItemID::Oak_Log, {"Oak Log", 16, 64, ItemRarity::Common, ItemCategory::Block}},
-    {ItemID::Oak_Leaves, {"Oak Leaves", 17, 64, ItemRarity::Common, ItemCategory::Block}},
-    {ItemID::Bucket, {"Bucket", 19, 1, ItemRarity::Rare, ItemCategory::Misc, [](World& world, sf::Vector2f mouse, uint32_t user) -> bool
+    {ItemID::Iron_Ore, {"Iron Ore", 13, 64, ItemRarity::Common, ItemCategory::Block, false}},
+    {ItemID::Gold_Ore, {"Gold Ore", 14, 64, ItemRarity::Common, ItemCategory::Block, false}},
+    {ItemID::Diamond_Ore, {"Diamond Ore", 15, 64, ItemRarity::Common, ItemCategory::Block, false}},
+    {ItemID::Oak_Log, {"Oak Log", 16, 64, ItemRarity::Common, ItemCategory::Block, true}},
+    {ItemID::Oak_Leaves, {"Oak Leaves", 17, 64, ItemRarity::Common, ItemCategory::Block, true}},
+    {ItemID::Bucket, {"Bucket", 19, 1, ItemRarity::Rare, ItemCategory::Misc, true, [](World& world, sf::Vector2f mouse, uint32_t user) -> bool
         {
             auto entityWithID = [&world](uint32_t id) -> Entity&
             {
@@ -78,7 +78,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
 
             return false;
         }}},
-    {ItemID::Water_Bucket, {"Water Bucket", 20, 1, ItemRarity::Rare, ItemCategory::Misc, [](World& world, sf::Vector2f mouse, uint32_t user)
+    {ItemID::Water_Bucket, {"Water Bucket", 20, 1, ItemRarity::Rare, ItemCategory::Misc, false, [](World& world, sf::Vector2f mouse, uint32_t user)
         {
             auto entityWithID = [&world](uint32_t id) -> Entity&
             {

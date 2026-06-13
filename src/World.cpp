@@ -397,13 +397,6 @@ sf::Color World::getSkyColor(float t)
 
 void World::tick(float dt)
 {
-    dayTime += dt;
-    if(dayTime >= DAY_CYCLE_DURATION)
-    {
-        dayTime -= DAY_CYCLE_DURATION;
-        days++;
-    }
-
     fluidTimer += dt;
     if(fluidTimer >= FLUID_TICK)
     {

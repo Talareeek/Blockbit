@@ -36,6 +36,8 @@ protected:
 
     virtual void onTick(float tick_step) {}
 
+    std::vector<std::function<void(World&, float)>> systems;
+
 public:
 
     World& getWorld() { return world; }
