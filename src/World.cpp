@@ -379,20 +379,61 @@ float smooth(float t)
     return t * t * (3.0f - 2.0f * t);
 }
 
-sf::Color World::getSkyColor(float t)
+std::pair<sf::Color, sf::Color> World::getSkyGradient(float t)
 {
     t = std::fmod(t, 1.0f);
 
+    sf::Color top, bottom;
+
     if (t < 0.25f)
-        return lerpColor(night, dawn, smooth(t / 0.25f));
+    {
+        float k = smooth(t / 0.25f);
+        top    = lerpColor(nightTop, dawnTop, k);
+        bottom = lerpColor(nightBot, dawnBot, k);
+    }
+    else if (t < 0.5f)
+    {
+        float k = smooth((t - 0.25f) / 0.25f);
+        top    = lerpColor(dawnTop, dayTop, k);
+        bottom = lerpColor(dawnBot, dayBot, k);
+    }
+    else if (t < 0.75f)
+    {
+        float k = smooth((t - 0.5f) / 0.25f);
+        top    = lerpColor(dayTop, sunsetTop, k);
+        bottom = lerpColor(dayBot, sunsetBot, k);
+    }
+    else
+    {
+        float k = smooth((t - 0.75f) / 0.25f);
+        top    = lerpColor(sunsetTop, nightTop, k);
+        bottom = lerpColor(sunsetBot, nightBot, k);
+    }
 
-    if (t < 0.5f)
-        return lerpColor(dawn, day, smooth((t - 0.25f) / 0.25f));
+    return {top, bottom};
+}
 
-    if (t < 0.75f)
-        return lerpColor(day, sunset, smooth((t - 0.5f) / 0.25f));
+void renderSky(sf::RenderWindow& window, sf::Color top, sf::Color bottom)
+{
+    const float w = static_cast<float>(window.getSize().x);
+    const float h = static_cast<float>(window.getSize().y);
 
-    return lerpColor(sunset, night, smooth((t - 0.75f) / 0.25f));
+    sf::VertexArray sky(sf::PrimitiveType::TriangleStrip, 4);
+
+    sky[0].position = {0.0f, 0.0f};
+    sky[1].position = {w,    0.0f};
+    sky[2].position = {0.0f, h};
+    sky[3].position = {w,    h};
+
+    sky[0].color = top;
+    sky[1].color = top;
+    sky[2].color = bottom;
+    sky[3].color = bottom;
+
+    sf::View previous = window.getView();
+    window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {w, h})));
+    window.draw(sky);
+    window.setView(previous);
 }
 
 void World::tick(float dt)
@@ -1059,21 +1100,27 @@ void renderSunAndMoon(float daytime, sf::RenderWindow& window)
 {
     float passed = daytime / World::DAY_CYCLE_DURATION;
 
-    float sun_angle = passed * 2.0f * static_cast<float>(std::numbers::pi);
+    float sun_angle  = passed * 2.0f * static_cast<float>(std::numbers::pi);
+    float moon_angle = sun_angle + static_cast<float>(std::numbers::pi);
 
     float W = static_cast<float>(window.getSize().x);
     float H = static_cast<float>(window.getSize().y);
 
-    float radius = H * 0.7f;
+    float radius   = W * 0.55f;
+    float bodySize = W / 24.0f;
 
-    float sun_x = -std::sin(sun_angle) * radius + W / 2.0f;
-    float sun_y = std::cos(sun_angle) * radius + H;
+    auto drawBody = [&](float angle, sf::Color core)
+    {
+        float bx = -std::sin(angle) * radius + W * 0.5f;
+        float by =  std::cos(angle) * radius + H;
 
-    sf::RectangleShape sun({W / 20.0f, W / 20.0f});
-    sun.setFillColor(sf::Color::Yellow);
-    sun.setOrigin(sun.getLocalBounds().size / 2.0f);
+        sf::RectangleShape body({bodySize, bodySize});
+        body.setFillColor(core);
+        body.setOrigin({bodySize * 0.5f, bodySize * 0.5f});
+        body.setPosition({bx, by});
+        window.draw(body);
+    };
 
-    sun.setPosition({sun_x, sun_y});
-
-    window.draw(sun);
+    drawBody(moon_angle, sf::Color(235, 235, 245));
+    drawBody(sun_angle,  sf::Color(255, 235, 140));
 }

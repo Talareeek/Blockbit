@@ -235,10 +235,8 @@ void MainGameState::update(float dt)
 void MainGameState::render(sf::RenderWindow& window)
 {
     // DRAWING SKY
-    sf::RectangleShape sky({static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
-    sky.setPosition({0.0f, 0.0f});
-    sky.setFillColor(world.getSkyColor(world.getDayTime() / World::DAY_CYCLE_DURATION));
-    window.draw(sky);
+    auto [skyTop, skyBottom] = world.getSkyGradient(world.getDayTime() / World::DAY_CYCLE_DURATION);
+    renderSky(window, skyTop, skyBottom);
 
     renderSunAndMoon(world.getDayTime(), window);
 

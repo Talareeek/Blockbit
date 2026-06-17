@@ -30,10 +30,14 @@ private:
 
     uint32_t version;
 
-    static constexpr sf::Color night   {12, 18, 40};
-    static constexpr sf::Color dawn    {90, 120, 180};
-    static constexpr sf::Color day     {120, 190, 255};
-    static constexpr sf::Color sunset  {255, 170, 120};  
+    static constexpr sf::Color nightTop   {6, 10, 28};
+    static constexpr sf::Color nightBot   {18, 28, 60};
+    static constexpr sf::Color dawnTop    {60, 90, 160};
+    static constexpr sf::Color dawnBot    {220, 150, 150};
+    static constexpr sf::Color dayTop     {80, 160, 240};
+    static constexpr sf::Color dayBot     {170, 215, 255};
+    static constexpr sf::Color sunsetTop  {120, 90, 160};
+    static constexpr sf::Color sunsetBot  {255, 160, 90};
     
     sf::Vector2f spawnPoint{0.0f, 0.0f};
 
@@ -126,7 +130,7 @@ public:
 
     float fluidTimer{0.0f};
 
-    sf::Color getSkyColor(float t);
+    std::pair<sf::Color, sf::Color> getSkyGradient(float t);
 
     float getDayTime() const { return dayTime; }
 
@@ -178,6 +182,8 @@ extern sf::Vector2f getMouseWorldPosition(const World& world, const sf::RenderWi
 extern sf::Vector2f getSunWorldPosition(const World& world, sf::Vector2f cameraCenter);
 
 extern void renderSunAndMoon(float daytime, sf::RenderWindow& window);
+
+extern void renderSky(sf::RenderWindow& window, sf::Color top, sf::Color bottom);
 
 extern void updateFluids(World& world);
 
