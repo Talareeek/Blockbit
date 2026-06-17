@@ -45,3 +45,7 @@ Blockbit
 Blockbit.exe
 /saves/
 /inspector/inspector
+
+/.vscode/
+.gitignore
+/.github/
