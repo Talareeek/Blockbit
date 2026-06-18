@@ -1,5 +1,9 @@
 # Blockbit
 
+![Screenshoot](resources/textures/loading_screen.png)
+
+---
+
 A 2D sandbox game written in **C++20** with **SFML**, inspired by classic block-based games. Explore a procedurally generated world, place and destroy blocks, and build whatever you can imagine.
 
 ![C++](https://img.shields.io/badge/C++-20-blue?logo=c%2B%2B)
