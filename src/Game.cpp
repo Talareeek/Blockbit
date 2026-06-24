@@ -12,6 +12,7 @@
 #include "../include/AssetManager.hpp"
 #include "../include/World.hpp"
 #include "../include/BlockAtlas.hpp"
+#include "../include/AuthorGameState.hpp"
 
 Game::Game()
 {
@@ -62,6 +63,7 @@ Game::Game()
     AssetManager::loadTexture(20, "resources/textures/water_bucket.png");
     AssetManager::loadTexture(21, "resources/textures/pig.png");
     AssetManager::loadTexture(22, "resources/textures/woodcutter.png");
+    AssetManager::loadTexture(23, "resources/textures/logo.png");
     AssetManager::loadTexture(UINT32_MAX, "resources/textures/nothing.png");
 
     AssetManager::loadSound(AssetManager::SoundID::Click, "resources/sounds/click.wav");

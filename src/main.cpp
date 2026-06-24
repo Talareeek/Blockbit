@@ -21,6 +21,8 @@
 
 #include "../include/ClientGameState.hpp"
 
+#include "../include/AuthorGameState.hpp"
+
 #include <cstdlib>
 
 #include <thread>
@@ -86,7 +88,7 @@ int main(int argc, char* argv[])
         else
         {
             std::cerr << "World not found at: " << worldPath << std::endl;
-            game.pushState(std::make_unique<IntroGameState>(&game));
+            game.pushState(std::make_unique<AuthorGameState>(&game));
         }
     }
     else if (!loadWorld.empty())
@@ -101,18 +103,18 @@ int main(int argc, char* argv[])
             catch (const std::exception& e)
             {
                 std::cerr << "Failed to load world: " << e.what() << std::endl;
-                game.pushState(std::make_unique<IntroGameState>(&game));
+                game.pushState(std::make_unique<AuthorGameState>(&game));
             }
         }
         else
         {
             std::cerr << "World not found at: " << worldPath << std::endl;
-            game.pushState(std::make_unique<IntroGameState>(&game));
+            game.pushState(std::make_unique<AuthorGameState>(&game));
         }
     }
     else
     {
-        game.pushState(std::make_unique<IntroGameState>(&game));
+        game.pushState(std::make_unique<AuthorGameState>(&game));
     }
 
     game.run();
