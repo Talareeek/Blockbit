@@ -2,8 +2,6 @@
 #include "../include/Button.hpp"
 #include "../include/World.hpp"
 #include "../include/AssetManager.hpp"
-#include "../include/MainGameState.hpp"
-#include "../include/HostGameState.hpp"
 #include "../include/ClientGameState.hpp"
 #include "../include/CreateWorldState.hpp"
 
@@ -222,14 +220,14 @@ void WorldList::update(float dt)
         {
             auto world_path = entries[i].getPath();
             entries[i].clearRequests();
-            game->pushState(std::make_unique<MainGameState>(game, World(world_path)));
+            game->pushState(std::make_unique<ClientGameState>(game, World(world_path)));
             return;
         }
         if(entries[i].wasHostRequested())
         {
             auto world_path = entries[i].getPath();
             entries[i].clearRequests();
-            game->pushState(std::make_unique<HostGameState>(game, World(world_path)));
+            game->pushState(std::make_unique<ClientGameState>(game, World(world_path), ClientGameState::DEFAULT_PORT));
             return;
         }
         if(entries[i].wasDeleteRequested())

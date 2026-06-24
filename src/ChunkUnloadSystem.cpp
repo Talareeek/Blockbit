@@ -1,9 +1,23 @@
 #include "../include/ChunkUnloadSystem.hpp"
 #include "../include/MainGameState.hpp"
 
+static bool isChunkSafe(int chunkPos, const std::vector<uint32_t>& playerIds, World& world)
+{
+    for (uint32_t playerId : playerIds)
+    {
+        int player_chunk = entityWithID(playerId, world).getComponent<TransformComponent>().position.x / CHUNK_WIDTH;
+        int min_safe = player_chunk - World::SIMULATION_DISTANCE / 2;
+        int max_safe = player_chunk + World::SIMULATION_DISTANCE / 2;
+        if (chunkPos >= min_safe && chunkPos <= max_safe) return true;
+    }
+    return false;
+}
+
 void ChunkUnloadSystem(World& world)
 {
     if(world.getChunks().size() <= World::MAX_CHUNKS_LOADED) return;
+
+    auto playerIds = world.getPlayerEntityIDs();
 
     while(world.getChunks().size() > World::PREFFERED_CHUNKS_LOADED)
     {
@@ -24,20 +38,21 @@ void ChunkUnloadSystem(World& world)
             if(a < min) min = a;
         }
 
-        int player_chunk_position = entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x / CHUNK_WIDTH;
+        bool erased = false;
 
-        int min_safe = player_chunk_position - World::SIMULATION_DISTANCE / 2;
-        int max_safe = player_chunk_position - World::SIMULATION_DISTANCE / 2;
-
-        if(min < min_safe)
+        if(!isChunkSafe(min, playerIds, world))
         {
             world.writeChunk(min);
             world.getChunks().erase(min);
+            erased = true;
         }
-        if(world.getChunks().size() > World::PREFFERED_CHUNKS_LOADED && max > max_safe)
+        if(world.getChunks().size() > World::PREFFERED_CHUNKS_LOADED && max != min && !isChunkSafe(max, playerIds, world))
         {
             world.writeChunk(max);
             world.getChunks().erase(max);
+            erased = true;
         }
+
+        if(!erased) break;
     }
 }

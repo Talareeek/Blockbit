@@ -4,26 +4,61 @@
 #include "../include/TransformComponent.hpp"
 #include "../include/RenderComponent.hpp"
 #include "../include/HealthComponent.hpp"
-#include "../include/RenderSystem.hpp"
+#include "../include/InventoryComponent.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/Chunk.hpp"
-#include "../include/Render.hpp"
+#include "../include/NetworkClientTransport.hpp"
+#include "../include/NetworkServerTransport.hpp"
+#include "../include/LoopbackServerTransport.hpp"
 
 #include <iostream>
 #include <algorithm>
 
-ClientGameState::ClientGameState(Game* game, const std::string& host, uint16_t port)
-    : GameState(game)
+ClientGameState::ClientGameState(Game* game, const std::string& host, uint16_t port) : MainGameState(game, World{})
 {
+    saveOnDestruct = false;
+
+    game->getWindow().setTitle("Blockbit - Multiplayer");
+
     pendingHost = host;
     pendingPort = port;
     remoteAddress = host + ":" + std::to_string(port);
+
+    transport = std::make_unique<NetworkClientTransport>();
+
     std::cerr << "[Client] Will attempt connection to " << remoteAddress << '\n';
+}
+
+ClientGameState::ClientGameState(Game* game, World w, uint16_t networkPort)
+    : MainGameState(game, std::move(w))
+{
+    game->getWindow().setTitle(networkPort == 0 ? "Blockbit - Singleplayer" : "Blockbit - Host");
+
+    if (networkPort == 0)
+    {
+        auto pair = makeLoopbackPair();
+        localServer.emplace(this->world, std::move(pair.serverSide), LoopbackChannel::LOOPBACK_CLIENT_ID);
+        transport = std::move(pair.clientSide);
+        transport->connect("loopback", 0);
+        remoteAddress = "local";
+    }
+    else
+    {
+        localServer.emplace(this->world, std::make_unique<NetworkServerTransport>(networkPort), 0u);
+        remoteAddress = "0.0.0.0:" + std::to_string(networkPort);
+        std::cerr << "[Server] Listening on port " << networkPort << '\n';
+    }
+
+    myEntityId          = localServer->getHostEntityId();
+    localPlayerEntityId = myEntityId;
+    initialized         = true;
+    wasConnected        = true;
+    connectAttempted    = true;
 }
 
 ClientGameState::~ClientGameState()
 {
-    client.disconnect();
+    if (transport) transport->disconnect();
 }
 
 void ClientGameState::rebuildEntitiesFromSnapshot(const SnapshotPacket& snap)
@@ -50,13 +85,22 @@ void ClientGameState::rebuildEntitiesFromSnapshot(const SnapshotPacket& snap)
 
         entities.push_back(std::move(e));
     }
+
+    playerUIInitialized = false;
 }
 
 void ClientGameState::processIncoming()
 {
+    if (!transport) return;
+
     std::vector<ReceivedPacket> packets;
-    try { packets = client.poll(); }
+    try { packets = transport->poll(); }
     catch (const std::bad_alloc&) { errorMessage = "Out of memory"; connectionFailed = true; return; }
+
+    if (isLocalSession())
+    {
+        return;
+    }
 
     for (auto& pkt : packets)
     {
@@ -92,7 +136,7 @@ void ClientGameState::processIncoming()
                 {
                     auto sp = deserializeSpawn(r);
                     myEntityId = sp.id;
-                    world.setPlayerID(myEntityId);
+                    localPlayerEntityId = myEntityId;
                     break;
                 }
                 case PacketType::Despawn:
@@ -109,7 +153,7 @@ void ClientGameState::processIncoming()
         }
         catch (const std::bad_alloc&)
         {
-            std::cerr << "[Client] bad_alloc decoding packet (type " << static_cast<int>(pkt.type) << ", size " << pkt.payload.size() << ")\n";
+            std::cerr << "[Client] bad_alloc decoding packet\n";
             errorMessage = "Out of memory";
             connectionFailed = true;
             return;
@@ -123,101 +167,136 @@ void ClientGameState::processIncoming()
 
 void ClientGameState::sendTickInputs()
 {
-    if (!client.isConnected() || myEntityId == 0)
-    {
-        inputs.clear();
-        return;
-    }
+    if (!transport || !transport->isConnected()) return;
+    if (myEntityId == 0) return;
 
     auto polled = ::getInputs(world, game->getWindow());
     inputs.insert(inputs.end(),
         std::make_move_iterator(polled.begin()),
         std::make_move_iterator(polled.end()));
 
+    if (inputs.empty()) return;
+
     InputPacket pkt;
     pkt.id = myEntityId;
     pkt.inputs = std::move(inputs);
     inputs.clear();
 
-    client.send(serializePacket(pkt));
+    transport->send(serializePacket(pkt));
+}
+
+void ClientGameState::onTick(float tick_step)
+{
+    if (transport && transport->isConnected())
+    {
+        sendTickInputs();
+    }
+    else if (localServer)
+    {
+        auto polled = ::getInputs(world, game->getWindow());
+        inputs.insert(inputs.end(),
+            std::make_move_iterator(polled.begin()),
+            std::make_move_iterator(polled.end()));
+
+        if (!inputs.empty() && localPlayerEntityId.has_value())
+        {
+            processWorldInputs(world, std::move(inputs), localPlayerEntityId.value());
+            inputs.clear();
+        }
+    }
+
+    if (localServer)
+    {
+        localServer->tick(tick_step);
+    }
+
+    if (transport)
+    {
+        processIncoming();
+    }
+}
+
+void ClientGameState::update(float dt)
+{
+    if (!isLocalSession())
+    {
+        try
+        {
+            if (!connectAttempted && !connectionFailed)
+            {
+                connectAttempted = true;
+                if (!transport->connect(pendingHost, pendingPort))
+                {
+                    connectionFailed = true;
+                    errorMessage = transport->getLastError();
+                    if (errorMessage.empty()) errorMessage = "Connection failed";
+                    std::cerr << "[Client] connect failed: " << errorMessage << '\n';
+                    return;
+                }
+                wasConnected = true;
+                std::cerr << "[Client] connected to " << remoteAddress << '\n';
+            }
+
+            if (!connectionFailed && wasConnected && !transport->isConnected())
+            {
+                connectionFailed = true;
+                if (errorMessage.empty())
+                {
+                    errorMessage = transport->getLastError();
+                    if (errorMessage.empty()) errorMessage = "Disconnected from server";
+                }
+            }
+
+            if (connectionFailed) return;
+        }
+        catch (const std::bad_alloc&)
+        {
+            std::cerr << "[Client] bad_alloc in update\n";
+            connectionFailed = true;
+            errorMessage = "Out of memory while updating";
+            return;
+        }
+        catch (const std::exception& e)
+        {
+            std::cerr << "[Client] exception in update: " << e.what() << '\n';
+            connectionFailed = true;
+            errorMessage = e.what();
+            return;
+        }
+    }
+
+    MainGameState::update(dt);
 }
 
 void ClientGameState::handleEvent(const sf::Event& event)
 {
-    if (event.is<sf::Event::Resized>())
-    {
-        world.chunkMeshes.clear();
-    }
-
-    if (event.is<sf::Event::KeyPressed>())
+    if (!isLocalSession() && event.is<sf::Event::KeyPressed>())
     {
         auto key = event.getIf<sf::Event::KeyPressed>();
-        if (key->code == sf::Keyboard::Key::Escape && (connectionFailed || !client.isConnected()))
+        if (key && key->code == sf::Keyboard::Key::Escape && (connectionFailed || (transport && !transport->isConnected())))
         {
             game->popState();
             return;
         }
     }
 
-    auto new_inputs = ::getInputsFromEvent(event, world, game->getWindow(), localSelectedSlot);
+    MainGameState::handleEvent(event);
+
+    uint8_t* slotPtr = nullptr;
+    if (hasPlayerEntity())
+    {
+        auto& playerEntity = entityWithID(localPlayerEntityId.value(), world);
+        if (playerEntity.hasComponent<InventoryComponent>())
+        {
+            slotPtr = &playerEntity.getComponent<InventoryComponent>().selectedSlot;
+        }
+    }
+    if (!slotPtr) slotPtr = &localSelectedSlot;
+
+    auto new_inputs = ::getInputsFromEvent(event, world, game->getWindow(), *slotPtr);
     inputs.insert(inputs.end(),
         std::make_move_iterator(new_inputs.begin()),
         std::make_move_iterator(new_inputs.end()));
-}
-
-void ClientGameState::update(float dt)
-{
-    try
-    {
-        if (!connectAttempted && !connectionFailed)
-        {
-            connectAttempted = true;
-            if (!client.connect(pendingHost, pendingPort, std::chrono::seconds(3)))
-            {
-                connectionFailed = true;
-                errorMessage = client.getLastError();
-                if (errorMessage.empty()) errorMessage = "Connection failed";
-                std::cerr << "[Client] connect failed: " << errorMessage << '\n';
-                return;
-            }
-            wasConnected = true;
-            std::cerr << "[Client] connected to " << remoteAddress << '\n';
-        }
-
-        if (!connectionFailed && wasConnected && !client.isConnected())
-        {
-            connectionFailed = true;
-            if (errorMessage.empty())
-            {
-                errorMessage = client.getLastError();
-                if (errorMessage.empty()) errorMessage = "Disconnected from server";
-            }
-        }
-
-        if (connectionFailed) return;
-
-        processIncoming();
-
-        const float tick_step = 1.0f / static_cast<float>(TICKS_PER_SECOND);
-        since_last_tick += dt;
-        while (since_last_tick >= tick_step)
-        {
-            sendTickInputs();
-            since_last_tick -= tick_step;
-        }
-    }
-    catch (const std::bad_alloc&)
-    {
-        std::cerr << "[Client] bad_alloc caught in update\n";
-        connectionFailed = true;
-        errorMessage = "Out of memory while updating";
-    }
-    catch (const std::exception& e)
-    {
-        std::cerr << "[Client] exception in update: " << e.what() << '\n';
-        connectionFailed = true;
-        errorMessage = e.what();
-    }
 }
 
 void ClientGameState::render(sf::RenderWindow& window)
@@ -269,11 +348,11 @@ void ClientGameState::render(sf::RenderWindow& window)
         return;
     }
 
-    auto [skyTop, skyBottom] = world.getSkyGradient(world.getDayTime() / World::DAY_CYCLE_DURATION);
-    renderSky(window, skyTop, skyBottom);
-
-    if (!initialized)
+    if (!isLocalSession() && !initialized)
     {
+        auto [skyTop, skyBottom] = world.getSkyGradient(world.getDayTime() / World::DAY_CYCLE_DURATION);
+        renderSky(window, skyTop, skyBottom);
+
         sf::Text waiting(AssetManager::getFont(0), "Connecting to " + remoteAddress + "...", 28);
         waiting.setFillColor(sf::Color::White);
         waiting.setOutlineColor(sf::Color::Black);
@@ -284,44 +363,5 @@ void ClientGameState::render(sf::RenderWindow& window)
         return;
     }
 
-    auto& entities = world.getEntities();
-    unsigned int unit_size = window.getSize().y / UNIT_SIZE_FACTOR;
-
-    sf::Vector2f camPos{0.0f, 0.0f};
-    if (myEntityId != 0)
-    {
-        auto it = std::find_if(entities.begin(), entities.end(),
-            [this](const Entity& e) { return e.getID() == myEntityId; });
-        if (it != entities.end() && it->hasComponent<TransformComponent>())
-        {
-            camPos = sf::Vector2f(it->getComponent<TransformComponent>().position);
-        }
-    }
-
-    sf::View view(
-        {(camPos.x + 0.5f) * unit_size, (camPos.y - 0.5f) * unit_size},
-        {(float)window.getSize().x, (float)window.getSize().y}
-    );
-    view.setSize({view.getSize().x, -view.getSize().y});
-    window.setView(view);
-
-    try
-    {
-        RenderSystem(entities, window);
-        RenderWorld(world, window);
-    }
-    catch (const std::bad_alloc&)
-    {
-        std::cerr << "[Client] bad_alloc in render\n";
-        connectionFailed = true;
-        errorMessage = "Out of memory while rendering";
-    }
-    catch (const std::exception& e)
-    {
-        std::cerr << "[Client] exception in render: " << e.what() << '\n';
-        connectionFailed = true;
-        errorMessage = e.what();
-    }
-
-    window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
+    MainGameState::render(window);
 }

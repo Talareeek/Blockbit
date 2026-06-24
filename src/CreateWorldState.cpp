@@ -2,7 +2,7 @@
 #include "../include/InputManager.hpp"
 #include "../include/Game.hpp"
 #include "../include/AssetManager.hpp"
-#include "../include/MainGameState.hpp"
+#include "../include/ClientGameState.hpp"
 
 CreateWorldState::CreateWorldState(Game* game) : GameState(game)
 {
@@ -49,7 +49,7 @@ CreateWorldState::CreateWorldState(Game* game) : GameState(game)
 
             game->popState();
 
-            game->pushState(std::make_unique<MainGameState>(game, world));
+            game->pushState(std::make_unique<ClientGameState>(game, std::move(world)));
         }
     );
 }

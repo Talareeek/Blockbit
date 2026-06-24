@@ -4,23 +4,23 @@
 
 void TransformSystem(World& world)
 {
-    auto player_position = entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position;
-
-    // LOADING CHUNKS
-    int player_chunk_position = player_position.x / CHUNK_WIDTH;
-
-    int chunk_lowest = player_chunk_position - World::SIMULATION_DISTANCE / 2;
-    int chunk_highest = player_chunk_position + World::SIMULATION_DISTANCE / 2;
-
-    for (int i = chunk_lowest; i <= chunk_highest; i++)
+    for (uint32_t playerId : world.getPlayerEntityIDs())
     {
-        // Check if chunk exists and is already generated
-        if(world.getChunks().contains(i)) {
-            if(world.getChunks()[i].generated) continue;
-        }
+        auto player_position = entityWithID(playerId, world).getComponent<TransformComponent>().position;
 
-        // Load or generate chunk
-        if(world.hasChunkFile(i)) world.readChunk(i);
-        else world.generateChunk(i);
+        int player_chunk_position = player_position.x / CHUNK_WIDTH;
+
+        int chunk_lowest = player_chunk_position - World::SIMULATION_DISTANCE / 2;
+        int chunk_highest = player_chunk_position + World::SIMULATION_DISTANCE / 2;
+
+        for (int i = chunk_lowest; i <= chunk_highest; i++)
+        {
+            if(world.getChunks().contains(i)) {
+                if(world.getChunks()[i].generated) continue;
+            }
+
+            if(world.hasChunkFile(i)) world.readChunk(i);
+            else world.generateChunk(i);
+        }
     }
 }

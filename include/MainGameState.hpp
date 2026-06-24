@@ -10,6 +10,9 @@
 #include "TransformComponent.hpp"
 #include "Input.hpp"
 
+#include <optional>
+#include <cstdint>
+
 extern Entity& entityWithID(uint32_t id, World& world);
 
 class MainGameState : public GameState
@@ -17,10 +20,16 @@ class MainGameState : public GameState
 protected:
 
     World world;
+
+    std::optional<uint32_t> localPlayerEntityId;
+
     HealthBar healthBar;
 
     InventoryWidget inventoryWidget{nullptr};
     Hotbar hotbar;
+
+    bool playerUIInitialized = false;
+    bool saveOnDestruct = true;
 
     bool debug = false;
 
@@ -36,7 +45,8 @@ protected:
 
     virtual void onTick(float tick_step) {}
 
-    std::vector<std::function<void(World&, float)>> systems;
+    void tryInitializePlayerUI();
+    bool hasPlayerEntity() const;
 
 public:
 
@@ -57,9 +67,6 @@ public:
     static constexpr unsigned int UNIT_SIZE_FACTOR = 12;
 
     static constexpr uint8_t TICKS_PER_SECOND = 60;
-
-    
-
 };
 
 extern bool isInRange(TransformComponent& player, TransformComponent& target, float range);

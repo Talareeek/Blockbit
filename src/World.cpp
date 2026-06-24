@@ -11,6 +11,11 @@
 #include "../include/ItemComponent.hpp"
 #include "../include/BlockAtlas.hpp"
 #include "../include/AIComponent.hpp"
+#include "../include/PlayerControlledComponent.hpp"
+#include "../include/InventoryComponent.hpp"
+#include "../include/PhysicsComponent.hpp"
+#include "../include/RenderComponent.hpp"
+#include "../include/HealthComponent.hpp"
 #include "../include/Render.hpp"
 #include <SFML/Graphics.hpp>
 
@@ -29,7 +34,6 @@ World::World(const std::filesystem::path path) : path{path}
 World::World(const std::string name, const std::filesystem::path path, unsigned int seed) : name(name), path(path), seed(seed), perlin(seed)
 {
     generateWorldSpawn();
-    createPlayer();
     save();
 }
 
@@ -642,6 +646,11 @@ void World::writeEntities() const
                 file << "AI" << "\n";
                 file << std::any_cast<AIComponent>(component).serialize();
             }
+            else if(type == typeid(PlayerControlledComponent))
+            {
+                file << "PlayerControlled" << '\n';
+                file << std::any_cast<PlayerControlledComponent>(component).serialize();
+            }
         }
 
         file << '\n';
@@ -670,7 +679,6 @@ void World::writeData() const
     file << "DayTime: " << getDayTime() << '\n';
     file << "Days: " << days << '\n';
     file << "Spawn Point: " << getSpawnPoint().x << ' ' << getSpawnPoint().y << '\n';
-    file << "Player ID: " << getPlayerID() << '\n';
 }
 
 
@@ -868,6 +876,13 @@ void World::readEntities()
                         entity.addComponent<AIComponent>(c);
                         std::cout << "\t\tAIComponent loaded\n";
                     }
+                    else if (componentType == "PlayerControlled")
+                    {
+                        PlayerControlledComponent c;
+                        c.deserialize(componentData);
+                        entity.addComponent<PlayerControlledComponent>(c);
+                        std::cout << "\t\tPlayerControlledComponent loaded (client " << c.clientId << ")\n";
+                    }
                 }
             }
 
@@ -894,13 +909,10 @@ void World::readData()
 
     file >> trash >> trash >> spawnPoint.x >> spawnPoint.y;
 
-    file >> trash >> trash >> playerID;
-
     std::cout << "Data file: " << std::endl;
     std::cout << "Daytime: " << dayTime << std::endl;
     std::cout << "Days: " << days << std::endl;
     std::cout << "Spawnpoint: " << spawnPoint.x << ' ' << spawnPoint.y << std::endl;
-    std::cout << "Player ID: " << playerID << std::endl;
 }
 
 
@@ -927,7 +939,6 @@ void World::load()
         seed = static_cast<unsigned int>(std::rand());
         perlin = PerlinNoise(seed);
         generateWorldSpawn();
-        createPlayer();
         try { save(); } catch(const std::exception& e) { std::cerr << "Warning: Failed to save new world: " << e.what() << '\n'; }
         return;
     }
@@ -939,11 +950,7 @@ void World::load()
         } catch(const std::exception& e) {
             std::cerr << "Warning: Failed to read entities: " << e.what() << '\n';
             entities.clear();
-            createPlayer();
         }
-    } else {
-        // No entities file -> create default player
-        createPlayer();
     }
 
     // Data
@@ -965,33 +972,67 @@ void World::load()
     try { save(); } catch(const std::exception& e) { std::cerr << "Warning: Failed to save world: " << e.what() << '\n'; }
 }
 
-void World::createPlayer()
+uint32_t World::spawnPlayer(uint32_t clientId)
 {
-    setPlayerID(getPossibleID());
+    uint32_t id = getPossibleID();
 
-    entities.emplace_back(getPlayerID());
+    Entity player(id);
 
-    entityWithID(getPlayerID(), *this).addComponent(TransformComponent{{0.0f, 0.0f}, {1.0f, 1.0f}, sf::degrees(0.0f)});
-    entityWithID(getPlayerID(), *this).addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
-    entityWithID(getPlayerID(), *this).addComponent(InventoryComponent(36));
-    entityWithID(getPlayerID(), *this).getComponent<InventoryComponent>().inventory.slots[0] = {ItemID::Dynamite, 16};
-    entityWithID(getPlayerID(), *this).getComponent<InventoryComponent>().inventory.slots[1] = {ItemID::Bucket, 1};
-    entityWithID(getPlayerID(), *this).getComponent<InventoryComponent>().inventory.slots[2] = {ItemID::Woodcutter, 64};
+    player.addComponent(TransformComponent{{0.0f, 0.0f}, {1.0f, 1.0f}, sf::degrees(0.0f)});
+    player.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
 
-    for(int i = 0; i < 255; i++)
+    InventoryComponent inv(36);
+    inv.inventory.slots[0] = {ItemID::Dynamite, 16};
+    inv.inventory.slots[1] = {ItemID::Bucket, 1};
+    inv.inventory.slots[2] = {ItemID::Woodcutter, 64};
+    player.addComponent(std::move(inv));
+
+    sf::Vector2f spawn = getSpawnPoint();
+    int spawnY = static_cast<int>(spawn.y);
+    if (spawnY == 0)
     {
-        if(getBlock(0, i).id == BlockID::Air)
+        for (int i = 0; i < 255; i++)
         {
-            entityWithID(getPlayerID(), *this).getComponent<TransformComponent>().position.y = i + 1.0f;
-            break;
+            if (getBlock(static_cast<int>(spawn.x), i).id == BlockID::Air)
+            {
+                spawnY = i + 1;
+                break;
+            }
         }
     }
+    player.getComponent<TransformComponent>().position = {spawn.x, static_cast<double>(spawnY)};
 
-    entityWithID(getPlayerID(), *this).addComponent(RenderComponent{0, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
+    player.addComponent(RenderComponent{0, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
+    player.addComponent(HealthComponent{100, 100, false});
+    player.addComponent(PlayerControlledComponent{clientId});
 
-    entityWithID(getPlayerID(), *this).addComponent(HealthComponent{100, 100, false});
+    entities.push_back(std::move(player));
 
+    return id;
 }
+
+std::vector<uint32_t> World::getPlayerEntityIDs() const
+{
+    std::vector<uint32_t> ids;
+    for (const auto& e : entities)
+    {
+        if (e.hasComponent<PlayerControlledComponent>())
+            ids.push_back(e.getID());
+    }
+    return ids;
+}
+
+std::optional<uint32_t> World::findPlayerEntityByClient(uint32_t clientId) const
+{
+    for (const auto& e : entities)
+    {
+        if (!e.hasComponent<PlayerControlledComponent>()) continue;
+        if (e.getComponent<PlayerControlledComponent>().clientId == clientId)
+            return e.getID();
+    }
+    return std::nullopt;
+}
+
 
 std::pair<float, float> World::getSimulationRangeForEntity(const uint32_t entity)
 {

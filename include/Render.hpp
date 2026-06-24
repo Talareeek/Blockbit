@@ -6,7 +6,7 @@
 
 extern void RenderWorld(World& world, sf::RenderWindow& window);
 
-extern void RenderBlockOverlay(World& world, sf::RenderWindow& window);
+extern void RenderBlockOverlay(World& world, sf::RenderWindow& window, uint32_t viewerEntityId);
 
 extern void RenderLightRays(World& world, sf::RenderWindow& window);
 

@@ -18,7 +18,7 @@
 
 struct ReceivedPacket
 {
-    PacketType        type;
+    PacketType type;
     std::vector<char> payload;
 };
 
@@ -32,7 +32,7 @@ private:
     std::atomic<bool> connected{false};
 
     std::array<char, 4> headerBuf;
-    std::vector<char>   bodyBuf;
+    std::vector<char> bodyBuf;
 
     std::deque<std::vector<char>> writeQueue;
     std::mutex writeMutex;

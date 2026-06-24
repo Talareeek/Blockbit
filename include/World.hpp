@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <cstdlib>
 #include <filesystem>
+#include <optional>
 
 #include <SFML/Graphics.hpp>
 
@@ -40,8 +41,6 @@ private:
     static constexpr sf::Color sunsetBot  {255, 160, 90};
     
     sf::Vector2f spawnPoint{0.0f, 0.0f};
-
-    uint32_t playerID{0};
 
 public:
 
@@ -91,7 +90,11 @@ public:
     // normal world
     void generateWorldSpawn();
 
-    void createPlayer();
+    uint32_t spawnPlayer(uint32_t clientId);
+
+    std::vector<uint32_t> getPlayerEntityIDs() const;
+
+    std::optional<uint32_t> findPlayerEntityByClient(uint32_t clientId) const;
 
     void generateChunk(int chunk_position);
 
@@ -140,10 +143,6 @@ public:
 
     void setName(const std::string& name) { this->name = name; }
 
-    uint32_t getPlayerID() const { return playerID; }
-    void setPlayerID(uint32_t id) { playerID = id; }
-
-    
     void writeManifest() const;
     void writeChunk(int chunk_position) const;
     void writeEntities() const;

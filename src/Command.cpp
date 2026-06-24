@@ -10,6 +10,7 @@
 #include "../include/PhysicsComponent.hpp"
 #include "../include/AnimationComponent.hpp"
 #include "../include/ExplosiveComponent.hpp"
+#include "../include/PlayerControlledComponent.hpp"
 
 #include <sstream>
 
@@ -46,7 +47,13 @@ std::unordered_map<std::wstring, Command> commandDatabase =
                 console.writeLine(L"   " + std::to_wstring(entity.getID()));
             }
 
-            console.writeLine(L"Player: " + std::to_wstring(world->getPlayerID()));
+            console.writeLine(L"Players:");
+            for(uint32_t id : world->getPlayerEntityIDs())
+            {
+                auto& e = entityWithID(id, *world);
+                uint32_t clientId = e.getComponent<PlayerControlledComponent>().clientId;
+                console.writeLine(L"   entity " + std::to_wstring(id) + L" (client " + std::to_wstring(clientId) + L")");
+            }
         }
     }},
 

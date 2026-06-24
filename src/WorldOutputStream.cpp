@@ -146,5 +146,4 @@ void WorldOutputStream::writeData(const World& world)
     file << "DayTime: " << world.getDayTime() << '\n';
     file << "Days: " << world.days << '\n';
     file << "Spawn Point: " << world.getSpawnPoint().x << ' ' << world.getSpawnPoint().y << '\n';
-    file << "Player ID: " << world.getPlayerID() << '\n';
 }

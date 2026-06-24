@@ -1,8 +1,6 @@
 #include "../include/MainGameState.hpp"
 #include "../include/Game.hpp"
 #include "../include/Entity.hpp"
-#include "../include/PhysicsSystem.hpp"
-#include "../include/RenderSystem.hpp"
 #include "../include/PhysicsComponent.hpp"
 #include "../include/RenderComponent.hpp"
 #include "../include/AssetManager.hpp"
@@ -11,18 +9,12 @@
 #include "../include/HealthComponent.hpp"
 #include "../include/ItemComponent.hpp"
 #include "../include/TransformComponent.hpp"
-#include "../include/InventorySystem.hpp"
 #include "../include/InventoryWidget.hpp"
 #include "../include/InputManager.hpp"
 #include "../include/DeathScreenState.hpp"
-#include "../include/ExplosiveSystem.hpp"
-#include "../include/HealthSystem.hpp"
-#include "../include/TransformSystem.hpp"
-#include "../include/ChunkUnloadSystem.hpp"
-#include "../include/AISystem.hpp"
 #include "../include/AnimationSystem.hpp"
 #include "../include/Render.hpp"
-#include "../include/DaycycleSystem.hpp"
+#include "../include/RenderSystem.hpp"
 
 #include <iostream>
 
@@ -37,51 +29,80 @@ Entity& entityWithID(uint32_t id, World& world)
 
 MainGameState::MainGameState(Game* game, World world) : GameState(game)
 {
-    game->getWindow().setTitle("Blockbit - Singleplayer");
+    this->world = std::move(world);
 
-    this->world = std::move(world);  
-
-    if(this->world.getEntities().empty())
-    {
-        std::cerr << "No entities!" << std::endl;
-        throw std::runtime_error("World has no entities - cannot initialize MainGameState");
-    }
-
-    healthBar = HealthBar(&entityWithID(this->world.getPlayerID(), this->world).getComponent<HealthComponent>());
-    healthBar.updateScreenRelative(game->getWindow().getSize());
-    
-    try
-    {
-        inventoryWidget = InventoryWidget(&entityWithID(this->world.getPlayerID(), this->world).getComponent<InventoryComponent>());
-        inventoryWidget.updateScreenRelative(game->getWindow().getSize());
-        
-        hotbar = Hotbar(&entityWithID(this->world.getPlayerID(), this->world).getComponent<InventoryComponent>());
-        hotbar.updateScreenRelative(game->getWindow().getSize());
-    } catch(const std::exception& e)
-    {
-        std::cerr << "Failed to initialize inventory widgets: " << e.what() << std::endl;
-        throw;
-    }
+    tryInitializePlayerUI();
 }
 
 MainGameState::~MainGameState()
 {
     game->getWindow().setTitle("Blockbit");
 
-    world.save();
+    if (saveOnDestruct)
+    {
+        try { world.save(); }
+        catch (const std::exception& e)
+        {
+            std::cerr << "[MainGameState] world.save() failed: " << e.what() << '\n';
+        }
+    }
+
     game->getConsole().assignWorld(nullptr);
+}
+
+bool MainGameState::hasPlayerEntity() const
+{
+    if (!localPlayerEntityId.has_value()) return false;
+    uint32_t pid = localPlayerEntityId.value();
+    for (const auto& e : world.getEntities())
+        if (e.getID() == pid) return true;
+    return false;
+}
+
+void MainGameState::tryInitializePlayerUI()
+{
+    if (playerUIInitialized) return;
+    if (!hasPlayerEntity()) return;
+
+    auto& playerEntity = entityWithID(localPlayerEntityId.value(), world);
+
+    if (!playerEntity.hasComponent<TransformComponent>()) return;
+
+    if (playerEntity.hasComponent<HealthComponent>())
+    {
+        healthBar = HealthBar(&playerEntity.getComponent<HealthComponent>());
+        healthBar.updateScreenRelative(game->getWindow().getSize());
+    }
+
+    if (playerEntity.hasComponent<InventoryComponent>())
+    {
+        inventoryWidget = InventoryWidget(&playerEntity.getComponent<InventoryComponent>());
+        inventoryWidget.updateScreenRelative(game->getWindow().getSize());
+
+        hotbar = Hotbar(&playerEntity.getComponent<InventoryComponent>());
+        hotbar.updateScreenRelative(game->getWindow().getSize());
+    }
+
+    playerUIInitialized = true;
 }
 
 void MainGameState::handleEvent(const sf::Event& event)
 {
+    if(event.is<sf::Event::Resized>())
+    {
+        world.chunkMeshes.clear();
+    }
+
+    if (!playerUIInitialized) return;
+
     if(event.is<sf::Event::MouseButtonPressed>())
     {
         float unit_size = game->getWindow().getView().getSize().y / static_cast<float>(MainGameState::UNIT_SIZE_FACTOR);
 
         sf::View view(
         {
-            static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
-            static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
+            static_cast<float>((entityWithID(localPlayerEntityId.value(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
+            static_cast<float>((entityWithID(localPlayerEntityId.value(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
         },
         {
             (float)game->getWindow().getSize().x,
@@ -93,95 +114,78 @@ void MainGameState::handleEvent(const sf::Event& event)
         game->getWindow().setView(view);
     }
 
-    if(event.is<sf::Event::Resized>())
-    {
-        world.chunkMeshes.clear();
-    }
-
     healthBar.handleEvent(event);
-
     inventoryWidget.handleEvent(event);
-
     hotbar.handleEvent(event);
-
-    auto& selectedSlot = entityWithID(world.getPlayerID(), world).getComponent<InventoryComponent>().selectedSlot;
-    auto new_inputs = ::getInputsFromEvent(event, world, game->getWindow(), selectedSlot);
-
-    inputs.insert(inputs.end(), std::make_move_iterator(new_inputs.begin()), std::make_move_iterator(new_inputs.end()));
 }
 
 void MainGameState::update(float dt)
 {
+    tryInitializePlayerUI();
+
     float tick_step = 1.0f / static_cast<float>(MainGameState::TICKS_PER_SECOND);
+
+    if (dt > tick_step * 4.0f) dt = tick_step;
 
     since_last_tick += dt;
 
-    auto& entities = world.getEntities();
-
-    // DEPENDANT BY TICK-RATE
-    while(since_last_tick >= tick_step)
+    int max_ticks_per_frame = 4;
+    while(since_last_tick >= tick_step && max_ticks_per_frame-- > 0)
     {
-        float unit_size = game->getWindow().getView().getSize().y / static_cast<float>(MainGameState::UNIT_SIZE_FACTOR);
-
-        sf::View view(
+        if (playerUIInitialized)
         {
-            static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
-            static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
-        },
-        {
-            (float)game->getWindow().getSize().x,
-            (float)game->getWindow().getSize().y
-        });
+            float unit_size = game->getWindow().getView().getSize().y / static_cast<float>(MainGameState::UNIT_SIZE_FACTOR);
 
-        view.setSize({view.getSize().x, -view.getSize().y});
+            sf::View view(
+            {
+                static_cast<float>((entityWithID(localPlayerEntityId.value(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
+                static_cast<float>((entityWithID(localPlayerEntityId.value(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
+            },
+            {
+                (float)game->getWindow().getSize().x,
+                (float)game->getWindow().getSize().y
+            });
 
-        game->getWindow().setView(view);
+            view.setSize({view.getSize().x, -view.getSize().y});
 
-        auto new_inputs = ::getInputs(world, game->getWindow());
-        inputs.insert(inputs.end(), std::make_move_iterator(new_inputs.begin()), std::make_move_iterator(new_inputs.end()));
-
-        processInputs(std::move(inputs), world.getPlayerID());
-        inputs.clear();
+            game->getWindow().setView(view);
+        }
 
         onTick(tick_step);
-
-        AISystem(world, tick_step);
-        TransformSystem(world);
-        ExplosiveSystem(world, tick_step);
-        HealthSystem(world);
-        PhysicsSystem(entities, world, tick_step);
-        InventorySystem(entities);
-        ChunkUnloadSystem(world);
-        DaycycleSystem(world, tick_step);
 
         since_last_tick -= tick_step;
     }
 
+    if (since_last_tick > tick_step) since_last_tick = 0.0f;
+
     AnimationSystem(world, dt);
 
     game->getConsole().assignWorld(&world);
-    
+
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
     {
         game->pushState(std::make_unique<PauseScreenState>(game));
-    }    
-
-    healthBar.setHealth(&entityWithID(world.getPlayerID(), world).getComponent<HealthComponent>());
-
-    inventoryWidget.updateScreenRelative(game->getWindow().getSize());
-    hotbar.updateScreenRelative(game->getWindow().getSize());
-
-    healthBar.update(dt);
-    hotbar.update(dt);
-
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E))
-    {
-        inventoryWidget.setActive(!inventoryWidget.isActive());
     }
 
-    if(inventoryWidget.isActive())
+    if (playerUIInitialized)
     {
-        inventoryWidget.update(dt);
+        healthBar.setHealth(&entityWithID(localPlayerEntityId.value(), world).getComponent<HealthComponent>());
+
+        inventoryWidget.updateScreenRelative(game->getWindow().getSize());
+        hotbar.updateScreenRelative(game->getWindow().getSize());
+
+        healthBar.update(dt);
+        hotbar.update(dt);
+
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E))
+        {
+            inventoryWidget.setActive(!inventoryWidget.isActive());
+        }
+
+        if(inventoryWidget.isActive())
+        {
+            inventoryWidget.update(dt);
+        }
     }
 
     if(InputManager::isLazyKeyPressed(sf::Keyboard::Key::F3))
@@ -189,9 +193,8 @@ void MainGameState::update(float dt)
         debug = !debug;
     }
 
-    world.tick(dt);
-
-    if(entityWithID(world.getPlayerID(), world).getComponent<HealthComponent>().health <= 0)
+    if (playerUIInitialized
+        && entityWithID(localPlayerEntityId.value(), world).getComponent<HealthComponent>().health <= 0)
     {
         game->pushState(std::make_unique<DeathScreenState>(game, world, 1));
     }
@@ -204,41 +207,20 @@ void MainGameState::update(float dt)
 
         fps = 1.0f / dt;
     }
-
-    bool music_playing;
-
-    for(auto& music : AssetManager::musics)
-    {
-        if(music.second.getStatus() == sf::Music::Status::Playing)
-        {
-            music_playing = true;
-            break;
-        }
-    }
-
-    /*
-    if(!music_playing)
-    {
-        music_timer += dt;
-
-        if(music_timer >= music_interval)
-        {
-            music_timer = 0.0f;
-            music_interval = std::rand() % 420 + 180.0f;
-
-            AssetManager::getMusic(static_cast<AssetManager::MusicID>(std::rand() % AssetManager::musics.size())).play();
-        }
-    }
-    */
 }
 
 void MainGameState::render(sf::RenderWindow& window)
 {
-    // DRAWING SKY
     auto [skyTop, skyBottom] = world.getSkyGradient(world.getDayTime() / World::DAY_CYCLE_DURATION);
     renderSky(window, skyTop, skyBottom);
 
     renderSunAndMoon(world.getDayTime(), window);
+
+    if (!playerUIInitialized)
+    {
+        window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
+        return;
+    }
 
     auto& entities = world.getEntities();
 
@@ -246,15 +228,13 @@ void MainGameState::render(sf::RenderWindow& window)
 
     sf::View view(
     {
-        static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
-        static_cast<float>((entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
+        static_cast<float>((entityWithID(localPlayerEntityId.value(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
+        static_cast<float>((entityWithID(localPlayerEntityId.value(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
     },
     {
         (float)window.getSize().x,
         (float)window.getSize().y
     });
-
-
 
     view.setSize({view.getSize().x, -view.getSize().y});
 
@@ -264,14 +244,11 @@ void MainGameState::render(sf::RenderWindow& window)
 
     RenderWorld(world, window);
 
-    //RenderLightRays(world, window);
-
-    RenderBlockOverlay(world, window);
+    RenderBlockOverlay(world, window, localPlayerEntityId.value());
 
     window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
 
     healthBar.render(window);
-
     hotbar.render(window);
 
     if(inventoryWidget.isActive())
@@ -279,40 +256,37 @@ void MainGameState::render(sf::RenderWindow& window)
         inventoryWidget.render(window);
     }
 
-
     if(debug)
     {
         sf::Text debug_text(AssetManager::getFont(0), debugString(), 20);
-
         debug_text.setPosition({50.0f, 50.0f});
-
         debug_text.setFillColor(sf::Color::White);
-
         debug_text.setOutlineThickness(2.0f);
-
         debug_text.setOutlineColor(sf::Color::Black);
-
         window.draw(debug_text);
     }
 }
 
 std::string MainGameState::debugString()
 {
-    auto simulationRange = world.getSimulationRangeForEntity(world.getPlayerID());
+    std::string debug_string = "FPS: " + std::to_string(fps) + '\n';
 
-    std::string debug_string = 
-    "FPS: " + std::to_string(fps) + '\n' +
-    "X: " + std::to_string(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.x) +
-    " Y: " + std::to_string(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>().position.y) + '\n' +
-    "CHUNKS LOADED: " + std::to_string(world.getChunks().size()) + '\n' +
-    "MUSIC: " + std::to_string(music_timer) + " / " + std::to_string(music_interval) + '\n' +
-    "SIMULATION RANGE: " + std::to_string(simulationRange.first) + " - " + std::to_string(simulationRange.second) + '\n' +
-    "INPUTS: " + std::to_string(inputs.size()) + '\n';
+    if (playerUIInitialized)
+    {
+        auto simulationRange = world.getSimulationRangeForEntity(localPlayerEntityId.value());
+        debug_string +=
+            "X: " + std::to_string(entityWithID(localPlayerEntityId.value(), world).getComponent<TransformComponent>().position.x) +
+            " Y: " + std::to_string(entityWithID(localPlayerEntityId.value(), world).getComponent<TransformComponent>().position.y) + '\n' +
+            "CHUNKS LOADED: " + std::to_string(world.getChunks().size()) + '\n' +
+            "MUSIC: " + std::to_string(music_timer) + " / " + std::to_string(music_interval) + '\n' +
+            "SIMULATION RANGE: " + std::to_string(simulationRange.first) + " - " + std::to_string(simulationRange.second) + '\n' +
+            "INPUTS: " + std::to_string(inputs.size()) + '\n';
+    }
 
     return debug_string;
 }
 
-void MainGameState::processInputs(std::vector<Input> inputs, uint32_t id)
+void processWorldInputs(World& world, std::vector<Input> inputs, uint32_t id)
 {
     auto& entity = entityWithID(id, world);
 
@@ -439,6 +413,11 @@ void MainGameState::processInputs(std::vector<Input> inputs, uint32_t id)
             }
         }
     }
+}
+
+void MainGameState::processInputs(std::vector<Input> inputs, uint32_t id)
+{
+    processWorldInputs(world, std::move(inputs), id);
 }
 
 bool isInRange(TransformComponent& player, TransformComponent& target, float range)

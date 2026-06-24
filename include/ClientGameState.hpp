@@ -1,52 +1,59 @@
 #ifndef CLIENT_GAME_STATE_HPP
 #define CLIENT_GAME_STATE_HPP
 
-#include "GameState.hpp"
-#include "Client.hpp"
-#include "World.hpp"
-#include "Input.hpp"
+#include "MainGameState.hpp"
+#include "ClientTransport.hpp"
+#include "GameServer.hpp"
+#include "Packet.hpp"
 
+#include <memory>
+#include <optional>
 #include <string>
-#include <vector>
 #include <cstdint>
 
-class ClientGameState : public GameState
+class ClientGameState : public MainGameState
 {
 private:
 
-    Client client;
-    World  world;
+    std::unique_ptr<ClientTransport> transport;
+    std::optional<GameServer> localServer;
 
     uint32_t myEntityId = 0;
-    bool     initialized = false;
-    bool     connectionFailed = false;
-    bool     wasConnected = false;
-    bool     connectAttempted = false;
+    bool initialized = false;
+    bool connectionFailed = false;
+    bool wasConnected = false;
+    bool connectAttempted = false;
 
     std::string errorMessage;
     std::string remoteAddress;
     std::string pendingHost;
-    uint16_t    pendingPort = 0;
+    uint16_t pendingPort = 0;
 
-    std::vector<Input> inputs;
-    float since_last_tick = 0.0f;
     uint8_t localSelectedSlot = 0;
 
     void processIncoming();
     void sendTickInputs();
     void rebuildEntitiesFromSnapshot(const SnapshotPacket& snap);
 
+    bool isLocalSession() const { return localServer.has_value(); }
+
+protected:
+
+    void onTick(float tick_step) override;
+
 public:
 
     ClientGameState(Game* game, const std::string& host, uint16_t port);
+
+    ClientGameState(Game* game, World world, uint16_t networkPort = 0);
+
     ~ClientGameState() override;
 
     void handleEvent(const sf::Event& event) override;
     void update(float dt) override;
     void render(sf::RenderWindow& window) override;
 
-    static constexpr unsigned int UNIT_SIZE_FACTOR = 12;
-    static constexpr uint8_t      TICKS_PER_SECOND = 60;
+    static constexpr uint16_t DEFAULT_PORT = 25565;
 };
 
 #endif // CLIENT_GAME_STATE_HPP

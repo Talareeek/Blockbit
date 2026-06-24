@@ -3,7 +3,10 @@
 
 #include <iostream>
 
-Client::Client() : socket(io) {}
+Client::Client() : socket(io)
+{
+    
+}
 
 Client::~Client()
 {

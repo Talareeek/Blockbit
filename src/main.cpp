@@ -17,13 +17,9 @@
 
 #include "../include/AssetManager.hpp"
 
-#include "../include/MainGameState.hpp"
-
 #include "../include/IntroGameState.hpp"
 
 #include "../include/ClientGameState.hpp"
-
-#include "../include/HostGameState.hpp"
 
 #include <cstdlib>
 
@@ -85,7 +81,7 @@ int main(int argc, char* argv[])
         if (std::filesystem::exists(worldPath))
         {
             std::cerr << "[main] --host " << hostWorld << " on 25565" << std::endl;
-            game.pushState(std::make_unique<HostGameState>(&game, World(worldPath)));
+            game.pushState(std::make_unique<ClientGameState>(&game, World(worldPath), ClientGameState::DEFAULT_PORT));
         }
         else
         {
@@ -100,7 +96,7 @@ int main(int argc, char* argv[])
         {
             try
             {
-                game.pushState(std::make_unique<MainGameState>(&game, World(worldPath)));
+                game.pushState(std::make_unique<ClientGameState>(&game, World(worldPath)));
             }
             catch (const std::exception& e)
             {

@@ -42,6 +42,12 @@ public:
     {
         return std::any_cast<T&>(components.at(typeid(T)));
     }
+
+    template<typename T>
+    const T& getComponent() const
+    {
+        return std::any_cast<const T&>(components.at(typeid(T)));
+    }
 };
 
 #endif // ENTITY_HPP

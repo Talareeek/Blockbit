@@ -28,7 +28,7 @@ void RenderWorld(World& world, sf::RenderWindow& window)
     }
 }
 
-void RenderBlockOverlay(World& world, sf::RenderWindow& window)
+void RenderBlockOverlay(World& world, sf::RenderWindow& window, uint32_t viewerEntityId)
 {
     unsigned int unit_size = window.getSize().y / MainGameState::UNIT_SIZE_FACTOR;
 
@@ -36,7 +36,7 @@ void RenderBlockOverlay(World& world, sf::RenderWindow& window)
     int blockX = blockPos.x;
     int blockY = blockPos.y;
 
-    if(world.getBlock(blockX, blockY).id != BlockID::Air && isBlockInRange(entityWithID(world.getPlayerID(), world).getComponent<TransformComponent>(), blockPos, 4.0f))
+    if(world.getBlock(blockX, blockY).id != BlockID::Air && isBlockInRange(entityWithID(viewerEntityId, world).getComponent<TransformComponent>(), blockPos, 4.0f))
     {
         sf::Sprite sprite(AssetManager::getTexture(8));
         sprite.setPosition({

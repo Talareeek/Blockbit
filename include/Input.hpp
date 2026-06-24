@@ -36,4 +36,6 @@ struct Input
 std::vector<Input> getInputs(const World& world, const sf::RenderWindow& window);
 std::vector<Input> getInputsFromEvent(const sf::Event& event, const World& world, const sf::RenderWindow& window, uint8_t& selectedSlot);
 
+void processWorldInputs(World& world, std::vector<Input> inputs, uint32_t id);
+
 #endif // INPUT_HPP
