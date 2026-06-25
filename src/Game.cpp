@@ -18,8 +18,6 @@ Game::Game()
 {
     window.create(sf::VideoMode::getDesktopMode(), "Blockbit");
 	
-	sf::Image icon;
-	
 	if (!icon.loadFromFile("resources/textures/grass.png")) throw std::runtime_error("Failed loading an icon");
 	
 	window.setIcon(icon);
@@ -139,6 +137,7 @@ void Game::handleEvents()
             {
                 sf::View view(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(event->getIf<sf::Event::Resized>()->size.x), static_cast<float>(event->getIf<sf::Event::Resized>()->size.y)}));
                 window.setView(view);
+                window.setIcon(icon);
             }
 
             else if (event->is<sf::Event::KeyPressed>())
