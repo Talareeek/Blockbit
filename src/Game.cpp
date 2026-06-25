@@ -17,6 +17,12 @@
 Game::Game()
 {
     window.create(sf::VideoMode::getDesktopMode(), "Blockbit");
+	
+	sf::Image icon;
+	
+	if (!icon.loadFromFile("resources/textures/grass.png")) throw std::runtime_error("Failed loading an icon");
+	
+	window.setIcon(icon);
 
     unit_size = window.getSize().y / 9;
 
