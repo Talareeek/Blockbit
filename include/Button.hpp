@@ -16,13 +16,13 @@ private:
     sf::Color color;
     std::function<void()> onClick;
 
-    bool cursorHovering = false;
-
-    sf::Cursor cursor{sf::Cursor::Type::Arrow};
-
     bool Clicked = false;
 
     sf::Sound sound{AssetManager::getSound(AssetManager::SoundID::Click)};
+
+    bool hover = false;
+
+    float scale = 1.0f;
 
 public:
 
