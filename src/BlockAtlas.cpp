@@ -26,14 +26,16 @@ bool BlockAtlas::build()
 
         sf::Image img = tex.copyToImage();
 
-        atlasImage.copy(img, {x, 0}, sf::IntRect({0, 0}, {(int)tileSize, (int)tileSize}));
+        if (!atlasImage.copy(img, {x, 0}, sf::IntRect({0, 0}, {(int)tileSize, (int)tileSize})))
+            return false;
 
         uvMap[id] = {{(int)x, 0}, {(int)tileSize, (int)tileSize}};
 
         x += tileSize;
     }
 
-    atlasTexture.loadFromImage(atlasImage);
+    if (!atlasTexture.loadFromImage(atlasImage))
+        return false;
 
     atlasTexture.setSmooth(false);
 

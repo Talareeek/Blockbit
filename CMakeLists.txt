@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(Blockbit CXX)
+project(Blockbit C CXX)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 20)
@@ -25,6 +25,20 @@ find_package(SFML REQUIRED COMPONENTS Graphics Window System Audio)
 # Threads (asio)
 find_package(Threads REQUIRED)
 
+# SQLite (amalgamation in external/sqlite)
+add_library(sqlite3 STATIC ${CMAKE_SOURCE_DIR}/external/sqlite/sqlite3.c)
+target_include_directories(sqlite3 PUBLIC ${CMAKE_SOURCE_DIR}/external/sqlite)
+target_compile_definitions(sqlite3 PRIVATE
+    SQLITE_ENABLE_FTS5
+    SQLITE_ENABLE_JSON1
+    SQLITE_THREADSAFE=1
+)
+if(UNIX AND NOT APPLE)
+    target_link_libraries(sqlite3 PUBLIC ${CMAKE_DL_LIBS} Threads::Threads m)
+elseif(APPLE)
+    target_link_libraries(sqlite3 PUBLIC ${CMAKE_DL_LIBS} Threads::Threads)
+endif()
+
 # Source files
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
@@ -44,6 +58,7 @@ target_link_libraries(Blockbit PRIVATE
     SFML::System
     SFML::Audio
     Threads::Threads
+    sqlite3
 )
 
 # Enable debug info in Release mode as well

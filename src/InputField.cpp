@@ -3,6 +3,27 @@
 
 #include <cmath>
 
+namespace
+{
+    float character_pos_x(const sf::Text& text, std::size_t index)
+    {
+        const auto& glyphs = text.getShapedGlyphs();
+        const float origin_x = text.getPosition().x;
+
+        for (const auto& g : glyphs)
+            if (g.cluster >= index)
+                return origin_x + g.position.x;
+
+        if (!glyphs.empty())
+        {
+            const auto& last = glyphs.back();
+            return origin_x + last.position.x + last.glyph.advance;
+        }
+
+        return origin_x;
+    }
+}
+
 InputField::InputField() : UIElement({0.0f, 0.0f}, {100.0f, 50.0f})
 {
 
@@ -48,7 +69,7 @@ void InputField::handleEvent(const sf::Event& event)
 
             for (std::size_t i = view_start + 1; i <= this->text.size(); ++i)
             {
-                float char_x = probe.findCharacterPos(i - view_start).x;
+                float char_x = character_pos_x(probe, i - view_start);
                 float dist = std::abs(char_x - click_x);
 
                 if (dist < best_dist)
@@ -167,13 +188,13 @@ void InputField::render(sf::RenderWindow& window)
         sf::Text measure(AssetManager::getFont(0), text, font_size);
 
         while (view_start < cursor_pos &&
-               measure.findCharacterPos(cursor_pos).x - measure.findCharacterPos(view_start).x > visible_width)
+               character_pos_x(measure, cursor_pos) - character_pos_x(measure, view_start) > visible_width)
         {
             view_start++;
         }
 
         while (view_start > 0 &&
-               measure.findCharacterPos(text.size()).x - measure.findCharacterPos(view_start - 1).x <= visible_width)
+               character_pos_x(measure, text.size()) - character_pos_x(measure, view_start - 1) <= visible_width)
         {
             view_start--;
         }
@@ -216,7 +237,7 @@ void InputField::render(sf::RenderWindow& window)
         }
         else
         {
-            cursor_x = text_obj.findCharacterPos(cursor_pos - view_start).x;
+            cursor_x = character_pos_x(text_obj, cursor_pos - view_start);
         }
 
         float cursor_h = borderless_size.y * 0.65f;
