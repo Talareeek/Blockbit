@@ -16,6 +16,7 @@ class ClientGameState : public MainGameState
 private:
 
     std::unique_ptr<ClientTransport> transport;
+    
     std::optional<GameServer> localServer;
 
     uint32_t myEntityId = 0;

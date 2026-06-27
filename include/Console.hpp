@@ -4,7 +4,43 @@
 #include "UIElement.hpp"
 #include <vector>
 #include <string>
+#include <mutex>
+#include <streambuf>
+#include <iosfwd>
 #include "Command.hpp"
+
+class ConsoleSink
+{
+public:
+    struct Message
+    {
+        std::wstring text;
+        sf::Color color;
+    };
+
+    static void push(std::wstring text, sf::Color color);
+    static std::vector<Message> drain();
+
+    static void installRedirects();
+};
+
+class ConsoleStreambuf : public std::streambuf
+{
+public:
+    ConsoleStreambuf(std::streambuf* passthrough, sf::Color color);
+
+protected:
+    int_type overflow(int_type c) override;
+    int sync() override;
+
+private:
+    void flushLine();
+
+    std::streambuf* passthrough;
+    sf::Color color;
+    std::string buffer;
+    std::mutex mutex;
+};
 
 class Console : public UIElement
 {

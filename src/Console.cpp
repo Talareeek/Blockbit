@@ -3,6 +3,97 @@
 #include "../include/AssetManager.hpp"
 #include "../include/Command.hpp"
 
+#include <iostream>
+#include <deque>
+
+namespace
+{
+    std::mutex& sinkMutex()
+    {
+        static std::mutex m;
+        return m;
+    }
+
+    std::deque<ConsoleSink::Message>& sinkQueue()
+    {
+        static std::deque<ConsoleSink::Message> q;
+        return q;
+    }
+}
+
+void ConsoleSink::push(std::wstring text, sf::Color color)
+{
+    std::lock_guard<std::mutex> lock(sinkMutex());
+    sinkQueue().push_back({std::move(text), color});
+}
+
+std::vector<ConsoleSink::Message> ConsoleSink::drain()
+{
+    std::lock_guard<std::mutex> lock(sinkMutex());
+    std::vector<Message> out;
+    out.reserve(sinkQueue().size());
+    while(!sinkQueue().empty())
+    {
+        out.push_back(std::move(sinkQueue().front()));
+        sinkQueue().pop_front();
+    }
+    return out;
+}
+
+void ConsoleSink::installRedirects()
+{
+    static ConsoleStreambuf coutBuf(std::cout.rdbuf(), sf::Color::White);
+    static ConsoleStreambuf cerrBuf(std::cerr.rdbuf(), sf::Color(235, 160, 90));
+    static ConsoleStreambuf clogBuf(std::clog.rdbuf(), sf::Color(200, 200, 200));
+
+    std::cout.rdbuf(&coutBuf);
+    std::cerr.rdbuf(&cerrBuf);
+    std::clog.rdbuf(&clogBuf);
+}
+
+ConsoleStreambuf::ConsoleStreambuf(std::streambuf* passthrough, sf::Color color)
+    : passthrough(passthrough), color(color)
+{
+}
+
+ConsoleStreambuf::int_type ConsoleStreambuf::overflow(int_type c)
+{
+    if(c == traits_type::eof()) return traits_type::not_eof(c);
+
+    char ch = static_cast<char>(c);
+
+    if(passthrough) passthrough->sputc(ch);
+
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        if(ch == '\n')
+        {
+            flushLine();
+        }
+        else if(ch != '\r')
+        {
+            buffer.push_back(ch);
+        }
+    }
+
+    return c;
+}
+
+int ConsoleStreambuf::sync()
+{
+    if(passthrough) passthrough->pubsync();
+    return 0;
+}
+
+void ConsoleStreambuf::flushLine()
+{
+    std::wstring wide;
+    wide.reserve(buffer.size());
+    for(unsigned char c : buffer) wide.push_back(static_cast<wchar_t>(c));
+    ConsoleSink::push(std::move(wide), color);
+    buffer.clear();
+}
+
 void Console::handleEvent(const sf::Event& event)
 {
     if(!active) return;
@@ -170,6 +261,11 @@ void Console::update(float dt)
 {
     if(InputManager::isLazyKeyPressed(sf::Keyboard::Key::Grave)) active = !active;
     if(active) cursorTimer += dt;
+
+    for(auto& msg : ConsoleSink::drain())
+    {
+        logs.push_back({std::move(msg.text), msg.color});
+    }
 }
 
 void Console::render(sf::RenderWindow& window)

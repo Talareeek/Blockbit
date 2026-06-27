@@ -26,16 +26,15 @@ ClientGameState::ClientGameState(Game* game, const std::string& host, uint16_t p
 
     transport = std::make_unique<NetworkClientTransport>();
 
-    std::cerr << "[Client] Will attempt connection to " << remoteAddress << '\n';
+    game->getConsole().writeLine(L"[Client] Will attempt connection to " + std::wstring(remoteAddress.begin(), remoteAddress.end()));
 }
 
-ClientGameState::ClientGameState(Game* game, World w, uint16_t networkPort)
-    : MainGameState(game, std::move(w))
+ClientGameState::ClientGameState(Game* game, World world, uint16_t networkPort) : MainGameState(game, std::move(world))
 {
-    game->getWindow().setTitle(networkPort == 0 ? "Blockbit - Singleplayer" : "Blockbit - Host");
-
     if (networkPort == 0)
     {
+        game->getWindow().setTitle("Blockbit - Singleplayer");
+
         auto pair = makeLoopbackPair();
         localServer.emplace(this->world, std::move(pair.serverSide), LoopbackChannel::LOOPBACK_CLIENT_ID);
         transport = std::move(pair.clientSide);
@@ -44,16 +43,18 @@ ClientGameState::ClientGameState(Game* game, World w, uint16_t networkPort)
     }
     else
     {
+        game->getWindow().setTitle("Blockbit - Host");
+
         localServer.emplace(this->world, std::make_unique<NetworkServerTransport>(networkPort), 0u);
         remoteAddress = "0.0.0.0:" + std::to_string(networkPort);
         std::cerr << "[Server] Listening on port " << networkPort << '\n';
     }
 
-    myEntityId          = localServer->getHostEntityId();
+    myEntityId = localServer->getHostEntityId();
     localPlayerEntityId = myEntityId;
-    initialized         = true;
-    wasConnected        = true;
-    connectAttempted    = true;
+    initialized = true;
+    wasConnected = true;
+    connectAttempted = true;
 }
 
 ClientGameState::~ClientGameState()
@@ -64,26 +65,19 @@ ClientGameState::~ClientGameState()
 void ClientGameState::rebuildEntitiesFromSnapshot(const SnapshotPacket& snap)
 {
     auto& entities = world.getEntities();
+
     entities.clear();
     entities.reserve(snap.entities.size());
 
-    for (const auto& ne : snap.entities)
+    for (const auto& net_entity : snap.entities)
     {
-        Entity e(ne.id);
+        Entity entity(net_entity.id);
 
-        e.addComponent(TransformComponent{
-            {ne.x, ne.y},
-            {ne.size_x, ne.size_y},
-            sf::degrees(0.0f)
-        });
-        e.addComponent(RenderComponent{
-            static_cast<uint16_t>(ne.textureID),
-            sf::IntRect{{ne.uv_x, ne.uv_y}, {ne.uv_size_x, ne.uv_size_y}},
-            {ne.size_x, ne.size_y}
-        });
-        e.addComponent(HealthComponent{ne.health, ne.maxHealth, false});
+        entity.addComponent(TransformComponent{{net_entity.x, net_entity.y}, {net_entity.size_x, net_entity.size_y}, sf::degrees(0.0f)});
+        entity.addComponent(RenderComponent{static_cast<uint16_t>(net_entity.textureID), sf::IntRect{{net_entity.uv_x, net_entity.uv_y}, {net_entity.uv_size_x, net_entity.uv_size_y}}, {net_entity.size_x, net_entity.size_y}});
+        entity.addComponent(HealthComponent{net_entity.health, net_entity.maxHealth, false});
 
-        entities.push_back(std::move(e));
+        entities.push_back(std::move(entity));
     }
 
     playerUIInitialized = false;
@@ -170,19 +164,17 @@ void ClientGameState::sendTickInputs()
     if (!transport || !transport->isConnected()) return;
     if (myEntityId == 0) return;
 
-    auto polled = ::getInputs(world, game->getWindow());
-    inputs.insert(inputs.end(),
-        std::make_move_iterator(polled.begin()),
-        std::make_move_iterator(polled.end()));
+    auto polled = getInputs(world, game->getWindow());
+    inputs.insert(inputs.end(), std::make_move_iterator(polled.begin()), std::make_move_iterator(polled.end()));
 
     if (inputs.empty()) return;
 
-    InputPacket pkt;
-    pkt.id = myEntityId;
-    pkt.inputs = std::move(inputs);
+    InputPacket packet;
+    packet.id = myEntityId;
+    packet.inputs = std::move(inputs);
     inputs.clear();
 
-    transport->send(serializePacket(pkt));
+    transport->send(serializePacket(packet));
 }
 
 void ClientGameState::onTick(float tick_step)

@@ -1,6 +1,6 @@
 #include "../include/AuthorGameState.hpp"
 #include "../include/Game.hpp"
-#include "../include/IntroGameState.hpp"
+#include "../include/MenuGameState.hpp"
 #include "../include/AssetManager.hpp"
 
 void AuthorGameState::update(float dt)
@@ -13,7 +13,7 @@ void AuthorGameState::update(float dt)
 
         game->popState();
 
-        temp_game->pushState(std::make_unique<IntroGameState>(temp_game));
+        temp_game->pushState(std::make_unique<MenuGameState>(temp_game));
     }
 }
 

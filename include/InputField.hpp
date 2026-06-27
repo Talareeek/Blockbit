@@ -12,7 +12,13 @@ private:
     std::string text;
     std::string placeholder;
     bool focused = false;
-    
+
+    float cursor_timer = 0.0f;
+    bool cursor_visible = true;
+
+    std::size_t cursor_pos = 0;
+    std::size_t view_start = 0;
+
 public:
 
     using UIElement::UIElement;

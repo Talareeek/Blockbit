@@ -23,6 +23,8 @@
 
 #include "../include/AuthorGameState.hpp"
 
+#include "../include/Console.hpp"
+
 #include <cstdlib>
 
 #include <thread>
@@ -35,6 +37,8 @@
 
 int main(int argc, char* argv[])
 {
+    ConsoleSink::installRedirects();
+
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
     std::string loadWorld;
