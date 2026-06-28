@@ -985,6 +985,7 @@ uint32_t World::spawnPlayer(uint32_t clientId)
     inv.inventory.slots[0] = {ItemID::Dynamite, 16};
     inv.inventory.slots[1] = {ItemID::Bucket, 1};
     inv.inventory.slots[2] = {ItemID::Woodcutter, 64};
+    inv.inventory.slots[3] = {ItemID::Lighter, 1};
     player.addComponent(std::move(inv));
 
     sf::Vector2f spawn = getSpawnPoint();

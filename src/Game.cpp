@@ -68,6 +68,8 @@ Game::Game()
     AssetManager::loadTexture(21, "resources/textures/pig.png");
     AssetManager::loadTexture(22, "resources/textures/woodcutter.png");
     AssetManager::loadTexture(23, "resources/textures/logo.png");
+    AssetManager::loadTexture(24, "resources/textures/lighter.png");
+    AssetManager::loadTexture(25, "resources/textures/fire.png");
     AssetManager::loadTexture(UINT32_MAX, "resources/textures/nothing.png");
 
     AssetManager::loadSound(AssetManager::SoundID::Click, "resources/sounds/click.wav");
@@ -87,6 +89,7 @@ Game::Game()
     BlockAtlas::add(16);
     BlockAtlas::add(17);
     BlockAtlas::add(22);
+    BlockAtlas::add(25);
     BlockAtlas::build();
 
     std::filesystem::path savePath;

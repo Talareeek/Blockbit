@@ -109,7 +109,19 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
 
             return false;
         }}},
-        {ItemID::Woodcutter, {"Woodcutter", 22, 64, ItemRarity::Common, ItemCategory::Block}}
+        {ItemID::Woodcutter, {"Woodcutter", 22, 64, ItemRarity::Common, ItemCategory::Block}},
+        {ItemID::Lighter, {"Lighter", 24, 1, ItemRarity::Rare, ItemCategory::Misc, false, [](World& world, sf::Vector2f mouse, uint32_t user) -> bool
+            {
+                sf::Vector2i position = {static_cast<int>(std::floor(mouse.x)), static_cast<int>(std::floor(mouse.y))};
+
+                if(world.getBlock(position.x, position.y).id == BlockID::Air && blockDatabase[world.getBlock(position.x, position.y - 1).id].solid)
+                {
+                    world.setBlock(position.x, position.y, {BlockID::Fire, 0});
+                }
+
+                return false;
+            }
+        }}
 };
 
 bool ItemStack::empty() const
