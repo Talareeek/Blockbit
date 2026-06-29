@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <optional>
 
 #include <SFML/System/Vector2.hpp>
 
@@ -61,7 +62,7 @@ enum class RecyclingCategory
     Ore
 };
 
-struct CraftMaterials
+struct CraftProperties
 {
     uint32_t wood;
     uint32_t stone;
@@ -85,9 +86,7 @@ struct ItemData
 
     std::function<bool(World& world, sf::Vector2f mouse, uint32_t user)> onUse = [](World&, sf::Vector2f, uint32_t) -> bool {return false;};    
 
-    //RecyclingCategory recycling_category = RecyclingCategory::None;
-
-    //CraftMaterials materials = {0, 0, 0, 0, 0};
+    std::optional<CraftProperties> craft_properties;
 };
 
 extern std::unordered_map<ItemID, ItemData> itemDatabase;

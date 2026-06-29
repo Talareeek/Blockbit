@@ -62,6 +62,7 @@ struct NetEntity
     };
 
     std::vector<InventorySlot> inventory;
+    uint8_t selectedSlot = 0;
 };
 
 struct SnapshotPacket

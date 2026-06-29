@@ -84,6 +84,7 @@ std::vector<char> serializePacket(const SnapshotPacket& p)
             w.write(slot.itemID);
             w.write(slot.quantity);
         }
+        w.write(e.selectedSlot);
     }
 
     w.write(p.dayTime);
@@ -230,6 +231,7 @@ SnapshotPacket deserializeSnapshot(PacketReader& r)
             e.inventory[j].itemID   = r.read<uint32_t>();
             e.inventory[j].quantity = r.read<uint32_t>();
         }
+        e.selectedSlot = r.read<uint8_t>();
 
         p.entities.push_back(std::move(e));
     }

@@ -252,6 +252,17 @@ void GameServer::broadcastSnapshot()
             ne.maxHealth = h.maxHealth;
         }
 
+        if (e.hasComponent<InventoryComponent>())
+        {
+            const auto& inv = e.getComponent<InventoryComponent>();
+            ne.inventory.reserve(inv.inventory.slots.size());
+            for (const auto& slot : inv.inventory.slots)
+            {
+                ne.inventory.push_back({static_cast<uint32_t>(slot.itemID), slot.quantity});
+            }
+            ne.selectedSlot = inv.selectedSlot;
+        }
+
         snap.entities.push_back(std::move(ne));
     }
 

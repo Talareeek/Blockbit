@@ -76,6 +76,20 @@ void ClientGameState::rebuildEntitiesFromSnapshot(const SnapshotPacket& snap)
         entity.addComponent(TransformComponent{{net_entity.x, net_entity.y}, {net_entity.size_x, net_entity.size_y}, sf::degrees(0.0f)});
         entity.addComponent(RenderComponent{static_cast<uint16_t>(net_entity.textureID), sf::IntRect{{net_entity.uv_x, net_entity.uv_y}, {net_entity.uv_size_x, net_entity.uv_size_y}}, {net_entity.size_x, net_entity.size_y}});
         entity.addComponent(HealthComponent{net_entity.health, net_entity.maxHealth, false});
+        
+        if(!net_entity.inventory.empty())
+        {
+            InventoryComponent inventory_component(net_entity.inventory.size());
+
+            for(size_t i = 0; i < net_entity.inventory.size(); i++)
+            {
+                inventory_component.inventory.slots[i].itemID = static_cast<ItemID>(net_entity.inventory[i].itemID);
+                inventory_component.inventory.slots[i].quantity = net_entity.inventory[i].quantity;
+            }
+            inventory_component.selectedSlot = net_entity.selectedSlot;
+
+            entity.addComponent(std::move(inventory_component));
+        }
 
         entities.push_back(std::move(entity));
     }
