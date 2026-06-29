@@ -18,12 +18,17 @@ std::vector<Input> getInputs(const World& world, const sf::RenderWindow& window)
         inputs.push_back({InputType::MOVE, sf::Vector2f{1.0f, 0.0f}});
     }
 
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space))
+    if(sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::X) != 0)
+    {
+        inputs.push_back({InputType::MOVE, sf::Vector2f{1.0f * sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::X) / 100.0f, 0.0f}});
+    }
+
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space) || sf::Joystick::isButtonPressed(0, 0))
     {
         inputs.push_back({InputType::JUMP, std::monostate{}});
     }
 
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q))
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q) || sf::Joystick::isButtonPressed(0, 2))
     {
         inputs.push_back({InputType::DROP, DropInfo{
             getMouseWorldPosition(world, window),
