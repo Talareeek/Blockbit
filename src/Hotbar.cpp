@@ -3,12 +3,12 @@
 #include <iostream>
 
 
-Hotbar::Hotbar() : UIElement(UIElement::ScreenRelative{{0.2f, 0.8f}, {0.6f, 0.6f * (13.0f / 101.0f)}, true, UIElement::ScreenRelative::Axis::Y})
+Hotbar::Hotbar() : UIElement(UIElement::ScreenRelative{{0.2f, 0.8f}, {0.6f, 0.6f * (13.0f / 101.0f)}, UIElement::ScreenRelative::ScaleMode::UniformByHeight})
 {
 
 }
 
-Hotbar::Hotbar(InventoryComponent* inventory) : UIElement(UIElement::ScreenRelative{{0.2f, 0.8f}, {0.6f, 0.6f * (13.0f / 101.0f)}, true, UIElement::ScreenRelative::Axis::Y}), inventory(inventory)
+Hotbar::Hotbar(InventoryComponent* inventory) : UIElement(UIElement::ScreenRelative{{0.2f, 0.8f}, {0.6f, 0.6f * (13.0f / 101.0f)}, UIElement::ScreenRelative::ScaleMode::UniformByHeight}), inventory(inventory)
 {
 
 }

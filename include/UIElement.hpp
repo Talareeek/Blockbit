@@ -2,6 +2,7 @@
 #define UI_ELEMENT_HPP
 
 #include <SFML/Graphics.hpp>
+#include <optional>
 
 class UIElement
 {
@@ -9,16 +10,29 @@ public:
 
     struct ScreenRelative
     {
+        enum class ScaleMode
+        {
+            // x scales with window width, y scales with window height.
+            // The element stretches anisotropically to fill the window.
+            Stretch,
+
+            // Both axes are scaled by the window's width.
+            // The y-axis is centered vertically, so the usable area is a
+            // (width x width) square letterboxed top and bottom.
+            UniformByWidth,
+
+            // Both axes are scaled by the window's height.
+            // The x-axis is centered horizontally, so the usable area is a
+            // (height x height) square pillarboxed left and right.
+            UniformByHeight
+        };
+
         sf::Vector2f position;
         sf::Vector2f size;
+        ScaleMode mode = ScaleMode::Stretch;
 
-        bool keep_aspect = false;
-
-        enum class Axis
-        {
-            X,
-            Y
-        } axis = Axis::X;
+        sf::Vector2f toAbsolutePosition(const sf::Vector2u& windowSize) const;
+        sf::Vector2f toAbsoluteSize(const sf::Vector2u& windowSize) const;
     };
 
 protected:
@@ -26,15 +40,13 @@ protected:
     sf::Vector2f position;
     sf::Vector2f size;
 
-    ScreenRelative screen_relative;
-    bool is_screen_relative = false;
+    std::optional<ScreenRelative> screen_relative;
 
 public:
 
     UIElement() = default;
     UIElement(const sf::Vector2f& position, const sf::Vector2f& size) : position(position), size(size) {}
-    UIElement(const ScreenRelative& screen_relative) : screen_relative(screen_relative), is_screen_relative(true) {}
-    UIElement(ScreenRelative&& screen_relative) : screen_relative(screen_relative), is_screen_relative(true) {}
+    UIElement(const ScreenRelative& sr) : screen_relative(sr) {}
     virtual ~UIElement() = default;
 
     virtual void handleEvent(const sf::Event& event) = 0;
@@ -51,10 +63,5 @@ public:
 
     void updateScreenRelative(const sf::Vector2u& windowSize);
 };
-
-extern sf::Vector2f computeAbsolutePosition(const UIElement::ScreenRelative& sr, const sf::Vector2u& windowSize);
-
-extern sf::Vector2f computeAbsoluteSize(const UIElement::ScreenRelative& sr, const sf::Vector2u& windowSize);
-
 
 #endif // UI_ELEMENT_HPP

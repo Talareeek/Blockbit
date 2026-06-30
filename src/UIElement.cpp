@@ -20,81 +20,71 @@ sf::Vector2f UIElement::getSize() const
     return size;
 }
 
-
-sf::Vector2f computeAbsolutePosition(const UIElement::ScreenRelative& sr, const sf::Vector2u& windowSize)
+sf::Vector2f UIElement::ScreenRelative::toAbsolutePosition(const sf::Vector2u& windowSize) const
 {
-    if(sr.keep_aspect)
+    switch(mode)
     {
-        float base;
-        float offsetX = 0.f;
-        float offsetY = 0.f;
+        case ScaleMode::Stretch:
+            return {
+                position.x * windowSize.x,
+                position.y * windowSize.y
+            };
 
-        if(sr.axis == UIElement::ScreenRelative::Axis::Y)
+        case ScaleMode::UniformByWidth:
         {
-            base = static_cast<float>(windowSize.y);
-            offsetX = (windowSize.x - base) / 2.f;
-        }
-        else
-        {
-            base = static_cast<float>(windowSize.x);
-            offsetY = (windowSize.y - base) / 2.f;
+            float base = static_cast<float>(windowSize.x);
+            float offsetY = (static_cast<float>(windowSize.y) - base) / 2.f;
+            return {
+                position.x * base,
+                position.y * base + offsetY
+            };
         }
 
-        return {
-            sr.position.x * base + offsetX,
-            sr.position.y * base + offsetY
-        };
+        case ScaleMode::UniformByHeight:
+        {
+            float base = static_cast<float>(windowSize.y);
+            float offsetX = (static_cast<float>(windowSize.x) - base) / 2.f;
+            return {
+                position.x * base + offsetX,
+                position.y * base
+            };
+        }
     }
-    else
-    {
-        return {
-            sr.position.x * windowSize.x,
-            sr.position.y * windowSize.y
-        };
-    }
+
+    return {};
 }
 
-
-sf::Vector2f computeAbsoluteSize(const UIElement::ScreenRelative& sr, const sf::Vector2u& windowSize)
+sf::Vector2f UIElement::ScreenRelative::toAbsoluteSize(const sf::Vector2u& windowSize) const
 {
-    sf::Vector2f size;
-
-    if(sr.keep_aspect)
+    switch(mode)
     {
-        if(sr.axis == UIElement::ScreenRelative::Axis::X)
-        {
-            float base = sr.size.x * windowSize.x;
-            float ratio = sr.size.y / sr.size.x;
+        case ScaleMode::Stretch:
+            return {
+                size.x * windowSize.x,
+                size.y * windowSize.y
+            };
 
-            size.x = base;
-            size.y = base * ratio;
-        }
-        else
-        {
-            float base = sr.size.y * windowSize.y;
-            float ratio = sr.size.x / sr.size.y;
+        case ScaleMode::UniformByWidth:
+            return {
+                size.x * windowSize.x,
+                size.y * windowSize.x
+            };
 
-            size.y = base;
-            size.x = base * ratio;
-        }
-    }
-    else
-    {
-        size = {
-            sr.size.x * windowSize.x,
-            sr.size.y * windowSize.y
-        };
+        case ScaleMode::UniformByHeight:
+            return {
+                size.x * windowSize.y,
+                size.y * windowSize.y
+            };
     }
 
-    return size;
+    return {};
 }
-
 
 void UIElement::updateScreenRelative(const sf::Vector2u& windowSize)
 {
-    if(is_screen_relative)
+    if(screen_relative)
     {
-        size = computeAbsoluteSize(screen_relative, windowSize);
-        position = computeAbsolutePosition(screen_relative, windowSize);       
+        size = screen_relative->toAbsoluteSize(windowSize);
+        position = screen_relative->toAbsolutePosition(windowSize);
     }
 }

@@ -4,6 +4,7 @@
 #include "GameState.hpp"
 #include "InputField.hpp"
 #include "Button.hpp"
+#include "GenerationPreview.hpp"
 
 class CreateWorldState : public GameState
 {
@@ -13,6 +14,8 @@ private:
     InputField seed;
 
     Button create;
+
+    GenerationPreview preview;
 
 public:
 

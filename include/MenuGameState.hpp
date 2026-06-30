@@ -7,6 +7,7 @@
 #include "Slot.hpp"
 #include "WorldList.hpp"
 #include "LobbyPlayerElement.hpp"
+#include "Slider.hpp"
 
 #include "Hotbar.hpp"
 
@@ -17,6 +18,7 @@ private:
     Button quit;
     WorldList worldList;
     LobbyPlayerElement player;
+    Slider testSlider;
 
 public:
 

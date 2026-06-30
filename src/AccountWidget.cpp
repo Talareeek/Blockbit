@@ -1,13 +1,13 @@
 #include "../include/AccountWidget.hpp"
 #include "../include/AssetManager.hpp"
 
-AccountWidget::AccountWidget() : UIElement(UIElement::ScreenRelative{{0.85f, 0}, {0.15f, 0.1f}, true, UIElement::ScreenRelative::Axis::Y})
+AccountWidget::AccountWidget() : UIElement(UIElement::ScreenRelative{{0.85f, 0}, {0.15f, 0.1f}, UIElement::ScreenRelative::ScaleMode::UniformByHeight})
 {
 
 }
 
 
-AccountWidget::AccountWidget(Account* account) : UIElement(UIElement::ScreenRelative{{0.85f, 0}, {0.15f, 0.1f}, true, UIElement::ScreenRelative::Axis::Y}), account(account)
+AccountWidget::AccountWidget(Account* account) : UIElement(UIElement::ScreenRelative{{0.85f, 0}, {0.15f, 0.1f}, UIElement::ScreenRelative::ScaleMode::UniformByHeight}), account(account)
 {
 
 }

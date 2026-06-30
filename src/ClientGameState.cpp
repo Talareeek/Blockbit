@@ -111,52 +111,57 @@ void ClientGameState::processIncoming()
         return;
     }
 
-    for (auto& pkt : packets)
+    for (auto& packet : packets)
     {
         try
         {
-            PacketReader r(pkt.payload.data(), pkt.payload.size());
+            PacketReader reader(packet.payload.data(), packet.payload.size());
 
-            switch (pkt.type)
+            switch (packet.type)
             {
                 case PacketType::Initialization:
                 {
-                    auto init = deserializeInitialization(r);
+                    auto init = deserializeInitialization(reader);
+
                     auto& chunk = world.getChunks()[init.chunk.chunk_position];
                     chunk = init.chunk;
+
                     chunk.meshDirty = true;
                     world.chunkMeshes[init.chunk.chunk_position].built = false;
                     initialized = true;
+
                     break;
                 }
                 case PacketType::Snapshot:
                 {
-                    auto snap = deserializeSnapshot(r);
-                    rebuildEntitiesFromSnapshot(snap);
+                    auto snapshot = deserializeSnapshot(reader);
+                    rebuildEntitiesFromSnapshot(snapshot);
+
                     break;
                 }
                 case PacketType::BlockUpdate:
                 {
-                    auto bu = deserializeBlockUpdate(r);
-                    world.setBlock(bu.x, bu.y, bu.block);
+                    auto block_update = deserializeBlockUpdate(reader);
+                    world.setBlock(block_update.x, block_update.y, block_update.block);
                     break;
                 }
                 case PacketType::Spawn:
                 {
-                    auto sp = deserializeSpawn(r);
-                    myEntityId = sp.id;
+                    auto spawn = deserializeSpawn(reader);
+                    myEntityId = spawn.id;
                     localPlayerEntityId = myEntityId;
                     break;
                 }
                 case PacketType::Despawn:
                 {
-                    auto dp = deserializeDespawn(r);
+                    auto despawn = deserializeDespawn(reader);
                     auto& entities = world.getEntities();
-                    entities.erase(std::remove_if(entities.begin(), entities.end(),
-                        [&](const Entity& e) { return e.getID() == dp.id; }), entities.end());
+                    entities.erase(std::remove_if(entities.begin(), entities.end(), [&](const Entity& e) { return e.getID() == despawn.id; }), entities.end());
+                    
                     break;
                 }
                 case PacketType::Input:
+                    
                     break;
             }
         }

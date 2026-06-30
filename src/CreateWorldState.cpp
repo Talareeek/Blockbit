@@ -9,10 +9,14 @@ CreateWorldState::CreateWorldState(Game* game) : GameState(game)
     UIElement::ScreenRelative name_relative;
     name_relative.position = {50.0f, 50.0f};
     name_relative.size = {10.0f, 5.0f};
-    name_relative.axis = UIElement::ScreenRelative::Axis::Y;
+    name_relative.mode = UIElement::ScreenRelative::ScaleMode::UniformByHeight;
 
     name = InputField(InputField({100.0f, 100.0f}, {400.0f, 50.0f}), "Name", "World Name");
     seed = InputField(InputField({100.0f, 200.0f}, {400.0f, 50.0f}), "", "Seed");
+    UIElement::ScreenRelative previewRelative{{0.40f, 0.05f}, {0.55f, 0.90f}, UIElement::ScreenRelative::ScaleMode::Stretch};
+    preview = GenerationPreview(previewRelative, static_cast<unsigned int>(std::rand()));
+    preview.updateScreenRelative(game->getWindow().getSize());
+
     create = Button({100.0f, 300.0f}, {200.0f, 50.0f}, sf::Color::Green, "Create",
         [this]()
         {
@@ -59,6 +63,7 @@ void CreateWorldState::handleEvent(const sf::Event& event)
     name.handleEvent(event);
     seed.handleEvent(event);
     create.handleEvent(event);
+    preview.handleEvent(event);
 }
 
 void CreateWorldState::update(float dt)
@@ -74,6 +79,9 @@ void CreateWorldState::update(float dt)
     create.updateScreenRelative(game->getWindow().getSize());
 
     create.update(dt);
+
+    preview.updateScreenRelative(game->getWindow().getSize());
+    preview.update(dt);
 
     if(InputManager::isLazyKeyPressed(sf::Keyboard::Key::Escape))
     {
@@ -102,4 +110,6 @@ void CreateWorldState::render(sf::RenderWindow& window)
     seed.render(window);
 
     create.render(window);
+
+    preview.render(window);
 }

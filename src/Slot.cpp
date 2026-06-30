@@ -9,7 +9,7 @@ Slot::Slot() : UIElement(sf::Vector2f(0.0f, 0.0f), sf::Vector2f(20.0f, 20.0f))
     
 }
 
-Slot::Slot(const sf::Vector2f& relative_position, const float size, bool show_item_info) : UIElement(UIElement::ScreenRelative{relative_position, sf::Vector2f(size, size), true, UIElement::ScreenRelative::Axis::X}), show_item_info{show_item_info}
+Slot::Slot(const sf::Vector2f& relative_position, const float size, bool show_item_info) : UIElement(UIElement::ScreenRelative{relative_position, sf::Vector2f(size, size), UIElement::ScreenRelative::ScaleMode::UniformByWidth}), show_item_info{show_item_info}
 {
     
 }
