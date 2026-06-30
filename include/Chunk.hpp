@@ -17,6 +17,7 @@ struct Chunk
     Block blocks[CHUNK_HEIGHT][CHUNK_WIDTH];
     bool dirty;
     bool generated;
+    bool meshDirty;
 };
 
 #endif // CHUNK_HPP

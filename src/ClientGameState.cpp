@@ -95,6 +95,7 @@ void ClientGameState::rebuildEntitiesFromSnapshot(const SnapshotPacket& snap)
     }
 
     playerUIInitialized = false;
+    tryInitializePlayerUI();
 }
 
 void ClientGameState::processIncoming()
@@ -121,8 +122,10 @@ void ClientGameState::processIncoming()
                 case PacketType::Initialization:
                 {
                     auto init = deserializeInitialization(r);
-                    world.getChunks()[init.chunk.chunk_position] = init.chunk;
-                    world.chunkMeshes.erase(init.chunk.chunk_position);
+                    auto& chunk = world.getChunks()[init.chunk.chunk_position];
+                    chunk = init.chunk;
+                    chunk.meshDirty = true;
+                    world.chunkMeshes[init.chunk.chunk_position].built = false;
                     initialized = true;
                     break;
                 }
@@ -136,8 +139,6 @@ void ClientGameState::processIncoming()
                 {
                     auto bu = deserializeBlockUpdate(r);
                     world.setBlock(bu.x, bu.y, bu.block);
-                    int chunkPos = (bu.x >= 0) ? bu.x / CHUNK_WIDTH : (bu.x - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
-                    world.chunkMeshes.erase(chunkPos);
                     break;
                 }
                 case PacketType::Spawn:

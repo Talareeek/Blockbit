@@ -98,6 +98,7 @@ void GameServer::despawnRemotePlayer(uint32_t clientId)
 
     clientToEntity.erase(it);
     remoteInputQueues.erase(clientId);
+    sentChunks.erase(clientId);
 
     std::cout << "[Server] Client " << clientId << " left, despawned entity " << entityId << '\n';
 }
@@ -106,6 +107,8 @@ void GameServer::sendInitializationTo(uint32_t clientId, int aroundChunkPos)
 {
     constexpr int N = World::SIMULATION_DISTANCE + 1;
     int start = aroundChunkPos - N / 2;
+
+    auto& sent = sentChunks[clientId];
 
     for (int i = 0; i < N; i++)
     {
@@ -118,6 +121,44 @@ void GameServer::sendInitializationTo(uint32_t clientId, int aroundChunkPos)
         InitializationPacket init;
         init.chunk = world.getChunk(cp);
         transport->send(clientId, serializePacket(init));
+        sent.insert(cp);
+    }
+}
+
+void GameServer::streamChunksToClients()
+{
+    constexpr int HALF = World::SIMULATION_DISTANCE / 2;
+
+    for (auto& [clientId, entityId] : clientToEntity)
+    {
+        if (clientId == hostClientId) continue;
+
+        Entity* playerEntity = nullptr;
+        for (auto& e : world.getEntities())
+        {
+            if (e.getID() == entityId) { playerEntity = &e; break; }
+        }
+        if (!playerEntity || !playerEntity->hasComponent<TransformComponent>()) continue;
+
+        float px = playerEntity->getComponent<TransformComponent>().position.x;
+        int playerChunk = (px >= 0.0f)
+            ? static_cast<int>(px) / CHUNK_WIDTH
+            : (static_cast<int>(px) - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
+
+        auto& sent = sentChunks[clientId];
+        auto& chunks = world.getChunks();
+
+        for (int cp = playerChunk - HALF; cp <= playerChunk + HALF; ++cp)
+        {
+            if (sent.contains(cp)) continue;
+            auto it = chunks.find(cp);
+            if (it == chunks.end() || !it->second.generated) continue;
+
+            InitializationPacket init;
+            init.chunk = it->second;
+            transport->send(clientId, serializePacket(init));
+            sent.insert(cp);
+        }
     }
 }
 
@@ -292,6 +333,7 @@ void GameServer::tick(float tick_step)
 
         runSystems(tick_step);
 
+        streamChunksToClients();
         broadcastBlockUpdates();
         broadcastSnapshot();
     }

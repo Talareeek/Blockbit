@@ -50,6 +50,7 @@ Chunk& World::getChunk(int chunk_position)
         Chunk c{};
         c.chunk_position = chunk_position;
         c.dirty = true;
+        c.meshDirty = true;
         c.generated = false;
         chunks[chunk_position] = c;
     }
@@ -91,6 +92,7 @@ void World::setBlock(int wx, int wy, Block block)
     Chunk& chunk = chunks[chunk_position];
     chunk.blocks[local_y][local_x] = block;
     chunk.dirty = true;
+    chunk.meshDirty = true;
     chunk.generated = true;
 
     if (trackBlockChanges)
@@ -116,6 +118,7 @@ void World::generateFlatChunk(int chunk_position)
 {
     Chunk& chunk = getChunk(chunk_position);
     chunk.dirty = true;
+    chunk.meshDirty = true;
     chunk.generated = true;
 
     for (int y = 0; y < CHUNK_HEIGHT; ++y)
@@ -154,6 +157,7 @@ void World::generateChunk(int chunk_position)
 
     chunk.generated = true;
     chunk.dirty = true;
+    chunk.meshDirty = true;
 }
 
 
@@ -721,6 +725,8 @@ void World::readChunk(int chunk_position)
     }
 
     c.generated = true;
+    c.dirty = false;
+    c.meshDirty = true;
     chunks[chunk_position] = c;
 }
 
@@ -1136,6 +1142,7 @@ void World::rebuildChunkMesh(int chunk_position, unsigned int unit_size)
     }
 
     mesh.built = true;
+    chunk.meshDirty = false;
 }
 
 void renderSunAndMoon(float daytime, sf::RenderWindow& window)

@@ -19,7 +19,7 @@ void RenderWorld(World& world, sf::RenderWindow& window)
 
         ChunkMesh& mesh = world.chunkMeshes[i];
 
-        if (chunk.dirty || !mesh.built)
+        if (chunk.meshDirty || !mesh.built)
         {
             world.rebuildChunkMesh(i, unit_size);
         }
