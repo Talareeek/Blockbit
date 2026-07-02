@@ -248,6 +248,8 @@ void MainGameState::render(sf::RenderWindow& window)
 
     window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
 
+    if (hideUI) return;
+
     healthBar.render(window);
     hotbar.render(window);
 

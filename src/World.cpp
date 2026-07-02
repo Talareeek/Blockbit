@@ -31,7 +31,7 @@ World::World(const std::filesystem::path path) : path{path}
     load();
 }
 
-World::World(const std::string name, const std::filesystem::path path, unsigned int seed) : name(name), path(path), seed(seed), perlin(seed)
+World::World(const std::string name, const std::filesystem::path path, unsigned int seed, GenerationProperties generation_properties) : name(name), path(path), seed(seed), perlin(seed), generation_properties{generation_properties}
 {
     generateWorldSpawn();
     save();
@@ -150,10 +150,17 @@ void World::generateChunk(int chunk_position)
 {
     Chunk& chunk = getChunk(chunk_position);
 
-    generateTerrain(chunk_position);
-    generateCaves(chunk_position);
-    generateOres(chunk_position);
-    generateNature(chunk_position);
+    if(generation_properties.flat)
+    {
+        generateFlatChunk(chunk_position);
+    }
+    else
+    {
+        generateTerrain(chunk_position);
+        generateCaves(chunk_position);
+        generateOres(chunk_position);
+        generateNature(chunk_position);
+    }
 
     chunk.generated = true;
     chunk.dirty = true;
@@ -327,9 +334,10 @@ sf::Vector2f getSunWorldPosition(const World& world, sf::Vector2f cameraCenter)
 float World::getHeightNoise(float x) const
 {
     float total = 0;
-    float frequency = 0.03f;
-    float amplitude = 1.0f;
-    float persistence = 0.5f;
+    
+    float frequency = generation_properties.frequency; //0.03f;
+    float amplitude = generation_properties.amplitude; //1.0f;
+    float persistence = generation_properties.persistence; //0.5f;
 
     for(int i = 0; i < 4; i++)
     {
@@ -344,10 +352,10 @@ float World::getHeightNoise(float x) const
 
 int World::getHeight(int worldX) const
 {
-    float baseHeight = 45.0f;
-    float heightScale = 35.0f;
+    //float baseHeight = 45.0f;
+    //float heightScale = 35.0f;
 
-    return baseHeight + getHeightNoise((float)worldX) * heightScale;
+    return generation_properties.base_height + getHeightNoise((float)worldX) * generation_properties.height_scale;
 }
 
 
@@ -680,9 +688,15 @@ void World::writeData() const
 {
     std::ofstream file(path / "data", std::ios::out);
 
-    file << "DayTime: " << getDayTime() << '\n';
-    file << "Days: " << days << '\n';
-    file << "Spawn Point: " << getSpawnPoint().x << ' ' << getSpawnPoint().y << '\n';
+    file << "DayTime " << getDayTime() << '\n';
+    file << "Days " << days << '\n';
+    file << "SpawnPoint " << getSpawnPoint().x << ' ' << getSpawnPoint().y << '\n';
+    file << "Flat " << generation_properties.flat << '\n';
+    file << "BaseHeight " << generation_properties.base_height << '\n';
+    file << "HeightScale " << generation_properties.height_scale << '\n';
+    file << "Frequency " << generation_properties.frequency << '\n';
+    file << "Amplitude " << generation_properties.amplitude << '\n';
+    file << "Persistence " << generation_properties.persistence << '\n';
 }
 
 
@@ -913,7 +927,14 @@ void World::readData()
 
     file >> trash >> days;
 
-    file >> trash >> trash >> spawnPoint.x >> spawnPoint.y;
+    file >> trash >> spawnPoint.x >> spawnPoint.y;
+
+    file >> trash >> generation_properties.flat;
+    file >> trash >> generation_properties.base_height;
+    file >> trash >> generation_properties.height_scale;
+    file >> trash >> generation_properties.frequency;
+    file >> trash >> generation_properties.amplitude;
+    file >> trash >> generation_properties.persistence;
 
     std::cout << "Data file: " << std::endl;
     std::cout << "Daytime: " << dayTime << std::endl;

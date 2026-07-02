@@ -4,14 +4,19 @@
 #include "GameState.hpp"
 #include "InputField.hpp"
 #include "Button.hpp"
+#include "Checkbox.hpp"
 #include "GenerationPreview.hpp"
 
 class CreateWorldState : public GameState
 {
 private:
 
+    Button quit;
+
     InputField name;
     InputField seed;
+
+    Checkbox flat;
 
     Button create;
 

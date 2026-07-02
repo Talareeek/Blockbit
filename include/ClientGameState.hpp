@@ -32,9 +32,12 @@ private:
 
     uint8_t localSelectedSlot = 0;
 
+    bool pendingScreenshot = false;
+
     void processIncoming();
     void sendTickInputs();
     void rebuildEntitiesFromSnapshot(const SnapshotPacket& snap);
+    void saveScreenshot(sf::RenderWindow& window);
 
     bool isLocalSession() const { return localServer.has_value(); }
 

@@ -13,6 +13,12 @@
 
 #include <iostream>
 #include <algorithm>
+#include <filesystem>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
+#include <cstdlib>
 
 ClientGameState::ClientGameState(Game* game, const std::string& host, uint16_t port) : MainGameState(game, World{})
 {
@@ -282,13 +288,21 @@ void ClientGameState::update(float dt)
 
 void ClientGameState::handleEvent(const sf::Event& event)
 {
-    if (!isLocalSession() && event.is<sf::Event::KeyPressed>())
+    if (auto key = event.getIf<sf::Event::KeyPressed>())
     {
-        auto key = event.getIf<sf::Event::KeyPressed>();
-        if (key && key->code == sf::Keyboard::Key::Escape && (connectionFailed || (transport && !transport->isConnected())))
+        if (!isLocalSession() && key->code == sf::Keyboard::Key::Escape && (connectionFailed || (transport && !transport->isConnected())))
         {
             game->popState();
             return;
+        }
+
+        if (key->code == sf::Keyboard::Key::F1)
+        {
+            hideUI = !hideUI;
+        }
+        else if (key->code == sf::Keyboard::Key::F2)
+        {
+            pendingScreenshot = true;
         }
     }
 
@@ -376,4 +390,63 @@ void ClientGameState::render(sf::RenderWindow& window)
     }
 
     MainGameState::render(window);
+
+    if (pendingScreenshot)
+    {
+        pendingScreenshot = false;
+        saveScreenshot(window);
+    }
+}
+
+void ClientGameState::saveScreenshot(sf::RenderWindow& window)
+{
+    std::filesystem::path dir;
+
+    #ifdef _WIN32
+        const char* appdata = std::getenv("APPDATA");
+        dir = appdata ? std::filesystem::path(appdata) : std::filesystem::temp_directory_path();
+    #else
+        const char* home = std::getenv("HOME");
+        dir = home ? std::filesystem::path(home) : std::filesystem::temp_directory_path();
+    #endif
+
+    dir /= "Blockbit";
+    dir /= "screenshots";
+
+    try
+    {
+        std::filesystem::create_directories(dir);
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "[Client] Failed to create screenshot directory: " << e.what() << '\n';
+        return;
+    }
+
+    auto now = std::chrono::system_clock::now();
+    std::time_t t = std::chrono::system_clock::to_time_t(now);
+    std::tm tm_local{};
+    #ifdef _WIN32
+        localtime_s(&tm_local, &t);
+    #else
+        localtime_r(&t, &tm_local);
+    #endif
+
+    std::ostringstream name;
+    name << "screenshot_" << std::put_time(&tm_local, "%Y-%m-%d_%H-%M-%S") << ".png";
+
+    sf::Vector2u size = window.getSize();
+    if (size.x == 0 || size.y == 0) return;
+
+    sf::Texture texture(size);
+    texture.update(window);
+
+    std::filesystem::path filePath = dir / name.str();
+    if (!texture.copyToImage().saveToFile(filePath.string()))
+    {
+        std::cerr << "[Client] Failed to save screenshot to " << filePath << '\n';
+        return;
+    }
+
+    std::cerr << "[Client] Screenshot saved: " << filePath << '\n';
 }

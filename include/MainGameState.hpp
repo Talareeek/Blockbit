@@ -32,6 +32,7 @@ protected:
     bool saveOnDestruct = true;
 
     bool debug = false;
+    bool hideUI = false;
 
     int fps = 0;
     float last_fps_update = 1.0f;

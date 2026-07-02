@@ -1,4 +1,5 @@
 #include "../include/GenerationPreview.hpp"
+#include "../include/Button.hpp"
 
 #include <algorithm>
 #include <cstdlib>

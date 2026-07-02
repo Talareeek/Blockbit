@@ -14,6 +14,16 @@
 
 #include <SFML/Graphics.hpp>
 
+struct GenerationProperties
+{
+    bool flat;
+    float base_height;
+    float height_scale;
+    float frequency;
+    float amplitude;
+    float persistence;
+};
+
 class World
 {
 private:
@@ -24,10 +34,13 @@ private:
 
     unsigned int seed;
 
-    std::unordered_map<int, Chunk> chunks;
-    std::vector<Entity> entities;
+    GenerationProperties generation_properties;
 
     PerlinNoise perlin{0};
+
+    std::unordered_map<int, Chunk> chunks;
+    std::vector<Entity> entities;
+   
 
     uint32_t version;
 
@@ -45,10 +58,10 @@ private:
 public:
 
     World() : version(0) {}
-    World(unsigned int seed) : perlin(seed), version(0), seed(seed) {}
+    World(unsigned int seed, GenerationProperties generation_properties) : perlin(seed), version(0), seed(seed), generation_properties{generation_properties} {}
 
     World(const std::filesystem::path path);
-    World(const std::string name, const std::filesystem::path path, unsigned int seed);
+    World(const std::string name, const std::filesystem::path path, unsigned int seed, GenerationProperties generation_properties);
 
     void setSeed(unsigned int seed)
     {

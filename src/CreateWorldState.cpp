@@ -6,6 +6,10 @@
 
 CreateWorldState::CreateWorldState(Game* game) : GameState(game)
 {
+    quit = Button({0.0f, 0.0f}, {0.0f, 0.0f}, sf::Color(211, 211, 211), "X");
+
+
+
     UIElement::ScreenRelative name_relative;
     name_relative.position = {50.0f, 50.0f};
     name_relative.size = {10.0f, 5.0f};
@@ -13,6 +17,7 @@ CreateWorldState::CreateWorldState(Game* game) : GameState(game)
 
     name = InputField(InputField({100.0f, 100.0f}, {400.0f, 50.0f}), "Name", "World Name");
     seed = InputField(InputField({100.0f, 200.0f}, {400.0f, 50.0f}), "", "Seed");
+    flat = Checkbox({100.0f, 260.0f}, {400.0f, 30.0f}, false, "Flat");
     UIElement::ScreenRelative previewRelative{{0.40f, 0.05f}, {0.55f, 0.90f}, UIElement::ScreenRelative::ScaleMode::Stretch};
     preview = GenerationPreview(previewRelative, static_cast<unsigned int>(std::rand()));
     preview.updateScreenRelative(game->getWindow().getSize());
@@ -47,7 +52,17 @@ CreateWorldState::CreateWorldState(Game* game) : GameState(game)
                 stream >> potential_seed;
             }
 
-            World world(name.getText(), path, (!seed_text.empty()) ? potential_seed : std::rand());
+            GenerationProperties properties;
+
+            properties.flat = flat.getValue();
+
+            properties.base_height = preview.getBaseHeight();
+            properties.height_scale = preview.getHeightScale();
+            properties.frequency = preview.getFrequency();
+            properties.amplitude = preview.getAmplitude();
+            properties.persistence = preview.getPersistence();
+
+            World world(name.getText(), path, (!seed_text.empty()) ? potential_seed : std::rand(), properties);
 
             Game* game = this->game;
 
@@ -60,14 +75,29 @@ CreateWorldState::CreateWorldState(Game* game) : GameState(game)
 
 void CreateWorldState::handleEvent(const sf::Event& event)
 {
+    quit.handleEvent(event);
     name.handleEvent(event);
     seed.handleEvent(event);
+    flat.handleEvent(event);
     create.handleEvent(event);
     preview.handleEvent(event);
 }
 
 void CreateWorldState::update(float dt)
 {
+    if(InputManager::isLazyKeyPressed(sf::Keyboard::Key::Escape) || quit.clicked())
+    {
+        game->popState();
+        return;
+    }
+
+    sf::Vector2u winSize = game->getWindow().getSize();
+    float buttonSize = winSize.y / 20.0f - 20.0f;
+    quit.setSize({buttonSize, buttonSize});
+    quit.setPosition({winSize.x - buttonSize - 10.0f, 10.0f});
+
+    quit.update(dt);
+
     name.updateScreenRelative(game->getWindow().getSize());
 
     name.update(dt);
@@ -76,6 +106,10 @@ void CreateWorldState::update(float dt)
 
     seed.update(dt);
 
+    flat.updateScreenRelative(game->getWindow().getSize());
+
+    flat.update(dt);
+
     create.updateScreenRelative(game->getWindow().getSize());
 
     create.update(dt);
@@ -83,10 +117,7 @@ void CreateWorldState::update(float dt)
     preview.updateScreenRelative(game->getWindow().getSize());
     preview.update(dt);
 
-    if(InputManager::isLazyKeyPressed(sf::Keyboard::Key::Escape))
-    {
-        game->popState();
-    }
+    
 }
 
 void CreateWorldState::render(sf::RenderWindow& window)
@@ -105,9 +136,36 @@ void CreateWorldState::render(sf::RenderWindow& window)
 
     window.draw(background);
 
+
+    sf::RectangleShape header({static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y) / 20});
+
+    header.setPosition({0.0f, 0.0f});
+
+    header.setFillColor(sf::Color(211, 211, 211));
+
+    header.setOutlineColor(sf::Color::Black);
+
+    header.setOutlineThickness(5.0f);
+
+    window.draw(header);
+
+    
+    sf::Text header_text(AssetManager::getFont(0), "Create world", header.getSize().y - 20.0f);
+
+    header_text.setPosition({10.0f, 10.0f});
+
+    header_text.setOutlineColor(sf::Color::Black);
+    header_text.setOutlineThickness(2.0f);
+
+    window.draw(header_text);
+
+    quit.render(window);
+
     name.render(window);
 
     seed.render(window);
+
+    flat.render(window);
 
     create.render(window);
 
