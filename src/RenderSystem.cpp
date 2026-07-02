@@ -5,6 +5,7 @@
 #include "../include/AssetManager.hpp"
 #include "../include/HealthComponent.hpp"
 #include "../include/MainGameState.hpp"
+#include "../include/World.hpp"
 
 #include <cmath>
 
@@ -18,11 +19,17 @@ float screenToWorldY(float screenY, float unit_size, float windowHeight)
     return (windowHeight - screenY) / unit_size;
 }
 
-void RenderSystem(std::vector<Entity>& entities, sf::RenderWindow& window)
+void RenderEntities(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window)
 {
+    sf::View view({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
+
+    view.setSize({view.getSize().x, -view.getSize().y});
+
+    window.setView(view);
+
     unsigned int unit_size = window.getSize().y / MainGameState::UNIT_SIZE_FACTOR;
 
-    for(auto& entity : entities)
+    for(auto& entity : world.getEntities())
     {
         if(!entity.hasComponent<RenderComponent>() || !entity.hasComponent<TransformComponent>()) continue;
 
@@ -45,7 +52,9 @@ void RenderSystem(std::vector<Entity>& entities, sf::RenderWindow& window)
 
         auto& transform = entity.getComponent<TransformComponent>();
 
-        sprite.setPosition({static_cast<float>(transform.position.x * unit_size), static_cast<float>(transform.position.y * unit_size)});
+        sf::Vector2f render_position = {static_cast<float>(transform.position.x - camera.x), static_cast<float>(transform.position.y - camera.y)};
+
+        sprite.setPosition({static_cast<float>(render_position.x * unit_size), static_cast<float>(render_position.y * unit_size)});
         window.draw(sprite);
     }
 }

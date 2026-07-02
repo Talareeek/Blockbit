@@ -4,9 +4,9 @@
 #include "World.hpp"
 #include <SFML/Graphics.hpp>
 
-extern void RenderWorld(World& world, sf::RenderWindow& window);
+extern void RenderWorld(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window);
 
-extern void RenderBlockOverlay(World& world, sf::RenderWindow& window, uint32_t viewerEntityId);
+extern void RenderBlockOverlay(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window, uint32_t viewerEntityId);
 
 extern void RenderLightRays(World& world, sf::RenderWindow& window);
 

@@ -222,29 +222,13 @@ void MainGameState::render(sf::RenderWindow& window)
         return;
     }
 
-    auto& entities = world.getEntities();
+    sf::Vector2<double> camera = entityWithID(localPlayerEntityId.value(), world).getComponent<TransformComponent>().position + sf::Vector2<double>(0.5, -0.5);
 
-    unsigned int unit_size = window.getSize().y / UNIT_SIZE_FACTOR;
+    RenderEntities(world, camera, window);
 
-    sf::View view(
-    {
-        static_cast<float>((entityWithID(localPlayerEntityId.value(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
-        static_cast<float>((entityWithID(localPlayerEntityId.value(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
-    },
-    {
-        (float)window.getSize().x,
-        (float)window.getSize().y
-    });
+    RenderWorld(world, camera, window);
 
-    view.setSize({view.getSize().x, -view.getSize().y});
-
-    window.setView(view);
-
-    RenderSystem(entities, window);
-
-    RenderWorld(world, window);
-
-    RenderBlockOverlay(world, window, localPlayerEntityId.value());
+    RenderBlockOverlay(world, camera, window, localPlayerEntityId.value());
 
     window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
 

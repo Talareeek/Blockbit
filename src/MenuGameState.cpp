@@ -32,8 +32,6 @@ MenuGameState::MenuGameState(Game* game) : GameState(game)
     quit.updateScreenRelative(game->getWindow().getSize());
 
     UIElement::ScreenRelative sliderRelative{{0.30f, 0.45f}, {0.30f, 0.08f}, UIElement::ScreenRelative::ScaleMode::UniformByHeight};
-    testSlider = Slider(sliderRelative, 0.0f, 100.0f, 50.0f, "Volume");
-    testSlider.updateScreenRelative(game->getWindow().getSize());
 }
 
 void MenuGameState::handleEvent(const sf::Event& event)
@@ -41,7 +39,6 @@ void MenuGameState::handleEvent(const sf::Event& event)
     worldList.handleEvent(event);
     quit.handleEvent(event);
     player.handleEvent(event);
-    testSlider.handleEvent(event);
 }
 
 void MenuGameState::update(float dt)
@@ -50,7 +47,6 @@ void MenuGameState::update(float dt)
 
     quit.updateScreenRelative(size);
     worldList.updateScreenRelative(size);
-    testSlider.updateScreenRelative(size);
 
     worldList.setPosition({size.x * 0.75f, 0.0f});
     worldList.setSize({size.x * 0.25f, static_cast<float>(size.y)});
@@ -59,7 +55,6 @@ void MenuGameState::update(float dt)
     quit.update(dt);
 
     player.update(dt);
-    testSlider.update(dt);
 }
 
 void MenuGameState::render(sf::RenderWindow& window)
@@ -84,7 +79,6 @@ void MenuGameState::render(sf::RenderWindow& window)
     worldList.render(window);
     quit.render(window);
     player.render(window);
-    testSlider.render(window);
 
 
     sf::Text copyright(AssetManager::getFont(0), L"©2026 Talarek\n(github.com/Talareeek)", 10);

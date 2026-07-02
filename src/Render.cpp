@@ -2,14 +2,17 @@
 #include "../include/MainGameState.hpp"
 #include "../include/BlockAtlas.hpp"
 
-void RenderWorld(World& world, sf::RenderWindow& window)
+void RenderWorld(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window)
 {
+    sf::View view({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
+
+    view.setSize({view.getSize().x, -view.getSize().y});
+
+    window.setView(view);
+
     unsigned int unit_size = window.getSize().y / MainGameState::UNIT_SIZE_FACTOR;
 
-    int centerChunk = window.getView().getCenter().x / unit_size / CHUNK_WIDTH;
-
-    sf::RenderStates states;
-    states.texture = &BlockAtlas::getTexture();
+    int centerChunk = static_cast<int>(std::floor(camera.x / static_cast<double>(CHUNK_WIDTH)));
 
     for (int i = centerChunk - 2; i <= centerChunk + 2; ++i)
     {
@@ -24,24 +27,40 @@ void RenderWorld(World& world, sf::RenderWindow& window)
             world.rebuildChunkMesh(i, unit_size);
         }
 
+        float tx = static_cast<float>((static_cast<double>(i * CHUNK_WIDTH) - camera.x) * static_cast<double>(unit_size));
+        float ty = static_cast<float>(-camera.y * static_cast<double>(unit_size));
+
+        sf::RenderStates states;
+        states.texture = &BlockAtlas::getTexture();
+        states.transform.translate({tx, ty});
+
         window.draw(mesh.vertices, states);
     }
 }
 
-void RenderBlockOverlay(World& world, sf::RenderWindow& window, uint32_t viewerEntityId)
+void RenderBlockOverlay(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window, uint32_t viewerEntityId)
 {
+    sf::View view({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
+
+    view.setSize({view.getSize().x, -view.getSize().y});
+
+    window.setView(view);
+
     unsigned int unit_size = window.getSize().y / MainGameState::UNIT_SIZE_FACTOR;
 
-    sf::Vector2i blockPos = getMouseBlockPosition(world, window);
-    int blockX = blockPos.x;
-    int blockY = blockPos.y;
+    sf::Vector2f mouseView = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+    double mouseWorldX = static_cast<double>(mouseView.x) / static_cast<double>(unit_size) + camera.x;
+    double mouseWorldY = static_cast<double>(mouseView.y) / static_cast<double>(unit_size) + camera.y;
+    int blockX = static_cast<int>(std::floor(mouseWorldX));
+    int blockY = static_cast<int>(std::floor(mouseWorldY));
+    sf::Vector2i blockPos{blockX, blockY};
 
     if(world.getBlock(blockX, blockY).id != BlockID::Air && isBlockInRange(entityWithID(viewerEntityId, world).getComponent<TransformComponent>(), blockPos, 4.0f))
     {
         sf::Sprite sprite(AssetManager::getTexture(8));
         sprite.setPosition({
-            blockX * static_cast<float>(unit_size),
-            blockY * static_cast<float>(unit_size)
+            static_cast<float>((static_cast<double>(blockX) - camera.x) * static_cast<double>(unit_size)),
+            static_cast<float>((static_cast<double>(blockY) - camera.y) * static_cast<double>(unit_size))
         });
 
         sprite.setScale({

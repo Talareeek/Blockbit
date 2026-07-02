@@ -1130,11 +1130,9 @@ void World::rebuildChunkMesh(int chunk_position, unsigned int unit_size)
             const sf::IntRect& uv =
                 BlockAtlas::getUV(texID);
 
-            float worldX =
-                (chunk_position * CHUNK_WIDTH + x) * size;
+            float worldX = x * size;
 
-            float worldY =
-                y * size;
+            float worldY = y * size;
 
             float heightFactor = 1.0f;
 

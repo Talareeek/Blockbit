@@ -18,7 +18,6 @@ private:
     Button quit;
     WorldList worldList;
     LobbyPlayerElement player;
-    Slider testSlider;
 
 public:
 

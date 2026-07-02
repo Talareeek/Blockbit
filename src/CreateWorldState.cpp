@@ -4,27 +4,75 @@
 #include "../include/AssetManager.hpp"
 #include "../include/ClientGameState.hpp"
 
+namespace
+{
+    constexpr float HEADER_H     = 0.07f;
+
+    constexpr float PANEL_X      = 0.03f;
+    constexpr float PANEL_Y      = 0.10f;
+    constexpr float PANEL_W      = 0.34f;
+    constexpr float PANEL_H      = 0.85f;
+
+    constexpr float FIELD_X      = PANEL_X + 0.02f;
+    constexpr float FIELD_W      = PANEL_W - 0.04f;
+
+    constexpr float NAME_Y       = 0.20f;
+    constexpr float SEED_Y       = 0.34f;
+    constexpr float FLAT_Y       = 0.48f;
+
+    constexpr float FIELD_H      = 0.06f;
+    constexpr float FLAT_H       = 0.05f;
+
+    constexpr float CREATE_Y     = 0.85f;
+    constexpr float CREATE_H     = 0.08f;
+
+    constexpr float PREVIEW_X    = 0.40f;
+    constexpr float PREVIEW_Y    = 0.12f;
+    constexpr float PREVIEW_W    = 0.57f;
+    constexpr float PREVIEW_H    = 0.83f;
+}
+
 CreateWorldState::CreateWorldState(Game* game) : GameState(game)
 {
-    quit = Button({0.0f, 0.0f}, {0.0f, 0.0f}, sf::Color(211, 211, 211), "X");
+    UIElement::ScreenRelative quitRelative{
+        {1.0f - 0.055f, 0.012f},
+        {0.04f, 0.05f},
+        UIElement::ScreenRelative::ScaleMode::Stretch};
 
+    quit = Button(quitRelative, sf::Color(200, 70, 70), "X");
 
+    UIElement::ScreenRelative nameRelative{
+        {FIELD_X, NAME_Y}, {FIELD_W, FIELD_H},
+        UIElement::ScreenRelative::ScaleMode::Stretch};
 
-    UIElement::ScreenRelative name_relative;
-    name_relative.position = {50.0f, 50.0f};
-    name_relative.size = {10.0f, 5.0f};
-    name_relative.mode = UIElement::ScreenRelative::ScaleMode::UniformByHeight;
+    UIElement::ScreenRelative seedRelative{
+        {FIELD_X, SEED_Y}, {FIELD_W, FIELD_H},
+        UIElement::ScreenRelative::ScaleMode::Stretch};
 
-    name = InputField(InputField({100.0f, 100.0f}, {400.0f, 50.0f}), "Name", "World Name");
-    seed = InputField(InputField({100.0f, 200.0f}, {400.0f, 50.0f}), "", "Seed");
-    flat = Checkbox({100.0f, 260.0f}, {400.0f, 30.0f}, false, "Flat");
-    UIElement::ScreenRelative previewRelative{{0.40f, 0.05f}, {0.55f, 0.90f}, UIElement::ScreenRelative::ScaleMode::Stretch};
+    UIElement::ScreenRelative flatRelative{
+        {FIELD_X, FLAT_Y}, {FIELD_W, FLAT_H},
+        UIElement::ScreenRelative::ScaleMode::Stretch};
+
+    UIElement::ScreenRelative createRelative{
+        {FIELD_X, CREATE_Y}, {FIELD_W, CREATE_H},
+        UIElement::ScreenRelative::ScaleMode::Stretch};
+
+    name = InputField(InputField(nameRelative), "", "World name");
+    seed = InputField(InputField(seedRelative), "", "Seed (empty = random)");
+    flat = Checkbox(flatRelative, false, "Flat terrain");
+
+    UIElement::ScreenRelative previewRelative{
+        {PREVIEW_X, PREVIEW_Y}, {PREVIEW_W, PREVIEW_H},
+        UIElement::ScreenRelative::ScaleMode::Stretch};
+
     preview = GenerationPreview(previewRelative, static_cast<unsigned int>(std::rand()));
     preview.updateScreenRelative(game->getWindow().getSize());
 
-    create = Button({100.0f, 300.0f}, {200.0f, 50.0f}, sf::Color::Green, "Create",
+    create = Button(createRelative, sf::Color(70, 160, 90), "Create world",
         [this]()
         {
+            if (name.getText().empty()) return;
+
             std::string home;
 
             #ifdef _WIN32
@@ -92,82 +140,107 @@ void CreateWorldState::update(float dt)
     }
 
     sf::Vector2u winSize = game->getWindow().getSize();
-    float buttonSize = winSize.y / 20.0f - 20.0f;
-    quit.setSize({buttonSize, buttonSize});
-    quit.setPosition({winSize.x - buttonSize - 10.0f, 10.0f});
+
+    quit.updateScreenRelative(winSize);
+    name.updateScreenRelative(winSize);
+    seed.updateScreenRelative(winSize);
+    flat.updateScreenRelative(winSize);
+    create.updateScreenRelative(winSize);
+    preview.updateScreenRelative(winSize);
 
     quit.update(dt);
-
-    name.updateScreenRelative(game->getWindow().getSize());
-
     name.update(dt);
-
-    seed.updateScreenRelative(game->getWindow().getSize());
-
     seed.update(dt);
-
-    flat.updateScreenRelative(game->getWindow().getSize());
-
     flat.update(dt);
-
-    create.updateScreenRelative(game->getWindow().getSize());
-
     create.update(dt);
-
-    preview.updateScreenRelative(game->getWindow().getSize());
     preview.update(dt);
-
-    
 }
 
 void CreateWorldState::render(sf::RenderWindow& window)
 {
-    sf::Texture texture = AssetManager::getTexture(3);
+    window.setView(sf::View(sf::FloatRect({0.0f, 0.0f},
+        {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
 
-    texture.setRepeated(true);
+    const float win_w = static_cast<float>(window.getSize().x);
+    const float win_h = static_cast<float>(window.getSize().y);
 
-    sf::RectangleShape background({static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().x)});
-
-    background.setTexture(&texture);
-
-    background.setTextureRect({{0, 0}, {480, 480}});
-
+    sf::Sprite background(AssetManager::getTexture(200135));
     background.setPosition({0.0f, 0.0f});
-
+    background.setScale({
+        win_w / background.getTexture().getSize().x,
+        win_h / background.getTexture().getSize().y
+    });
     window.draw(background);
 
+    sf::RectangleShape overlay({win_w, win_h});
+    overlay.setFillColor(sf::Color(10, 15, 25, 140));
+    window.draw(overlay);
 
-    sf::RectangleShape header({static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y) / 20});
-
+    sf::RectangleShape header({win_w, win_h * HEADER_H});
     header.setPosition({0.0f, 0.0f});
-
-    header.setFillColor(sf::Color(211, 211, 211));
-
-    header.setOutlineColor(sf::Color::Black);
-
-    header.setOutlineThickness(5.0f);
-
+    header.setFillColor(sf::Color(30, 40, 60, 220));
+    header.setOutlineColor(sf::Color(0, 0, 0, 180));
+    header.setOutlineThickness(2.0f);
     window.draw(header);
 
-    
-    sf::Text header_text(AssetManager::getFont(0), "Create world", header.getSize().y - 20.0f);
-
-    header_text.setPosition({10.0f, 10.0f});
-
+    sf::Text header_text(AssetManager::getFont(0), "Create world",
+        static_cast<unsigned>(header.getSize().y * 0.55f));
+    header_text.setFillColor(sf::Color::White);
     header_text.setOutlineColor(sf::Color::Black);
     header_text.setOutlineThickness(2.0f);
-
+    {
+        auto b = header_text.getLocalBounds();
+        header_text.setOrigin({b.position.x, b.position.y + b.size.y * 0.5f});
+        header_text.setPosition({win_w * 0.5f - b.size.x * 0.5f, header.getSize().y * 0.5f});
+    }
     window.draw(header_text);
 
-    quit.render(window);
+    sf::RectangleShape panel({win_w * PANEL_W, win_h * PANEL_H});
+    panel.setPosition({win_w * PANEL_X, win_h * PANEL_Y});
+    panel.setFillColor(sf::Color(20, 25, 40, 190));
+    panel.setOutlineColor(sf::Color(80, 100, 130, 220));
+    panel.setOutlineThickness(2.0f);
+    window.draw(panel);
+
+    sf::RectangleShape panel_header({win_w * PANEL_W, win_h * 0.045f});
+    panel_header.setPosition({win_w * PANEL_X, win_h * PANEL_Y});
+    panel_header.setFillColor(sf::Color(40, 55, 85, 230));
+    window.draw(panel_header);
+
+    sf::Text panel_title(AssetManager::getFont(0), "World settings",
+        static_cast<unsigned>(panel_header.getSize().y * 0.55f));
+    panel_title.setFillColor(sf::Color(220, 230, 245));
+    panel_title.setOutlineColor(sf::Color::Black);
+    panel_title.setOutlineThickness(1.0f);
+    {
+        auto b = panel_title.getLocalBounds();
+        panel_title.setOrigin({b.position.x, b.position.y + b.size.y * 0.5f});
+        panel_title.setPosition({panel_header.getPosition().x + win_w * 0.012f,
+                                 panel_header.getPosition().y + panel_header.getSize().y * 0.5f});
+    }
+    window.draw(panel_title);
+
+    auto drawLabel = [&](const std::string& str, float rel_x, float rel_y)
+    {
+        sf::Text label(AssetManager::getFont(0), str, static_cast<unsigned>(win_h * 0.022f));
+        label.setFillColor(sf::Color(220, 225, 235));
+        label.setOutlineColor(sf::Color::Black);
+        label.setOutlineThickness(1.0f);
+        auto b = label.getLocalBounds();
+        label.setOrigin({b.position.x, b.position.y + b.size.y});
+        label.setPosition({win_w * rel_x, win_h * rel_y});
+        window.draw(label);
+    };
+
+    drawLabel("Name",  FIELD_X, NAME_Y - 0.005f);
+    drawLabel("Seed",  FIELD_X, SEED_Y - 0.005f);
+    drawLabel("Terrain preview", PREVIEW_X, PREVIEW_Y - 0.025f);
 
     name.render(window);
-
     seed.render(window);
-
     flat.render(window);
-
     create.render(window);
-
     preview.render(window);
+
+    quit.render(window);
 }

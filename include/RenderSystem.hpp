@@ -6,10 +6,12 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 
+class World;
+
 extern float worldToScreenY(float worldY, float unit_size, float windowHeight);
 
 float screenToWorldY(float screenY, float unit_size, float windowHeight);
 
-extern void RenderSystem(std::vector<Entity>& entities, sf::RenderWindow& window);
+extern void RenderEntities(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window);
 
 #endif // RENDER_SYSTEM_HPP
