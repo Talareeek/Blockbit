@@ -4,7 +4,6 @@
 #include "Chunk.hpp"
 #include "Entity.hpp"
 #include "PerlinNoise.hpp"
-#include "WorldOutputStream.hpp"
 #include "ChunkMesh.hpp"
 
 #include <unordered_map>

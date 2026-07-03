@@ -25,6 +25,31 @@ find_package(SFML REQUIRED COMPONENTS Graphics Window System Audio)
 # Threads (asio)
 find_package(Threads REQUIRED)
 
+# zstd
+find_package(zstd CONFIG QUIET)
+if(TARGET zstd::libzstd_shared)
+    set(ZSTD_TARGET zstd::libzstd_shared)
+elseif(TARGET zstd::libzstd_static)
+    set(ZSTD_TARGET zstd::libzstd_static)
+else()
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(ZSTD QUIET IMPORTED_TARGET libzstd)
+    endif()
+    if(TARGET PkgConfig::ZSTD)
+        set(ZSTD_TARGET PkgConfig::ZSTD)
+    else()
+        find_path(ZSTD_INCLUDE_DIR zstd.h REQUIRED)
+        find_library(ZSTD_LIBRARY NAMES zstd zstd_static REQUIRED)
+        add_library(zstd_manual UNKNOWN IMPORTED)
+        set_target_properties(zstd_manual PROPERTIES
+            IMPORTED_LOCATION "${ZSTD_LIBRARY}"
+            INTERFACE_INCLUDE_DIRECTORIES "${ZSTD_INCLUDE_DIR}"
+        )
+        set(ZSTD_TARGET zstd_manual)
+    endif()
+endif()
+
 # SQLite (amalgamation in external/sqlite)
 add_library(sqlite3 STATIC ${CMAKE_SOURCE_DIR}/external/sqlite/sqlite3.c)
 target_include_directories(sqlite3 PUBLIC ${CMAKE_SOURCE_DIR}/external/sqlite)
@@ -59,6 +84,7 @@ target_link_libraries(Blockbit PRIVATE
     SFML::Audio
     Threads::Threads
     sqlite3
+    ${ZSTD_TARGET}
 )
 
 # Enable debug info in Release mode as well

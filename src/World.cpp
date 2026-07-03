@@ -18,13 +18,15 @@
 #include "../include/HealthComponent.hpp"
 #include "../include/Render.hpp"
 #include <SFML/Graphics.hpp>
-
+#include <zstd.h>
 #include <iostream>
 #include <cmath>
 #include <limits>
 #include <memory>
 #include <map>
 #include <numbers>
+#include <cstring>
+#include <fstream>
 
 World::World(const std::filesystem::path path) : path{path}
 {
@@ -571,20 +573,47 @@ void World::writeManifest() const
 
 void World::writeChunk(int chunk_position) const
 {
-    std::ofstream file(path / ("chunk_" + std::to_string(chunk_position)), std::ios::binary);
-
     auto it = chunks.find(chunk_position);
     if(it == chunks.end()) return;
+
+    size_t block_size = sizeof(BlockID) + sizeof(uint8_t);
+    size_t raw_size = CHUNK_WIDTH * CHUNK_HEIGHT * block_size;
+
+    std::vector<char> raw(raw_size);
+    char* ptr = raw.data();    
 
     for(int y = 0; y < CHUNK_HEIGHT; y++)
     {
         for(int x = 0; x < CHUNK_WIDTH; x++)
         {
             const Block& block = it->second.blocks[y][x];
-            file.write(reinterpret_cast<const char*>(&block.id), sizeof(BlockID));
-            file.write(reinterpret_cast<const char*>(&block.metadata), sizeof(uint8_t));
+
+            std::memcpy(ptr, &block.id, sizeof(BlockID));
+            ptr += sizeof(BlockID);
+
+            std::memcpy(ptr, &block.metadata, sizeof(uint8_t));
+            ptr += sizeof(uint8_t);
         }
     }
+
+    size_t bound = ZSTD_compressBound(raw_size);
+    std::vector<char> compressed(bound);
+
+    size_t compressed_size = ZSTD_compress(compressed.data(), bound, raw.data(), raw_size, 12);
+
+    if(ZSTD_isError(compressed_size))
+    {
+        std::cerr << "ZSTD_compress failed for chunk " << chunk_position
+                  << ": " << ZSTD_getErrorName(compressed_size) << '\n';
+        return;
+    }
+
+    std::ofstream file(path / ("chunk_" + std::to_string(chunk_position)), std::ios::binary);
+
+    uint32_t raw_size32 = static_cast<uint32_t>(raw_size);
+
+    file.write(reinterpret_cast<const char*>(&raw_size32), sizeof(uint32_t));
+    file.write(compressed.data(), compressed_size);
 }
 
 
@@ -719,29 +748,44 @@ void World::readManifest()
 void World::readChunk(int chunk_position)
 {
     std::ifstream file(path / ("chunk_" + std::to_string(chunk_position)), std::ios::binary);
+    if(!file) return;
 
-    if(!file) throw std::runtime_error("Cannot open file");
+    uint32_t raw_size;
+    file.read(reinterpret_cast<char*>(&raw_size), sizeof(raw_size));
 
-    Chunk c;
-    c.chunk_position = chunk_position;
+    std::vector<char> compressed((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
+    std::vector<char> raw(raw_size);
+    size_t result = ZSTD_decompress(raw.data(), raw_size, compressed.data(), compressed.size());
+
+    if(ZSTD_isError(result))
+    {
+        std::cerr << "ZSTD_decompress failed for chunk " << chunk_position
+                  << ": " << ZSTD_getErrorName(result) << '\n';
+        return;
+    }
+
+    Chunk& chunk = chunks[chunk_position];
+    chunk.chunk_position = chunk_position;
+    chunk.generated = true;
+    chunk.dirty = false;
+    chunk.meshDirty = true;
+
+    const char* ptr = raw.data();
 
     for(int y = 0; y < CHUNK_HEIGHT; y++)
     {
         for(int x = 0; x < CHUNK_WIDTH; x++)
         {
-            Block block;
+            Block& block = chunk.blocks[y][x];
 
-            file.read(reinterpret_cast<char*>(&block.id), sizeof(BlockID));
-            file.read(reinterpret_cast<char*>(&block.metadata), sizeof(uint8_t));
+            std::memcpy(&block.id, ptr, sizeof(BlockID));
+            ptr += sizeof(BlockID);
 
-            c.blocks[y][x] = block;
+            std::memcpy(&block.metadata, ptr, sizeof(uint8_t));
+            ptr += sizeof(uint8_t);
         }
     }
-
-    c.generated = true;
-    c.dirty = false;
-    c.meshDirty = true;
-    chunks[chunk_position] = c;
 }
 
 void World::readEntities()

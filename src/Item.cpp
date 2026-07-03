@@ -4,6 +4,8 @@
 #include "../include/ExplosiveComponent.hpp"
 #include "../include/TransformComponent.hpp"
 #include "../include/InventoryComponent.hpp"
+#include "../include/RenderComponent.hpp"
+#include "../include/PhysicsComponent.hpp"
 
 std::unordered_map<ItemID, ItemData> itemDatabase =
 {
