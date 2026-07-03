@@ -31,6 +31,9 @@ struct BlockData
     bool transparent;
     bool breakable;
 
+    bool liquid = false;
+    float drag = 1.0f;
+
     float hardness;
     uint32_t texture;
 };
@@ -43,21 +46,171 @@ struct Block
 
 inline std::unordered_map<BlockID, BlockData> blockDatabase = 
 {
-    { BlockID::Air, { false, true, false, 0.0f, INT_MAX}},
-    { BlockID::Stone, { true, false, true, 1.5f, 1 }},
-    { BlockID::Grass, { true, false, true, 0.6f, 2 }},
-    { BlockID::Dirt, { true, false, true, 0.5f, 3 }},
-    { BlockID::Cobblestone, { true, false, true, 2.0f, 4 }},
-    { BlockID::Obsidian, { true, false, true, 50.0f, 5 }},
-    { BlockID::Bedrock, { true, false, false, -1.0f, 6 }},
-    { BlockID::Water, { false, true, false, 0.0f, 11 }},
-    { BlockID::Iron_Ore, { true, false, true, 3.0f, 13 }},
-    { BlockID::Gold_Ore, { true, false, true, 3.0f, 14 }},
-    { BlockID::Diamond_Ore, { true, false, true, 5.0f, 15 }},
-    { BlockID::Oak_Log, { true, false, true, 2.0f, 16 }},
-    { BlockID::Oak_Leaves, { true, true, true, 0.2f, 17 }},
-    { BlockID::Woodcutter, { true, false, true, 2.0f, 22}},
-    { BlockID::Fire, { false, true, true, 0.0f, 25}}
+    { BlockID::Air,
+        {
+            .solid = false,
+            .transparent = true,
+            .breakable = false,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 0.0f,
+            .texture = INT_MAX
+        }
+    },
+    { BlockID::Stone,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 1.5f,
+            .texture = 1
+        }
+    },
+    { BlockID::Grass,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 0.6f,
+            .texture = 2
+        }
+    },
+    { BlockID::Dirt,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 0.5f,
+            .texture = 3
+        }
+    },
+    { BlockID::Cobblestone,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 2.0f,
+            .texture = 4
+        }
+    },
+    { BlockID::Obsidian,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 50.0f,
+            .texture = 5
+        }
+    },
+    { BlockID::Bedrock,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = false,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = -1.0f,
+            .texture = 6
+        }
+    },
+    { BlockID::Water,
+        {
+            .solid = false,
+            .transparent = true,
+            .breakable = false,
+            .liquid = true,
+            .drag = 4.0f,
+            .hardness = 0.0f,
+            .texture = 11
+        }
+    },
+    { BlockID::Iron_Ore,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 3.0f,
+            .texture = 13
+        }
+    },
+    { BlockID::Gold_Ore,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 3.0f,
+            .texture = 14
+        }
+    },
+    { BlockID::Diamond_Ore,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 5.0f,
+            .texture = 15
+        }
+    },
+    { BlockID::Oak_Log,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 2.0f,
+            .texture = 16
+        }
+    },
+    { BlockID::Oak_Leaves,
+        {
+            .solid = true,
+            .transparent = true,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 0.2f,
+            .texture = 17
+        }
+    },
+    { BlockID::Woodcutter,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 2.0f,
+            .texture = 22
+        }
+    },
+    { BlockID::Fire,
+        {
+            .solid = false,
+            .transparent = true,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 0.0f,
+            .texture = 25
+        }
+    }
 };
 
 

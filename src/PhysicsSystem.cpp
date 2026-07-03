@@ -6,31 +6,49 @@
 
 #include <cmath>
 
+bool isSubmerged(World& world, const TransformComponent& transform)
+{
+    int cx = (int)std::floor(transform.position.x + transform.size.x / 2.0f);
+    int cy = (int)std::floor(transform.position.y + transform.size.y / 2.0f);
+
+    return blockDatabase[world.getBlock(cx, cy).id].liquid;
+}
+
 void PhysicsSystem(std::vector<Entity>& entities, World& world, float deltaTime)
 {
     for(auto& entity : entities)
     {
         if(!entity.hasComponent<PhysicsComponent>()) continue;
+        if(!entity.hasComponent<TransformComponent>()) continue;
 
         auto& c = entity.getComponent<PhysicsComponent>();
+        auto& transform = entity.getComponent<TransformComponent>();
+
+        bool inLiquid = isSubmerged(world, transform);
 
         // ---- GRAVITY ----
         if(c.isGravityActive)
-            c.force.y -= 32.0f * c.mass;
+        {
+            float gravityScale = inLiquid ? 0.25f : 1.0f;
+            c.force.y -= 32.0f * c.mass * gravityScale;
+
+            if(inLiquid) c.force.y += 5.0f * c.mass;
+        }
 
         sf::Vector2f acceleration = c.force / c.mass;
         c.velocity += acceleration * deltaTime;
-        if(c.velocity.y < -PhysicsComponent::TERMINAL_VELOCITY)
-            c.velocity.y = -PhysicsComponent::TERMINAL_VELOCITY;
 
+        float terminalVelocity = inLiquid ? 10.0f : PhysicsComponent::TERMINAL_VELOCITY;
+        if(c.velocity.y < -terminalVelocity)
+            c.velocity.y = -terminalVelocity;
+        if(inLiquid && c.velocity.y > 3.0f)
+            c.velocity.y = 3.0f;
+
+        float dragMultiplier = inLiquid ? blockDatabase[world.getBlock((int)std::floor(transform.position.x + transform.size.x / 2.0f), (int)std::floor(transform.position.y + transform.size.y / 2.0f)).id].drag : 1.0f;
         c.velocity.x *= std::exp(-PhysicsComponent::damping.x * deltaTime);
-        c.velocity.y *= std::exp(-PhysicsComponent::damping.y * deltaTime);
+        c.velocity.y *= std::exp(-PhysicsComponent::damping.y * dragMultiplier * deltaTime);
 
         c.onGround = false;
-
-        if(!entity.hasComponent<TransformComponent>()) continue;
-
-        auto& transform = entity.getComponent<TransformComponent>();
 
 
         // ======================================================

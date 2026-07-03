@@ -2,6 +2,7 @@
 #include "../include/Game.hpp"
 #include "../include/Entity.hpp"
 #include "../include/PhysicsComponent.hpp"
+#include "../include/PhysicsSystem.hpp"
 #include "../include/RenderComponent.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/World.hpp"
@@ -292,7 +293,9 @@ void processWorldInputs(World& world, std::vector<Input> inputs, uint32_t id)
             {
                 auto direction = std::get<sf::Vector2f>(input.value);
 
-                physics.force.x += 45.0f * direction.x;
+                int bx = (int)std::floor(transform.position.x + transform.size.x / 2.0f);
+                int by = (int)std::floor(transform.position.y);
+                physics.force.x += 45.0f * direction.x / blockDatabase[world.getBlock(bx, by).id].drag;
 
                 if(direction.x < 0.0f)
                 {
@@ -310,6 +313,10 @@ void processWorldInputs(World& world, std::vector<Input> inputs, uint32_t id)
                 if(physics.onGround)
                 {
                     physics.velocity.y += 10.0f;
+                }
+                else if(isSubmerged(world, transform))
+                {
+                    physics.force.y += 60.0f;
                 }
 
                 break;
