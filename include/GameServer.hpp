@@ -6,6 +6,7 @@
 #include "Input.hpp"
 
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <deque>
@@ -26,7 +27,7 @@ private:
     std::unordered_map<uint32_t, std::deque<std::vector<Input>>> remoteInputQueues;
     std::unordered_map<uint32_t, std::unordered_set<int>> sentChunks;
 
-    void spawnRemotePlayer(uint32_t clientId);
+    void spawnRemotePlayer(uint32_t clientId, const std::string& nickname);
     void despawnRemotePlayer(uint32_t clientId);
     void sendInitializationTo(uint32_t clientId, int aroundChunkPos);
     void streamChunksToClients();

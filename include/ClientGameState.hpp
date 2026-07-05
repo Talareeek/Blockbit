@@ -29,6 +29,8 @@ private:
     std::string remoteAddress;
     std::string pendingHost;
     uint16_t pendingPort = 0;
+    std::string nickname;
+    bool loginSent = false;
 
     uint8_t localSelectedSlot = 0;
 
@@ -47,9 +49,9 @@ protected:
 
 public:
 
-    ClientGameState(Game* game, const std::string& host, uint16_t port);
+    ClientGameState(Game* game, const std::string& host, uint16_t port, std::string nickname = "Player");
 
-    ClientGameState(Game* game, World world, uint16_t networkPort = 0);
+    ClientGameState(Game* game, World world, uint16_t networkPort = 0, std::string nickname = "Player");
 
     ~ClientGameState() override;
 

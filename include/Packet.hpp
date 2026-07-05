@@ -14,6 +14,11 @@
 
 enum class PacketType : uint8_t
 {
+    Login,
+
+    StatusRequest,
+    StatusResponse,
+
     Initialization,
     BlockUpdate,
     Snapshot,
@@ -90,6 +95,26 @@ struct InputPacket
     std::vector<Input> inputs;
 };
 
+struct LoginPacket
+{
+    std::string nickname;
+};
+
+struct StatusRequestPacket
+{
+
+};
+
+struct StatusResponsePacket
+{
+    std::string name;
+    std::string description;
+    uint32_t players;
+    uint32_t max_players;
+
+    uint8_t icon[8192];
+};
+
 
 class PacketWriter
 {
@@ -151,6 +176,9 @@ std::vector<char> serializePacket(const SnapshotPacket& p);
 std::vector<char> serializePacket(const SpawnPacket& p);
 std::vector<char> serializePacket(const DespawnPacket& p);
 std::vector<char> serializePacket(const InputPacket& p);
+std::vector<char> serializePacket(const StatusRequestPacket& p);
+std::vector<char> serializePacket(const StatusResponsePacket& p);
+std::vector<char> serializePacket(const LoginPacket& p);
 
 InitializationPacket deserializeInitialization(PacketReader& r);
 BlockUpdatePacket    deserializeBlockUpdate(PacketReader& r);
@@ -158,5 +186,8 @@ SnapshotPacket       deserializeSnapshot(PacketReader& r);
 SpawnPacket          deserializeSpawn(PacketReader& r);
 DespawnPacket        deserializeDespawn(PacketReader& r);
 InputPacket          deserializeInput(PacketReader& r);
+StatusRequestPacket deserializeStatusRequest(PacketReader& r);
+StatusResponsePacket deserializeStatusResponse(PacketReader& r);
+LoginPacket deserializeLogin(PacketReader& r);
 
 #endif // PACKET_HPP

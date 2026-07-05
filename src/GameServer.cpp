@@ -6,6 +6,7 @@
 #include "../include/RenderComponent.hpp"
 #include "../include/HealthComponent.hpp"
 #include "../include/InventoryComponent.hpp"
+#include "../include/PlayerControlledComponent.hpp"
 #include "../include/Chunk.hpp"
 #include "../include/Packet.hpp"
 
@@ -51,18 +52,27 @@ GameServer::~GameServer()
     transport->stop();
 }
 
-void GameServer::spawnRemotePlayer(uint32_t clientId)
+void GameServer::spawnRemotePlayer(uint32_t clientId, const std::string& nickname)
 {
     uint32_t entityId;
     if (auto existing = world.findPlayerEntityByClient(clientId))
     {
         entityId = *existing;
-        std::cout << "[Server] Client " << clientId << " joined, reusing entity " << entityId << '\n';
+        std::cout << "[Server] Client " << clientId << " logged in as \"" << nickname << "\", reusing entity " << entityId << '\n';
     }
     else
     {
         entityId = world.spawnPlayer(clientId);
-        std::cout << "[Server] Client " << clientId << " joined, spawned as entity " << entityId << '\n';
+        std::cout << "[Server] Client " << clientId << " logged in as \"" << nickname << "\", spawned as entity " << entityId << '\n';
+    }
+
+    for (auto& e : world.getEntities())
+    {
+        if (e.getID() == entityId && e.hasComponent<PlayerControlledComponent>())
+        {
+            e.getComponent<PlayerControlledComponent>().nickname = nickname;
+            break;
+        }
     }
 
     clientToEntity[clientId] = entityId;
@@ -171,8 +181,8 @@ void GameServer::syncConnections()
     {
         if (!knownClients.contains(id))
         {
-            spawnRemotePlayer(id);
             knownClients.insert(id);
+            std::cout << "[Server] Client " << id << " connected, waiting for Login\n";
         }
     }
 
@@ -199,6 +209,37 @@ void GameServer::processIncoming()
 
             switch (pkt.type)
             {
+                case PacketType::Login:
+                {
+                    LoginPacket login = deserializeLogin(r);
+
+                    if (!knownClients.contains(pkt.clientId))
+                    {
+                        std::cerr << "[Server] Login from unknown client " << pkt.clientId << ", ignoring\n";
+                        break;
+                    }
+
+                    auto it = clientToEntity.find(pkt.clientId);
+                    if (it == clientToEntity.end())
+                    {
+                        spawnRemotePlayer(pkt.clientId, login.nickname);
+                    }
+                    else
+                    {
+                        uint32_t entityId = it->second;
+                        for (auto& e : world.getEntities())
+                        {
+                            if (e.getID() == entityId && e.hasComponent<PlayerControlledComponent>())
+                            {
+                                e.getComponent<PlayerControlledComponent>().nickname = login.nickname;
+                                break;
+                            }
+                        }
+                        std::cout << "[Server] Client " << pkt.clientId << " re-logged as \"" << login.nickname << "\"\n";
+                    }
+
+                    break;
+                }
                 case PacketType::Input:
                 {
                     InputPacket in = deserializeInput(r);
@@ -211,6 +252,20 @@ void GameServer::processIncoming()
                 {
                     BlockUpdatePacket bu = deserializeBlockUpdate(r);
                     world.setBlock(bu.x, bu.y, bu.block);
+                    break;
+                }
+                case PacketType::StatusRequest:
+                {
+                    StatusResponsePacket response;
+
+                    response.name = "Blockbit Server";
+                    response.description = "A server for Blockbit game";
+
+                    response.players = static_cast<uint32_t>(clientToEntity.size());
+                    response.max_players = 20;
+
+                    transport->send(pkt.clientId, serializePacket(response));
+
                     break;
                 }
                 default:

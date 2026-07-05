@@ -32,6 +32,8 @@ MenuGameState::MenuGameState(Game* game) : GameState(game)
     quit.updateScreenRelative(game->getWindow().getSize());
 
     UIElement::ScreenRelative sliderRelative{{0.30f, 0.45f}, {0.30f, 0.08f}, UIElement::ScreenRelative::ScaleMode::UniformByHeight};
+
+    nicknameField = InputField(InputField({0.0f, 0.0f}, {0.0f, 0.0f}), "Player", "Nickname");
 }
 
 void MenuGameState::handleEvent(const sf::Event& event)
@@ -39,6 +41,7 @@ void MenuGameState::handleEvent(const sf::Event& event)
     worldList.handleEvent(event);
     quit.handleEvent(event);
     player.handleEvent(event);
+    nicknameField.handleEvent(event);
 }
 
 void MenuGameState::update(float dt)
@@ -51,10 +54,20 @@ void MenuGameState::update(float dt)
     worldList.setPosition({size.x * 0.75f, 0.0f});
     worldList.setSize({size.x * 0.25f, static_cast<float>(size.y)});
 
+    float fieldW = size.y * 0.32f;
+    float fieldH = size.y * 0.06f;
+    float fieldX = (size.x * 0.75f - fieldW) * 0.5f;
+    float fieldY = size.y * 0.78f;
+    nicknameField.setPosition({fieldX, fieldY});
+    nicknameField.setSize({fieldW, fieldH});
+
+    worldList.setNickname(nicknameField.getText());
+
     worldList.update(dt);
     quit.update(dt);
 
     player.update(dt);
+    nicknameField.update(dt);
 }
 
 void MenuGameState::render(sf::RenderWindow& window)
@@ -79,6 +92,19 @@ void MenuGameState::render(sf::RenderWindow& window)
     worldList.render(window);
     quit.render(window);
     player.render(window);
+
+    {
+        sf::Vector2f fpos = nicknameField.getPosition();
+        sf::Vector2f fsize = nicknameField.getSize();
+
+        sf::Text label(AssetManager::getFont(0), "Nickname", static_cast<unsigned>(fsize.y * 0.4f));
+        label.setFillColor(sf::Color(230, 230, 230));
+        label.setOutlineColor(sf::Color::Black);
+        label.setOutlineThickness(1.0f);
+        label.setPosition({fpos.x, fpos.y - fsize.y * 0.55f});
+        window.draw(label);
+    }
+    nicknameField.render(window);
 
 
     sf::Text copyright(AssetManager::getFont(0), L"©2026 Talarek\n(github.com/Talareeek)", 10);

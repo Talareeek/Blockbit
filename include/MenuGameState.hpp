@@ -8,6 +8,7 @@
 #include "WorldList.hpp"
 #include "LobbyPlayerElement.hpp"
 #include "Slider.hpp"
+#include "InputField.hpp"
 
 #include "Hotbar.hpp"
 
@@ -18,6 +19,7 @@ private:
     Button quit;
     WorldList worldList;
     LobbyPlayerElement player;
+    InputField nicknameField;
 
 public:
 

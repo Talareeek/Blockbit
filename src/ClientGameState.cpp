@@ -20,7 +20,7 @@
 #include <sstream>
 #include <cstdlib>
 
-ClientGameState::ClientGameState(Game* game, const std::string& host, uint16_t port) : MainGameState(game, World{})
+ClientGameState::ClientGameState(Game* game, const std::string& host, uint16_t port, std::string nickname) : MainGameState(game, World{})
 {
     saveOnDestruct = false;
 
@@ -29,14 +29,17 @@ ClientGameState::ClientGameState(Game* game, const std::string& host, uint16_t p
     pendingHost = host;
     pendingPort = port;
     remoteAddress = host + ":" + std::to_string(port);
+    this->nickname = std::move(nickname);
 
     transport = std::make_unique<NetworkClientTransport>();
 
     game->getConsole().writeLine(L"[Client] Will attempt connection to " + std::wstring(remoteAddress.begin(), remoteAddress.end()));
 }
 
-ClientGameState::ClientGameState(Game* game, World world, uint16_t networkPort) : MainGameState(game, std::move(world))
+ClientGameState::ClientGameState(Game* game, World world, uint16_t networkPort, std::string nickname) : MainGameState(game, std::move(world))
 {
+    this->nickname = std::move(nickname);
+
     if (networkPort == 0)
     {
         game->getWindow().setTitle("Blockbit - Singleplayer");
@@ -46,6 +49,9 @@ ClientGameState::ClientGameState(Game* game, World world, uint16_t networkPort) 
         transport = std::move(pair.clientSide);
         transport->connect("loopback", 0);
         remoteAddress = "local";
+
+        transport->send(serializePacket(LoginPacket{this->nickname}));
+        loginSent = true;
     }
     else
     {
@@ -253,6 +259,13 @@ void ClientGameState::update(float dt)
                 }
                 wasConnected = true;
                 std::cerr << "[Client] connected to " << remoteAddress << '\n';
+            }
+
+            if (wasConnected && !loginSent && transport->isConnected())
+            {
+                transport->send(serializePacket(LoginPacket{nickname}));
+                loginSent = true;
+                std::cerr << "[Client] Sent Login as \"" << nickname << "\"\n";
             }
 
             if (!connectionFailed && wasConnected && !transport->isConnected())

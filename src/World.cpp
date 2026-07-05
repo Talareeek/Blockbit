@@ -571,6 +571,9 @@ void World::writeManifest() const
     file << seed << '\n';
 }
 
+// "BBCK" little-endian: identifies the chunk file format we write today.
+static constexpr uint32_t CHUNK_FILE_MAGIC = 0x4B434242u;
+
 void World::writeChunk(int chunk_position) const
 {
     auto it = chunks.find(chunk_position);
@@ -580,7 +583,7 @@ void World::writeChunk(int chunk_position) const
     size_t raw_size = CHUNK_WIDTH * CHUNK_HEIGHT * block_size;
 
     std::vector<char> raw(raw_size);
-    char* ptr = raw.data();    
+    char* ptr = raw.data();
 
     for(int y = 0; y < CHUNK_HEIGHT; y++)
     {
@@ -608,12 +611,43 @@ void World::writeChunk(int chunk_position) const
         return;
     }
 
-    std::ofstream file(path / ("chunk_" + std::to_string(chunk_position)), std::ios::binary);
+    std::filesystem::path final_path = path / ("chunk_" + std::to_string(chunk_position));
+    std::filesystem::path tmp_path = path / ("chunk_" + std::to_string(chunk_position) + ".tmp");
 
-    uint32_t raw_size32 = static_cast<uint32_t>(raw_size);
+    {
+        std::ofstream file(tmp_path, std::ios::binary | std::ios::trunc);
+        if(!file)
+        {
+            std::cerr << "Failed to open temp file for chunk " << chunk_position << '\n';
+            return;
+        }
 
-    file.write(reinterpret_cast<const char*>(&raw_size32), sizeof(uint32_t));
-    file.write(compressed.data(), compressed_size);
+        uint32_t magic = CHUNK_FILE_MAGIC;
+        uint32_t raw_size32 = static_cast<uint32_t>(raw_size);
+        uint32_t compressed_size32 = static_cast<uint32_t>(compressed_size);
+
+        file.write(reinterpret_cast<const char*>(&magic), sizeof(uint32_t));
+        file.write(reinterpret_cast<const char*>(&raw_size32), sizeof(uint32_t));
+        file.write(reinterpret_cast<const char*>(&compressed_size32), sizeof(uint32_t));
+        file.write(compressed.data(), compressed_size);
+        file.flush();
+
+        if(!file)
+        {
+            std::cerr << "Failed to write chunk " << chunk_position << '\n';
+            std::error_code ec;
+            std::filesystem::remove(tmp_path, ec);
+            return;
+        }
+    }
+
+    std::error_code ec;
+    std::filesystem::rename(tmp_path, final_path, ec);
+    if(ec)
+    {
+        std::cerr << "Failed to finalize chunk " << chunk_position << ": " << ec.message() << '\n';
+        std::filesystem::remove(tmp_path, ec);
+    }
 }
 
 
@@ -747,21 +781,89 @@ void World::readManifest()
 
 void World::readChunk(int chunk_position)
 {
-    std::ifstream file(path / ("chunk_" + std::to_string(chunk_position)), std::ios::binary);
+    std::filesystem::path chunk_path = path / ("chunk_" + std::to_string(chunk_position));
+
+    size_t expected_raw_size = CHUNK_WIDTH * CHUNK_HEIGHT * (sizeof(BlockID) + sizeof(uint8_t));
+
+    auto discardCorrupt = [&](const std::string& reason)
+    {
+        std::cerr << "Discarding corrupt chunk file " << chunk_path
+                  << " (" << reason << "); will regenerate\n";
+        std::error_code ec;
+        std::filesystem::remove(chunk_path, ec);
+    };
+
+    std::ifstream file(chunk_path, std::ios::binary);
     if(!file) return;
 
-    uint32_t raw_size;
-    file.read(reinterpret_cast<char*>(&raw_size), sizeof(raw_size));
+    uint32_t first_word = 0;
+    file.read(reinterpret_cast<char*>(&first_word), sizeof(uint32_t));
+    if(file.gcount() != static_cast<std::streamsize>(sizeof(uint32_t)))
+    {
+        discardCorrupt("header truncated");
+        return;
+    }
 
-    std::vector<char> compressed((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    uint32_t raw_size = 0;
+    std::vector<char> compressed;
+
+    if(first_word == CHUNK_FILE_MAGIC)
+    {
+        uint32_t compressed_size = 0;
+        file.read(reinterpret_cast<char*>(&raw_size), sizeof(uint32_t));
+        file.read(reinterpret_cast<char*>(&compressed_size), sizeof(uint32_t));
+        if(!file)
+        {
+            discardCorrupt("header incomplete");
+            return;
+        }
+        if(raw_size != expected_raw_size)
+        {
+            discardCorrupt("raw_size mismatch");
+            return;
+        }
+
+        compressed.resize(compressed_size);
+        if(compressed_size > 0)
+        {
+            file.read(compressed.data(), compressed_size);
+            if(file.gcount() != static_cast<std::streamsize>(compressed_size))
+            {
+                discardCorrupt("compressed payload truncated");
+                return;
+            }
+        }
+    }
+    else
+    {
+        // Legacy format: [raw_size uint32][compressed data to EOF]
+        raw_size = first_word;
+        if(raw_size != expected_raw_size)
+        {
+            discardCorrupt("legacy raw_size mismatch");
+            return;
+        }
+        compressed.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    }
+
+    if(compressed.empty())
+    {
+        discardCorrupt("no compressed data");
+        return;
+    }
 
     std::vector<char> raw(raw_size);
     size_t result = ZSTD_decompress(raw.data(), raw_size, compressed.data(), compressed.size());
 
     if(ZSTD_isError(result))
     {
-        std::cerr << "ZSTD_decompress failed for chunk " << chunk_position
-                  << ": " << ZSTD_getErrorName(result) << '\n';
+        discardCorrupt(std::string("ZSTD_decompress: ") + ZSTD_getErrorName(result));
+        return;
+    }
+
+    if(result != raw_size)
+    {
+        discardCorrupt("decompressed size mismatch");
         return;
     }
 

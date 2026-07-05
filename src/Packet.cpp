@@ -179,6 +179,31 @@ std::vector<char> serializePacket(const InputPacket& p)
     return w.release();
 }
 
+std::vector<char> serializePacket(const StatusRequestPacket& p)
+{
+    return {};
+}
+
+std::vector<char> serializePacket(const StatusResponsePacket& p)
+{
+    PacketWriter writer(PacketType::StatusResponse);
+    writer.writeString(p.name);
+    writer.writeString(p.description);
+    writer.write(p.players);
+    writer.write(p.max_players);
+    writer.writeBytes(p.icon, 8192);
+
+    return writer.release();
+}
+
+std::vector<char> serializePacket(const LoginPacket& p)
+{
+    PacketWriter writer(PacketType::Login);
+    writer.writeString(p.nickname);
+
+    return writer.release();
+}
+
 // ----- deserialize -----
 // The type byte is consumed by the network layer before these are called,
 // so the reader points directly at the payload.
@@ -266,6 +291,35 @@ InputPacket deserializeInput(PacketReader& r)
 
     p.inputs.reserve(count);
     for (uint32_t i = 0; i < count; i++) p.inputs.push_back(readInput(r));
+
+    return p;
+}
+
+StatusRequestPacket deserializeStatusRequest(PacketReader& r)
+{
+    return StatusRequestPacket();
+}
+
+StatusResponsePacket deserializeStatusResponse(PacketReader& r)
+{
+    StatusResponsePacket p;
+
+    p.name = r.readString();
+    p.description = r.readString();
+
+    p.players = r.read<uint32_t>();
+    p.max_players = r.read<uint32_t>();
+
+    r.readBytes(p.icon, 8192);
+
+    return p;
+}
+
+LoginPacket deserializeLogin(PacketReader& r)
+{
+    LoginPacket p;
+
+    p.nickname = r.readString();
 
     return p;
 }
