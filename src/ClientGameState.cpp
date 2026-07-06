@@ -33,6 +33,13 @@ ClientGameState::ClientGameState(Game* game, const std::string& host, uint16_t p
 
     transport = std::make_unique<NetworkClientTransport>();
 
+    chatUI.assignChat(&chat);
+    chatUI.setOnSend([this](std::wstring msg)
+    {
+        if (!transport || !transport->isConnected()) return;
+        transport->send(serializePacket(ChatMessagePacket{std::move(msg)}));
+    });
+
     game->getConsole().writeLine(L"[Client] Will attempt connection to " + std::wstring(remoteAddress.begin(), remoteAddress.end()));
 }
 
@@ -67,6 +74,31 @@ ClientGameState::ClientGameState(Game* game, World world, uint16_t networkPort, 
     initialized = true;
     wasConnected = true;
     connectAttempted = true;
+
+    chatUI.assignChat(&chat);
+
+    if (networkPort == 0)
+    {
+        chatUI.setOnSend([this](std::wstring msg)
+        {
+            if (!transport || !transport->isConnected()) return;
+            transport->send(serializePacket(ChatMessagePacket{std::move(msg)}));
+        });
+    }
+    else
+    {
+        localServer->onChatBroadcast = [this](std::wstring msg)
+        {
+            chat.pushMessage(std::move(msg));
+        };
+
+        chatUI.setOnSend([this](std::wstring msg)
+        {
+            if (!localServer) return;
+            std::wstring wnick(this->nickname.begin(), this->nickname.end());
+            localServer->sendChat(wnick, msg);
+        });
+    }
 }
 
 ClientGameState::~ClientGameState()
@@ -118,13 +150,10 @@ void ClientGameState::processIncoming()
     try { packets = transport->poll(); }
     catch (const std::bad_alloc&) { errorMessage = "Out of memory"; connectionFailed = true; return; }
 
-    if (isLocalSession())
-    {
-        return;
-    }
-
     for (auto& packet : packets)
     {
+        if (isLocalSession() && packet.type != PacketType::ChatMessage) continue;
+
         try
         {
             PacketReader reader(packet.payload.data(), packet.payload.size());
@@ -172,8 +201,13 @@ void ClientGameState::processIncoming()
                     
                     break;
                 }
+                case PacketType::ChatMessage:
+                {
+                    auto message = deserializeChatMessage(reader);
+                    chat.pushMessage(message.message);
+                    break;
+                }
                 case PacketType::Input:
-                    
                     break;
             }
         }
@@ -211,22 +245,29 @@ void ClientGameState::sendTickInputs()
 
 void ClientGameState::onTick(float tick_step)
 {
-    if (transport && transport->isConnected())
+    if (acceptsPlayerInput())
     {
-        sendTickInputs();
-    }
-    else if (localServer)
-    {
-        auto polled = ::getInputs(world, game->getWindow());
-        inputs.insert(inputs.end(),
-            std::make_move_iterator(polled.begin()),
-            std::make_move_iterator(polled.end()));
-
-        if (!inputs.empty() && localPlayerEntityId.has_value())
+        if (transport && transport->isConnected())
         {
-            processWorldInputs(world, std::move(inputs), localPlayerEntityId.value());
-            inputs.clear();
+            sendTickInputs();
         }
+        else if (localServer)
+        {
+            auto polled = ::getInputs(world, game->getWindow());
+            inputs.insert(inputs.end(),
+                std::make_move_iterator(polled.begin()),
+                std::make_move_iterator(polled.end()));
+
+            if (!inputs.empty() && localPlayerEntityId.has_value())
+            {
+                processWorldInputs(world, std::move(inputs), localPlayerEntityId.value());
+                inputs.clear();
+            }
+        }
+    }
+    else
+    {
+        inputs.clear();
     }
 
     if (localServer)
@@ -242,6 +283,9 @@ void ClientGameState::onTick(float tick_step)
 
 void ClientGameState::update(float dt)
 {
+    chatUI.update(dt);
+    if (chatCloseCooldown > 0.0f) chatCloseCooldown -= dt;
+
     if (!isLocalSession())
     {
         try
@@ -301,11 +345,26 @@ void ClientGameState::update(float dt)
 
 void ClientGameState::handleEvent(const sf::Event& event)
 {
+    bool chatWasActive = chatUI.isActive();
+    chatUI.handleEvent(event);
+    if (chatWasActive && !chatUI.isActive())
+    {
+        chatCloseCooldown = 0.3f;
+    }
+
+    if (chatUI.isActive()) return;
+
     if (auto key = event.getIf<sf::Event::KeyPressed>())
     {
         if (!isLocalSession() && key->code == sf::Keyboard::Key::Escape && (connectionFailed || (transport && !transport->isConnected())))
         {
             game->popState();
+            return;
+        }
+
+        if (!chatWasActive && key->code == sf::Keyboard::Key::T)
+        {
+            chatUI.open();
             return;
         }
 
@@ -403,6 +462,9 @@ void ClientGameState::render(sf::RenderWindow& window)
     }
 
     MainGameState::render(window);
+
+    window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
+    chatUI.render(window);
 
     if (pendingScreenshot)
     {

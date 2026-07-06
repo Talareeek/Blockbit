@@ -46,6 +46,8 @@ protected:
 
     virtual void onTick(float tick_step) {}
 
+    virtual bool acceptsPlayerInput() const { return true; }
+
     void tryInitializePlayerUI();
     bool hasPlayerEntity() const;
 

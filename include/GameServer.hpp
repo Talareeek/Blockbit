@@ -11,6 +11,7 @@
 #include <unordered_set>
 #include <deque>
 #include <vector>
+#include <functional>
 #include <cstdint>
 
 class GameServer
@@ -48,6 +49,10 @@ public:
     World& getWorld() { return world; }
 
     uint32_t getHostEntityId() const { return hostEntityId; }
+
+    void sendChat(const std::wstring& nickname, const std::wstring& message);
+
+    std::function<void(std::wstring)> onChatBroadcast;
 
     static constexpr uint16_t DEFAULT_PORT = 25565;
 };

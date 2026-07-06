@@ -268,6 +268,27 @@ void GameServer::processIncoming()
 
                     break;
                 }
+                case PacketType::ChatMessage:
+                {
+                    ChatMessagePacket chat_message = deserializeChatMessage(r);
+
+                    auto entity_with_id = [](World& world, uint32_t id) -> Entity&
+                    {
+                        for(auto& e : world.getEntities())
+                        {
+                            if(e.getID() == id) return e;
+                        }
+
+                        throw std::runtime_error("No entity found");
+                    };
+
+                    std::string nickname = entity_with_id(world, clientToEntity[pkt.clientId]).getComponent<PlayerControlledComponent>().nickname;
+                    std::wstring wnickname(nickname.begin(), nickname.end());
+
+                    sendChat(wnickname, chat_message.message);
+
+                    break;
+                }
                 default:
                     break;
             }
@@ -367,6 +388,22 @@ void GameServer::broadcastSnapshot()
         transport->broadcastExcept(hostClientId, buf);
     else
         transport->broadcast(buf);
+}
+
+void GameServer::sendChat(const std::wstring& nickname, const std::wstring& message)
+{
+    std::wstring final_message = nickname + L"> " + message + L'\n';
+
+    ChatMessagePacket packet;
+    packet.message = final_message;
+    auto buf = serializePacket(packet);
+
+    for (auto client : knownClients)
+    {
+        transport->send(client, buf);
+    }
+
+    if (onChatBroadcast) onChatBroadcast(final_message);
 }
 
 void GameServer::tick(float tick_step)

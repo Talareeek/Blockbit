@@ -5,6 +5,8 @@
 #include "ClientTransport.hpp"
 #include "GameServer.hpp"
 #include "Packet.hpp"
+#include "Chat.hpp"
+#include "ChatUI.hpp"
 
 #include <memory>
 #include <optional>
@@ -36,6 +38,11 @@ private:
 
     bool pendingScreenshot = false;
 
+    Chat chat;
+    ChatUI chatUI;
+
+    float chatCloseCooldown = 0.0f;
+
     void processIncoming();
     void sendTickInputs();
     void rebuildEntitiesFromSnapshot(const SnapshotPacket& snap);
@@ -46,6 +53,8 @@ private:
 protected:
 
     void onTick(float tick_step) override;
+
+    bool acceptsPlayerInput() const override { return !chatUI.isActive() && chatCloseCooldown <= 0.0f; }
 
 public:
 

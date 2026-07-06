@@ -37,6 +37,135 @@ std::string PacketReader::readString()
     return s;
 }
 
+// Wide strings are serialized as UTF-8 on the wire so the format is
+// identical regardless of whether wchar_t is 16 bits (Windows) or 32 bits
+// (Linux/most Unix). Payload: uint32_t byte length, then UTF-8 bytes.
+
+void PacketWriter::writeWideString(const std::wstring& s)
+{
+    std::string utf8;
+    utf8.reserve(s.size());
+
+    for (std::size_t i = 0; i < s.size(); i++)
+    {
+        uint32_t cp = static_cast<uint32_t>(s[i]);
+
+        if constexpr (sizeof(wchar_t) == 2)
+        {
+            if (cp >= 0xD800 && cp <= 0xDBFF && i + 1 < s.size())
+            {
+                uint32_t low = static_cast<uint32_t>(s[i + 1]);
+                if (low >= 0xDC00 && low <= 0xDFFF)
+                {
+                    cp = 0x10000 + ((cp - 0xD800) << 10) + (low - 0xDC00);
+                    i++;
+                }
+            }
+        }
+
+        if (cp < 0x80)
+        {
+            utf8.push_back(static_cast<char>(cp));
+        }
+        else if (cp < 0x800)
+        {
+            utf8.push_back(static_cast<char>(0xC0 | (cp >> 6)));
+            utf8.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+        }
+        else if (cp < 0x10000)
+        {
+            utf8.push_back(static_cast<char>(0xE0 | (cp >> 12)));
+            utf8.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+            utf8.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+        }
+        else
+        {
+            utf8.push_back(static_cast<char>(0xF0 | (cp >> 18)));
+            utf8.push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3F)));
+            utf8.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+            utf8.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+        }
+    }
+
+    uint32_t len = static_cast<uint32_t>(utf8.size());
+    write(len);
+    writeBytes(utf8.data(), len);
+}
+
+std::wstring PacketReader::readWideString()
+{
+    uint32_t len = read<uint32_t>();
+    if (ptr + len > end)
+        throw std::runtime_error("PacketReader: wide string out of bounds");
+
+    const char* data = ptr;
+    ptr += len;
+
+    std::wstring result;
+    result.reserve(len);
+
+    std::size_t i = 0;
+    while (i < len)
+    {
+        uint8_t b = static_cast<uint8_t>(data[i]);
+        uint32_t cp = 0;
+
+        if (b < 0x80)
+        {
+            cp = b;
+            i += 1;
+        }
+        else if ((b & 0xE0) == 0xC0)
+        {
+            if (i + 1 >= len) throw std::runtime_error("readWideString: truncated UTF-8");
+            cp  = (b & 0x1F) << 6;
+            cp |= (static_cast<uint8_t>(data[i + 1]) & 0x3F);
+            i += 2;
+        }
+        else if ((b & 0xF0) == 0xE0)
+        {
+            if (i + 2 >= len) throw std::runtime_error("readWideString: truncated UTF-8");
+            cp  = (b & 0x0F) << 12;
+            cp |= (static_cast<uint8_t>(data[i + 1]) & 0x3F) << 6;
+            cp |= (static_cast<uint8_t>(data[i + 2]) & 0x3F);
+            i += 3;
+        }
+        else if ((b & 0xF8) == 0xF0)
+        {
+            if (i + 3 >= len) throw std::runtime_error("readWideString: truncated UTF-8");
+            cp  = (b & 0x07) << 18;
+            cp |= (static_cast<uint8_t>(data[i + 1]) & 0x3F) << 12;
+            cp |= (static_cast<uint8_t>(data[i + 2]) & 0x3F) << 6;
+            cp |= (static_cast<uint8_t>(data[i + 3]) & 0x3F);
+            i += 4;
+        }
+        else
+        {
+            throw std::runtime_error("readWideString: invalid UTF-8 lead byte");
+        }
+
+        if constexpr (sizeof(wchar_t) == 2)
+        {
+            if (cp >= 0x10000)
+            {
+                cp -= 0x10000;
+                result.push_back(static_cast<wchar_t>(0xD800 | (cp >> 10)));
+                result.push_back(static_cast<wchar_t>(0xDC00 | (cp & 0x3FF)));
+            }
+            else
+            {
+                result.push_back(static_cast<wchar_t>(cp));
+            }
+        }
+        else
+        {
+            result.push_back(static_cast<wchar_t>(cp));
+        }
+    }
+
+    return result;
+}
+
 // ----- serialize -----
 
 std::vector<char> serializePacket(const InitializationPacket& p)
@@ -204,6 +333,15 @@ std::vector<char> serializePacket(const LoginPacket& p)
     return writer.release();
 }
 
+std::vector<char> serializePacket(const ChatMessagePacket& p)
+{
+    PacketWriter writer(PacketType::ChatMessage);
+
+    writer.writeWideString(p.message);
+
+    return writer.release();
+}
+
 // ----- deserialize -----
 // The type byte is consumed by the network layer before these are called,
 // so the reader points directly at the payload.
@@ -321,5 +459,12 @@ LoginPacket deserializeLogin(PacketReader& r)
 
     p.nickname = r.readString();
 
+    return p;
+}
+
+ChatMessagePacket deserializeChatMessage(PacketReader& r)
+{
+    ChatMessagePacket p;
+    p.message = r.readWideString();
     return p;
 }

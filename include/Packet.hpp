@@ -25,7 +25,9 @@ enum class PacketType : uint8_t
     Spawn,
     Despawn,
 
-    Input
+    Input,
+
+    ChatMessage
 };
 
 struct InitializationPacket
@@ -115,6 +117,10 @@ struct StatusResponsePacket
     uint8_t icon[8192];
 };
 
+struct ChatMessagePacket
+{
+    std::wstring message;
+};
 
 class PacketWriter
 {
@@ -137,6 +143,7 @@ public:
     }
 
     void writeString(const std::string& s);
+    void writeWideString(const std::wstring& s);
 
     const std::vector<char>& buffer() const { return data; }
     std::vector<char> release() { return std::move(data); }
@@ -165,6 +172,7 @@ public:
     }
 
     std::string readString();
+    std::wstring readWideString();
 
     bool eof() const { return ptr >= end; }
     std::size_t remaining() const { return static_cast<std::size_t>(end - ptr); }
@@ -179,6 +187,7 @@ std::vector<char> serializePacket(const InputPacket& p);
 std::vector<char> serializePacket(const StatusRequestPacket& p);
 std::vector<char> serializePacket(const StatusResponsePacket& p);
 std::vector<char> serializePacket(const LoginPacket& p);
+std::vector<char> serializePacket(const ChatMessagePacket& p);
 
 InitializationPacket deserializeInitialization(PacketReader& r);
 BlockUpdatePacket    deserializeBlockUpdate(PacketReader& r);
@@ -189,5 +198,6 @@ InputPacket          deserializeInput(PacketReader& r);
 StatusRequestPacket deserializeStatusRequest(PacketReader& r);
 StatusResponsePacket deserializeStatusResponse(PacketReader& r);
 LoginPacket deserializeLogin(PacketReader& r);
+ChatMessagePacket deserializeChatMessage(PacketReader& r);
 
 #endif // PACKET_HPP

@@ -163,7 +163,7 @@ void MainGameState::update(float dt)
 
     game->getConsole().assignWorld(&world);
 
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
+    if(acceptsPlayerInput() && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
     {
         game->pushState(std::make_unique<PauseScreenState>(game));
     }
@@ -178,7 +178,7 @@ void MainGameState::update(float dt)
         healthBar.update(dt);
         hotbar.update(dt);
 
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E))
+        if(acceptsPlayerInput() && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E))
         {
             inventoryWidget.setActive(!inventoryWidget.isActive());
         }
@@ -189,7 +189,7 @@ void MainGameState::update(float dt)
         }
     }
 
-    if(InputManager::isLazyKeyPressed(sf::Keyboard::Key::F3))
+    if(acceptsPlayerInput() && InputManager::isLazyKeyPressed(sf::Keyboard::Key::F3))
     {
         debug = !debug;
     }
