@@ -69,7 +69,7 @@ private:
     std::deque<IncomingPacket> inbox;
     std::mutex inboxMutex;
 
-    uint32_t nextClientId = 1;
+    uint32_t nextClientId = 100;
 
     void doAccept();
 

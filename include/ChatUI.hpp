@@ -45,6 +45,9 @@ public:
 
     static constexpr float FADE_DURATION = 10.0f;
     static constexpr std::size_t VISIBLE_MESSAGES = 10;
+
+    static constexpr float WIDTH = 0.33f;
+    static constexpr float HEIGHT = 0.5f;
 };
 
 #endif // CHAT_UI_HPP

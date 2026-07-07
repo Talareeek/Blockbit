@@ -3,10 +3,10 @@
 #include "../include/AssetManager.hpp"
 #include "../include/RenderSystem.hpp"
 #include "../include/TransformComponent.hpp"
-#include "../include/MainGameState.hpp"
+#include "../include/GameCommon.hpp"
+#include "../include/Entity.hpp"
 #include "../include/PreserveComponent.hpp"
 #include "../include/AnimationComponent.hpp"
-#include "../include/MainGameState.hpp"
 #include "../include/ExplosiveComponent.hpp"
 #include "../include/ItemComponent.hpp"
 #include "../include/BlockAtlas.hpp"
@@ -384,7 +384,7 @@ sf::Vector2i getMouseBlockPosition(const World& world, const sf::RenderWindow& w
 
 sf::Vector2f getMouseWorldPosition(const World&, const sf::RenderWindow& window)
 {
-    float unit_size = window.getView().getSize().y / static_cast<float>(MainGameState::UNIT_SIZE_FACTOR);
+    float unit_size = window.getView().getSize().y / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
 
     sf::Vector2f mouseWorld = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 

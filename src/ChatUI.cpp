@@ -103,6 +103,15 @@ void ChatUI::update(float dt)
 
 void ChatUI::render(sf::RenderWindow& window)
 {
+    if(active)
+    {
+        sf::RectangleShape background({WIDTH * static_cast<float>(window.getSize().x), HEIGHT * static_cast<float>(window.getSize().y)});
+        background.setFillColor(sf::Color(0, 0, 0, 200));
+        background.setPosition({0.0f, static_cast<float>(window.getSize().y) - background.getLocalBounds().size.y});
+
+        window.draw(background);
+    }
+
     if(!chat) return;
 
     const auto& messages = chat->getMessages();

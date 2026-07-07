@@ -1,6 +1,8 @@
 #include "../include/TransformSystem.hpp"
 #include "../include/TransformComponent.hpp"
-#include "../include/MainGameState.hpp"
+#include "../include/GameCommon.hpp"
+#include "../include/Entity.hpp"
+#include "../include/World.hpp"
 
 void TransformSystem(World& world)
 {

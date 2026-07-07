@@ -1,5 +1,7 @@
 #include "../include/ClientGameState.hpp"
+
 #include "../include/Game.hpp"
+#include "../include/GameCommon.hpp"
 #include "../include/Entity.hpp"
 #include "../include/TransformComponent.hpp"
 #include "../include/RenderComponent.hpp"
@@ -7,9 +9,16 @@
 #include "../include/InventoryComponent.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/Chunk.hpp"
+#include "../include/PauseScreenState.hpp"
+#include "../include/DeathScreenState.hpp"
+#include "../include/InputManager.hpp"
+#include "../include/AnimationSystem.hpp"
+#include "../include/Render.hpp"
+#include "../include/RenderSystem.hpp"
 #include "../include/NetworkClientTransport.hpp"
 #include "../include/NetworkServerTransport.hpp"
 #include "../include/LoopbackServerTransport.hpp"
+#include "../include/CompositeServerTransport.hpp"
 
 #include <iostream>
 #include <algorithm>
@@ -20,107 +29,130 @@
 #include <sstream>
 #include <cstdlib>
 
-ClientGameState::ClientGameState(Game* game, const std::string& host, uint16_t port, std::string nickname) : MainGameState(game, World{})
+ClientGameState::ClientGameState(Game* game, const std::string& host, uint16_t port, std::string nickname)
+    : GameState(game)
 {
-    saveOnDestruct = false;
-
     game->getWindow().setTitle("Blockbit - Multiplayer");
 
-    pendingHost = host;
-    pendingPort = port;
-    remoteAddress = host + ":" + std::to_string(port);
+    pending_host = host;
+    pending_port = port;
+    remote_address = host + ":" + std::to_string(port);
     this->nickname = std::move(nickname);
 
     transport = std::make_unique<NetworkClientTransport>();
 
-    chatUI.assignChat(&chat);
-    chatUI.setOnSend([this](std::wstring msg)
+    chat_ui.assignChat(&chat);
+    chat_ui.setOnSend([this](std::wstring message)
     {
         if (!transport || !transport->isConnected()) return;
-        transport->send(serializePacket(ChatMessagePacket{std::move(msg)}));
+        transport->send(serializePacket(ChatMessagePacket{std::move(message)}));
     });
 
-    game->getConsole().writeLine(L"[Client] Will attempt connection to " + std::wstring(remoteAddress.begin(), remoteAddress.end()));
+    game->getConsole().writeLine(L"[Client] Will attempt connection to " + std::wstring(remote_address.begin(), remote_address.end()));
 }
 
-ClientGameState::ClientGameState(Game* game, World world, uint16_t networkPort, std::string nickname) : MainGameState(game, std::move(world))
+ClientGameState::ClientGameState(Game* game, World world, uint16_t network_port, std::string nickname)
+    : GameState(game)
 {
     this->nickname = std::move(nickname);
 
-    if (networkPort == 0)
+    auto loopback_pair = makeLoopbackPair();
+
+    if (network_port == 0)
     {
         game->getWindow().setTitle("Blockbit - Singleplayer");
 
-        auto pair = makeLoopbackPair();
-        localServer.emplace(this->world, std::move(pair.serverSide), LoopbackChannel::LOOPBACK_CLIENT_ID);
-        transport = std::move(pair.clientSide);
-        transport->connect("loopback", 0);
-        remoteAddress = "local";
-
-        transport->send(serializePacket(LoginPacket{this->nickname}));
-        loginSent = true;
+        local_server.emplace(std::move(world), std::move(loopback_pair.serverSide), LoopbackChannel::LOOPBACK_CLIENT_ID);
+        remote_address = "local";
     }
     else
     {
         game->getWindow().setTitle("Blockbit - Host");
 
-        localServer.emplace(this->world, std::make_unique<NetworkServerTransport>(networkPort), 0u);
-        remoteAddress = "0.0.0.0:" + std::to_string(networkPort);
-        std::cerr << "[Server] Listening on port " << networkPort << '\n';
+        auto composite = std::make_unique<CompositeServerTransport>();
+        composite->add(std::move(loopback_pair.serverSide));
+        composite->add(std::make_unique<NetworkServerTransport>(network_port));
+
+        local_server.emplace(std::move(world), std::move(composite), LoopbackChannel::LOOPBACK_CLIENT_ID);
+        remote_address = "0.0.0.0:" + std::to_string(network_port);
+        std::cerr << "[Server] Listening on port " << network_port << '\n';
     }
 
-    myEntityId = localServer->getHostEntityId();
-    localPlayerEntityId = myEntityId;
-    initialized = true;
-    wasConnected = true;
-    connectAttempted = true;
+    transport = std::move(loopback_pair.clientSide);
+    transport->connect("loopback", 0);
+    transport->send(serializePacket(LoginPacket{this->nickname}));
+    login_sent = true;
 
-    chatUI.assignChat(&chat);
+    was_connected = true;
+    connect_attempted = true;
 
-    if (networkPort == 0)
+    chat_ui.assignChat(&chat);
+    chat_ui.setOnSend([this](std::wstring message)
     {
-        chatUI.setOnSend([this](std::wstring msg)
-        {
-            if (!transport || !transport->isConnected()) return;
-            transport->send(serializePacket(ChatMessagePacket{std::move(msg)}));
-        });
-    }
-    else
-    {
-        localServer->onChatBroadcast = [this](std::wstring msg)
-        {
-            chat.pushMessage(std::move(msg));
-        };
-
-        chatUI.setOnSend([this](std::wstring msg)
-        {
-            if (!localServer) return;
-            std::wstring wnick(this->nickname.begin(), this->nickname.end());
-            localServer->sendChat(wnick, msg);
-        });
-    }
+        if (!transport || !transport->isConnected()) return;
+        transport->send(serializePacket(ChatMessagePacket{std::move(message)}));
+    });
 }
 
 ClientGameState::~ClientGameState()
 {
     if (transport) transport->disconnect();
+
+    game->getWindow().setTitle("Blockbit");
+    game->getConsole().assignWorld(nullptr);
 }
 
-void ClientGameState::rebuildEntitiesFromSnapshot(const SnapshotPacket& snap)
+bool ClientGameState::hasPlayerEntity() const
+{
+    if (!local_player_entity_id.has_value()) return false;
+    uint32_t player_id = local_player_entity_id.value();
+    for (const auto& entity : world.getEntities())
+        if (entity.getID() == player_id) return true;
+    return false;
+}
+
+void ClientGameState::tryInitializePlayerUI()
+{
+    if (player_ui_initialized) return;
+    if (!hasPlayerEntity()) return;
+
+    auto& player_entity = entityWithID(local_player_entity_id.value(), world);
+
+    if (!player_entity.hasComponent<TransformComponent>()) return;
+
+    if (player_entity.hasComponent<HealthComponent>())
+    {
+        health_bar = HealthBar(&player_entity.getComponent<HealthComponent>());
+        health_bar.updateScreenRelative(game->getWindow().getSize());
+    }
+
+    if (player_entity.hasComponent<InventoryComponent>())
+    {
+        inventory_widget = InventoryWidget(&player_entity.getComponent<InventoryComponent>());
+        inventory_widget.updateScreenRelative(game->getWindow().getSize());
+
+        hotbar = Hotbar(&player_entity.getComponent<InventoryComponent>());
+        hotbar.updateScreenRelative(game->getWindow().getSize());
+    }
+
+    player_ui_initialized = true;
+}
+
+void ClientGameState::rebuildEntitiesFromSnapshot(const SnapshotPacket& snapshot)
 {
     auto& entities = world.getEntities();
 
     entities.clear();
-    entities.reserve(snap.entities.size());
+    entities.reserve(snapshot.entities.size());
 
-    for (const auto& net_entity : snap.entities)
+    for (const auto& net_entity : snapshot.entities)
     {
         Entity entity(net_entity.id);
 
         entity.addComponent(TransformComponent{{net_entity.x, net_entity.y}, {net_entity.size_x, net_entity.size_y}, sf::degrees(0.0f)});
         entity.addComponent(RenderComponent{static_cast<uint16_t>(net_entity.textureID), sf::IntRect{{net_entity.uv_x, net_entity.uv_y}, {net_entity.uv_size_x, net_entity.uv_size_y}}, {net_entity.size_x, net_entity.size_y}});
         entity.addComponent(HealthComponent{net_entity.health, net_entity.maxHealth, false});
-        
+
         if(!net_entity.inventory.empty())
         {
             InventoryComponent inventory_component(net_entity.inventory.size());
@@ -138,7 +170,9 @@ void ClientGameState::rebuildEntitiesFromSnapshot(const SnapshotPacket& snap)
         entities.push_back(std::move(entity));
     }
 
-    playerUIInitialized = false;
+    world.dayTime = snapshot.dayTime;
+
+    player_ui_initialized = false;
     tryInitializePlayerUI();
 }
 
@@ -148,12 +182,10 @@ void ClientGameState::processIncoming()
 
     std::vector<ReceivedPacket> packets;
     try { packets = transport->poll(); }
-    catch (const std::bad_alloc&) { errorMessage = "Out of memory"; connectionFailed = true; return; }
+    catch (const std::bad_alloc&) { error_message = "Out of memory"; connection_failed = true; return; }
 
     for (auto& packet : packets)
     {
-        if (isLocalSession() && packet.type != PacketType::ChatMessage) continue;
-
         try
         {
             PacketReader reader(packet.payload.data(), packet.payload.size());
@@ -162,13 +194,13 @@ void ClientGameState::processIncoming()
             {
                 case PacketType::Initialization:
                 {
-                    auto init = deserializeInitialization(reader);
+                    auto initialization = deserializeInitialization(reader);
 
-                    auto& chunk = world.getChunks()[init.chunk.chunk_position];
-                    chunk = init.chunk;
+                    auto& chunk = world.getChunks()[initialization.chunk.chunk_position];
+                    chunk = initialization.chunk;
 
                     chunk.meshDirty = true;
-                    world.chunkMeshes[init.chunk.chunk_position].built = false;
+                    world.chunkMeshes[initialization.chunk.chunk_position].built = false;
                     initialized = true;
 
                     break;
@@ -189,16 +221,17 @@ void ClientGameState::processIncoming()
                 case PacketType::Spawn:
                 {
                     auto spawn = deserializeSpawn(reader);
-                    myEntityId = spawn.id;
-                    localPlayerEntityId = myEntityId;
+                    my_entity_id = spawn.id;
+                    local_player_entity_id = my_entity_id;
                     break;
                 }
                 case PacketType::Despawn:
                 {
                     auto despawn = deserializeDespawn(reader);
                     auto& entities = world.getEntities();
-                    entities.erase(std::remove_if(entities.begin(), entities.end(), [&](const Entity& e) { return e.getID() == despawn.id; }), entities.end());
-                    
+                    entities.erase(std::remove_if(entities.begin(), entities.end(),
+                        [&](const Entity& entity) { return entity.getID() == despawn.id; }), entities.end());
+
                     break;
                 }
                 case PacketType::ChatMessage:
@@ -209,18 +242,20 @@ void ClientGameState::processIncoming()
                 }
                 case PacketType::Input:
                     break;
+                default:
+                    break;
             }
         }
         catch (const std::bad_alloc&)
         {
             std::cerr << "[Client] bad_alloc decoding packet\n";
-            errorMessage = "Out of memory";
-            connectionFailed = true;
+            error_message = "Out of memory";
+            connection_failed = true;
             return;
         }
-        catch (const std::exception& e)
+        catch (const std::exception& exception)
         {
-            std::cerr << "[Client] Bad packet: " << e.what() << '\n';
+            std::cerr << "[Client] Bad packet: " << exception.what() << '\n';
         }
     }
 }
@@ -228,7 +263,7 @@ void ClientGameState::processIncoming()
 void ClientGameState::sendTickInputs()
 {
     if (!transport || !transport->isConnected()) return;
-    if (myEntityId == 0) return;
+    if (my_entity_id == 0) return;
 
     auto polled = getInputs(world, game->getWindow());
     inputs.insert(inputs.end(), std::make_move_iterator(polled.begin()), std::make_move_iterator(polled.end()));
@@ -236,7 +271,7 @@ void ClientGameState::sendTickInputs()
     if (inputs.empty()) return;
 
     InputPacket packet;
-    packet.id = myEntityId;
+    packet.id = my_entity_id;
     packet.inputs = std::move(inputs);
     inputs.clear();
 
@@ -251,28 +286,15 @@ void ClientGameState::onTick(float tick_step)
         {
             sendTickInputs();
         }
-        else if (localServer)
-        {
-            auto polled = ::getInputs(world, game->getWindow());
-            inputs.insert(inputs.end(),
-                std::make_move_iterator(polled.begin()),
-                std::make_move_iterator(polled.end()));
-
-            if (!inputs.empty() && localPlayerEntityId.has_value())
-            {
-                processWorldInputs(world, std::move(inputs), localPlayerEntityId.value());
-                inputs.clear();
-            }
-        }
     }
     else
     {
         inputs.clear();
     }
 
-    if (localServer)
+    if (local_server)
     {
-        localServer->tick(tick_step);
+        local_server->tick(tick_step);
     }
 
     if (transport)
@@ -281,247 +303,421 @@ void ClientGameState::onTick(float tick_step)
     }
 }
 
-void ClientGameState::update(float dt)
-{
-    chatUI.update(dt);
-    if (chatCloseCooldown > 0.0f) chatCloseCooldown -= dt;
-
-    if (!isLocalSession())
-    {
-        try
-        {
-            if (!connectAttempted && !connectionFailed)
-            {
-                connectAttempted = true;
-                if (!transport->connect(pendingHost, pendingPort))
-                {
-                    connectionFailed = true;
-                    errorMessage = transport->getLastError();
-                    if (errorMessage.empty()) errorMessage = "Connection failed";
-                    std::cerr << "[Client] connect failed: " << errorMessage << '\n';
-                    return;
-                }
-                wasConnected = true;
-                std::cerr << "[Client] connected to " << remoteAddress << '\n';
-            }
-
-            if (wasConnected && !loginSent && transport->isConnected())
-            {
-                transport->send(serializePacket(LoginPacket{nickname}));
-                loginSent = true;
-                std::cerr << "[Client] Sent Login as \"" << nickname << "\"\n";
-            }
-
-            if (!connectionFailed && wasConnected && !transport->isConnected())
-            {
-                connectionFailed = true;
-                if (errorMessage.empty())
-                {
-                    errorMessage = transport->getLastError();
-                    if (errorMessage.empty()) errorMessage = "Disconnected from server";
-                }
-            }
-
-            if (connectionFailed) return;
-        }
-        catch (const std::bad_alloc&)
-        {
-            std::cerr << "[Client] bad_alloc in update\n";
-            connectionFailed = true;
-            errorMessage = "Out of memory while updating";
-            return;
-        }
-        catch (const std::exception& e)
-        {
-            std::cerr << "[Client] exception in update: " << e.what() << '\n';
-            connectionFailed = true;
-            errorMessage = e.what();
-            return;
-        }
-    }
-
-    MainGameState::update(dt);
-}
-
 void ClientGameState::handleEvent(const sf::Event& event)
 {
-    bool chatWasActive = chatUI.isActive();
-    chatUI.handleEvent(event);
-    if (chatWasActive && !chatUI.isActive())
+    bool chat_was_active = chat_ui.isActive();
+    chat_ui.handleEvent(event);
+    if (chat_was_active && !chat_ui.isActive())
     {
-        chatCloseCooldown = 0.3f;
+        chat_close_cooldown = 0.3f;
     }
 
-    if (chatUI.isActive()) return;
+    if (chat_ui.isActive()) return;
 
     if (auto key = event.getIf<sf::Event::KeyPressed>())
     {
-        if (!isLocalSession() && key->code == sf::Keyboard::Key::Escape && (connectionFailed || (transport && !transport->isConnected())))
+        if (!isLocalSession() && key->code == sf::Keyboard::Key::Escape && (connection_failed || (transport && !transport->isConnected())))
         {
             game->popState();
             return;
         }
 
-        if (!chatWasActive && key->code == sf::Keyboard::Key::T)
+        if (!chat_was_active && key->code == sf::Keyboard::Key::T)
         {
-            chatUI.open();
+            chat_ui.open();
             return;
         }
 
         if (key->code == sf::Keyboard::Key::F1)
         {
-            hideUI = !hideUI;
+            hide_ui = !hide_ui;
         }
         else if (key->code == sf::Keyboard::Key::F2)
         {
-            pendingScreenshot = true;
+            pending_screenshot = true;
         }
     }
 
-    MainGameState::handleEvent(event);
+    if(event.is<sf::Event::Resized>())
+    {
+        world.chunkMeshes.clear();
+    }
 
-    uint8_t* slotPtr = nullptr;
+    if (player_ui_initialized)
+    {
+        if(event.is<sf::Event::MouseButtonPressed>())
+        {
+            float unit_size = game->getWindow().getView().getSize().y / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
+
+            sf::View view(
+            {
+                static_cast<float>((entityWithID(local_player_entity_id.value(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
+                static_cast<float>((entityWithID(local_player_entity_id.value(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
+            },
+            {
+                (float)game->getWindow().getSize().x,
+                (float)game->getWindow().getSize().y
+            });
+
+            view.setSize({view.getSize().x, -view.getSize().y});
+
+            game->getWindow().setView(view);
+        }
+
+        health_bar.handleEvent(event);
+        inventory_widget.handleEvent(event);
+        hotbar.handleEvent(event);
+    }
+
+    uint8_t* slot_pointer = nullptr;
     if (hasPlayerEntity())
     {
-        auto& playerEntity = entityWithID(localPlayerEntityId.value(), world);
-        if (playerEntity.hasComponent<InventoryComponent>())
+        auto& player_entity = entityWithID(local_player_entity_id.value(), world);
+        if (player_entity.hasComponent<InventoryComponent>())
         {
-            slotPtr = &playerEntity.getComponent<InventoryComponent>().selectedSlot;
+            slot_pointer = &player_entity.getComponent<InventoryComponent>().selectedSlot;
         }
     }
-    if (!slotPtr) slotPtr = &localSelectedSlot;
+    if (!slot_pointer) slot_pointer = &local_selected_slot;
 
-    auto new_inputs = ::getInputsFromEvent(event, world, game->getWindow(), *slotPtr);
+    auto new_inputs = ::getInputsFromEvent(event, world, game->getWindow(), *slot_pointer);
     inputs.insert(inputs.end(),
         std::make_move_iterator(new_inputs.begin()),
         std::make_move_iterator(new_inputs.end()));
+}
+
+void ClientGameState::update(float dt)
+{
+    chat_ui.update(dt);
+    if (chat_close_cooldown > 0.0f) chat_close_cooldown -= dt;
+
+    if (!isLocalSession())
+    {
+        try
+        {
+            if (!connect_attempted && !connection_failed)
+            {
+                connect_attempted = true;
+                if (!transport->connect(pending_host, pending_port))
+                {
+                    connection_failed = true;
+                    error_message = transport->getLastError();
+                    if (error_message.empty()) error_message = "Connection failed";
+                    std::cerr << "[Client] connect failed: " << error_message << '\n';
+                    return;
+                }
+                was_connected = true;
+                std::cerr << "[Client] connected to " << remote_address << '\n';
+            }
+
+            if (was_connected && !login_sent && transport->isConnected())
+            {
+                transport->send(serializePacket(LoginPacket{nickname}));
+                login_sent = true;
+                std::cerr << "[Client] Sent Login as \"" << nickname << "\"\n";
+            }
+
+            if (!connection_failed && was_connected && !transport->isConnected())
+            {
+                connection_failed = true;
+                if (error_message.empty())
+                {
+                    error_message = transport->getLastError();
+                    if (error_message.empty()) error_message = "Disconnected from server";
+                }
+            }
+
+            if (connection_failed) return;
+        }
+        catch (const std::bad_alloc&)
+        {
+            std::cerr << "[Client] bad_alloc in update\n";
+            connection_failed = true;
+            error_message = "Out of memory while updating";
+            return;
+        }
+        catch (const std::exception& exception)
+        {
+            std::cerr << "[Client] exception in update: " << exception.what() << '\n';
+            connection_failed = true;
+            error_message = exception.what();
+            return;
+        }
+    }
+
+    tryInitializePlayerUI();
+
+    float tick_step = 1.0f / static_cast<float>(WORLD_TICKS_PER_SECOND);
+
+    if (dt > tick_step * 4.0f) dt = tick_step;
+
+    since_last_tick += dt;
+
+    int max_ticks_per_frame = 4;
+    while(since_last_tick >= tick_step && max_ticks_per_frame-- > 0)
+    {
+        if (player_ui_initialized)
+        {
+            float unit_size = game->getWindow().getView().getSize().y / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
+
+            sf::View view(
+            {
+                static_cast<float>((entityWithID(local_player_entity_id.value(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
+                static_cast<float>((entityWithID(local_player_entity_id.value(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
+            },
+            {
+                (float)game->getWindow().getSize().x,
+                (float)game->getWindow().getSize().y
+            });
+
+            view.setSize({view.getSize().x, -view.getSize().y});
+
+            game->getWindow().setView(view);
+        }
+
+        onTick(tick_step);
+
+        since_last_tick -= tick_step;
+    }
+
+    if (since_last_tick > tick_step) since_last_tick = 0.0f;
+
+    AnimationSystem(world, dt);
+
+    game->getConsole().assignWorld(local_server.has_value() ? &local_server->getWorld() : &world);
+
+    if(acceptsPlayerInput() && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
+    {
+        game->pushState(std::make_unique<PauseScreenState>(game));
+    }
+
+    if (player_ui_initialized)
+    {
+        health_bar.setHealth(&entityWithID(local_player_entity_id.value(), world).getComponent<HealthComponent>());
+
+        inventory_widget.updateScreenRelative(game->getWindow().getSize());
+        hotbar.updateScreenRelative(game->getWindow().getSize());
+
+        health_bar.update(dt);
+        hotbar.update(dt);
+
+        if(acceptsPlayerInput() && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E))
+        {
+            inventory_widget.setActive(!inventory_widget.isActive());
+        }
+
+        if(inventory_widget.isActive())
+        {
+            inventory_widget.update(dt);
+        }
+    }
+
+    if(acceptsPlayerInput() && InputManager::isLazyKeyPressed(sf::Keyboard::Key::F3))
+    {
+        debug = !debug;
+    }
+
+    if (player_ui_initialized
+        && entityWithID(local_player_entity_id.value(), world).getComponent<HealthComponent>().health <= 0)
+    {
+        World& death_world = local_server.has_value() ? local_server->getWorld() : world;
+        game->pushState(std::make_unique<DeathScreenState>(game, death_world, local_player_entity_id.value()));
+    }
+
+    last_fps_update += dt;
+
+    if(last_fps_update >= 1.0f)
+    {
+        last_fps_update -= 1.0f;
+
+        fps = 1.0f / dt;
+    }
 }
 
 void ClientGameState::render(sf::RenderWindow& window)
 {
     window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
 
-    if (connectionFailed)
+    if (connection_failed)
     {
-        sf::RectangleShape bg({static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
-        bg.setFillColor(sf::Color(18, 22, 30));
-        window.draw(bg);
+        sf::RectangleShape background({static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
+        background.setFillColor(sf::Color(18, 22, 30));
+        window.draw(background);
 
-        std::string title = wasConnected ? "Disconnected" : "Cannot connect to server";
-        std::string detail = remoteAddress.empty() ? "" : remoteAddress;
-        std::string reason = errorMessage.empty() ? "" : ("Reason: " + errorMessage);
+        std::string title = was_connected ? "Disconnected" : "Cannot connect to server";
+        std::string detail = remote_address.empty() ? "" : remote_address;
+        std::string reason = error_message.empty() ? "" : ("Reason: " + error_message);
         std::string hint = "Press ESC to go back";
 
-        sf::Text titleText(AssetManager::getFont(0), title, 36);
-        titleText.setFillColor(sf::Color(230, 80, 80));
-        titleText.setOutlineColor(sf::Color::Black);
-        titleText.setOutlineThickness(2.0f);
-        auto tb = titleText.getLocalBounds();
-        titleText.setPosition({(window.getSize().x - tb.size.x) * 0.5f, window.getSize().y * 0.35f});
-        window.draw(titleText);
+        sf::Text title_text(AssetManager::getFont(0), title, 36);
+        title_text.setFillColor(sf::Color(230, 80, 80));
+        title_text.setOutlineColor(sf::Color::Black);
+        title_text.setOutlineThickness(2.0f);
+        auto title_bounds = title_text.getLocalBounds();
+        title_text.setPosition({(window.getSize().x - title_bounds.size.x) * 0.5f, window.getSize().y * 0.35f});
+        window.draw(title_text);
 
         if (!detail.empty())
         {
-            sf::Text detailText(AssetManager::getFont(0), detail, 22);
-            detailText.setFillColor(sf::Color(220, 220, 220));
-            auto db = detailText.getLocalBounds();
-            detailText.setPosition({(window.getSize().x - db.size.x) * 0.5f, window.getSize().y * 0.35f + 50.0f});
-            window.draw(detailText);
+            sf::Text detail_text(AssetManager::getFont(0), detail, 22);
+            detail_text.setFillColor(sf::Color(220, 220, 220));
+            auto detail_bounds = detail_text.getLocalBounds();
+            detail_text.setPosition({(window.getSize().x - detail_bounds.size.x) * 0.5f, window.getSize().y * 0.35f + 50.0f});
+            window.draw(detail_text);
         }
 
         if (!reason.empty())
         {
-            sf::Text reasonText(AssetManager::getFont(0), reason, 20);
-            reasonText.setFillColor(sf::Color(200, 200, 200));
-            auto rb = reasonText.getLocalBounds();
-            reasonText.setPosition({(window.getSize().x - rb.size.x) * 0.5f, window.getSize().y * 0.35f + 85.0f});
-            window.draw(reasonText);
+            sf::Text reason_text(AssetManager::getFont(0), reason, 20);
+            reason_text.setFillColor(sf::Color(200, 200, 200));
+            auto reason_bounds = reason_text.getLocalBounds();
+            reason_text.setPosition({(window.getSize().x - reason_bounds.size.x) * 0.5f, window.getSize().y * 0.35f + 85.0f});
+            window.draw(reason_text);
         }
 
-        sf::Text hintText(AssetManager::getFont(0), hint, 18);
-        hintText.setFillColor(sf::Color(180, 180, 180));
-        auto hb = hintText.getLocalBounds();
-        hintText.setPosition({(window.getSize().x - hb.size.x) * 0.5f, window.getSize().y * 0.55f});
-        window.draw(hintText);
+        sf::Text hint_text(AssetManager::getFont(0), hint, 18);
+        hint_text.setFillColor(sf::Color(180, 180, 180));
+        auto hint_bounds = hint_text.getLocalBounds();
+        hint_text.setPosition({(window.getSize().x - hint_bounds.size.x) * 0.5f, window.getSize().y * 0.55f});
+        window.draw(hint_text);
         return;
     }
 
     if (!isLocalSession() && !initialized)
     {
-        auto [skyTop, skyBottom] = world.getSkyGradient(world.getDayTime() / World::DAY_CYCLE_DURATION);
-        renderSky(window, skyTop, skyBottom);
+        auto [sky_top, sky_bottom] = world.getSkyGradient(world.getDayTime() / World::DAY_CYCLE_DURATION);
+        renderSky(window, sky_top, sky_bottom);
 
-        sf::Text waiting(AssetManager::getFont(0), "Connecting to " + remoteAddress + "...", 28);
+        sf::Text waiting(AssetManager::getFont(0), "Connecting to " + remote_address + "...", 28);
         waiting.setFillColor(sf::Color::White);
         waiting.setOutlineColor(sf::Color::Black);
         waiting.setOutlineThickness(2.0f);
-        auto wb = waiting.getLocalBounds();
-        waiting.setPosition({(window.getSize().x - wb.size.x) * 0.5f, window.getSize().y * 0.5f});
+        auto waiting_bounds = waiting.getLocalBounds();
+        waiting.setPosition({(window.getSize().x - waiting_bounds.size.x) * 0.5f, window.getSize().y * 0.5f});
         window.draw(waiting);
         return;
     }
 
-    MainGameState::render(window);
+    auto [sky_top, sky_bottom] = world.getSkyGradient(world.getDayTime() / World::DAY_CYCLE_DURATION);
+    renderSky(window, sky_top, sky_bottom);
+
+    renderSunAndMoon(world.getDayTime(), window);
+
+    if (!player_ui_initialized)
+    {
+        window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
+    }
+    else
+    {
+        sf::Vector2<double> camera = entityWithID(local_player_entity_id.value(), world).getComponent<TransformComponent>().position + sf::Vector2<double>(0.5, -0.5);
+
+        RenderEntities(world, camera, window);
+
+        RenderWorld(world, camera, window);
+
+        RenderBlockOverlay(world, camera, window, local_player_entity_id.value());
+
+        window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
+
+        if (!hide_ui)
+        {
+            health_bar.render(window);
+            hotbar.render(window);
+
+            if(inventory_widget.isActive())
+            {
+                inventory_widget.render(window);
+            }
+
+            if(debug)
+            {
+                sf::Text debug_text(AssetManager::getFont(0), debugString(), 20);
+                debug_text.setPosition({50.0f, 50.0f});
+                debug_text.setFillColor(sf::Color::White);
+                debug_text.setOutlineThickness(2.0f);
+                debug_text.setOutlineColor(sf::Color::Black);
+                window.draw(debug_text);
+            }
+        }
+    }
 
     window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
-    chatUI.render(window);
+    chat_ui.render(window);
 
-    if (pendingScreenshot)
+    if (pending_screenshot)
     {
-        pendingScreenshot = false;
+        pending_screenshot = false;
         saveScreenshot(window);
     }
 }
 
+std::string ClientGameState::debugString()
+{
+    std::string debug_string = "FPS: " + std::to_string(fps) + '\n';
+
+    if (player_ui_initialized)
+    {
+        auto simulation_range = world.getSimulationRangeForEntity(local_player_entity_id.value());
+        debug_string +=
+            "X: " + std::to_string(entityWithID(local_player_entity_id.value(), world).getComponent<TransformComponent>().position.x) +
+            " Y: " + std::to_string(entityWithID(local_player_entity_id.value(), world).getComponent<TransformComponent>().position.y) + '\n' +
+            "CHUNKS LOADED: " + std::to_string(world.getChunks().size()) + '\n' +
+            "SIMULATION RANGE: " + std::to_string(simulation_range.first) + " - " + std::to_string(simulation_range.second) + '\n' +
+            "INPUTS: " + std::to_string(inputs.size()) + '\n';
+    }
+
+    return debug_string;
+}
+
 void ClientGameState::saveScreenshot(sf::RenderWindow& window)
 {
-    std::filesystem::path dir;
+    std::filesystem::path directory;
 
     #ifdef _WIN32
         const char* appdata = std::getenv("APPDATA");
-        dir = appdata ? std::filesystem::path(appdata) : std::filesystem::temp_directory_path();
+        directory = appdata ? std::filesystem::path(appdata) : std::filesystem::temp_directory_path();
     #else
         const char* home = std::getenv("HOME");
-        dir = home ? std::filesystem::path(home) : std::filesystem::temp_directory_path();
+        directory = home ? std::filesystem::path(home) : std::filesystem::temp_directory_path();
     #endif
 
-    dir /= "Blockbit";
-    dir /= "screenshots";
+    directory /= "Blockbit";
+    directory /= "screenshots";
 
     try
     {
-        std::filesystem::create_directories(dir);
+        std::filesystem::create_directories(directory);
     }
-    catch (const std::exception& e)
+    catch (const std::exception& exception)
     {
-        std::cerr << "[Client] Failed to create screenshot directory: " << e.what() << '\n';
+        std::cerr << "[Client] Failed to create screenshot directory: " << exception.what() << '\n';
         return;
     }
 
     auto now = std::chrono::system_clock::now();
-    std::time_t t = std::chrono::system_clock::to_time_t(now);
-    std::tm tm_local{};
+    std::time_t time_now = std::chrono::system_clock::to_time_t(now);
+    std::tm time_local{};
     #ifdef _WIN32
-        localtime_s(&tm_local, &t);
+        localtime_s(&time_local, &time_now);
     #else
-        localtime_r(&t, &tm_local);
+        localtime_r(&time_now, &time_local);
     #endif
 
-    std::ostringstream name;
-    name << "screenshot_" << std::put_time(&tm_local, "%Y-%m-%d_%H-%M-%S") << ".png";
+    std::ostringstream file_name;
+    file_name << "screenshot_" << std::put_time(&time_local, "%Y-%m-%d_%H-%M-%S") << ".png";
 
-    sf::Vector2u size = window.getSize();
-    if (size.x == 0 || size.y == 0) return;
+    sf::Vector2u window_size = window.getSize();
+    if (window_size.x == 0 || window_size.y == 0) return;
 
-    sf::Texture texture(size);
+    sf::Texture texture(window_size);
     texture.update(window);
 
-    std::filesystem::path filePath = dir / name.str();
-    if (!texture.copyToImage().saveToFile(filePath.string()))
+    std::filesystem::path file_path = directory / file_name.str();
+    if (!texture.copyToImage().saveToFile(file_path.string()))
     {
-        std::cerr << "[Client] Failed to save screenshot to " << filePath << '\n';
+        std::cerr << "[Client] Failed to save screenshot to " << file_path << '\n';
         return;
     }
 
-    std::cerr << "[Client] Screenshot saved: " << filePath << '\n';
+    std::cerr << "[Client] Screenshot saved: " << file_path << '\n';
 }

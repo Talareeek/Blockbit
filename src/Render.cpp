@@ -1,5 +1,9 @@
 #include "../include/Render.hpp"
-#include "../include/MainGameState.hpp"
+#include "../include/GameCommon.hpp"
+#include "../include/Entity.hpp"
+#include "../include/World.hpp"
+#include "../include/TransformComponent.hpp"
+#include "../include/AssetManager.hpp"
 #include "../include/BlockAtlas.hpp"
 
 void RenderWorld(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window)
@@ -10,7 +14,7 @@ void RenderWorld(World& world, const sf::Vector2<double> camera, sf::RenderWindo
 
     window.setView(view);
 
-    unsigned int unit_size = window.getSize().y / MainGameState::UNIT_SIZE_FACTOR;
+    unsigned int unit_size = window.getSize().y / WORLD_UNIT_SIZE_FACTOR;
 
     int centerChunk = static_cast<int>(std::floor(camera.x / static_cast<double>(CHUNK_WIDTH)));
 
@@ -46,7 +50,7 @@ void RenderBlockOverlay(World& world, const sf::Vector2<double> camera, sf::Rend
 
     window.setView(view);
 
-    unsigned int unit_size = window.getSize().y / MainGameState::UNIT_SIZE_FACTOR;
+    unsigned int unit_size = window.getSize().y / WORLD_UNIT_SIZE_FACTOR;
 
     sf::Vector2f mouseView = window.mapPixelToCoords(sf::Mouse::getPosition(window));
     double mouseWorldX = static_cast<double>(mouseView.x) / static_cast<double>(unit_size) + camera.x;
@@ -228,7 +232,7 @@ void RenderLightRays(World& world, sf::RenderWindow& window)
         lastSize = windowSize;
     }
 
-    unsigned int unit_size = windowSize.y / MainGameState::UNIT_SIZE_FACTOR;
+    unsigned int unit_size = windowSize.y / WORLD_UNIT_SIZE_FACTOR;
 
     sf::Vector2f cameraCenter
     {

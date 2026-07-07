@@ -6,6 +6,9 @@
 #include "Button.hpp"
 #include "Checkbox.hpp"
 #include "GenerationPreview.hpp"
+#include "World.hpp"
+
+#include <optional>
 
 class CreateWorldState : public GameState
 {
@@ -21,6 +24,8 @@ private:
     Button create;
 
     GenerationPreview preview;
+
+    std::optional<World> pending_world;
 
 public:
 

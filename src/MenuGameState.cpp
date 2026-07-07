@@ -1,5 +1,4 @@
 #include "../include/MenuGameState.hpp"
-#include "../include/MainGameState.hpp"
 #include "../include/Game.hpp"
 #include "../include/AssetManager.hpp"
 

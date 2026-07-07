@@ -1,5 +1,7 @@
 #include "../include/ChunkUnloadSystem.hpp"
-#include "../include/MainGameState.hpp"
+#include "../include/GameCommon.hpp"
+#include "../include/Entity.hpp"
+#include "../include/TransformComponent.hpp"
 
 static bool isChunkSafe(int chunkPos, const std::vector<uint32_t>& playerIds, World& world)
 {

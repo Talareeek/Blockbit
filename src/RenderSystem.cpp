@@ -4,7 +4,7 @@
 #include "../include/AnimationComponent.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/HealthComponent.hpp"
-#include "../include/MainGameState.hpp"
+#include "../include/GameCommon.hpp"
 #include "../include/World.hpp"
 
 #include <cmath>
@@ -27,7 +27,7 @@ void RenderEntities(World& world, const sf::Vector2<double> camera, sf::RenderWi
 
     window.setView(view);
 
-    unsigned int unit_size = window.getSize().y / MainGameState::UNIT_SIZE_FACTOR;
+    unsigned int unit_size = window.getSize().y / WORLD_UNIT_SIZE_FACTOR;
 
     for(auto& entity : world.getEntities())
     {

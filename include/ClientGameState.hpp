@@ -1,66 +1,94 @@
 #ifndef CLIENT_GAME_STATE_HPP
 #define CLIENT_GAME_STATE_HPP
 
-#include "MainGameState.hpp"
+#include "GameState.hpp"
+#include "World.hpp"
 #include "ClientTransport.hpp"
 #include "GameServer.hpp"
 #include "Packet.hpp"
+#include "HealthBar.hpp"
+#include "InventoryWidget.hpp"
+#include "Hotbar.hpp"
+#include "Input.hpp"
 #include "Chat.hpp"
 #include "ChatUI.hpp"
 
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 #include <cstdint>
 
-class ClientGameState : public MainGameState
+class ClientGameState : public GameState
 {
 private:
 
+    World world;
+
     std::unique_ptr<ClientTransport> transport;
-    
-    std::optional<GameServer> localServer;
+    std::optional<GameServer> local_server;
 
-    uint32_t myEntityId = 0;
+    std::optional<uint32_t> local_player_entity_id;
+    uint32_t my_entity_id = 0;
+
     bool initialized = false;
-    bool connectionFailed = false;
-    bool wasConnected = false;
-    bool connectAttempted = false;
+    bool connection_failed = false;
+    bool was_connected = false;
+    bool connect_attempted = false;
 
-    std::string errorMessage;
-    std::string remoteAddress;
-    std::string pendingHost;
-    uint16_t pendingPort = 0;
+    std::string error_message;
+    std::string remote_address;
+    std::string pending_host;
+    uint16_t pending_port = 0;
     std::string nickname;
-    bool loginSent = false;
+    bool login_sent = false;
 
-    uint8_t localSelectedSlot = 0;
+    uint8_t local_selected_slot = 0;
 
-    bool pendingScreenshot = false;
+    HealthBar health_bar;
+    InventoryWidget inventory_widget{nullptr};
+    Hotbar hotbar;
+
+    bool player_ui_initialized = false;
+
+    bool debug = false;
+    bool hide_ui = false;
+
+    int fps = 0;
+    float last_fps_update = 1.0f;
+
+    float since_last_tick = 0.0f;
+
+    std::vector<Input> inputs;
+
+    bool pending_screenshot = false;
 
     Chat chat;
-    ChatUI chatUI;
+    ChatUI chat_ui;
 
-    float chatCloseCooldown = 0.0f;
+    float chat_close_cooldown = 0.0f;
+
+    void tryInitializePlayerUI();
+    bool hasPlayerEntity() const;
 
     void processIncoming();
     void sendTickInputs();
-    void rebuildEntitiesFromSnapshot(const SnapshotPacket& snap);
+    void rebuildEntitiesFromSnapshot(const SnapshotPacket& snapshot);
     void saveScreenshot(sf::RenderWindow& window);
 
-    bool isLocalSession() const { return localServer.has_value(); }
+    void onTick(float tick_step);
 
-protected:
+    bool acceptsPlayerInput() const { return !chat_ui.isActive() && chat_close_cooldown <= 0.0f; }
 
-    void onTick(float tick_step) override;
+    bool isLocalSession() const { return local_server.has_value(); }
 
-    bool acceptsPlayerInput() const override { return !chatUI.isActive() && chatCloseCooldown <= 0.0f; }
+    std::string debugString();
 
 public:
 
     ClientGameState(Game* game, const std::string& host, uint16_t port, std::string nickname = "Player");
 
-    ClientGameState(Game* game, World world, uint16_t networkPort = 0, std::string nickname = "Player");
+    ClientGameState(Game* game, World world, uint16_t network_port = 0, std::string nickname = "Player");
 
     ~ClientGameState() override;
 
