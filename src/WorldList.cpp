@@ -83,6 +83,26 @@ sf::FloatRect WorldList::getCreateButtonArea() const
     return sf::FloatRect({position.x + strip_w + padding, position.y + bar_h + header_h}, {size.x - strip_w - 2.0f * padding, create_h});
 }
 
+sf::FloatRect WorldList::getServerPreviewArea() const
+{
+    sf::FloatRect list_area = getListArea();
+
+    float strip_w = size.x * STRIP_WIDTH_FACTOR;
+    float content_w = size.x - strip_w;
+    float field_w = content_w * 0.85f;
+    float field_h = size.y * 0.06f;
+    float field_x = position.x + strip_w + (content_w - field_w) * 0.5f;
+    float field_y = list_area.position.y + size.y * 0.04f;
+    float button_h = field_h * 1.2f;
+    float button_y = field_y + field_h + size.y * 0.025f;
+
+    float top = button_y + button_h + size.y * 0.03f;
+    float bottom = position.y + size.y - size.y * 0.04f;
+    float height = std::max(0.0f, bottom - top);
+
+    return sf::FloatRect({field_x, top}, {field_w, height});
+}
+
 void WorldList::handleEvent(const sf::Event& event)
 {
     if(event.is<sf::Event::MouseMoved>())

@@ -64,6 +64,7 @@ private:
     sf::FloatRect getListArea() const;
     sf::FloatRect getTabBarArea() const;
     sf::FloatRect getCreateButtonArea() const;
+    sf::FloatRect getServerPreviewArea() const;
 
     void loadEntries();
 
@@ -73,6 +74,10 @@ public:
     WorldList(std::filesystem::path path, Game* game);
 
     void setNickname(std::string value) { nickname = value.empty() ? std::string{"Player"} : std::move(value); }
+
+    std::string getIpText() const { return ipField.getText(); }
+    bool multiplayerActive() const { return mode == Mode::VISIBLE && selection == Selection::MULTIPLAYER; }
+    sf::FloatRect serverPreviewArea() const { return getServerPreviewArea(); }
 
     void handleEvent(const sf::Event& event) override;
     void update(float dt) override;

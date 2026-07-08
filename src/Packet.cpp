@@ -310,7 +310,8 @@ std::vector<char> serializePacket(const InputPacket& p)
 
 std::vector<char> serializePacket(const StatusRequestPacket& p)
 {
-    return {};
+    PacketWriter writer(PacketType::StatusRequest);
+    return writer.release();
 }
 
 std::vector<char> serializePacket(const StatusResponsePacket& p)
