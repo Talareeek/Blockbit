@@ -750,17 +750,28 @@ void World::save() const
 
 void World::writeData() const
 {
-    std::ofstream file(path / "data", std::ios::out);
+    BBT data("data");
 
-    file << "DayTime " << getDayTime() << '\n';
-    file << "Days " << days << '\n';
-    file << "SpawnPoint " << getSpawnPoint().x << ' ' << getSpawnPoint().y << '\n';
-    file << "Flat " << generation_properties.flat << '\n';
-    file << "BaseHeight " << generation_properties.base_height << '\n';
-    file << "HeightScale " << generation_properties.height_scale << '\n';
-    file << "Frequency " << generation_properties.frequency << '\n';
-    file << "Amplitude " << generation_properties.amplitude << '\n';
-    file << "Persistence " << generation_properties.persistence << '\n';
+    data["day_time"] = Tag(getDayTime());
+    data["days"] = Tag(days);
+
+    data["spawn_point"] = TagCompound();
+    data["spawn_point"]["x"] = Tag(getSpawnPoint().x);
+    data["spawn_point"]["y"] = Tag(getSpawnPoint().y);
+
+    data["generation_properties"] = TagCompound();
+    data["generation_properties"]["flat"] = Tag(generation_properties.flat);
+    data["generation_properties"]["base_height"] = Tag(generation_properties.base_height);
+    data["generation_properties"]["height_scale"] = Tag(generation_properties.height_scale);
+    data["generation_properties"]["frequency"] = Tag(generation_properties.frequency);
+    data["generation_properties"]["amplitude"] = Tag(generation_properties.amplitude);
+    data["generation_properties"]["persistence"] = Tag(generation_properties.persistence);
+
+    auto buffer = data.save();
+
+    std::ofstream file(path / "data", std::ios::out | std::ios::binary);
+    
+    file.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
 }
 
 
@@ -1065,10 +1076,39 @@ void World::readEntities()
 
 void World::readData()
 {
-    std::ifstream file(path / "data", std::ios::in);
+    std::ifstream file(path / "data", std::ios::ate | std::ios::binary);
 
     if(!file) throw std::runtime_error("Failed to open data file");
 
+    std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    std::vector<uint8_t> buffer(static_cast<size_t>(size));
+
+    file.read(reinterpret_cast<char*>(buffer.data()), size);
+
+    file.close();
+
+
+    BBT data = BBT::load(buffer);
+
+    dayTime = data["day_time"].get<float>();
+    days = data["days"].get<uint64_t>();
+
+    spawnPoint = {data["spawn_point"]["x"].get<float>(), data["spawn_point"]["y"].get<float>()};
+    
+    generation_properties =
+    {
+        .flat = data["generation_properties"]["flat"].get<bool>(),
+        .base_height = data["generation_properties"]["base_height"].get<float>(),
+        .height_scale = data["generation_properties"]["height_scale"].get<float>(),
+        .frequency = data["generation_properties"]["frequency"].get<float>(),
+        .amplitude = data["generation_properties"]["amplitude"].get<float>(),
+        .persistence = data["generation_properties"]["persistence"].get<float>()
+    };
+
+
+    /*
     std::string trash;
 
     file >> trash >> dayTime;
@@ -1083,11 +1123,20 @@ void World::readData()
     file >> trash >> generation_properties.frequency;
     file >> trash >> generation_properties.amplitude;
     file >> trash >> generation_properties.persistence;
+    */
 
     std::cout << "Data file: " << std::endl;
     std::cout << "Daytime: " << dayTime << std::endl;
     std::cout << "Days: " << days << std::endl;
     std::cout << "Spawnpoint: " << spawnPoint.x << ' ' << spawnPoint.y << std::endl;
+
+    std::cout << "Generation Properties:\n";
+    std::cout << "\tFlat: " << ((generation_properties.flat) ? "true" : "false") << '\n';
+    std::cout << "\tBase height: " << generation_properties.base_height << '\n';
+    std::cout << "\tHeight scale: " << generation_properties.height_scale << '\n';
+    std::cout << "\tFrequency: " << generation_properties.frequency << '\n';
+    std::cout << "\tAmplitude: " << generation_properties.amplitude << '\n';
+    std::cout << "\tPersistence: " << generation_properties.persistence << '\n';
 }
 
 
