@@ -373,8 +373,8 @@ SnapshotPacket deserializeSnapshot(PacketReader& r)
     {
         NetEntity e;
         e.id        = r.read<uint32_t>();
-        e.x         = r.read<float>();
-        e.y         = r.read<float>();
+        e.x         = r.read<double>();
+        e.y         = r.read<double>();
         e.size_x    = r.read<float>();
         e.size_y    = r.read<float>();
         e.textureID = r.read<uint32_t>();

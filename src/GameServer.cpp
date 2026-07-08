@@ -138,7 +138,8 @@ void GameServer::sendInitializationTo(uint32_t client_id, int around_chunk_posit
         int chunk_position = start + i;
         if (!world.getChunks().contains(chunk_position))
         {
-            world.generateChunk(chunk_position);
+            if (world.hasChunkFile(chunk_position)) world.readChunk(chunk_position);
+            else world.generateChunk(chunk_position);
         }
 
         InitializationPacket initialization;

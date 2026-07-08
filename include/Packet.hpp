@@ -46,8 +46,8 @@ struct NetEntity
 {
     uint32_t id;
 
-    float x;
-    float y;
+    double x;
+    double y;
 
     float size_x;
     float size_y;

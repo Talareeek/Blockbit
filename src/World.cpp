@@ -17,6 +17,7 @@
 #include "../include/RenderComponent.hpp"
 #include "../include/HealthComponent.hpp"
 #include "../include/Render.hpp"
+#include "../include/BBT.hpp"
 #include <SFML/Graphics.hpp>
 #include <zstd.h>
 #include <iostream>
@@ -777,6 +778,7 @@ void World::readManifest()
 
     file >> name;
     file >> seed;
+    perlin = PerlinNoise(seed);
 }
 
 void World::readChunk(int chunk_position)
