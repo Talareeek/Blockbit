@@ -15,6 +15,11 @@ struct TransformComponent
     void teleport(const sf::Vector2<double>& position);
     void move(const sf::Vector2<double>& offset);
 
+    sf::Vector2<double> center() const
+    {
+        return position + size / 2.0;
+    }
+
 
     std::string serialize()
     {

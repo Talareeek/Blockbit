@@ -4,14 +4,12 @@
 #include "Chunk.hpp"
 #include "Entity.hpp"
 #include "PerlinNoise.hpp"
-#include "ChunkMesh.hpp"
 
 #include <unordered_map>
-#include <cstdlib>
 #include <filesystem>
 #include <optional>
 
-#include <SFML/Graphics.hpp>
+#include <SFML/System/Vector2.hpp>
 
 struct GenerationProperties
 {
@@ -39,19 +37,10 @@ private:
 
     std::unordered_map<int, Chunk> chunks;
     std::vector<Entity> entities;
-   
+
 
     uint32_t version;
 
-    static constexpr sf::Color nightTop   {6, 10, 28};
-    static constexpr sf::Color nightBot   {18, 28, 60};
-    static constexpr sf::Color dawnTop    {60, 90, 160};
-    static constexpr sf::Color dawnBot    {220, 150, 150};
-    static constexpr sf::Color dayTop     {80, 160, 240};
-    static constexpr sf::Color dayBot     {170, 215, 255};
-    static constexpr sf::Color sunsetTop  {120, 90, 160};
-    static constexpr sf::Color sunsetBot  {255, 160, 90};
-    
     sf::Vector2f spawnPoint{0.0f, 0.0f};
 
 public:
@@ -86,7 +75,7 @@ public:
         }
         throw std::runtime_error("No available entity ID found");
     }
-    
+
     Chunk& getChunk(int chunk_position);
     Block getBlock(int wx, int wy);
     void setBlock(int wx, int wy, Block block);
@@ -145,8 +134,6 @@ public:
 
     float fluidTimer{0.0f};
 
-    std::pair<sf::Color, sf::Color> getSkyGradient(float t);
-
     float getDayTime() const { return dayTime; }
 
     sf::Vector2f getSpawnPoint() const { return spawnPoint; }
@@ -174,10 +161,6 @@ public:
 
     std::pair<float, float> getSimulationRangeForEntity(const uint32_t entity);
 
-    void rebuildChunkMesh(int chunk_position, unsigned int unit_size);
-
-    std::unordered_map<int, ChunkMesh> chunkMeshes;
-
     bool trackBlockChanges = false;
     std::vector<std::tuple<int, int, Block>> pendingBlockUpdates;
 
@@ -185,16 +168,6 @@ public:
 
     uint64_t days{0};
 };
-
-extern sf::Vector2i getMouseBlockPosition(const World& world, const sf::RenderWindow& window);
-
-extern sf::Vector2f getMouseWorldPosition(const World& world, const sf::RenderWindow& window);
-
-extern sf::Vector2f getSunWorldPosition(const World& world, sf::Vector2f cameraCenter);
-
-extern void renderSunAndMoon(float daytime, sf::RenderWindow& window);
-
-extern void renderSky(sf::RenderWindow& window, sf::Color top, sf::Color bottom);
 
 extern void updateFluids(World& world);
 

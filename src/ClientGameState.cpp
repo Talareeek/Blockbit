@@ -200,7 +200,7 @@ void ClientGameState::processIncoming()
                     chunk = initialization.chunk;
 
                     chunk.meshDirty = true;
-                    world.chunkMeshes[initialization.chunk.chunk_position].built = false;
+                    chunkMeshes[initialization.chunk.chunk_position].built = false;
                     initialized = true;
 
                     break;
@@ -340,7 +340,7 @@ void ClientGameState::handleEvent(const sf::Event& event)
 
     if(event.is<sf::Event::Resized>())
     {
-        world.chunkMeshes.clear();
+        chunkMeshes.clear();
     }
 
     if (player_ui_initialized)
@@ -585,7 +585,7 @@ void ClientGameState::render(sf::RenderWindow& window)
 
     if (!isLocalSession() && !initialized)
     {
-        auto [sky_top, sky_bottom] = world.getSkyGradient(world.getDayTime() / World::DAY_CYCLE_DURATION);
+        auto [sky_top, sky_bottom] = getSkyGradient(world.getDayTime() / World::DAY_CYCLE_DURATION);
         renderSky(window, sky_top, sky_bottom);
 
         sf::Text waiting(AssetManager::getFont(0), "Connecting to " + remote_address + "...", 28);
@@ -598,7 +598,7 @@ void ClientGameState::render(sf::RenderWindow& window)
         return;
     }
 
-    auto [sky_top, sky_bottom] = world.getSkyGradient(world.getDayTime() / World::DAY_CYCLE_DURATION);
+    auto [sky_top, sky_bottom] = getSkyGradient(world.getDayTime() / World::DAY_CYCLE_DURATION);
     renderSky(window, sky_top, sky_bottom);
 
     renderSunAndMoon(world.getDayTime(), window);

@@ -19,11 +19,11 @@ void ExplosiveSystem(World& world, float dt)
 
         if(explosive.timer < explosive.fuseTime) continue;
 
-        sf::Vector2f center = sf::Vector2f(entity.getComponent<TransformComponent>().position);
+        sf::Vector2f center = sf::Vector2f(entity.getComponent<TransformComponent>().center());
 
         for(auto& other : entities)
         {
-            sf::Vector2f diff = sf::Vector2f(other.getComponent<TransformComponent>().position) - center;
+            sf::Vector2f diff = sf::Vector2f(other.getComponent<TransformComponent>().center()) - center;
 
             float dist = std::sqrt(diff.x * diff.x + diff.y * diff.y);
 
@@ -40,7 +40,8 @@ void ExplosiveSystem(World& world, float dt)
                 other.getComponent<HealthComponent>().health -= damage;
             }
 
-            other.getComponent<PhysicsComponent>().velocity += sf::Vector2f(dir.x, dir.y - 0.4f) * (factor);
+            float impulse = std::sqrt(factor) * (2.f + explosive.force * 0.5f);
+            other.getComponent<PhysicsComponent>().velocity += sf::Vector2f(dir.x, dir.y - 0.6f) * impulse;
         }
 
         // DESTROY BLOCKS

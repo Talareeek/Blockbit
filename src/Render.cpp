@@ -7,6 +7,230 @@
 #include "../include/BlockAtlas.hpp"
 
 #include <random>
+#include <numbers>
+
+std::unordered_map<int, ChunkMesh> chunkMeshes;
+
+namespace
+{
+    constexpr sf::Color nightTop   {6, 10, 28};
+    constexpr sf::Color nightBot   {18, 28, 60};
+    constexpr sf::Color dawnTop    {60, 90, 160};
+    constexpr sf::Color dawnBot    {220, 150, 150};
+    constexpr sf::Color dayTop     {80, 160, 240};
+    constexpr sf::Color dayBot     {170, 215, 255};
+    constexpr sf::Color sunsetTop  {120, 90, 160};
+    constexpr sf::Color sunsetBot  {255, 160, 90};
+
+    float smooth(float t)
+    {
+        t = std::clamp(t, 0.0f, 1.0f);
+        return t * t * (3.0f - 2.0f * t);
+    }
+
+    void appendQuad(sf::VertexArray& va, const sf::Vector2f& pos, const sf::Vector2f& size, const sf::IntRect& uv)
+    {
+        sf::Vertex v0, v1, v2, v3;
+
+        const sf::Vector2f uvPos  = sf::Vector2f(static_cast<float>(uv.position.x), static_cast<float>(uv.position.y));
+        const sf::Vector2f uvSize = sf::Vector2f(static_cast<float>(uv.size.x), static_cast<float>(uv.size.y));
+
+        const float u0 = uvPos.x;
+        const float v0y = uvPos.y;
+        const float u1 = uvPos.x + uvSize.x;
+        const float v1y = uvPos.y + uvSize.y;
+
+        v0.position = {pos.x, pos.y};
+        v1.position = {pos.x + size.x, pos.y};
+        v2.position = {pos.x + size.x, pos.y + size.y};
+        v3.position = {pos.x, pos.y + size.y};
+
+        v0.texCoords = {u0, v1y};
+        v1.texCoords = {u1, v1y};
+        v2.texCoords = {u1, v0y};
+        v3.texCoords = {u0, v0y};
+
+        va.append(v0);
+        va.append(v1);
+        va.append(v2);
+
+        va.append(v0);
+        va.append(v2);
+        va.append(v3);
+    }
+}
+
+void rebuildChunkMesh(World& world, int chunk_position, unsigned int unit_size)
+{
+    Chunk& chunk = world.getChunk(chunk_position);
+    ChunkMesh& mesh = chunkMeshes[chunk_position];
+
+    mesh.vertices.clear();
+
+    const float size = (float)unit_size;
+
+    for (int y = 0; y < CHUNK_HEIGHT; y++)
+    {
+        for (int x = 0; x < CHUNK_WIDTH; x++)
+        {
+            Block& block = chunk.blocks[y][x];
+
+            if (block.id == BlockID::Air)
+                continue;
+
+            uint32_t texID = blockDatabase[block.id].texture;
+
+            const sf::IntRect& uv = BlockAtlas::getUV(texID);
+
+            float worldX = x * size;
+            float worldY = y * size;
+
+            float heightFactor = 1.0f;
+
+            if (block.id == BlockID::Water)
+            {
+                uint8_t level = block.metadata;
+
+                if (level == 9)
+                    level = 8;
+
+                BlockID above =
+                    world.getBlock(
+                        chunk_position * CHUNK_WIDTH + x,
+                        y + 1).id;
+
+                if (above != BlockID::Water)
+                    heightFactor = level / 9.0f;
+            }
+
+            sf::Vector2f pos(worldX, worldY);
+            sf::Vector2f blockSize(size, size * heightFactor);
+
+            appendQuad(mesh.vertices, pos, blockSize, uv);
+        }
+    }
+
+    mesh.built = true;
+    chunk.meshDirty = false;
+}
+
+std::pair<sf::Color, sf::Color> getSkyGradient(float t)
+{
+    t = std::fmod(t, 1.0f);
+
+    sf::Color top, bottom;
+
+    if (t < 0.25f)
+    {
+        float k = smooth(t / 0.25f);
+        top    = lerpColor(nightTop, dawnTop, k);
+        bottom = lerpColor(nightBot, dawnBot, k);
+    }
+    else if (t < 0.5f)
+    {
+        float k = smooth((t - 0.25f) / 0.25f);
+        top    = lerpColor(dawnTop, dayTop, k);
+        bottom = lerpColor(dawnBot, dayBot, k);
+    }
+    else if (t < 0.75f)
+    {
+        float k = smooth((t - 0.5f) / 0.25f);
+        top    = lerpColor(dayTop, sunsetTop, k);
+        bottom = lerpColor(dayBot, sunsetBot, k);
+    }
+    else
+    {
+        float k = smooth((t - 0.75f) / 0.25f);
+        top    = lerpColor(sunsetTop, nightTop, k);
+        bottom = lerpColor(sunsetBot, nightBot, k);
+    }
+
+    return {top, bottom};
+}
+
+void renderSky(sf::RenderWindow& window, sf::Color top, sf::Color bottom)
+{
+    const float w = static_cast<float>(window.getSize().x);
+    const float h = static_cast<float>(window.getSize().y);
+
+    sf::VertexArray sky(sf::PrimitiveType::TriangleStrip, 4);
+
+    sky[0].position = {0.0f, 0.0f};
+    sky[1].position = {w,    0.0f};
+    sky[2].position = {0.0f, h};
+    sky[3].position = {w,    h};
+
+    sky[0].color = top;
+    sky[1].color = top;
+    sky[2].color = bottom;
+    sky[3].color = bottom;
+
+    sf::View previous = window.getView();
+    window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {w, h})));
+    window.draw(sky);
+    window.setView(previous);
+}
+
+void renderSunAndMoon(float daytime, sf::RenderWindow& window)
+{
+    float passed = daytime / World::DAY_CYCLE_DURATION;
+
+    float sun_angle  = passed * 2.0f * static_cast<float>(std::numbers::pi);
+    float moon_angle = sun_angle + static_cast<float>(std::numbers::pi);
+
+    float W = static_cast<float>(window.getSize().x);
+    float H = static_cast<float>(window.getSize().y);
+
+    float radius   = W * 0.55f;
+    float bodySize = W / 24.0f;
+
+    auto drawBody = [&](float angle, sf::Color core)
+    {
+        float bx = -std::sin(angle) * radius + W * 0.5f;
+        float by =  std::cos(angle) * radius + H;
+
+        sf::RectangleShape body({bodySize, bodySize});
+        body.setFillColor(core);
+        body.setOrigin({bodySize * 0.5f, bodySize * 0.5f});
+        body.setPosition({bx, by});
+        window.draw(body);
+    };
+
+    drawBody(moon_angle, sf::Color(235, 235, 245));
+    drawBody(sun_angle,  sf::Color(255, 235, 140));
+}
+
+sf::Vector2f getMouseWorldPosition(const World&, const sf::RenderWindow& window)
+{
+    float unit_size = window.getView().getSize().y / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
+
+    sf::Vector2f mouseWorld = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+
+    return {-(mouseWorld.x / unit_size), -(mouseWorld.y / unit_size)};
+}
+
+sf::Vector2i getMouseBlockPosition(const World& world, const sf::RenderWindow& window)
+{
+    auto mousePos = getMouseWorldPosition(world, window);
+    return {static_cast<int>(std::floor(mousePos.x)), static_cast<int>(std::floor(mousePos.y))};
+}
+
+sf::Vector2f getSunWorldPosition(const World& world, sf::Vector2f cameraCenter)
+{
+    constexpr float PI = 3.14159265359f;
+    constexpr float SUN_DISTANCE = 200.0f;
+
+    float t = std::fmod(world.getDayTime() / World::DAY_CYCLE_DURATION, 1.0f);
+
+    float normalized = std::clamp((t - 0.25f) / 0.5f, 0.0f, 1.0f);
+    float angle = normalized * PI;
+
+    return
+    {
+        cameraCenter.x - std::cos(angle) * SUN_DISTANCE,
+        cameraCenter.y + std::sin(angle) * SUN_DISTANCE
+    };
+}
 
 void RenderWorld(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window)
 {
@@ -26,11 +250,11 @@ void RenderWorld(World& world, const sf::Vector2<double> camera, sf::RenderWindo
 
         if (!chunk.generated) continue;
 
-        ChunkMesh& mesh = world.chunkMeshes[i];
+        ChunkMesh& mesh = chunkMeshes[i];
 
         if (chunk.meshDirty || !mesh.built)
         {
-            world.rebuildChunkMesh(i, unit_size);
+            rebuildChunkMesh(world, i, unit_size);
         }
 
         float tx = static_cast<float>((static_cast<double>(i * CHUNK_WIDTH) - camera.x) * static_cast<double>(unit_size));

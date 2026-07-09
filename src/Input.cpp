@@ -1,5 +1,6 @@
 #include "../include/Input.hpp"
 #include "../include/World.hpp"
+#include "../include/Render.hpp"
 #include "../include/GameCommon.hpp"
 #include "../include/Entity.hpp"
 #include "../include/PhysicsComponent.hpp"
