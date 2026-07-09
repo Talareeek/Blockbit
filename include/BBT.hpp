@@ -142,6 +142,8 @@ public:
 
     BBT(std::string name);
 
+    BBT(std::string name, TagCompound root_compound);
+
     Tag& operator[](const std::string& field_name);
     const Tag& operator[](const std::string& field_name) const;
 
@@ -149,6 +151,11 @@ public:
 
     std::vector<uint8_t> save() const;
     static BBT load(const std::vector<uint8_t> buffer);
+
+    TagCompound& root();
+    const TagCompound& root() const;
 };
+
+extern void mergeBBTIntoTagCompound(const BBT& bbt, TagCompound& destination);
 
 #endif // BBT_HPP

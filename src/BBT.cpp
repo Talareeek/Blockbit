@@ -354,6 +354,8 @@ Tag Tag::load(const std::vector<uint8_t>& buffer, size_t& position)
 
 BBT::BBT(std::string name) : root_compound(), bbt_name(std::move(name)) {}
 
+BBT::BBT(std::string name, TagCompound root_compound) : root_compound{root_compound}, bbt_name{name} {}
+
 Tag& BBT::operator[](const std::string& field_name)
 {
     return root_compound[field_name];
@@ -400,4 +402,19 @@ BBT BBT::load(const std::vector<uint8_t> buffer)
     bbt.root_compound = root.get<TagCompound>();
 
     return bbt;
+}
+
+TagCompound& BBT::root()
+{
+    return root_compound;
+}
+
+const TagCompound& BBT::root() const
+{
+    return root_compound;
+}
+
+void mergeBBTIntoTagCompound(const BBT& bbt, TagCompound& destination)
+{
+    destination[bbt.name()] = bbt.root();
 }
