@@ -49,6 +49,8 @@ private:
     std::shared_ptr<ProbeState> activeProbe;
     std::thread probeThread;
 
+    sf::Texture backgroundTexture;
+
     void beginProbe(const std::string& text);
     void cancelActiveProbe();
 

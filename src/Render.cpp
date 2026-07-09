@@ -6,6 +6,8 @@
 #include "../include/AssetManager.hpp"
 #include "../include/BlockAtlas.hpp"
 
+#include <random>
+
 void RenderWorld(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window)
 {
     sf::View view({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
@@ -280,4 +282,115 @@ sf::Color lerpColor(sf::Color a, sf::Color b, float t)
         a.g + (b.g - a.g) * t,
         a.b + (b.b - a.b) * t
     );
+}
+
+sf::Texture generateBackground()
+{
+    std::random_device rd;
+    unsigned int seed = rd();
+    std::mt19937 rng(seed);
+
+    std::uniform_real_distribution<float> baseDist(0.0f,    200.0f);
+    std::uniform_real_distribution<float> scaleDist(0.0f,    100.0f);
+    std::uniform_real_distribution<float> freqDist (0.001f,  0.200f);
+    std::uniform_real_distribution<float> ampDist  (0.0f,    2.0f);
+    std::uniform_real_distribution<float> persDist (0.0f,    1.0f);
+
+    GenerationProperties props{};
+    props.flat = false;
+    props.base_height = baseDist(rng);
+    props.height_scale = scaleDist(rng);
+    props.frequency = freqDist(rng);
+    props.amplitude = ampDist(rng);
+    props.persistence = persDist(rng);
+
+    PerlinNoise perlin(seed);
+
+    auto heightAt = [&](float x) -> float
+    {
+        float total = 0.0f;
+        float f = props.frequency;
+        float a = props.amplitude;
+        float p = props.persistence;
+
+        for (int i = 0; i < 4; ++i)
+        {
+            total += perlin.noise(x * f, 0.0f) * a;
+            a *= p;
+            f *= 2.0f;
+        }
+        return props.base_height + total * props.height_scale;
+    };
+
+    constexpr unsigned int OUT_W = 1920;
+    constexpr unsigned int OUT_H = 1080;
+    constexpr unsigned int UNIT_SIZE = 45;
+
+    const float viewBlocksW = static_cast<float>(OUT_W) / UNIT_SIZE;
+    const float viewBlocksH = static_cast<float>(OUT_H) / UNIT_SIZE;
+
+    const float cameraX = 0.0f;
+
+    const int firstCol = static_cast<int>(std::floor(cameraX - viewBlocksW * 0.5f)) - 2;
+    const int lastCol  = static_cast<int>(std::ceil (cameraX + viewBlocksW * 0.5f)) + 2;
+
+    float minH =  std::numeric_limits<float>::infinity();
+    for (int x = firstCol; x <= lastCol; ++x)
+    {
+        minH = std::min(minH, heightAt(static_cast<float>(x)));
+    }
+
+    const float bottomView = std::floor(minH) - 3.0f;
+    const float cameraY = bottomView + viewBlocksH * 0.5f;
+
+    sf::RenderTexture rt(sf::Vector2u{OUT_W, OUT_H});
+    rt.clear();
+
+    constexpr sf::Color skyTop   {80, 160, 240};
+    constexpr sf::Color skyBottom{170, 215, 255};
+
+    sf::VertexArray sky(sf::PrimitiveType::TriangleStrip, 4);
+    sky[0].position = {0.0f, 0.0f};
+    sky[1].position = {static_cast<float>(OUT_W), 0.0f};
+    sky[2].position = {0.0f, static_cast<float>(OUT_H)};
+    sky[3].position = {static_cast<float>(OUT_W), static_cast<float>(OUT_H)};
+    sky[0].color = skyTop;
+    sky[1].color = skyTop;
+    sky[2].color = skyBottom;
+    sky[3].color = skyBottom;
+    rt.draw(sky);
+
+    const int minY = static_cast<int>(std::floor(cameraY - viewBlocksH * 0.5f));
+    const int maxY = static_cast<int>(std::ceil (cameraY + viewBlocksH * 0.5f));
+
+    for (int wx = firstCol; wx <= lastCol; ++wx)
+    {
+        const int h = static_cast<int>(std::floor(heightAt(static_cast<float>(wx))));
+
+        const float px = (static_cast<float>(wx) - cameraX + viewBlocksW * 0.5f) * UNIT_SIZE;
+
+        for (int wy = minY; wy <= maxY; ++wy)
+        {
+            if (wy >= h) continue;
+
+            const BlockID id = (wy == h - 1) ? BlockID::Grass : BlockID::Dirt;
+
+            const uint32_t texID = blockDatabase[id].texture;
+            sf::Sprite sprite(AssetManager::getTexture(texID));
+
+            const float py = (cameraY + viewBlocksH * 0.5f - static_cast<float>(wy + 1)) * UNIT_SIZE;
+            sprite.setPosition({px, py});
+
+            const auto texSize = sprite.getTexture().getSize();
+            sprite.setScale({
+                static_cast<float>(UNIT_SIZE) / texSize.x,
+                static_cast<float>(UNIT_SIZE) / texSize.y
+            });
+
+            rt.draw(sprite);
+        }
+    }
+
+    rt.display();
+    return sf::Texture(rt.getTexture());
 }

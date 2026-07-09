@@ -2,6 +2,7 @@
 #include "../include/Game.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/Client.hpp"
+#include "../include/Render.hpp"
 
 #include <chrono>
 #include <iostream>
@@ -72,6 +73,8 @@ MenuGameState::MenuGameState(Game* game) : GameState(game), serverPreview(&statu
     UIElement::ScreenRelative sliderRelative{{0.30f, 0.45f}, {0.30f, 0.08f}, UIElement::ScreenRelative::ScaleMode::UniformByHeight};
 
     nicknameField = InputField(InputField({0.0f, 0.0f}, {0.0f, 0.0f}), "Player", "Nickname");
+
+    backgroundTexture = generateBackground();
 }
 
 MenuGameState::~MenuGameState()
@@ -224,7 +227,7 @@ void MenuGameState::render(sf::RenderWindow& window)
 {
     window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
 
-    sf::Sprite background(AssetManager::getTexture(200135));
+    sf::Sprite background(backgroundTexture);
     background.setPosition({0.0f, 0.0f});
     background.setScale
     (

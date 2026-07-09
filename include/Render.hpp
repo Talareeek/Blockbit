@@ -12,4 +12,6 @@ extern void RenderLightRays(World& world, sf::RenderWindow& window);
 
 extern sf::Color lerpColor(sf::Color a, sf::Color b, float t);
 
+extern sf::Texture generateBackground();
+
 #endif // RENDER_HPP
