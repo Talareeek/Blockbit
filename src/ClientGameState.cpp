@@ -20,6 +20,7 @@
 #include "../include/LoopbackServerTransport.hpp"
 #include "../include/CompositeServerTransport.hpp"
 #include "../include/PhysicsSystem.hpp"
+#include "../include/AnnouncementState.hpp"
 
 #include <iostream>
 #include <algorithm>
@@ -317,12 +318,6 @@ void ClientGameState::handleEvent(const sf::Event& event)
 
     if (auto key = event.getIf<sf::Event::KeyPressed>())
     {
-        if (!isLocalSession() && key->code == sf::Keyboard::Key::Escape && (connection_failed || (transport && !transport->isConnected())))
-        {
-            game->popState();
-            return;
-        }
-
         if (!chat_was_active && key->code == sf::Keyboard::Key::T)
         {
             chat_ui.open();
@@ -543,46 +538,17 @@ void ClientGameState::render(sf::RenderWindow& window)
 
     if (connection_failed)
     {
-        sf::RectangleShape background({static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
-        background.setFillColor(sf::Color(18, 22, 30));
-        window.draw(background);
 
         std::string title = was_connected ? "Disconnected" : "Cannot connect to server";
         std::string detail = remote_address.empty() ? "" : remote_address;
         std::string reason = error_message.empty() ? "" : ("Reason: " + error_message);
         std::string hint = "Press ESC to go back";
 
-        sf::Text title_text(AssetManager::getFont(0), title, 36);
-        title_text.setFillColor(sf::Color(230, 80, 80));
-        title_text.setOutlineColor(sf::Color::Black);
-        title_text.setOutlineThickness(2.0f);
-        auto title_bounds = title_text.getLocalBounds();
-        title_text.setPosition({(window.getSize().x - title_bounds.size.x) * 0.5f, window.getSize().y * 0.35f});
-        window.draw(title_text);
+        Game* temp_game = game;
+        game->popState();
 
-        if (!detail.empty())
-        {
-            sf::Text detail_text(AssetManager::getFont(0), detail, 22);
-            detail_text.setFillColor(sf::Color(220, 220, 220));
-            auto detail_bounds = detail_text.getLocalBounds();
-            detail_text.setPosition({(window.getSize().x - detail_bounds.size.x) * 0.5f, window.getSize().y * 0.35f + 50.0f});
-            window.draw(detail_text);
-        }
+        game->pushState(std::make_unique<AnnouncementState>(temp_game, title + '\n' + detail + '\n' + reason + '\n' + hint));
 
-        if (!reason.empty())
-        {
-            sf::Text reason_text(AssetManager::getFont(0), reason, 20);
-            reason_text.setFillColor(sf::Color(200, 200, 200));
-            auto reason_bounds = reason_text.getLocalBounds();
-            reason_text.setPosition({(window.getSize().x - reason_bounds.size.x) * 0.5f, window.getSize().y * 0.35f + 85.0f});
-            window.draw(reason_text);
-        }
-
-        sf::Text hint_text(AssetManager::getFont(0), hint, 18);
-        hint_text.setFillColor(sf::Color(180, 180, 180));
-        auto hint_bounds = hint_text.getLocalBounds();
-        hint_text.setPosition({(window.getSize().x - hint_bounds.size.x) * 0.5f, window.getSize().y * 0.55f});
-        window.draw(hint_text);
         return;
     }
 
