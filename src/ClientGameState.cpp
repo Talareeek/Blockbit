@@ -19,6 +19,7 @@
 #include "../include/NetworkServerTransport.hpp"
 #include "../include/LoopbackServerTransport.hpp"
 #include "../include/CompositeServerTransport.hpp"
+#include "../include/PhysicsSystem.hpp"
 
 #include <iostream>
 #include <algorithm>
@@ -481,6 +482,8 @@ void ClientGameState::update(float dt)
     }
 
     if (since_last_tick > tick_step) since_last_tick = 0.0f;
+
+    PhysicsSystem(world.getEntities(), world, dt);
 
     AnimationSystem(world, dt);
 
