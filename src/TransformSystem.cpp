@@ -17,12 +17,7 @@ void TransformSystem(World& world)
 
         for (int i = chunk_lowest; i <= chunk_highest; i++)
         {
-            if(world.getChunks().contains(i)) {
-                if(world.getChunks()[i].generated) continue;
-            }
-
-            if(world.hasChunkFile(i)) world.readChunk(i);
-            else world.generateChunk(i);
+            world.loadOrCreateChunk(i);
         }
     }
 }

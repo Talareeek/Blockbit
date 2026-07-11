@@ -19,6 +19,7 @@ class GameServer
 private:
 
     World world;
+    
     std::unique_ptr<ServerTransport> transport;
     uint32_t host_client_id;
     uint32_t host_entity_id{0};

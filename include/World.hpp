@@ -98,6 +98,7 @@ public:
     std::optional<uint32_t> findPlayerEntityByClient(uint32_t clientId) const;
 
     void generateChunk(int chunk_position);
+    void loadOrCreateChunk(int chunk_position);
 
     // phases
     void generateTerrain(int chunk_position);

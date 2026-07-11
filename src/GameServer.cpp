@@ -17,6 +17,7 @@
 #include "../include/HealthSystem.hpp"
 #include "../include/PhysicsSystem.hpp"
 #include "../include/InventorySystem.hpp"
+#include "../include/ChunkLoadSystem.hpp"
 #include "../include/ChunkUnloadSystem.hpp"
 #include "../include/DaycycleSystem.hpp"
 
@@ -136,11 +137,7 @@ void GameServer::sendInitializationTo(uint32_t client_id, int around_chunk_posit
     for (int i = 0; i < chunk_count; i++)
     {
         int chunk_position = start + i;
-        if (!world.getChunks().contains(chunk_position))
-        {
-            if (world.hasChunkFile(chunk_position)) world.readChunk(chunk_position);
-            else world.generateChunk(chunk_position);
-        }
+        world.loadOrCreateChunk(chunk_position);
 
         InitializationPacket initialization;
         initialization.chunk = world.getChunk(chunk_position);
@@ -317,6 +314,7 @@ void GameServer::runSystems(float tick_step)
     HealthSystem(world);
     PhysicsSystem(entities, world, tick_step);
     InventorySystem(entities);
+    ChunkLoadSystem(world, tick_step);
     ChunkUnloadSystem(world);
     DaycycleSystem(world, tick_step);
 

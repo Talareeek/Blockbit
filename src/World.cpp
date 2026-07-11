@@ -140,6 +140,14 @@ WORLD GENERATION
 ==================================================
 */
 
+void World::loadOrCreateChunk(int chunk_position)
+{
+    if (chunks.contains(chunk_position) && chunks[chunk_position].generated) return;
+
+    if (hasChunkFile(chunk_position)) readChunk(chunk_position);
+    else generateChunk(chunk_position);
+}
+
 void World::generateChunk(int chunk_position)
 {
     Chunk& chunk = getChunk(chunk_position);
