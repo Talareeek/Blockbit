@@ -31,8 +31,7 @@
 #include <sstream>
 #include <cstdlib>
 
-ClientGameState::ClientGameState(Game* game, const std::string& host, uint16_t port, std::string nickname)
-    : GameState(game)
+ClientGameState::ClientGameState(Game* game, const std::string& host, uint16_t port, std::string nickname) : GameState(game)
 {
     game->getWindow().setTitle("Blockbit - Multiplayer");
 
@@ -689,4 +688,9 @@ void ClientGameState::saveScreenshot(sf::RenderWindow& window)
     }
 
     std::cerr << "[Client] Screenshot saved: " << file_path << '\n';
+}
+
+bool ClientGameState::alwaysUpdated() const
+{
+    return false; //true;
 }

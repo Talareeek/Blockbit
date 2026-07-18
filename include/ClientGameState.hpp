@@ -96,6 +96,8 @@ public:
     void update(float dt) override;
     void render(sf::RenderWindow& window) override;
 
+    bool alwaysUpdated() const override;
+
     static constexpr uint16_t DEFAULT_PORT = 25565;
 };
 

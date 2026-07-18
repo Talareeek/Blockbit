@@ -184,9 +184,12 @@ void Game::handleEvents()
 
 void Game::update()
 {
-    if(!gameStates.empty())
+    for(auto& state : gameStates)
     {
-        gameStates.back()->update(dt);
+        if(state == gameStates.back() || state->alwaysUpdated())
+        {
+            state->update(dt);
+        }
     }
 
     console.update(dt);

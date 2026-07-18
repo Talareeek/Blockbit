@@ -5,3 +5,8 @@ GameState::GameState(Game* game) : game(game)
 {
 
 }
+
+bool GameState::alwaysUpdated() const
+{
+    return false;
+}
