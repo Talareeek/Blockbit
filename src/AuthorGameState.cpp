@@ -11,9 +11,9 @@ void AuthorGameState::update(float dt)
     {
         Game* temp_game = game;
 
-        game->popState();
+        game->popState(this);
 
-        temp_game->pushState(std::make_unique<MenuGameState>(temp_game));
+        temp_game->pushState(this, std::make_unique<MenuGameState>(temp_game));
     }
 }
 

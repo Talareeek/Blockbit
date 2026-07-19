@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
         }
 
         std::cerr << "[main] --join " << host << ":" << port << std::endl;
-        game.pushState(std::make_unique<ClientGameState>(&game, host, port));
+        game.pushState(nullptr, std::make_unique<ClientGameState>(&game, host, port));
     }
     else if (!hostWorld.empty())
     {
@@ -87,12 +87,12 @@ int main(int argc, char* argv[])
         if (std::filesystem::exists(worldPath))
         {
             std::cerr << "[main] --host " << hostWorld << " on 25565" << std::endl;
-            game.pushState(std::make_unique<ClientGameState>(&game, World(worldPath), ClientGameState::DEFAULT_PORT));
+            game.pushState(nullptr, std::make_unique<ClientGameState>(&game, World(worldPath), ClientGameState::DEFAULT_PORT));
         }
         else
         {
             std::cerr << "World not found at: " << worldPath << std::endl;
-            game.pushState(std::make_unique<AuthorGameState>(&game));
+            game.pushState(nullptr, std::make_unique<AuthorGameState>(&game));
         }
     }
     else if (!loadWorld.empty())
@@ -102,23 +102,23 @@ int main(int argc, char* argv[])
         {
             try
             {
-                game.pushState(std::make_unique<ClientGameState>(&game, World(worldPath)));
+                game.pushState(nullptr, std::make_unique<ClientGameState>(&game, World(worldPath)));
             }
             catch (const std::exception& e)
             {
                 std::cerr << "Failed to load world: " << e.what() << std::endl;
-                game.pushState(std::make_unique<AuthorGameState>(&game));
+                game.pushState(nullptr, std::make_unique<AuthorGameState>(&game));
             }
         }
         else
         {
             std::cerr << "World not found at: " << worldPath << std::endl;
-            game.pushState(std::make_unique<AuthorGameState>(&game));
+            game.pushState(nullptr, std::make_unique<AuthorGameState>(&game));
         }
     }
     else
     {
-        game.pushState(std::make_unique<AuthorGameState>(&game));
+        game.pushState(nullptr, std::make_unique<AuthorGameState>(&game));
     }
 
     game.run();

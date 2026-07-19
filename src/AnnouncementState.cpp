@@ -18,7 +18,7 @@ void AnnouncementState::update(float dt)
 {
     if(InputManager::isLazyKeyPressed(sf::Keyboard::Key::Escape))
     {
-        game->popState();
+        game->popState(this);
     }
 }
 

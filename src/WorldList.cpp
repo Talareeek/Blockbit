@@ -207,7 +207,7 @@ void WorldList::update(float dt)
     if(selection == Selection::SINGLEPLAYER && createButton.clicked())
     {
         createButton.update(dt);
-        game->pushState(std::make_unique<CreateWorldState>(game));
+        game->pushState(&game->currentState(), std::make_unique<CreateWorldState>(game));
         return;
     }
 
@@ -240,14 +240,14 @@ void WorldList::update(float dt)
         {
             auto world_path = entries[i].getPath();
             entries[i].clearRequests();
-            game->pushState(std::make_unique<ClientGameState>(game, World(world_path), 0, nickname));
+            game->pushState(&game->currentState(), std::make_unique<ClientGameState>(game, World(world_path), 0, nickname));
             return;
         }
         if(entries[i].wasHostRequested())
         {
             auto world_path = entries[i].getPath();
             entries[i].clearRequests();
-            game->pushState(std::make_unique<ClientGameState>(game, World(world_path), ClientGameState::DEFAULT_PORT, nickname));
+            game->pushState(&game->currentState(), std::make_unique<ClientGameState>(game, World(world_path), ClientGameState::DEFAULT_PORT, nickname));
             return;
         }
         if(entries[i].wasDeleteRequested())
@@ -270,7 +270,7 @@ void WorldList::update(float dt)
         pendingConnect.reset();
         try
         {
-            game->pushState(std::make_unique<ClientGameState>(game, host, port, nickname));
+            game->pushState(&game->currentState(), std::make_unique<ClientGameState>(game, host, port, nickname));
         }
         catch (const std::bad_alloc&)
         {

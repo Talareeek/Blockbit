@@ -68,6 +68,8 @@ private:
 
     float chat_close_cooldown = 0.0f;
 
+    sf::Vector2<double> camera;
+
     void tryInitializePlayerUI();
     bool hasPlayerEntity() const;
 

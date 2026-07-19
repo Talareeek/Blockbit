@@ -65,7 +65,7 @@ MenuGameState::MenuGameState(Game* game) : GameState(game), serverPreview(&statu
 
     quit = Button(quitRelative, sf::Color::Red, "Quit", [this]()
     {
-        this->game->popState();
+        this->game->popState(this);
     });
 
     quit.updateScreenRelative(game->getWindow().getSize());

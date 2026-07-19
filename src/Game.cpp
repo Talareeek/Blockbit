@@ -184,10 +184,16 @@ void Game::handleEvents()
 
 void Game::update()
 {
+    handleBufferedStateActions();
+
+    if(gameStates.empty()) return;
+
     for(auto& state : gameStates)
     {
         if(state == gameStates.back() || state->alwaysUpdated())
         {
+            assert(state != nullptr);
+
             state->update(dt);
         }
     }
@@ -228,16 +234,45 @@ void Game::run()
     }
 }
 
-void Game::pushState(std::unique_ptr<GameState> state)
+void Game::pushState(GameState* sender, std::unique_ptr<GameState> state)
 {
-    gameStates.push_back(std::move(state));
+    if(gameStates.empty() || sender == gameStates.back().get())
+    {
+        actions_queue.push(GameStateAction{GameStateAction::TYPE::PUSH, std::move(state)});
+        console.writeLine(L"Requested push of GameState");
+    }
 }
 
-void Game::popState()
+void Game::popState(GameState* sender)
 {
-    if(!gameStates.empty())
+    if(!gameStates.empty() || sender != gameStates.back().get()) return;
+
+    actions_queue.push(GameStateAction{GameStateAction::TYPE::POP, std::nullopt});
+    console.writeLine(L"Requested pop of GameState");
+
+}
+
+void Game::handleBufferedStateActions()
+{
+    while(!actions_queue.empty())
     {
-        gameStates.pop_back();
+        switch(actions_queue.front().type)
+        {
+            case GameStateAction::TYPE::PUSH:
+
+                if(!gameStates.empty()) gameStates.back()->onObscured();
+                gameStates.emplace_back(std::move(*actions_queue.front().state));
+                
+                break;
+
+            case GameStateAction::TYPE::POP:
+
+                gameStates.pop_back();
+                if(!gameStates.empty()) gameStates.back()->onRevealed();
+                break;
+        }
+
+        actions_queue.pop();
     }
 }
 
@@ -250,11 +285,11 @@ GameState& Game::currentState()
     return *gameStates.back();
 }
 
-void Game::popStates(size_t amount)
+void Game::popStates(GameState* sender, size_t amount)
 {
     for(size_t i = 0; i < amount; i++)
     {
-        popState();
+        popState(sender);
     }
 }
 

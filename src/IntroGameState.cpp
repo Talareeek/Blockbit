@@ -18,8 +18,8 @@ void IntroGameState::update(float dt)
     {
         Game* temp_game = this->game;
 
-        temp_game->popState();
-        temp_game->pushState(std::make_unique<MenuGameState>(temp_game));
+        temp_game->popState(this);
+        temp_game->pushState(this, std::make_unique<MenuGameState>(temp_game));
     }
 }
 

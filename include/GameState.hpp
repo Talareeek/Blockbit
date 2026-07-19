@@ -7,6 +7,10 @@ class Game;
 
 class GameState
 {
+private:
+
+    bool on_top;
+
 protected:
 
     Game* game;
@@ -20,6 +24,11 @@ public:
     virtual void render(sf::RenderWindow& window) = 0;
 
     virtual bool alwaysUpdated() const;
+
+    virtual void onObscured();
+    virtual void onRevealed();
+
+    bool onTop() const;
 
     virtual ~GameState() = default;
 };

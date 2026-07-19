@@ -129,7 +129,7 @@ void CreateWorldState::update(float dt)
 {
     if(InputManager::isLazyKeyPressed(sf::Keyboard::Key::Escape) || quit.clicked())
     {
-        game->popState();
+        game->popState(this);
         return;
     }
 
@@ -139,8 +139,8 @@ void CreateWorldState::update(float dt)
         pending_world.reset();
 
         Game* game_pointer = this->game;
-        game_pointer->popState();
-        game_pointer->pushState(std::make_unique<ClientGameState>(game_pointer, std::move(world)));
+        game_pointer->popState(this);
+        game_pointer->pushState(this, std::make_unique<ClientGameState>(game_pointer, std::move(world)));
         return;
     }
 

@@ -31,11 +31,8 @@ void HealthSystem(World& world)
 
         if(health.health <= 0 && health.killOnZero)
         {
-            toDelete.push_back(entity.getID());            
-        }
+            toDelete.push_back(entity.getID());
 
-        if(health.health <= 0)
-        {
             if(!entity.hasComponent<InventoryComponent>()) continue;
 
             auto& inventory = entity.getComponent<InventoryComponent>();

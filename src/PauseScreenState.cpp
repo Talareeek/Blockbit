@@ -4,8 +4,8 @@
 
 PauseScreenState::PauseScreenState(Game* game) : GameState(game)
 {
-    resume = Button({50.0f, 50.0f}, {250.0f, 50.0f}, sf::Color::Green, "Resume", [this](){ this->game->popState(); });
-    quit = Button({50.0f, 120.0f}, {250.0f, 50.0f}, sf::Color::Red, "Quit", [this](){ this->game->popStates(2);});
+    resume = Button({50.0f, 50.0f}, {250.0f, 50.0f}, sf::Color::Green, "Resume", [this](){ this->game->popState(this); });
+    quit = Button({50.0f, 120.0f}, {250.0f, 50.0f}, sf::Color::Red, "Quit", [this](){ this->game->popStates(this, 2);});
 }
 
 void PauseScreenState::handleEvent(const sf::Event& event)

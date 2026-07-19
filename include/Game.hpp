@@ -3,11 +3,19 @@
 
 #include <SFML/Graphics.hpp>
 #include <vector>
+#include <queue>
+
 #include "Entity.hpp"
 #include "World.hpp"
 #include "GameState.hpp"
 #include "Account.hpp"
 #include "Console.hpp"
+
+struct GameStateAction
+{
+    enum class TYPE {PUSH, POP} type;
+    std::optional<std::unique_ptr<GameState>> state;
+};
 
 class Game
 {
@@ -28,6 +36,8 @@ private:
 
     Entity& entityWithID(uint32_t id);
 
+    void handleBufferedStateActions();
+
     void handleEvents();
 
     void update();
@@ -35,6 +45,8 @@ private:
     void render();
 
     std::vector<std::unique_ptr<GameState>> gameStates;
+
+    std::queue<GameStateAction> actions_queue;
 
     sf::Clock clock;
 
@@ -52,9 +64,9 @@ public:
     void run();
 
     // GAME STATES
-    void pushState(std::unique_ptr<GameState> state);
-    void popState();
-    void popStates(size_t amount);
+    void pushState(GameState* sender, std::unique_ptr<GameState> state);
+    void popState(GameState* sender);
+    void popStates(GameState* sender, size_t amount);
     GameState& currentState();
 
     //ACCOUNT

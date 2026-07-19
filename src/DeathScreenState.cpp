@@ -22,7 +22,7 @@ DeathScreenState::DeathScreenState(Game* game, World& world, uint32_t entityID) 
                 }
             }
 
-            this->game->popState();
+            this->game->popState(this);
         }
     };
 }

@@ -485,7 +485,7 @@ void ClientGameState::update(float dt)
 
     if(acceptsPlayerInput() && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
     {
-        game->pushState(std::make_unique<PauseScreenState>(game));
+        game->pushState(this, std::make_unique<PauseScreenState>(game));
     }
 
     if (player_ui_initialized)
@@ -514,11 +514,10 @@ void ClientGameState::update(float dt)
         debug = !debug;
     }
 
-    if (player_ui_initialized
-        && entityWithID(local_player_entity_id.value(), world).getComponent<HealthComponent>().health <= 0)
+    if (player_ui_initialized && entityWithID(local_player_entity_id.value(), world).getComponent<HealthComponent>().health <= 0 && this->onTop())
     {
         World& death_world = local_server.has_value() ? local_server->getWorld() : world;
-        game->pushState(std::make_unique<DeathScreenState>(game, death_world, local_player_entity_id.value()));
+        game->pushState(this, std::make_unique<DeathScreenState>(game, death_world, local_player_entity_id.value()));
     }
 
     last_fps_update += dt;
@@ -544,9 +543,9 @@ void ClientGameState::render(sf::RenderWindow& window)
         std::string hint = "Press ESC to go back";
 
         Game* temp_game = game;
-        game->popState();
+        game->popState(this);
 
-        game->pushState(std::make_unique<AnnouncementState>(temp_game, title + '\n' + detail + '\n' + reason + '\n' + hint));
+        game->pushState(this, std::make_unique<AnnouncementState>(temp_game, title + '\n' + detail + '\n' + reason + '\n' + hint));
 
         return;
     }
@@ -577,7 +576,10 @@ void ClientGameState::render(sf::RenderWindow& window)
     }
     else
     {
-        sf::Vector2<double> camera = entityWithID(local_player_entity_id.value(), world).getComponent<TransformComponent>().position + sf::Vector2<double>(0.5, -0.5);
+        if(hasPlayerEntity())
+        {
+            camera = entityWithID(local_player_entity_id.value(), world).getComponent<TransformComponent>().position + sf::Vector2<double>(0.5, -0.5);
+        }
 
         RenderEntities(world, camera, window);
 
@@ -692,5 +694,5 @@ void ClientGameState::saveScreenshot(sf::RenderWindow& window)
 
 bool ClientGameState::alwaysUpdated() const
 {
-    return false; //true;
+    return true;
 }
