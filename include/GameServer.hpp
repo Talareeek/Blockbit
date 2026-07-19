@@ -26,6 +26,8 @@ private:
     bool save_on_destruct = true;
 
     std::unordered_map<uint32_t, uint32_t> client_to_entity;
+    std::unordered_map<uint32_t, std::string> client_to_nickname;
+
     std::unordered_set<uint32_t> known_clients;
     std::unordered_map<uint32_t, std::deque<std::vector<Input>>> remote_input_queues;
     std::unordered_map<uint32_t, std::unordered_set<int>> sent_chunks;
@@ -58,5 +60,7 @@ public:
 
     static constexpr uint16_t DEFAULT_PORT = 25565;
 };
+
+extern bool isNicknameAllowed(std::string nickname);
 
 #endif // GAME_SERVER_HPP

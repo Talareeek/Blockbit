@@ -245,7 +245,7 @@ void Game::pushState(GameState* sender, std::unique_ptr<GameState> state)
 
 void Game::popState(GameState* sender)
 {
-    if(!gameStates.empty() || sender != gameStates.back().get()) return;
+    if(gameStates.empty() || sender != gameStates.back().get()) return;
 
     actions_queue.push(GameStateAction{GameStateAction::TYPE::POP, std::nullopt});
     console.writeLine(L"Requested pop of GameState");

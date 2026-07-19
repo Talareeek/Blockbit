@@ -222,6 +222,12 @@ void GameServer::processIncoming()
                 {
                     LoginPacket login = deserializeLogin(reader);
 
+                    if(!isNicknameAllowed(login.nickname))
+                    {
+                        std::cerr << "[Server] Login with not allowed nickname: " << login.nickname << " from: " << packet.clientId << '\n';
+                        break;
+                    }
+
                     if (!known_clients.contains(packet.clientId))
                     {
                         std::cerr << "[Server] Login from unknown client " << packet.clientId << ", ignoring\n";
@@ -290,6 +296,12 @@ void GameServer::processIncoming()
                     std::wstring wide_nickname(nickname.begin(), nickname.end());
 
                     sendChat(wide_nickname, chat_message.message);
+
+                    break;
+                }
+                case PacketType::Respawn:
+                {
+                    
 
                     break;
                 }
@@ -433,4 +445,9 @@ void GameServer::tick(float tick_step)
     {
         std::cerr << "[Server] exception in tick: " << exception.what() << '\n';
     }
+}
+
+bool isNicknameAllowed(std::string nickname)
+{
+    return nickname.length() >= 4 && nickname.length() <= 15 && nickname.find(" ") == std::string::npos;
 }

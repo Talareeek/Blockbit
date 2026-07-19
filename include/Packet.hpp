@@ -26,8 +26,8 @@ enum class PacketType : uint8_t
     Despawn,
 
     Input,
-
-    ChatMessage
+    ChatMessage,
+    Respawn
 };
 
 struct InitializationPacket
@@ -122,6 +122,11 @@ struct ChatMessagePacket
     std::wstring message;
 };
 
+struct RespawnPacket
+{
+
+};
+
 class PacketWriter
 {
 private:
@@ -188,6 +193,7 @@ std::vector<char> serializePacket(const StatusRequestPacket& p);
 std::vector<char> serializePacket(const StatusResponsePacket& p);
 std::vector<char> serializePacket(const LoginPacket& p);
 std::vector<char> serializePacket(const ChatMessagePacket& p);
+std::vector<char> serializePacket(const RespawnPacket& p);
 
 InitializationPacket deserializeInitialization(PacketReader& r);
 BlockUpdatePacket    deserializeBlockUpdate(PacketReader& r);
@@ -199,5 +205,6 @@ StatusRequestPacket deserializeStatusRequest(PacketReader& r);
 StatusResponsePacket deserializeStatusResponse(PacketReader& r);
 LoginPacket deserializeLogin(PacketReader& r);
 ChatMessagePacket deserializeChatMessage(PacketReader& r);
+RespawnPacket deserializeRespawn(PacketReader& r);
 
 #endif // PACKET_HPP

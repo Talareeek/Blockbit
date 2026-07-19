@@ -343,6 +343,13 @@ std::vector<char> serializePacket(const ChatMessagePacket& p)
     return writer.release();
 }
 
+std::vector<char> serializePacket(const RespawnPacket& p)
+{
+    PacketWriter writer(PacketType::Respawn);
+
+    return writer.release();
+}
+
 // ----- deserialize -----
 // The type byte is consumed by the network layer before these are called,
 // so the reader points directly at the payload.
@@ -468,4 +475,9 @@ ChatMessagePacket deserializeChatMessage(PacketReader& r)
     ChatMessagePacket p;
     p.message = r.readWideString();
     return p;
+}
+
+RespawnPacket deserializeRespawn(PacketReader& r)
+{
+    return RespawnPacket();
 }
