@@ -1,4 +1,4 @@
-# Blockbit
+![Blockbit Logo](resources/textures/blockbit_logo.png)
 
 ![Screenshoot](resources/textures/loading_screen.png)
 
@@ -28,7 +28,7 @@ A 2D sandbox game written in **C++20** with **SFML**, inspired by classic block-
 - C++20 compatible compiler (GCC / MSVC)
 - [CMake](https://cmake.org/) >= 3.16
 - [Ninja](https://ninja-build.org/)
-- [SFML](https://www.sfml-dev.org/) 3.x
+- [SFML](https://www.sfml-dev.org/) 3.1.x
 
 ---
 
