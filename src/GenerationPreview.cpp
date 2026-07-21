@@ -20,7 +20,7 @@ GenerationPreview::GenerationPreview(const sf::Vector2f& position, const sf::Vec
 {
     seedButton = Button({}, {}, sf::Color(70, 90, 140), "Seed: 0");
 
-    baseHeightSlider  = Slider({}, {}, 0.0f,   200.0f, 45.0f,  "Base Height");
+    baseHeightSlider  = Slider({}, {}, 0.0f,   200.0f, 30.0f,  "Base Height");
     heightScaleSlider = Slider({}, {}, 0.0f,   100.0f, 35.0f,  "Height Scale");
     frequencySlider   = Slider({}, {}, 0.001f, 0.200f, 0.030f, "Frequency");
     amplitudeSlider   = Slider({}, {}, 0.0f,   2.0f,   1.0f,   "Amplitude");

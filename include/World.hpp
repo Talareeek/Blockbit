@@ -125,6 +125,10 @@ public:
 
     uint32_t getVersion() const;
 
+    float getContinentalNoise(float x) const;
+    float getErosionNoise(float x) const;
+    float getPeakNoise(float x) const;
+    
     float getHeightNoise(float x) const;
     int getHeight(int worldX) const;
 

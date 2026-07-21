@@ -328,35 +328,90 @@ void World::generateWorldSpawn()
     }
 }
 
+float World::getContinentalNoise(float x) const
+{
+    return perlin.noise(
+        x * 0.003f,
+        1000.0f
+    );
+}
+
+
+float World::getPeakNoise(float x) const
+{
+    float n = perlin.noise(
+        x * 0.008f,
+        5000.0f
+    );
+
+    n = std::abs(n);
+
+    return pow(n, 3.0f);
+}
+
 float World::getHeightNoise(float x) const
 {
-    float total = 0.0f;
+    float total = 0;
 
     float frequency = generation_properties.frequency;
     float amplitude = generation_properties.amplitude;
 
-    float maxAmplitude = 0.0f;
-
-
-    for(int i = 0; i < 5; i++)
+    for(int i = 0; i < 4; i++)
     {
         total += perlin.noise(x * frequency, 0.0f) * amplitude;
-
-        maxAmplitude += amplitude;
 
         amplitude *= generation_properties.persistence;
         frequency *= 2.0f;
     }
 
-    return total / maxAmplitude;
+    return total;
 }
 
 int World::getHeight(int worldX) const
 {
-    //float baseHeight = 45.0f;
-    //float heightScale = 35.0f;
+    float x = static_cast<float>(worldX);
 
-    return generation_properties.base_height + getHeightNoise((float)worldX) * generation_properties.height_scale;
+
+    float height =
+        generation_properties.base_height;
+
+
+    // normalny teren
+    height +=
+        getHeightNoise(x)
+        *
+        generation_properties.height_scale;
+
+
+    // duże masy terenu
+    float continental =
+        getContinentalNoise(x);
+
+
+    continental =
+        (continental + 1.0f) * 0.5f;
+
+
+    height += continental * 15.0f;
+
+
+    // góry
+    float peaks = getPeakNoise(x);
+
+
+    if(peaks > 0.45f)
+    {
+        float mountain =
+            (peaks - 0.45f)
+            /
+            0.55f;
+
+
+        height += mountain * 60.0f;
+    }
+
+
+    return static_cast<int>(height);
 }
 
 
