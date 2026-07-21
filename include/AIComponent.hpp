@@ -1,13 +1,15 @@
 #ifndef AI_COMPONENT_HPP
 #define AI_COMPONENT_HPP
 
+#include "Component.hpp"
+
 #include <SFML/System/Vector2.hpp>
 
 #include <cstdint>
 #include <string>
 #include <sstream>
 
-struct AIComponent
+struct AIComponent : public Component
 {
     enum class State : uint8_t
     {
@@ -76,6 +78,44 @@ struct AIComponent
 
         state       = static_cast<State>(stateInt);
         personality = static_cast<Personality>(personalityInt);
+    }
+
+
+    std::string name() const override
+    {
+        return "AIComponent";
+    }
+
+    Tag serialize() const override
+    {
+        TagCompound compound;
+
+        compound["state"] = Tag(static_cast<uint8_t>(state));
+        compound["personality"] = Tag(static_cast<uint8_t>(personality));
+        compound["detection_range"] = Tag(detectionRange);
+        compound["attack_range"] = Tag(attackRange);
+        compound["flee_range"] = Tag(fleeRange);
+        compound["move_speed"] = Tag(moveSpeed);
+        compound["state_timer"] = Tag(stateTimer);
+        compound["state_duration"] = Tag(stateDuration);
+        compound["wander_dir"] = Tag(wanderDir);
+        compound["attack_cooldown"] = Tag(attackCooldown);
+
+        return Tag(compound);
+    }
+
+    void deserialize(const Tag& tag) override
+    {
+        state = static_cast<State>(tag["state"].get<uint8_t>());
+        personality = static_cast<Personality>(tag["personality"].get<uint8_t>());
+        detectionRange = tag["detection_range"].get<float>();
+        attackRange = tag["attack_range"].get<float>();
+        fleeRange = tag["flee_range"].get<float>();
+        moveSpeed = tag["move_speed"].get<float>();
+        stateTimer = tag["state_timer"].get<float>();
+        stateDuration = tag["state_duration"].get<float>();
+        wanderDir = tag["wander_dir"].get<int>();
+        attackCooldown = tag["attack_cooldown"].get<float>();
     }
 };
 

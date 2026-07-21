@@ -23,7 +23,7 @@ class ClientGameState : public GameState
 {
 private:
 
-    World world;
+    World local_world;
 
     std::unique_ptr<ClientTransport> transport;
     std::optional<GameServer> local_server;

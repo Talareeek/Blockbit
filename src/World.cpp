@@ -148,6 +148,18 @@ void World::loadOrCreateChunk(int chunk_position)
     else generateChunk(chunk_position);
 }
 
+Climate World::getClimate(int x)
+{
+    return Climate
+    {
+        .temperature = perlin.noise(x * 0.001, 0),
+        .humidity = perlin.noise(x * 0.001 + 500, 0),
+        .continentalness = perlin.noise(x * 0.0005, 0),
+        .erosion = perlin.noise(x * 0.002, 0), 
+        .weirdness = perlin.noise(x * 0.005, 0)
+    };
+}
+
 void World::generateChunk(int chunk_position)
 {
     Chunk& chunk = getChunk(chunk_position);
@@ -318,21 +330,25 @@ void World::generateWorldSpawn()
 
 float World::getHeightNoise(float x) const
 {
-    float total = 0;
-    
-    float frequency = generation_properties.frequency; //0.03f;
-    float amplitude = generation_properties.amplitude; //1.0f;
-    float persistence = generation_properties.persistence; //0.5f;
+    float total = 0.0f;
 
-    for(int i = 0; i < 4; i++)
+    float frequency = generation_properties.frequency;
+    float amplitude = generation_properties.amplitude;
+
+    float maxAmplitude = 0.0f;
+
+
+    for(int i = 0; i < 5; i++)
     {
         total += perlin.noise(x * frequency, 0.0f) * amplitude;
 
-        amplitude *= persistence;
+        maxAmplitude += amplitude;
+
+        amplitude *= generation_properties.persistence;
         frequency *= 2.0f;
     }
 
-    return total;
+    return total / maxAmplitude;
 }
 
 int World::getHeight(int worldX) const

@@ -1,6 +1,8 @@
 #ifndef ANIMATION_COMPONENT_HPP
 #define ANIMATION_COMPONENT_HPP
 
+#include "Component.hpp"
+
 #include <cstdint>
 #include <unordered_map>
 #include <string>
@@ -27,7 +29,7 @@ enum class AnimationState
     Flying
 };
 
-struct AnimationComponent
+struct AnimationComponent : public Component
 {
     std::unordered_map<AnimationState, AnimationClip> animations;
 
@@ -96,6 +98,50 @@ struct AnimationComponent
 
         currentState = static_cast<AnimationState>(currentStateInt);
         direction = directionInt == 0 ? Direction::Left : Direction::Right;
+    }
+
+    std::string name() const override
+    {
+        return "AnimationComponent";
+    }
+
+    Tag serialize() const override
+    {
+        TagCompound compound;
+
+        TagList animations_list;
+
+        for(const auto& [state, clip] : animations)
+        {
+            TagCompound animation;
+
+            animation["state"] = Tag(static_cast<uint8_t>(state));
+            animation["clip_start_frame"] = Tag(clip.startFrame);
+            animation["clip_frame_count"] = Tag(clip.frameCount);
+            animation["clip_frame_time"] = Tag(clip.frameTime);
+            animation["clip_loop"] = Tag(clip.loop);
+
+            animations_list.push_back(Tag(animation));
+        }
+
+        compound["animations"] = Tag(animations_list);
+
+        compound["current_state"] = Tag(static_cast<uint32_t>(currentState));
+
+        compound["direction"] = Tag(static_cast<bool>(direction));
+        compound["timer"] = Tag(timer);
+        compound["current_frame"] = Tag(currentFrame);
+        compound["frame_size"] = Tag(TagCompound({{"x", Tag(frameSize.x)}, {"y", Tag(frameSize.y)}}));
+
+        return Tag(compound);
+    }
+
+    void deserialize(const Tag& tag) override
+    {
+        for(auto& animation : tag["animations"].get<TagList>())
+        {
+            
+        }
     }
 };
 

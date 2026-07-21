@@ -21,6 +21,15 @@ struct GenerationProperties
     float persistence;
 };
 
+struct Climate
+{
+    float temperature;
+    float humidity;
+    float continentalness;
+    float erosion;
+    float weirdness;
+};
+
 class World
 {
 private:
@@ -96,6 +105,8 @@ public:
     std::vector<uint32_t> getPlayerEntityIDs() const;
 
     std::optional<uint32_t> findPlayerEntityByClient(uint32_t clientId) const;
+
+    Climate getClimate(int x);
 
     void generateChunk(int chunk_position);
     void loadOrCreateChunk(int chunk_position);

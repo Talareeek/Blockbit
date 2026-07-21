@@ -107,7 +107,7 @@ bool ClientGameState::hasPlayerEntity() const
 {
     if (!local_player_entity_id.has_value()) return false;
     uint32_t player_id = local_player_entity_id.value();
-    for (const auto& entity : world.getEntities())
+    for (const auto& entity : local_world.getEntities())
         if (entity.getID() == player_id) return true;
     return false;
 }
@@ -117,7 +117,7 @@ void ClientGameState::tryInitializePlayerUI()
     if (player_ui_initialized) return;
     if (!hasPlayerEntity()) return;
 
-    auto& player_entity = entityWithID(local_player_entity_id.value(), world);
+    auto& player_entity = entityWithID(local_player_entity_id.value(), local_world);
 
     if (!player_entity.hasComponent<TransformComponent>()) return;
 
@@ -141,7 +141,7 @@ void ClientGameState::tryInitializePlayerUI()
 
 void ClientGameState::rebuildEntitiesFromSnapshot(const SnapshotPacket& snapshot)
 {
-    auto& entities = world.getEntities();
+    auto& entities = local_world.getEntities();
 
     entities.clear();
     entities.reserve(snapshot.entities.size());
@@ -171,7 +171,7 @@ void ClientGameState::rebuildEntitiesFromSnapshot(const SnapshotPacket& snapshot
         entities.push_back(std::move(entity));
     }
 
-    world.dayTime = snapshot.dayTime;
+    local_world.dayTime = snapshot.dayTime;
 
     player_ui_initialized = false;
     tryInitializePlayerUI();
@@ -197,7 +197,7 @@ void ClientGameState::processIncoming()
                 {
                     auto initialization = deserializeInitialization(reader);
 
-                    auto& chunk = world.getChunks()[initialization.chunk.chunk_position];
+                    auto& chunk = local_world.getChunks()[initialization.chunk.chunk_position];
                     chunk = initialization.chunk;
 
                     chunk.meshDirty = true;
@@ -216,7 +216,7 @@ void ClientGameState::processIncoming()
                 case PacketType::BlockUpdate:
                 {
                     auto block_update = deserializeBlockUpdate(reader);
-                    world.setBlock(block_update.x, block_update.y, block_update.block);
+                    local_world.setBlock(block_update.x, block_update.y, block_update.block);
                     break;
                 }
                 case PacketType::Spawn:
@@ -229,7 +229,7 @@ void ClientGameState::processIncoming()
                 case PacketType::Despawn:
                 {
                     auto despawn = deserializeDespawn(reader);
-                    auto& entities = world.getEntities();
+                    auto& entities = local_world.getEntities();
                     entities.erase(std::remove_if(entities.begin(), entities.end(),
                         [&](const Entity& entity) { return entity.getID() == despawn.id; }), entities.end());
 
@@ -266,7 +266,7 @@ void ClientGameState::sendTickInputs()
     if (!transport || !transport->isConnected()) return;
     if (my_entity_id == 0) return;
 
-    auto polled = getInputs(world, game->getWindow());
+    auto polled = getInputs(local_world, game->getWindow());
     inputs.insert(inputs.end(), std::make_move_iterator(polled.begin()), std::make_move_iterator(polled.end()));
 
     if (inputs.empty()) return;
@@ -346,8 +346,8 @@ void ClientGameState::handleEvent(const sf::Event& event)
 
             sf::View view(
             {
-                static_cast<float>((entityWithID(local_player_entity_id.value(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
-                static_cast<float>((entityWithID(local_player_entity_id.value(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
+                static_cast<float>((entityWithID(local_player_entity_id.value(), local_world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
+                static_cast<float>((entityWithID(local_player_entity_id.value(), local_world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
             },
             {
                 (float)game->getWindow().getSize().x,
@@ -367,7 +367,7 @@ void ClientGameState::handleEvent(const sf::Event& event)
     uint8_t* slot_pointer = nullptr;
     if (hasPlayerEntity())
     {
-        auto& player_entity = entityWithID(local_player_entity_id.value(), world);
+        auto& player_entity = entityWithID(local_player_entity_id.value(), local_world);
         if (player_entity.hasComponent<InventoryComponent>())
         {
             slot_pointer = &player_entity.getComponent<InventoryComponent>().selectedSlot;
@@ -375,7 +375,7 @@ void ClientGameState::handleEvent(const sf::Event& event)
     }
     if (!slot_pointer) slot_pointer = &local_selected_slot;
 
-    auto new_inputs = ::getInputsFromEvent(event, world, game->getWindow(), *slot_pointer);
+    auto new_inputs = ::getInputsFromEvent(event, local_world, game->getWindow(), *slot_pointer);
     inputs.insert(inputs.end(),
         std::make_move_iterator(new_inputs.begin()),
         std::make_move_iterator(new_inputs.end()));
@@ -457,8 +457,8 @@ void ClientGameState::update(float dt)
 
             sf::View view(
             {
-                static_cast<float>((entityWithID(local_player_entity_id.value(), world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
-                static_cast<float>((entityWithID(local_player_entity_id.value(), world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
+                static_cast<float>((entityWithID(local_player_entity_id.value(), local_world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
+                static_cast<float>((entityWithID(local_player_entity_id.value(), local_world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
             },
             {
                 (float)game->getWindow().getSize().x,
@@ -477,11 +477,11 @@ void ClientGameState::update(float dt)
 
     if (since_last_tick > tick_step) since_last_tick = 0.0f;
 
-    PhysicsSystem(world.getEntities(), world, dt);
+    PhysicsSystem(local_world.getEntities(), local_world, dt);
 
-    AnimationSystem(world, dt);
+    AnimationSystem(local_world, dt);
 
-    game->getConsole().assignWorld(local_server.has_value() ? &local_server->getWorld() : &world);
+    game->getConsole().assignWorld(local_server.has_value() ? &local_server->getWorld() : &local_world);
 
     if(acceptsPlayerInput() && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
     {
@@ -490,7 +490,7 @@ void ClientGameState::update(float dt)
 
     if (player_ui_initialized)
     {
-        health_bar.setHealth(&entityWithID(local_player_entity_id.value(), world).getComponent<HealthComponent>());
+        health_bar.setHealth(&entityWithID(local_player_entity_id.value(), local_world).getComponent<HealthComponent>());
 
         inventory_widget.updateScreenRelative(game->getWindow().getSize());
         hotbar.updateScreenRelative(game->getWindow().getSize());
@@ -514,9 +514,9 @@ void ClientGameState::update(float dt)
         debug = !debug;
     }
 
-    if (player_ui_initialized && entityWithID(local_player_entity_id.value(), world).getComponent<HealthComponent>().health <= 0 && this->onTop())
+    if (player_ui_initialized && entityWithID(local_player_entity_id.value(), local_world).getComponent<HealthComponent>().health <= 0 && this->onTop())
     {
-        World& death_world = local_server.has_value() ? local_server->getWorld() : world;
+        World& death_world = local_server.has_value() ? local_server->getWorld() : local_world;
         game->pushState(this, std::make_unique<DeathScreenState>(game, death_world, local_player_entity_id.value()));
     }
 
@@ -552,7 +552,7 @@ void ClientGameState::render(sf::RenderWindow& window)
 
     if (!isLocalSession() && !initialized)
     {
-        auto [sky_top, sky_bottom] = getSkyGradient(world.getDayTime() / World::DAY_CYCLE_DURATION);
+        auto [sky_top, sky_bottom] = getSkyGradient(local_world.getDayTime() / World::DAY_CYCLE_DURATION);
         renderSky(window, sky_top, sky_bottom);
 
         sf::Text waiting(AssetManager::getFont(0), "Connecting to " + remote_address + "...", 28);
@@ -565,10 +565,10 @@ void ClientGameState::render(sf::RenderWindow& window)
         return;
     }
 
-    auto [sky_top, sky_bottom] = getSkyGradient(world.getDayTime() / World::DAY_CYCLE_DURATION);
+    auto [sky_top, sky_bottom] = getSkyGradient(local_world.getDayTime() / World::DAY_CYCLE_DURATION);
     renderSky(window, sky_top, sky_bottom);
 
-    renderSunAndMoon(world.getDayTime(), window);
+    renderSunAndMoon(local_world.getDayTime(), window);
 
     if (!player_ui_initialized)
     {
@@ -578,14 +578,14 @@ void ClientGameState::render(sf::RenderWindow& window)
     {
         if(hasPlayerEntity())
         {
-            camera = entityWithID(local_player_entity_id.value(), world).getComponent<TransformComponent>().position + sf::Vector2<double>(0.5, -0.5);
+            camera = entityWithID(local_player_entity_id.value(), local_world).getComponent<TransformComponent>().position + sf::Vector2<double>(0.5, -0.5);
         }
 
-        RenderEntities(world, camera, window);
+        RenderEntities(local_world, camera, window);
 
-        RenderWorld(world, camera, window);
+        RenderWorld(local_world, camera, window);
 
-        RenderBlockOverlay(world, camera, window, local_player_entity_id.value());
+        RenderBlockOverlay(local_world, camera, window, local_player_entity_id.value());
 
         window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
 
@@ -627,11 +627,11 @@ std::string ClientGameState::debugString()
 
     if (player_ui_initialized)
     {
-        auto simulation_range = world.getSimulationRangeForEntity(local_player_entity_id.value());
+        auto simulation_range = local_world.getSimulationRangeForEntity(local_player_entity_id.value());
         debug_string +=
-            "X: " + std::to_string(entityWithID(local_player_entity_id.value(), world).getComponent<TransformComponent>().position.x) +
-            " Y: " + std::to_string(entityWithID(local_player_entity_id.value(), world).getComponent<TransformComponent>().position.y) + '\n' +
-            "CHUNKS LOADED: " + std::to_string(world.getChunks().size()) + '\n' +
+            "X: " + std::to_string(entityWithID(local_player_entity_id.value(), local_world).getComponent<TransformComponent>().position.x) +
+            " Y: " + std::to_string(entityWithID(local_player_entity_id.value(), local_world).getComponent<TransformComponent>().position.y) + '\n' +
+            "CHUNKS LOADED: " + std::to_string(local_world.getChunks().size()) + '\n' +
             "SIMULATION RANGE: " + std::to_string(simulation_range.first) + " - " + std::to_string(simulation_range.second) + '\n' +
             "INPUTS: " + std::to_string(inputs.size()) + '\n';
     }
