@@ -1,4 +1,4 @@
-![Blockbit Logo](resources/textures/blockbit_logo.png)
+![Blockbit Logo](resources/textures/blockbit_logo_white.png)
 
 ![Screenshoot](resources/textures/loading_screen.png)
 
