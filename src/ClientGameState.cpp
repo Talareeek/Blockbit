@@ -21,6 +21,8 @@
 #include "../include/CompositeServerTransport.hpp"
 #include "../include/PhysicsSystem.hpp"
 #include "../include/AnnouncementState.hpp"
+#include "../include/World.hpp"
+#include "../include/Climate.hpp"
 
 #include <iostream>
 #include <algorithm>
@@ -628,12 +630,20 @@ std::string ClientGameState::debugString()
     if (player_ui_initialized)
     {
         auto simulation_range = local_world.getSimulationRangeForEntity(local_player_entity_id.value());
+        Climate climate = local_world.climateAt(static_cast<int>(entityWithID(local_player_entity_id.value(), local_world).getComponent<TransformComponent>().position.x));
+
         debug_string +=
             "X: " + std::to_string(entityWithID(local_player_entity_id.value(), local_world).getComponent<TransformComponent>().position.x) +
             " Y: " + std::to_string(entityWithID(local_player_entity_id.value(), local_world).getComponent<TransformComponent>().position.y) + '\n' +
             "CHUNKS LOADED: " + std::to_string(local_world.getChunks().size()) + '\n' +
             "SIMULATION RANGE: " + std::to_string(simulation_range.first) + " - " + std::to_string(simulation_range.second) + '\n' +
-            "INPUTS: " + std::to_string(inputs.size()) + '\n';
+            "INPUTS: " + std::to_string(inputs.size()) + '\n' +
+            "CLIMATE:\n" +
+            "\tTEMPERATURE: " + std::to_string(climate.temperature) + '\n' +
+            "\tHUMIDITY: " + std::to_string(climate.humidity) + '\n' +
+            "\tCONTINENTALNESS: " + std::to_string(climate.continentalness) + '\n' +
+            "\tEROSION: " + std::to_string(climate.erosion) + '\n' +
+            "\tWEIRDNESS: " + std::to_string(climate.weirdness) + '\n';
     }
 
     return debug_string;

@@ -43,7 +43,7 @@ public:
         p.resize(256);
         std::iota(p.begin(), p.end(), 0);
 
-        std::default_random_engine engine(seed);
+        std::mt19937 engine(seed);
         std::shuffle(p.begin(), p.end(), engine);
 
         p.insert(p.end(), p.begin(), p.end());

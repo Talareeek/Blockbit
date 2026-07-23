@@ -2,6 +2,7 @@
 #define CHUNK_HPP
 
 #include "Block.hpp"
+#include "Climate.hpp"
 
 #include <SFML/System/Vector2.hpp>
 
@@ -14,7 +15,13 @@ constexpr int CHUNK_HEIGHT = 256;
 struct Chunk
 {
     int chunk_position;
+
     Block blocks[CHUNK_HEIGHT][CHUNK_WIDTH];
+
+    Climate climates[CHUNK_WIDTH];
+
+    Biome biomes[CHUNK_WIDTH];
+
     bool dirty;
     bool generated;
     bool meshDirty;

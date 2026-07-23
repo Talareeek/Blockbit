@@ -69,6 +69,22 @@ Block World::getBlock(int wx, int wy)
     return chunks[chunk_position].blocks[local_y][local_x];
 }
 
+Climate World::climateAt(int wx)
+{
+    int chunk_position = (wx >= 0) ? wx / CHUNK_WIDTH : (wx - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
+    int local_x = wx - chunk_position * CHUNK_WIDTH;
+
+    return chunks[chunk_position].climates[local_x];
+}
+
+Biome World::biomeAt(int wx)
+{
+    int chunk_position = (wx >= 0) ? wx / CHUNK_WIDTH : (wx - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
+    int local_x = wx - chunk_position * CHUNK_WIDTH;
+
+    return chunks[chunk_position].biomes[local_x];
+}
+
 void World::setBlock(int wx, int wy, Block block)
 {
     if(wy < 0 || wy >= CHUNK_HEIGHT) return;
@@ -148,16 +164,49 @@ void World::loadOrCreateChunk(int chunk_position)
     else generateChunk(chunk_position);
 }
 
-Climate World::getClimate(int x)
+Climate World::getClimate(int x) const
 {
-    return Climate
+    Climate climate;
+
+    auto extend = [](float value)
     {
-        .temperature = perlin.noise(x * 0.001, 0),
-        .humidity = perlin.noise(x * 0.001 + 500, 0),
-        .continentalness = perlin.noise(x * 0.0005, 0),
-        .erosion = perlin.noise(x * 0.002, 0), 
-        .weirdness = perlin.noise(x * 0.005, 0)
+        return value * 2 - 1.0f;
     };
+
+    climate.temperature = extend(perlin.noise(x * 0.008f, 1000));
+
+    climate.humidity = extend(perlin.noise(x * 0.008f, 2000));
+
+    climate.continentalness = extend(perlin.noise(x * 0.003f, 3000));
+
+    climate.erosion = extend(perlin.noise(x * 0.015f, 4000));
+
+    climate.weirdness = extend(perlin.noise(x * 0.020f, 5000));
+
+    return climate;
+}
+
+Biome World::getBiome(int x) const
+{
+    auto c = getClimate(x);
+
+
+    if(c.continentalness < -0.5)
+        return Biome::Ocean;
+
+    if(c.temperature < -0.4)
+        return Biome::Snow;
+
+    if(c.weirdness > 0.6)
+        return Biome::Mountains;
+
+    if(c.temperature > 0.4f)
+    {
+        if(c.humidity > 0) return Biome::Savanna;
+        else return Biome::Desert;
+    }
+
+    return Biome::Plains;
 }
 
 void World::generateChunk(int chunk_position)
@@ -191,6 +240,15 @@ void World::generateTerrain(int chunk_position)
         int worldX = chunk_position * CHUNK_WIDTH + x;
         int height = getHeight(worldX);
 
+        Climate climate = getClimate(worldX);
+        Biome biome = getBiome(worldX);
+
+        chunk.climates[x] = climate;
+        chunk.biomes[x] = biome;
+
+        Block primary_block = surface_blocks[biome].first;
+        Block secondary_block = surface_blocks[biome].second;
+
         for(int y = 0; y < CHUNK_HEIGHT; y++)
         {
             if(y == 0)
@@ -200,11 +258,12 @@ void World::generateTerrain(int chunk_position)
                 chunk.blocks[y][x] = {BlockID::Stone, 0};
 
             else if(y < height - 1)
-                chunk.blocks[y][x] = {BlockID::Dirt, 0};
+                chunk.blocks[y][x] = secondary_block; //{BlockID::Dirt, 0};
 
-            else if(y == height - 1) {
-                if(y < SEA_LEVEL - 1) chunk.blocks[y][x] = {BlockID::Dirt, 0};
-                else chunk.blocks[y][x] = {BlockID::Grass, 0};
+            else if(y == height - 1)
+            {
+                if(y < SEA_LEVEL - 1) chunk.blocks[y][x] = secondary_block; //{BlockID::Dirt, 0};
+                else chunk.blocks[y][x] = primary_block; //{BlockID::Grass, 0};
             }
 
             else if(y < SEA_LEVEL)
@@ -328,33 +387,13 @@ void World::generateWorldSpawn()
     }
 }
 
-float World::getContinentalNoise(float x) const
-{
-    return perlin.noise(
-        x * 0.003f,
-        1000.0f
-    );
-}
-
-
-float World::getPeakNoise(float x) const
-{
-    float n = perlin.noise(
-        x * 0.008f,
-        5000.0f
-    );
-
-    n = std::abs(n);
-
-    return pow(n, 3.0f);
-}
-
 float World::getHeightNoise(float x) const
 {
     float total = 0;
 
-    float frequency = generation_properties.frequency;
     float amplitude = generation_properties.amplitude;
+
+    float frequency = generation_properties.frequency;
 
     for(int i = 0; i < 4; i++)
     {
@@ -371,47 +410,7 @@ int World::getHeight(int worldX) const
 {
     float x = static_cast<float>(worldX);
 
-
-    float height =
-        generation_properties.base_height;
-
-
-    // normalny teren
-    height +=
-        getHeightNoise(x)
-        *
-        generation_properties.height_scale;
-
-
-    // duże masy terenu
-    float continental =
-        getContinentalNoise(x);
-
-
-    continental =
-        (continental + 1.0f) * 0.5f;
-
-
-    height += continental * 15.0f;
-
-
-    // góry
-    float peaks = getPeakNoise(x);
-
-
-    if(peaks > 0.45f)
-    {
-        float mountain =
-            (peaks - 0.45f)
-            /
-            0.55f;
-
-
-        height += mountain * 60.0f;
-    }
-
-
-    return static_cast<int>(height);
+    return getHeightNoise(x) * generation_properties.height_scale + generation_properties.base_height;
 }
 
 
@@ -556,7 +555,7 @@ void World::writeChunk(int chunk_position) const
     if(it == chunks.end()) return;
 
     size_t block_size = sizeof(BlockID) + sizeof(uint8_t);
-    size_t raw_size = CHUNK_WIDTH * CHUNK_HEIGHT * block_size;
+    size_t raw_size = CHUNK_WIDTH * CHUNK_HEIGHT * block_size + 16 * sizeof(Climate) + 16 * sizeof(Biome);
 
     std::vector<char> raw(raw_size);
     char* ptr = raw.data();
@@ -573,6 +572,18 @@ void World::writeChunk(int chunk_position) const
             std::memcpy(ptr, &block.metadata, sizeof(uint8_t));
             ptr += sizeof(uint8_t);
         }
+    }
+
+    for(int x = 0; x < 16; x++)
+    {
+        const Climate& climate = it->second.climates[x]; 
+        const Biome& biome = it->second.biomes[x];
+
+        std::memcpy(ptr, &climate, sizeof(Climate));
+        ptr += sizeof(Climate);
+
+        std::memcpy(ptr, &biome, sizeof(Biome));
+        ptr += sizeof(Biome);
     }
 
     size_t bound = ZSTD_compressBound(raw_size);
@@ -771,7 +782,7 @@ void World::readChunk(int chunk_position)
 {
     std::filesystem::path chunk_path = path / ("chunk_" + std::to_string(chunk_position));
 
-    size_t expected_raw_size = CHUNK_WIDTH * CHUNK_HEIGHT * (sizeof(BlockID) + sizeof(uint8_t));
+    size_t expected_raw_size = CHUNK_WIDTH * CHUNK_HEIGHT * (sizeof(BlockID) + sizeof(uint8_t)) + CHUNK_WIDTH * (sizeof(Climate) + sizeof(Biome));
 
     auto discardCorrupt = [&](const std::string& reason)
     {
@@ -875,6 +886,19 @@ void World::readChunk(int chunk_position)
             std::memcpy(&block.metadata, ptr, sizeof(uint8_t));
             ptr += sizeof(uint8_t);
         }
+    }
+
+    for(int x = 0; x < CHUNK_WIDTH; x++)
+    {
+        Climate& climate = chunk.climates[x];
+        Biome& biome = chunk.biomes[x];
+
+        std::memcpy(&climate, ptr, sizeof(Climate));
+        ptr += sizeof(Climate);
+
+        std::memcpy(&biome, ptr, sizeof(Biome));
+        ptr += sizeof(Biome);
+
     }
 }
 

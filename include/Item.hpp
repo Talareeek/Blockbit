@@ -32,7 +32,8 @@ enum class ItemID : uint32_t
     Bucket = 13,
     Water_Bucket = 14,
     Woodcutter = 15,
-    Lighter = 16
+    Lighter = 16,
+    Sand = 17
 };
 
 enum class ItemRarity

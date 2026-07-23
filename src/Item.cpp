@@ -123,7 +123,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
 
                 return false;
             }
-        }}
+        }},
+        {ItemID::Sand, {"Sand", 26, 64, ItemRarity::Common, ItemCategory::Block, true}}
 };
 
 bool ItemStack::empty() const

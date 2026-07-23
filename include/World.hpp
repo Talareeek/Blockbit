@@ -4,6 +4,7 @@
 #include "Chunk.hpp"
 #include "Entity.hpp"
 #include "PerlinNoise.hpp"
+#include "Climate.hpp"
 
 #include <unordered_map>
 #include <filesystem>
@@ -21,13 +22,15 @@ struct GenerationProperties
     float persistence;
 };
 
-struct Climate
+inline std::unordered_map<Biome, std::pair<Block, Block>> surface_blocks = 
 {
-    float temperature;
-    float humidity;
-    float continentalness;
-    float erosion;
-    float weirdness;
+    {Biome::Plains, {{BlockID::Grass, 0}, {BlockID::Dirt, 0}}},
+    {Biome::Forest, {{BlockID::Grass, 0}, {BlockID::Dirt, 0}}},
+    {Biome::Ocean, {{BlockID::Sand, 0}, {BlockID::Sand, 0}}},
+    {Biome::Desert, {{BlockID::Sand, 0}, {BlockID::Sand, 0}}},
+    {Biome::Savanna, {{BlockID::Sand, 0}, {BlockID::Dirt, 0}}},
+    {Biome::Mountains, {{BlockID::Stone, 0}, {BlockID::Stone, 0}}},
+    {Biome::Snow, {{BlockID::Stone, 0}, {BlockID::Stone, 0}}},
 };
 
 class World
@@ -87,6 +90,8 @@ public:
 
     Chunk& getChunk(int chunk_position);
     Block getBlock(int wx, int wy);
+    Climate climateAt(int wx);
+    Biome biomeAt(int wx);
     void setBlock(int wx, int wy, Block block);
 
     std::unordered_map<int, Chunk>& getChunks();
@@ -106,7 +111,8 @@ public:
 
     std::optional<uint32_t> findPlayerEntityByClient(uint32_t clientId) const;
 
-    Climate getClimate(int x);
+    Climate getClimate(int x) const;
+    Biome getBiome(int x) const;
 
     void generateChunk(int chunk_position);
     void loadOrCreateChunk(int chunk_position);
@@ -124,10 +130,6 @@ public:
     const std::vector<Entity>& getEntities() const;
 
     uint32_t getVersion() const;
-
-    float getContinentalNoise(float x) const;
-    float getErosionNoise(float x) const;
-    float getPeakNoise(float x) const;
     
     float getHeightNoise(float x) const;
     int getHeight(int worldX) const;
