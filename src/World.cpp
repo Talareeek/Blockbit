@@ -179,9 +179,9 @@ Climate World::getClimate(int x) const
 
     climate.continentalness = extend(perlin.noise(x * 0.003f, 3000));
 
-    climate.erosion = extend(perlin.noise(x * 0.015f, 4000));
+    climate.erosion = perlin.noise(x * 0.015f, 4000);
 
-    climate.weirdness = extend(perlin.noise(x * 0.020f, 5000));
+    climate.weirdness = perlin.noise(x * 0.020f, 5000);
 
     return climate;
 }
@@ -408,9 +408,19 @@ float World::getHeightNoise(float x) const
 
 int World::getHeight(int worldX) const
 {
+    Climate climate = getClimate(worldX);
+
     float x = static_cast<float>(worldX);
 
-    return getHeightNoise(x) * generation_properties.height_scale + generation_properties.base_height;
+    float base = generation_properties.base_height + climate.continentalness * 0.30f;
+
+    float scale = generation_properties.height_scale * (1.0f - climate.erosion * 0.35f);
+
+    float terrain = getHeightNoise(static_cast<float>(worldX));
+
+    float ridge = (1.0f - std::abs(perlin.noise(worldX * 0.003f, 9000) * 2.0f - 1.0f)) * climate.weirdness * 20.0f;
+
+    return static_cast<int>(base + terrain * scale + ridge);
 }
 
 
