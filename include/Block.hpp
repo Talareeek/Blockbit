@@ -23,7 +23,9 @@ enum class BlockID : uint32_t
     Oak_Leaves = 12,
     Woodcutter = 13,
     Fire = 14,
-    Sand = 15
+    Sand = 15,
+    Coarse_Dirt = 16,
+    Snow = 17
 };
 
 struct BlockData
@@ -221,6 +223,28 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .drag = 1.0f,
             .hardness = 0.0f,
             .texture = 26
+        }
+    },
+    { BlockID::Coarse_Dirt,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 0.0f,
+            .texture = 27
+        }
+    },
+    { BlockID::Snow,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 0.0f,
+            .texture = 28
         }
     }
 };

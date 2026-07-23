@@ -28,9 +28,9 @@ inline std::unordered_map<Biome, std::pair<Block, Block>> surface_blocks =
     {Biome::Forest, {{BlockID::Grass, 0}, {BlockID::Dirt, 0}}},
     {Biome::Ocean, {{BlockID::Sand, 0}, {BlockID::Sand, 0}}},
     {Biome::Desert, {{BlockID::Sand, 0}, {BlockID::Sand, 0}}},
-    {Biome::Savanna, {{BlockID::Sand, 0}, {BlockID::Dirt, 0}}},
+    {Biome::Savanna, {{BlockID::Coarse_Dirt, 0}, {BlockID::Coarse_Dirt, 0}}},
     {Biome::Mountains, {{BlockID::Stone, 0}, {BlockID::Stone, 0}}},
-    {Biome::Snow, {{BlockID::Stone, 0}, {BlockID::Stone, 0}}},
+    {Biome::Snow, {{BlockID::Snow, 0}, {BlockID::Snow, 0}}},
 };
 
 class World
