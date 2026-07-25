@@ -44,9 +44,9 @@ void HealthSystem(World& world)
                 Entity drop(world.getPossibleID());
 
                 drop.addComponent(TransformComponent(transform.center(), {0.5, 0.5}));
-                drop.addComponent(PhysicsComponent{.velocity = {randomDouble(-2.0, 2.0), randomDouble(0.0, 2.0)}});
-                drop.addComponent(RenderComponent{.textureID = static_cast<uint16_t>(itemDatabase[item.itemID].texture), .size = {0.5f, 0.5f}});
-                drop.addComponent(ItemComponent{.item = item});
+                PhysicsComponent{{randomDouble(-2.0, 2.0), randomDouble(0.0, 2.0)}};
+                RenderComponent{static_cast<uint16_t>(itemDatabase[item.itemID].texture), {}, {0.5f,0.5f}};
+                drop.addComponent(ItemComponent{item});
 
                 world.getEntities().push_back(std::move(drop));
             }

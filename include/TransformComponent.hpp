@@ -1,12 +1,14 @@
 #ifndef TRANSFORM_COMPONENT_HPP
 #define TRANSFORM_COMPONENT_HPP
 
+#include "Component.hpp"
+
 #include <SFML/System/Vector2.hpp>
 
 #include <string>
 #include <sstream>
 
-struct TransformComponent
+struct TransformComponent : public Component
 {
     sf::Vector2<double> position;
     sf::Vector2<double> size;
@@ -65,6 +67,31 @@ struct TransformComponent
         float rotationDegrees;
         rotationStream >> rotationDegrees;
         rotation = sf::degrees(rotationDegrees);
+    }
+
+    std::string name() const override
+    {
+        return "TransformComponent";
+    }
+
+    Tag serialize() const override
+    {
+        TagCompound compound;
+
+        compound["position"] = Tag(position);
+        compound["size"] = Tag(size);
+
+        compound["rotation"] = Tag(rotation.asDegrees());
+
+        return Tag(compound);
+    }
+
+    void deserialize(const Tag& tag) override
+    {
+        position = tag["position"].get<sf::Vector2<double>>();
+        size = tag["size"].get<sf::Vector2<double>>();
+
+        rotation = sf::degrees(tag["rotation"].get<float>());
     }
 };
 

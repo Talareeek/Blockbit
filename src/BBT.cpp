@@ -104,6 +104,25 @@ void writeTagType(std::vector<uint8_t>& buffer, TagType tag_type)
     writeUInt8(buffer, static_cast<uint8_t>(tag_type));
 }
 
+void writeVector2f(std::vector<uint8_t>& buffer, sf::Vector2f value)
+{
+    writeFloat(buffer, value.x);
+    writeFloat(buffer, value.y);
+}
+
+void writeVector2i(std::vector<uint8_t>& buffer, sf::Vector2i value)
+{
+    writeInt32(buffer, value.x);
+    writeInt32(buffer, value.y);
+}
+
+void writeVector2d(std::vector<uint8_t>& buffer, sf::Vector2<double> value)
+{
+    writeDouble(buffer, value.x);
+    writeDouble(buffer, value.y);
+}
+
+
 bool readBool(const std::vector<uint8_t>& buffer, size_t& pos)
 {
     return buffer[pos++] != 0;
@@ -204,6 +223,21 @@ std::vector<uint8_t> readByteArray(const std::vector<uint8_t>& buffer, size_t& p
     return value;
 }
 
+sf::Vector2f readVector2f(const std::vector<uint8_t>& buffer, size_t& pos)
+{
+    return {readFloat(buffer, pos), readFloat(buffer, pos)};
+}
+
+sf::Vector2i readVector2i(const std::vector<uint8_t>& buffer, size_t& pos)
+{
+    return {readInt32(buffer, pos), readInt32(buffer, pos)};
+}
+
+sf::Vector2<double> readVector2d(const std::vector<uint8_t>& buffer, size_t& pos)
+{
+    return {readDouble(buffer, pos), readDouble(buffer, pos)};
+}
+
 Tag::Tag() : tag_type(TagType::T_END), value(std::monostate{}) {}
 Tag::Tag(bool value) : tag_type(TagType::T_BOOL), value(value) {}
 Tag::Tag(int8_t value) : tag_type(TagType::T_INT8), value(value) {}
@@ -220,6 +254,9 @@ Tag::Tag(const std::string& value) : tag_type(TagType::T_STRING), value(value) {
 Tag::Tag(const std::vector<uint8_t>& value) : tag_type(TagType::T_BYTEARRAY), value(value) {}
 Tag::Tag(const TagList& value) : tag_type(TagType::T_LIST), value(value) {}
 Tag::Tag(const TagCompound& value) : tag_type(TagType::T_COMPOUND), value(value) {}
+Tag::Tag(sf::Vector2f value) : tag_type(TagType::T_VECTOR2_FLOAT), value(value) {}
+Tag::Tag(sf::Vector2i value) : tag_type(TagType::T_VECTOR2_INT), value(value) {}
+Tag::Tag(sf::Vector2<double> value) : tag_type(TagType::T_VECTOR2_DOUBLE), value(value) {}
 
 TagType Tag::type() const
 {
@@ -261,6 +298,9 @@ static void writeTagPayload(const Tag& tag, std::vector<uint8_t>& buffer)
         case TagType::T_DOUBLE:    writeDouble(buffer, tag.get<double>()); break;
         case TagType::T_STRING:    writeString(buffer, tag.get<std::string>()); break;
         case TagType::T_BYTEARRAY: writeByteArray(buffer, tag.get<std::vector<uint8_t>>()); break;
+        case TagType::T_VECTOR2_FLOAT: writeVector2f(buffer, tag.get<sf::Vector2f>()); break;
+        case TagType::T_VECTOR2_INT: writeVector2i(buffer, tag.get<sf::Vector2i>()); break;
+        case TagType::T_VECTOR2_DOUBLE: writeVector2d(buffer, tag.get<sf::Vector2<double>>()); break;
 
         case TagType::T_LIST:
         {
@@ -313,6 +353,9 @@ static Tag readTagPayload(TagType type, const std::vector<uint8_t>& buffer, size
         case TagType::T_DOUBLE:    return Tag(readDouble(buffer, pos));
         case TagType::T_STRING:    return Tag(readString(buffer, pos));
         case TagType::T_BYTEARRAY: return Tag(readByteArray(buffer, pos));
+        case TagType::T_VECTOR2_FLOAT: return Tag(readVector2f(buffer, pos));
+        case TagType::T_VECTOR2_INT: return Tag(readVector2i(buffer, pos));
+        case TagType::T_VECTOR2_DOUBLE: return Tag(readVector2d(buffer, pos));
 
         case TagType::T_LIST:
         {

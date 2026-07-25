@@ -1,10 +1,12 @@
 #ifndef EXPLOSIVE_COMPONENT_HPP
 #define EXPLOSIVE_COMPONENT_HPP
 
+#include "Component.hpp"
+
 #include <string>
 #include <sstream>
 
-struct ExplosiveComponent
+struct ExplosiveComponent : public Component
 {
     float force;
 
@@ -13,6 +15,21 @@ struct ExplosiveComponent
 
     float fuseTime = 3.0f;
     float timer = 0.0f;
+
+    ExplosiveComponent(
+    float force = 0.0f,
+    bool destroyBlocks = true,
+    bool damageEntities = true,
+    float fuseTime = 3.0f,
+    float timer = 0.0f
+    )
+        : force(force),
+        destroyBlocks(destroyBlocks),
+        damageEntities(damageEntities),
+        fuseTime(fuseTime),
+        timer(timer)
+    {
+    }
 
     std::string serialize()
     {
@@ -38,6 +55,33 @@ struct ExplosiveComponent
         damageEntities = (damageEntitiesInt != 0);
     }
 
+    std::string name() const override
+    {
+        return "ExplosiveComponent";
+    }
+
+    Tag serialize() const override
+    {
+        TagCompound compound;
+
+        compound["force"] = Tag(force);
+        compound["destroy_blocks"] = Tag(destroyBlocks);
+        compound["damage_entities"] = Tag(damageEntities);
+        compound["fuse_time"] = Tag(fuseTime);
+        compound["timer"] = Tag(timer);
+
+        return Tag(compound);
+    }
+
+
+    void deserialize(const Tag& tag) override
+    {
+        force = tag["force"].get<float>();
+        destroyBlocks = tag["destroy_blocks"].get<bool>();
+        damageEntities = tag["damage_entities"].get<bool>();
+        fuseTime = tag["fuse_time"].get<float>();
+        timer = tag["timer"].get<float>();
+    }
 };
 
 #endif // EXPLOSIVE_COMPONENT_HPP

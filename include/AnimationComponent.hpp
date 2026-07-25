@@ -138,10 +138,36 @@ struct AnimationComponent : public Component
 
     void deserialize(const Tag& tag) override
     {
-        for(auto& animation : tag["animations"].get<TagList>())
+        animations.clear();
+
+        for (const auto& animationTag : tag["animations"].get<TagList>())
         {
-            
+            const auto& animation = animationTag.get<TagCompound>();
+
+            AnimationState state = static_cast<AnimationState>(animation.at("state").get<uint8_t>());
+
+            AnimationClip clip
+            {
+                animation.at("clip_start_frame").get<uint32_t>(),
+                animation.at("clip_frame_count").get<uint32_t>(),
+                animation.at("clip_frame_time").get<float>(),
+                animation.at("clip_loop").get<bool>()
+            };
+
+            animations[state] = clip;
         }
+
+        currentState = static_cast<AnimationState>(tag["current_state"].get<uint32_t>());
+
+        direction = tag["direction"].get<bool>() ? Direction::Right : Direction::Left;
+
+        timer = tag["timer"].get<float>();
+        
+        currentFrame = tag["current_frame"].get<uint32_t>();
+
+        const auto& frameSizeTag = tag["frame_size"].get<TagCompound>();
+        frameSize.x = frameSizeTag.at("x").get<int32_t>();
+        frameSize.y = frameSizeTag.at("y").get<int32_t>();
     }
 };
 

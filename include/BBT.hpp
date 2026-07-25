@@ -1,6 +1,8 @@
 #ifndef BBT_HPP
 #define BBT_HPP
 
+#include <SFML/System.hpp>
+
 #include <cstdint>
 #include <vector>
 #include <string>
@@ -24,7 +26,10 @@ enum class TagType : uint8_t
     T_STRING,
     T_LIST,
     T_COMPOUND,
-    T_BYTEARRAY
+    T_BYTEARRAY,
+    T_VECTOR2_FLOAT,
+    T_VECTOR2_INT,
+    T_VECTOR2_DOUBLE
 };
 
 extern void writeBool(std::vector<uint8_t>& buffer, bool value);
@@ -41,6 +46,9 @@ extern void writeDouble(std::vector<uint8_t>& buffer, double value);
 extern void writeString(std::vector<uint8_t>& buffer, const std::string& value);
 extern void writeByteArray(std::vector<uint8_t>& buffer, const std::vector<uint8_t>& value);
 extern void writeTagType(std::vector<uint8_t>& buffer, TagType type);
+extern void writeVector2f(std::vector<uint8_t>& buffer, sf::Vector2f value);
+extern void writeVector2i(std::vector<uint8_t>& buffer, sf::Vector2i value);
+extern void writeVector2d(std::vector<uint8_t>& buffer, sf::Vector2<double> value);
 
 extern bool readBool(const std::vector<uint8_t>& buffer, size_t& pos);
 extern int8_t readInt8(const std::vector<uint8_t>& buffer, size_t& pos);
@@ -55,7 +63,9 @@ extern float readFloat(const std::vector<uint8_t>& buffer, size_t& pos);
 extern double readDouble(const std::vector<uint8_t>& buffer, size_t& pos);
 extern std::string readString(const std::vector<uint8_t>& buffer, size_t& pos);
 extern std::vector<uint8_t> readByteArray(const std::vector<uint8_t>& buffer, size_t& pos);
-
+extern sf::Vector2f readVector2f(const std::vector<uint8_t>& buffer, size_t& pos);
+extern sf::Vector2i readVector2i(const std::vector<uint8_t>& buffer, size_t& pos);
+extern sf::Vector2<double> readVector2d(const std::vector<uint8_t>& buffer, size_t& pos);
 
 
 class Tag;
@@ -86,7 +96,10 @@ private:
         std::string,
         TagList,
         TagCompound,
-        std::vector<uint8_t>
+        std::vector<uint8_t>,
+        sf::Vector2f,
+        sf::Vector2i,
+        sf::Vector2<double>
     > value;
 
 public:
@@ -106,6 +119,9 @@ public:
     Tag(const std::vector<uint8_t>& value);
     Tag(const TagList& value);
     Tag(const TagCompound& value);
+    Tag(sf::Vector2f value);
+    Tag(sf::Vector2i value);
+    Tag(sf::Vector2<double> value);
 
     template<typename T>
     const T& get() const
@@ -136,7 +152,7 @@ private:
 
     std::string bbt_name;
 
-    static constexpr int MAGIC_NUMBER = 1;
+    static constexpr int MAGIC_NUMBER = 2;
 
 public:
 

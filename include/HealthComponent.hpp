@@ -1,11 +1,13 @@
 #ifndef HEALTH_COMPONENT_HPP
 #define HEALTH_COMPONENT_HPP
 
+#include "Component.hpp"
+
 #include <cstdint>
 #include <string>
 #include <sstream>
 
-struct HealthComponent
+struct HealthComponent : public Component
 {
     uint32_t health = 0;
     uint32_t maxHealth = 0;
@@ -33,6 +35,11 @@ struct HealthComponent
         return output;
     }
 
+    std::string name() const override
+    {
+        return "HealthComponent";
+    }
+
     void deserialize(const std::string& data)
     {
         std::istringstream iss(data);
@@ -41,6 +48,24 @@ struct HealthComponent
         iss >> health >> maxHealth >> killOnZeroInt;
 
         killOnZero = (killOnZeroInt != 0);
+    }
+
+    Tag serialize() const override
+    {
+        TagCompound compound;
+
+        compound["health"] = Tag(health);
+        compound["max_health"] = Tag(maxHealth);
+        compound["kill_on_zero"] = Tag(killOnZero);
+
+        return Tag(compound);
+    }
+
+    void deserialize(const Tag& tag) override
+    {
+        health = tag["health"].get<uint32_t>();
+        maxHealth = tag["max_health"].get<uint32_t>();
+        killOnZero = tag["kill_on_zero"].get<bool>();
     }
 
 };

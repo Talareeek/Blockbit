@@ -1,13 +1,15 @@
 #ifndef INVENTORY_COMPONENT_HPP
 #define INVENTORY_COMPONENT_HPP
 
+#include "Component.hpp"
+
 #include "Item.hpp"
 
 #include <cstdint>
 #include <string>
 #include <sstream>
 
-struct InventoryComponent
+struct InventoryComponent : public Component
 {
     Inventory inventory;
     uint8_t selectedSlot = 0;
@@ -56,6 +58,52 @@ struct InventoryComponent
             inventory.slots[index].itemID = static_cast<ItemID>(itemIDInt);
             inventory.slots[index].quantity = quantity;
             index++;
+        }
+    }
+
+    std::string name() const override
+    {
+        return "InventoryComponent";
+    }
+
+    Tag serialize() const override
+    {
+        TagCompound compound;
+
+        compound["selected_slot"] = Tag(selectedSlot);
+
+        compound["slots"] = TagList();
+
+
+        for(const auto& slot : inventory.slots)
+        {
+            TagCompound slot_compound;
+            slot_compound["item_id"] = Tag(static_cast<uint32_t>(slot.itemID));
+            slot_compound["quantity"] = Tag(slot.quantity);
+
+            compound["slots"].get<TagList>().push_back(Tag(slot_compound));
+        }
+
+        return Tag(compound);
+    }
+
+    void deserialize(const Tag& tag) override
+    {
+        selectedSlot = tag["selected_slot"].get<uint8_t>();
+
+        const auto& slots = tag["slots"].get<TagList>();
+
+        if (inventory.slots.size() != slots.size())
+        {
+            inventory.slots.resize(slots.size(), {ItemID::None, 0});
+        }
+
+        for (size_t i = 0; i < slots.size(); ++i)
+        {
+            const auto& slot = slots[i].get<TagCompound>();
+
+            inventory.slots[i].itemID = static_cast<ItemID>(slot.at("item_id").get<uint32_t>());
+            inventory.slots[i].quantity = slot.at("quantity").get<uint32_t>();
         }
     }
 };
