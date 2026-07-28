@@ -381,6 +381,8 @@ void World::generateWorldSpawn()
 
 sf::Vector2<double> World::getSpawnPoint()
 {
+    loadOrCreateChunk(0);
+
     sf::Vector2<double> spawnPoint;
 
     for(int i = 60; i < 255; i++)
