@@ -1,6 +1,8 @@
 #ifndef ENTITY_HPP
 #define ENTITY_HPP
 
+#include "BBT.hpp"
+
 #include <unordered_map>
 #include <typeindex>
 #include <cstdint>
@@ -48,6 +50,8 @@ public:
     {
         return std::any_cast<const T&>(components.at(typeid(T)));
     }
+
+    Tag serialize() const;
 };
 
 #endif // ENTITY_HPP

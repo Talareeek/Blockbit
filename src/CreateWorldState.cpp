@@ -110,7 +110,8 @@ CreateWorldState::CreateWorldState(Game* game) : GameState(game)
             properties.amplitude = preview.getAmplitude();
             properties.persistence = preview.getPersistence();
 
-            pending_world.emplace(name.getText(), path, (!seed_text.empty()) ? potential_seed : std::rand(), properties);
+            this->game->popState(this);
+            this->game->pushState(this, std::make_unique<ClientGameState>(this->game, name.getText(), (!seed_text.empty()) ? potential_seed : std::rand(), properties, 0, "Player"));
         }
     );
 }
@@ -130,17 +131,6 @@ void CreateWorldState::update(float dt)
     if(InputManager::isLazyKeyPressed(sf::Keyboard::Key::Escape) || quit.clicked())
     {
         game->popState(this);
-        return;
-    }
-
-    if (pending_world.has_value())
-    {
-        World world = std::move(pending_world.value());
-        pending_world.reset();
-
-        Game* game_pointer = this->game;
-        game_pointer->popState(this);
-        game_pointer->pushState(this, std::make_unique<ClientGameState>(game_pointer, std::move(world)));
         return;
     }
 

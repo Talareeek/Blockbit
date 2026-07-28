@@ -88,9 +88,11 @@ private:
 
 public:
 
-    ClientGameState(Game* game, const std::string& host, uint16_t port, std::string nickname = "Player");
+    ClientGameState(Game* game, std::filesystem::path world_path, uint16_t network_port, std::string nickname);
 
-    ClientGameState(Game* game, World world, uint16_t network_port = 0, std::string nickname = "Player");
+    ClientGameState(Game* game, std::string name, unsigned int seed, GenerationProperties generation_properties, uint16_t network_port, std::string nickname);
+
+    ClientGameState(Game* game, const std::string& host, uint16_t port, std::string nickname);
 
     ~ClientGameState() override;
 

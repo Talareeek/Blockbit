@@ -33,6 +33,86 @@
 #include <sstream>
 #include <cstdlib>
 
+ClientGameState::ClientGameState(Game* game, std::filesystem::path world_path, uint16_t network_port, std::string nickname) : GameState(game)
+{
+    game->getWindow().setTitle("Blockbit - " + (network_port == 0) ? "Singleplayer" : "Host");
+
+    this->nickname = std::move(nickname);
+
+    auto loopback_pair = makeLoopbackPair();
+
+    
+    if(network_port == 0)
+    {
+        local_server.emplace(world_path, std::move(loopback_pair.serverSide));
+    }
+    else
+    {
+        auto composite = std::make_unique<CompositeServerTransport>();
+        composite->add(std::move(loopback_pair.serverSide));
+        composite->add(std::make_unique<NetworkServerTransport>(network_port));
+
+        local_server.emplace(world_path, std::move(composite));
+        remote_address = "0.0.0.0:" + std::to_string(network_port);
+        std::cerr << "[Server] Listening on port " << network_port << '\n';
+    }
+
+    transport = std::move(loopback_pair.clientSide);
+    transport->connect("loopback", 0);
+    transport->send(serializePacket(LoginPacket{this->nickname}));
+    login_sent = true;
+
+    was_connected = true;
+    connect_attempted = true;
+
+    chat_ui.assignChat(&chat);
+    chat_ui.setOnSend([this](std::wstring message)
+    {
+        if (!transport || !transport->isConnected()) return;
+        transport->send(serializePacket(ChatMessagePacket{std::move(message)}));
+    });
+}
+
+ClientGameState::ClientGameState(Game* game, std::string name, unsigned int seed, GenerationProperties generation_properties, uint16_t network_port, std::string nickname) : GameState(game)
+{
+    game->getWindow().setTitle("Blockbit - " + (network_port == 0) ? "Singleplayer" : "Host");
+
+    this->nickname = std::move(nickname);
+
+    auto loopback_pair = makeLoopbackPair();
+
+    
+    if(network_port == 0)
+    {
+        local_server.emplace(name, seed, generation_properties, std::move(loopback_pair.serverSide));
+    }
+    else
+    {
+        auto composite = std::make_unique<CompositeServerTransport>();
+        composite->add(std::move(loopback_pair.serverSide));
+        composite->add(std::make_unique<NetworkServerTransport>(network_port));
+
+        local_server.emplace(name, seed, generation_properties, std::move(composite));
+        remote_address = "0.0.0.0:" + std::to_string(network_port);
+        std::cerr << "[Server] Listening on port " << network_port << '\n';
+    }
+
+    transport = std::move(loopback_pair.clientSide);
+    transport->connect("loopback", 0);
+    transport->send(serializePacket(LoginPacket{this->nickname}));
+    login_sent = true;
+
+    was_connected = true;
+    connect_attempted = true;
+
+    chat_ui.assignChat(&chat);
+    chat_ui.setOnSend([this](std::wstring message)
+    {
+        if (!transport || !transport->isConnected()) return;
+        transport->send(serializePacket(ChatMessagePacket{std::move(message)}));
+    });
+}
+
 ClientGameState::ClientGameState(Game* game, const std::string& host, uint16_t port, std::string nickname) : GameState(game)
 {
     game->getWindow().setTitle("Blockbit - Multiplayer");
@@ -52,49 +132,6 @@ ClientGameState::ClientGameState(Game* game, const std::string& host, uint16_t p
     });
 
     game->getConsole().writeLine(L"[Client] Will attempt connection to " + std::wstring(remote_address.begin(), remote_address.end()));
-}
-
-ClientGameState::ClientGameState(Game* game, World world, uint16_t network_port, std::string nickname)
-    : GameState(game)
-{
-    this->nickname = std::move(nickname);
-
-    auto loopback_pair = makeLoopbackPair();
-
-    if (network_port == 0)
-    {
-        game->getWindow().setTitle("Blockbit - Singleplayer");
-
-        local_server.emplace(std::move(world), std::move(loopback_pair.serverSide), LoopbackChannel::LOOPBACK_CLIENT_ID);
-        remote_address = "local";
-    }
-    else
-    {
-        game->getWindow().setTitle("Blockbit - Host");
-
-        auto composite = std::make_unique<CompositeServerTransport>();
-        composite->add(std::move(loopback_pair.serverSide));
-        composite->add(std::make_unique<NetworkServerTransport>(network_port));
-
-        local_server.emplace(std::move(world), std::move(composite), LoopbackChannel::LOOPBACK_CLIENT_ID);
-        remote_address = "0.0.0.0:" + std::to_string(network_port);
-        std::cerr << "[Server] Listening on port " << network_port << '\n';
-    }
-
-    transport = std::move(loopback_pair.clientSide);
-    transport->connect("loopback", 0);
-    transport->send(serializePacket(LoginPacket{this->nickname}));
-    login_sent = true;
-
-    was_connected = true;
-    connect_attempted = true;
-
-    chat_ui.assignChat(&chat);
-    chat_ui.setOnSend([this](std::wstring message)
-    {
-        if (!transport || !transport->isConnected()) return;
-        transport->send(serializePacket(ChatMessagePacket{std::move(message)}));
-    });
 }
 
 ClientGameState::~ClientGameState()
@@ -297,7 +334,7 @@ void ClientGameState::onTick(float tick_step)
 
     if (local_server)
     {
-        local_server->tick(tick_step);
+        local_server->update(tick_step);
     }
 
     if (transport)

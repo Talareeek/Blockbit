@@ -25,8 +25,6 @@ private:
 
     GenerationPreview preview;
 
-    std::optional<World> pending_world;
-
 public:
 
     CreateWorldState(Game* game);

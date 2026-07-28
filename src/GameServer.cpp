@@ -24,108 +24,28 @@
 #include <algorithm>
 #include <iostream>
 
-GameServer::GameServer(World world, std::unique_ptr<ServerTransport> transport, uint32_t host_client_id)
-    : world(std::move(world)),
-      transport(std::move(transport)),
-      host_client_id(host_client_id)
+GameServer::GameServer(std::filesystem::path world_path, std::unique_ptr<ServerTransport> transport) : mode(ServerMode::Listen), transport(std::move(transport))
 {
+    world = World(world_path);
+
     this->world.trackBlockChanges = true;
 
     this->transport->start();
-
-    if (auto existing = this->world.findPlayerEntityByClient(host_client_id))
-    {
-        host_entity_id = *existing;
-        std::cout << "[Server] Host client " << host_client_id << " reusing entity " << host_entity_id << '\n';
-    }
-    else
-    {
-        host_entity_id = this->world.spawnPlayer(host_client_id);
-        std::cout << "[Server] Host client " << host_client_id << " spawned as entity " << host_entity_id << '\n';
-    }
-
-    if (host_client_id != 0)
-    {
-        client_to_entity[host_client_id] = host_entity_id;
-        known_clients.insert(host_client_id);
-        remote_input_queues[host_client_id] = {};
-    }
 }
 
-GameServer::~GameServer()
+GameServer::GameServer(std::string name, unsigned int seed, GenerationProperties generation_properties, std::unique_ptr<ServerTransport> transport) : mode(ServerMode::Listen), transport(std::move(transport))
 {
-    transport->stop();
+    world = World(name, getWorldsPath() / name, seed, generation_properties);
 
-    if (save_on_destruct)
-    {
-        try { world.save(); }
-        catch (const std::exception& exception)
-        {
-            std::cerr << "[Server] world.save() failed: " << exception.what() << '\n';
-        }
-    }
+    this->world.trackBlockChanges = true;
+
+    this->transport->start();
 }
 
-void GameServer::spawnRemotePlayer(uint32_t client_id, const std::string& nickname)
+/*GameServer::GameServer(std::filesystem::path server_path, std::unique_ptr<ServerTransport> transport) : mode(ServerMode::Dedicated), transport(std::move(transport)), server_path(server_path)
 {
-    uint32_t entity_id;
-    if (auto existing = world.findPlayerEntityByClient(client_id))
-    {
-        entity_id = *existing;
-        std::cout << "[Server] Client " << client_id << " logged in as \"" << nickname << "\", reusing entity " << entity_id << '\n';
-    }
-    else
-    {
-        entity_id = world.spawnPlayer(client_id);
-        std::cout << "[Server] Client " << client_id << " logged in as \"" << nickname << "\", spawned as entity " << entity_id << '\n';
-    }
 
-    for (auto& entity : world.getEntities())
-    {
-        if (entity.getID() == entity_id && entity.hasComponent<PlayerControlledComponent>())
-        {
-            entity.getComponent<PlayerControlledComponent>().nickname = nickname;
-            break;
-        }
-    }
-
-    client_to_entity[client_id] = entity_id;
-    remote_input_queues[client_id] = {};
-
-    sf::Vector2f spawn = world.getSpawnPoint();
-    int spawn_chunk = static_cast<int>(spawn.x) / CHUNK_WIDTH;
-    sendInitializationTo(client_id, spawn_chunk);
-
-    transport->send(client_id, serializePacket(SpawnPacket{entity_id}));
-}
-
-void GameServer::despawnRemotePlayer(uint32_t client_id)
-{
-    auto iterator = client_to_entity.find(client_id);
-    if (iterator == client_to_entity.end()) return;
-
-    if (client_id == host_client_id)
-    {
-        client_to_entity.erase(iterator);
-        remote_input_queues.erase(client_id);
-        std::cout << "[Server] Host client " << client_id << " left, host entity preserved\n";
-        return;
-    }
-
-    uint32_t entity_id = iterator->second;
-
-    auto& entities = world.getEntities();
-    entities.erase(std::remove_if(entities.begin(), entities.end(),
-        [entity_id](const Entity& entity) { return entity.getID() == entity_id; }), entities.end());
-
-    transport->broadcast(serializePacket(DespawnPacket{entity_id}));
-
-    client_to_entity.erase(iterator);
-    remote_input_queues.erase(client_id);
-    sent_chunks.erase(client_id);
-
-    std::cout << "[Server] Client " << client_id << " left, despawned entity " << entity_id << '\n';
-}
+}*/
 
 void GameServer::sendInitializationTo(uint32_t client_id, int around_chunk_position)
 {
@@ -150,33 +70,32 @@ void GameServer::streamChunksToClients()
 {
     constexpr int half_distance = World::SIMULATION_DISTANCE / 2;
 
-    for (auto& [client_id, entity_id] : client_to_entity)
+    for(auto& [client_id, nickname] : client_to_nickname)
     {
-        Entity* player_entity = nullptr;
-        for (auto& entity : world.getEntities())
+        if(nickname_to_entity.contains(nickname))
         {
-            if (entity.getID() == entity_id) { player_entity = &entity; break; }
-        }
-        if (!player_entity || !player_entity->hasComponent<TransformComponent>()) continue;
+            Entity& entity = entityWithID(nickname_to_entity[nickname], world);
 
-        float player_x = player_entity->getComponent<TransformComponent>().position.x;
-        int player_chunk = (player_x >= 0.0f)
-            ? static_cast<int>(player_x) / CHUNK_WIDTH
-            : (static_cast<int>(player_x) - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
+            if(!entity.hasComponent<TransformComponent>()) continue;
 
-        auto& sent = sent_chunks[client_id];
-        auto& chunks = world.getChunks();
+            double player_x = entity.getComponent<TransformComponent>().position.x;
 
-        for (int chunk_position = player_chunk - half_distance; chunk_position <= player_chunk + half_distance; ++chunk_position)
-        {
-            if (sent.contains(chunk_position)) continue;
-            auto iterator = chunks.find(chunk_position);
-            if (iterator == chunks.end() || !iterator->second.generated) continue;
+            int player_chunk = (player_x >= 0.0f) ? static_cast<int>(player_x) / CHUNK_WIDTH : (static_cast<int>(player_x) - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
 
-            InitializationPacket initialization;
-            initialization.chunk = iterator->second;
-            transport->send(client_id, serializePacket(initialization));
-            sent.insert(chunk_position);
+            auto& sent = sent_chunks[client_id];
+            auto& chunks = world.getChunks();
+
+            for (int chunk_position = player_chunk - half_distance; chunk_position <= player_chunk + half_distance; ++chunk_position)
+            {
+                if (sent.contains(chunk_position)) continue;
+                auto iterator = chunks.find(chunk_position);
+                if (iterator == chunks.end() || !iterator->second.generated) continue;
+
+                InitializationPacket initialization;
+                initialization.chunk = iterator->second;
+                transport->send(client_id, serializePacket(initialization));
+                sent.insert(chunk_position);
+            }
         }
     }
 }
@@ -202,7 +121,7 @@ void GameServer::syncConnections()
     }
     for (uint32_t client_id : gone)
     {
-        despawnRemotePlayer(client_id);
+        deactivatePlayerFor(client_to_nickname[client_id]);
         known_clients.erase(client_id);
     }
 }
@@ -234,6 +153,26 @@ void GameServer::processIncoming()
                         break;
                     }
 
+                    if(!client_to_nickname.contains(packet.clientId))
+                    {
+                        client_to_nickname[packet.clientId] = login.nickname;
+                        remote_input_queues[packet.clientId] = {};
+                        spawnPlayerFor(login.nickname);
+
+                        uint32_t entity_id = nickname_to_entity[login.nickname];
+                        transport->send(packet.clientId, serializePacket(SpawnPacket{entity_id}));
+
+                        std::cout << "[Server] Logged " << packet.clientId << " as " << login.nickname << '\n';
+                    }
+                    else
+                    {
+                        std::cerr << "[Server] Another login from " << packet.clientId << ", ignoring\n";
+                    }
+
+                    
+
+                    
+                    /*
                     auto iterator = client_to_entity.find(packet.clientId);
                     if (iterator == client_to_entity.end())
                     {
@@ -256,7 +195,7 @@ void GameServer::processIncoming()
                         int spawn_chunk = static_cast<int>(spawn.x) / CHUNK_WIDTH;
                         sendInitializationTo(packet.clientId, spawn_chunk);
                         transport->send(packet.clientId, serializePacket(SpawnPacket{entity_id}));
-                    }
+                    }*/
 
                     break;
                 }
@@ -281,7 +220,7 @@ void GameServer::processIncoming()
                     response.name = "Blockbit Server";
                     response.description = "A server for Blockbit game";
 
-                    response.players = static_cast<uint32_t>(client_to_entity.size());
+                    response.players = static_cast<uint32_t>(client_to_nickname.size());
                     response.max_players = 20;
 
                     transport->send(packet.clientId, serializePacket(response));
@@ -292,7 +231,7 @@ void GameServer::processIncoming()
                 {
                     ChatMessagePacket chat_message = deserializeChatMessage(reader);
 
-                    std::string nickname = entityWithID(client_to_entity[packet.clientId], world).getComponent<PlayerControlledComponent>().nickname;
+                    std::string nickname = client_to_nickname[packet.clientId];
                     std::wstring wide_nickname(nickname.begin(), nickname.end());
 
                     sendChat(wide_nickname, chat_message.message);
@@ -314,23 +253,6 @@ void GameServer::processIncoming()
             std::cerr << "[Server] Bad packet from client " << packet.clientId << ": " << exception.what() << '\n';
         }
     }
-}
-
-void GameServer::runSystems(float tick_step)
-{
-    auto& entities = world.getEntities();
-
-    AISystem(world, tick_step);
-    TransformSystem(world);
-    ExplosiveSystem(world, tick_step);
-    HealthSystem(world);
-    PhysicsSystem(entities, world, tick_step);
-    InventorySystem(entities);
-    ChunkLoadSystem(world, tick_step);
-    ChunkUnloadSystem(world);
-    DaycycleSystem(world, tick_step);
-
-    world.tick(tick_step);
 }
 
 void GameServer::broadcastBlockUpdates()
@@ -414,7 +336,8 @@ void GameServer::sendChat(const std::wstring& nickname, const std::wstring& mess
     if (onChatBroadcast) onChatBroadcast(final_message);
 }
 
-void GameServer::tick(float tick_step)
+
+void GameServer::update(float dt)
 {
     try
     {
@@ -423,27 +346,88 @@ void GameServer::tick(float tick_step)
 
         for (auto& [client_id, queue] : remote_input_queues)
         {
-            auto iterator = client_to_entity.find(client_id);
-            if (iterator == client_to_entity.end()) continue;
+            if(!client_to_nickname.contains(client_id)) continue;
+
+            std::string nickname = client_to_nickname[client_id];
+
+            auto iterator = nickname_to_entity.find(nickname);
+            if (iterator == nickname_to_entity.end()) continue;
             if (queue.empty()) continue;
 
             processWorldInputs(world, std::move(queue.front()), iterator->second);
             queue.pop_front();
         }
 
-        runSystems(tick_step);
+        AISystem(world, dt);
+        TransformSystem(world);
+        ExplosiveSystem(world, dt);
+        HealthSystem(world);
+        PhysicsSystem(world.getEntities(), world, dt);
+        InventorySystem(world.getEntities());
+        ChunkLoadSystem(world, dt);
+        ChunkUnloadSystem(world);
+        DaycycleSystem(world, dt);
+
+        world.tick(dt);
 
         streamChunksToClients();
         broadcastBlockUpdates();
         broadcastSnapshot();
     }
-    catch (const std::bad_alloc&)
+    catch(const std::bad_alloc&)
     {
         std::cerr << "[Server] bad_alloc in tick\n";
     }
     catch (const std::exception& exception)
     {
         std::cerr << "[Server] exception in tick: " << exception.what() << '\n';
+    }
+    
+}
+
+void GameServer::spawnPlayerFor(std::string nickname)
+{
+    Entity entity(world.getPossibleID());
+
+    entity.addComponent(TransformComponent{{0.0f, 0.0f}, {1.0f, 1.0f}, sf::degrees(0.0f)});
+    entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
+
+    InventoryComponent inv(36);
+    inv.inventory.slots[0] = {ItemID::Dynamite, 16};
+    inv.inventory.slots[1] = {ItemID::Bucket, 1};
+    inv.inventory.slots[2] = {ItemID::Woodcutter, 64};
+    inv.inventory.slots[3] = {ItemID::Lighter, 1};
+    entity.addComponent(std::move(inv));
+
+    entity.getComponent<TransformComponent>().position = world.getSpawnPoint();
+
+    entity.addComponent(RenderComponent{0, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
+    entity.addComponent(HealthComponent{100, 100, false});
+    entity.addComponent(PlayerControlledComponent{nickname});
+
+    nickname_to_entity[nickname] = entity.getID();
+
+    world.getEntities().emplace_back(std::move(entity));
+}
+
+void GameServer::deactivatePlayerFor(std::string nickname)
+{
+    entityWithID(nickname_to_entity[nickname], world).getComponent<PlayerControlledComponent>().active = false;
+
+    nickname_to_entity.erase(nickname);
+}
+
+GameServer::~GameServer()
+{
+    transport->stop();
+
+    if (save_on_destruct)
+    {
+        try { world.save(); }
+        catch (const std::exception& exception)
+        {
+            std::cerr << "[Server] world.save() failed: " << exception.what() << '\n';
+        }
     }
 }
 

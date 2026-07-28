@@ -44,6 +44,7 @@ int main(int argc, char* argv[])
     std::string loadWorld;
     std::string joinAddress;
     std::string hostWorld;
+    std::string nickname;
 
     for (int i = 1; i < argc; i++)
     {
@@ -51,14 +52,18 @@ int main(int argc, char* argv[])
         if (arg == "--load" && i + 1 < argc)
         {
             loadWorld = argv[++i];
+            nickname = argv[++i];
         }
         else if (arg == "--join" && i + 1 < argc)
         {
             joinAddress = argv[++i];
+            nickname = argv[++i];
+
         }
         else if (arg == "--host" && i + 1 < argc)
         {
             hostWorld = argv[++i];
+            nickname = argv[++i];
         }
     }
 
@@ -79,7 +84,7 @@ int main(int argc, char* argv[])
         }
 
         std::cerr << "[main] --join " << host << ":" << port << std::endl;
-        game.pushState(nullptr, std::make_unique<ClientGameState>(&game, host, port));
+        game.pushState(nullptr, std::make_unique<ClientGameState>(&game, host, port, nickname));
     }
     else if (!hostWorld.empty())
     {
@@ -87,7 +92,7 @@ int main(int argc, char* argv[])
         if (std::filesystem::exists(worldPath))
         {
             std::cerr << "[main] --host " << hostWorld << " on 25565" << std::endl;
-            game.pushState(nullptr, std::make_unique<ClientGameState>(&game, World(worldPath), ClientGameState::DEFAULT_PORT));
+            game.pushState(nullptr, std::make_unique<ClientGameState>(&game, worldPath, 25565, nickname));
         }
         else
         {
@@ -102,7 +107,7 @@ int main(int argc, char* argv[])
         {
             try
             {
-                game.pushState(nullptr, std::make_unique<ClientGameState>(&game, World(worldPath)));
+                game.pushState(nullptr, std::make_unique<ClientGameState>(&game, worldPath, 0, nickname));
             }
             catch (const std::exception& e)
             {

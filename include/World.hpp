@@ -50,10 +50,7 @@ private:
     std::unordered_map<int, Chunk> chunks;
     std::vector<Entity> entities;
 
-
     uint32_t version;
-
-    sf::Vector2f spawnPoint{0.0f, 0.0f};
 
 public:
 
@@ -105,11 +102,9 @@ public:
     // normal world
     void generateWorldSpawn();
 
-    uint32_t spawnPlayer(uint32_t clientId);
+    [[deprecated]]uint32_t spawnPlayer(uint32_t clientId);
 
     std::vector<uint32_t> getPlayerEntityIDs() const;
-
-    std::optional<uint32_t> findPlayerEntityByClient(uint32_t clientId) const;
 
     Climate getClimate(int x) const;
     Biome getBiome(int x) const;
@@ -154,7 +149,7 @@ public:
 
     float getDayTime() const { return dayTime; }
 
-    sf::Vector2f getSpawnPoint() const { return spawnPoint; }
+    sf::Vector2<double> getSpawnPoint();
 
     const std::string& getName() const { return name; }
 
@@ -188,5 +183,24 @@ public:
 };
 
 extern void updateFluids(World& world);
+
+inline std::filesystem::path getWorldsPath()
+{
+    std::string home;
+
+    #ifdef _WIN32
+        const char* appdata = std::getenv("APPDATA");
+        home = appdata ? appdata : "";
+    #elif __linux__
+        const char* homeenv = std::getenv("HOME");
+        home = homeenv ? homeenv : "";
+    #endif
+
+    std::filesystem::path savesPath = home.empty() ? std::filesystem::temp_directory_path() : std::filesystem::path(home);
+    savesPath /= "Blockbit";
+    savesPath /= "saves";
+
+    return savesPath;
+}
 
 #endif // WORLD_HPP

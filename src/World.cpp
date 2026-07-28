@@ -377,14 +377,21 @@ void World::generateWorldSpawn()
     {
         generateChunk(i);
     }
+}
+
+sf::Vector2<double> World::getSpawnPoint()
+{
+    sf::Vector2<double> spawnPoint;
 
     for(int i = 60; i < 255; i++)
     {
         if(getBlock(0, i).id != BlockID::Air && getBlock(0, i + 1).id == BlockID::Air)
         {
-            spawnPoint = {0.0f, static_cast<float>(i + 1)};
+            spawnPoint = {0.0f, static_cast<double>(i + 1)};
         }
     }
+
+    return spawnPoint;
 }
 
 float World::getHeightNoise(float x) const
@@ -751,10 +758,6 @@ void World::writeData() const
     data["day_time"] = Tag(getDayTime());
     data["days"] = Tag(days);
 
-    data["spawn_point"] = TagCompound();
-    data["spawn_point"]["x"] = Tag(getSpawnPoint().x);
-    data["spawn_point"]["y"] = Tag(getSpawnPoint().y);
-
     data["generation_properties"] = TagCompound();
     data["generation_properties"]["flat"] = Tag(generation_properties.flat);
     data["generation_properties"]["base_height"] = Tag(generation_properties.base_height);
@@ -1069,7 +1072,7 @@ void World::readEntities()
                         PlayerControlledComponent c;
                         c.deserialize(componentData);
                         entity.addComponent<PlayerControlledComponent>(c);
-                        std::cout << "\t\tPlayerControlledComponent loaded (client " << c.clientId << ")\n";
+                        std::cout << "\t\tPlayerControlledComponent loaded\n";
                     }
                 }
             }
@@ -1103,8 +1106,6 @@ void World::readData()
 
     dayTime = data["day_time"].get<float>();
     days = data["days"].get<uint64_t>();
-
-    spawnPoint = {data["spawn_point"]["x"].get<float>(), data["spawn_point"]["y"].get<float>()};
     
     generation_properties =
     {
@@ -1137,7 +1138,6 @@ void World::readData()
     std::cout << "Data file: " << std::endl;
     std::cout << "Daytime: " << dayTime << std::endl;
     std::cout << "Days: " << days << std::endl;
-    std::cout << "Spawnpoint: " << spawnPoint.x << ' ' << spawnPoint.y << std::endl;
 
     std::cout << "Generation Properties:\n";
     std::cout << "\tFlat: " << ((generation_properties.flat) ? "true" : "false") << '\n';
@@ -1194,7 +1194,6 @@ void World::load()
             std::cerr << "Warning: Failed to read data: " << e.what() << '\n';
             dayTime = 0.0f;
             days = 0;
-            spawnPoint = {0.0f, 0.0f};
         }
     } else {
         // No data file -> write defaults
@@ -1221,7 +1220,7 @@ uint32_t World::spawnPlayer(uint32_t clientId)
     inv.inventory.slots[3] = {ItemID::Lighter, 1};
     player.addComponent(std::move(inv));
 
-    sf::Vector2f spawn = getSpawnPoint();
+    sf::Vector2<double> spawn = getSpawnPoint();
     int spawnY = static_cast<int>(spawn.y);
     if (spawnY == 0)
     {
@@ -1238,7 +1237,7 @@ uint32_t World::spawnPlayer(uint32_t clientId)
 
     player.addComponent(RenderComponent{0, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
     player.addComponent(HealthComponent{100, 100, false});
-    player.addComponent(PlayerControlledComponent{clientId});
+    player.addComponent(PlayerControlledComponent{""});
 
     entities.push_back(std::move(player));
 
@@ -1255,18 +1254,6 @@ std::vector<uint32_t> World::getPlayerEntityIDs() const
     }
     return ids;
 }
-
-std::optional<uint32_t> World::findPlayerEntityByClient(uint32_t clientId) const
-{
-    for (const auto& e : entities)
-    {
-        if (!e.hasComponent<PlayerControlledComponent>()) continue;
-        if (e.getComponent<PlayerControlledComponent>().clientId == clientId)
-            return e.getID();
-    }
-    return std::nullopt;
-}
-
 
 std::pair<float, float> World::getSimulationRangeForEntity(const uint32_t entity)
 {

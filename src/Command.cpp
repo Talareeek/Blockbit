@@ -53,8 +53,8 @@ std::unordered_map<std::wstring, Command> commandDatabase =
             for(uint32_t id : world->getPlayerEntityIDs())
             {
                 auto& e = entityWithID(id, *world);
-                uint32_t clientId = e.getComponent<PlayerControlledComponent>().clientId;
-                console.writeLine(L"   entity " + std::to_wstring(id) + L" (client " + std::to_wstring(clientId) + L")");
+                std::string nickname = e.getComponent<PlayerControlledComponent>().nickname;
+                console.writeLine(L"   entity " + std::to_wstring(id) + L" (player " + std::wstring(nickname.begin(), nickname.end()) + L")");
             }
         }
     }},

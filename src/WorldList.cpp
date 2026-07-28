@@ -240,14 +240,14 @@ void WorldList::update(float dt)
         {
             auto world_path = entries[i].getPath();
             entries[i].clearRequests();
-            game->pushState(&game->currentState(), std::make_unique<ClientGameState>(game, World(world_path), 0, nickname));
+            game->pushState(&game->currentState(), std::make_unique<ClientGameState>(game, world_path, 0, nickname));
             return;
         }
         if(entries[i].wasHostRequested())
         {
             auto world_path = entries[i].getPath();
             entries[i].clearRequests();
-            game->pushState(&game->currentState(), std::make_unique<ClientGameState>(game, World(world_path), ClientGameState::DEFAULT_PORT, nickname));
+            game->pushState(&game->currentState(), std::make_unique<ClientGameState>(game, world_path, ClientGameState::DEFAULT_PORT, nickname));
             return;
         }
         if(entries[i].wasDeleteRequested())
