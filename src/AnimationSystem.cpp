@@ -5,7 +5,7 @@
 
 void AnimationSystem(World& world, float dt)
 {
-    for(auto& entity : world.getEntities())
+    for(auto& [id, entity] : world.getEntities())
     {
         if(!entity.hasComponent<AnimationComponent>() || !entity.hasComponent<RenderComponent>()) continue;
 

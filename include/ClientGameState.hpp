@@ -28,8 +28,8 @@ private:
     std::unique_ptr<ClientTransport> transport;
     std::optional<GameServer> local_server;
 
-    std::optional<uint32_t> local_player_entity_id;
-    uint32_t my_entity_id = 0;
+    std::optional<UUID> local_player_entity_id;
+    UUID my_entity_id;
 
     bool initialized = false;
     bool connection_failed = false;
@@ -102,7 +102,7 @@ public:
 
     bool alwaysUpdated() const override;
 
-    static constexpr uint16_t DEFAULT_PORT = 25565;
+    static constexpr uint16_t DEFAULT_PORT = GameServer::DEFAULT_PORT;
 };
 
 #endif // CLIENT_GAME_STATE_HPP

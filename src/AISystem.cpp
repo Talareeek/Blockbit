@@ -41,7 +41,7 @@ void AISystem(World& world, float dt)
     auto& entities = world.getEntities();
 
     Entity* player = nullptr;
-    for (auto& e : entities)
+    for (auto& [id, e] : entities)
     {
         if (e.hasComponent<TransformComponent>())
         {
@@ -50,7 +50,7 @@ void AISystem(World& world, float dt)
         }
     }
 
-    for (auto& entity : entities)
+    for (auto& [id, entity] : entities)
     {
         if (!entity.hasComponent<AIComponent>())        continue;
         if (!entity.hasComponent<TransformComponent>()) continue;

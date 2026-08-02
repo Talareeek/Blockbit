@@ -1,40 +1,48 @@
 #ifndef ENTITY_HPP
 #define ENTITY_HPP
 
+#include "UUID.hpp"
 #include "BBT.hpp"
+#include "Component.hpp"
 
 #include <unordered_map>
 #include <typeindex>
 #include <cstdint>
-#include <any>
+#include <memory>
 #include <exception>
 
 class Entity
 {
 private:
 
-    uint32_t id;
+    UUID id;
 
-    std::unordered_map<std::type_index, std::any> components;
+    std::unordered_map<std::type_index, std::unique_ptr<Component>> components;
 
 public:
 
-    Entity(uint32_t id);
+    Entity(const Entity&) = delete;
+    Entity& operator=(const Entity&) = delete;
+    Entity(Entity&&) = default;
+    Entity& operator=(Entity&&) = default;
 
-    uint32_t getID() const;
+    Entity(UUID id);
 
-    std::unordered_map<std::type_index, std::any>& getComponents();
+    UUID getID() const;
 
-    const std::unordered_map<std::type_index, std::any>& getComponents() const;
+    std::unordered_map<std::type_index, std::unique_ptr<Component>>& getComponents();
+
+    const std::unordered_map<std::type_index, std::unique_ptr<Component>>& getComponents() const;
 
     template<typename T>
     void addComponent(T component)
     {
-        components[typeid(T)] = std::move(component);
+        static_assert(std::is_base_of<Component, T>::value, "T must derive from Component");
+        components[typeid(T)] = std::make_unique<T>(std::move(component));
     }
 
     template<typename T>
-    bool hasComponent() const 
+    bool hasComponent() const
     {
         return components.contains(typeid(T));
     }
@@ -42,16 +50,17 @@ public:
     template<typename T>
     T& getComponent()
     {
-        return std::any_cast<T&>(components.at(typeid(T)));
+        return static_cast<T&>(*components.at(typeid(T)));
     }
 
     template<typename T>
     const T& getComponent() const
     {
-        return std::any_cast<const T&>(components.at(typeid(T)));
+        return static_cast<const T&>(*components.at(typeid(T)));
     }
 
     Tag serialize() const;
+    void deserialize(Tag& tag);
 };
 
 #endif // ENTITY_HPP

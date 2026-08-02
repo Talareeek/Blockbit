@@ -8,6 +8,8 @@
 #include <functional>
 #include <optional>
 
+#include "UUID.hpp"
+
 #include <SFML/System/Vector2.hpp>
 
 #include "../include/Entity.hpp"
@@ -87,7 +89,7 @@ struct ItemData
 
     bool recycleable;
 
-    std::function<bool(World& world, sf::Vector2f mouse, uint32_t user)> onUse = [](World&, sf::Vector2f, uint32_t) -> bool {return false;};    
+    std::function<bool(World& world, sf::Vector2f mouse, UUID user)> onUse = [](World&, sf::Vector2f, UUID) -> bool {return false;};    
 
     std::optional<CraftProperties> craft_properties;
 };

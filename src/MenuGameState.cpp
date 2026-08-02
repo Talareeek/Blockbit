@@ -19,7 +19,7 @@ namespace
         if (text.empty()) return false;
 
         host = text;
-        port = 25565;
+        port = 34500;
 
         auto colon = text.find(':');
         if (colon != std::string::npos)

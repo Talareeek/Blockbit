@@ -8,6 +8,6 @@
 
 extern bool isSubmerged(World& world, const TransformComponent& transform);
 
-extern void PhysicsSystem(std::vector<Entity>& entities, World& world, float deltaTime);
+extern void PhysicsSystem(World& world, float deltaTime);
 
 #endif // PHYSICS_SYSTEM_HPP

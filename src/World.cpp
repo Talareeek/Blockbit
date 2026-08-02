@@ -14,11 +14,13 @@
 #include "../include/RenderComponent.hpp"
 #include "../include/HealthComponent.hpp"
 #include "../include/BBT.hpp"
+
 #include <zstd.h>
 #include <iostream>
 #include <cmath>
 #include <cstring>
 #include <fstream>
+#include <any>
 
 World::World(const std::filesystem::path path) : path{path}
 {
@@ -31,40 +33,34 @@ World::World(const std::string name, const std::filesystem::path path, unsigned 
     save();
 }
 
-unsigned int World::getSeed() const
-{
-    return seed;
-}
-
 Chunk& World::getChunk(int chunk_position)
 {
-    // lazy generation of chunks
     if (chunks.find(chunk_position) == chunks.end())
     {
-        Chunk c{};
-        c.chunk_position = chunk_position;
-        c.dirty = true;
-        c.meshDirty = true;
-        c.generated = false;
-        chunks[chunk_position] = c;
+        loadOrCreateChunk(chunk_position);
+
+        /*
+        Chunk chunk{};
+        chunk.chunk_position = chunk_position;
+        chunk.dirty = true;
+        chunk.meshDirty = true;
+        chunk.generated = false;
+        */
     }
     return chunks[chunk_position];
 }
 
 
-Block World::getBlock(int wx, int wy)
+Block World::getBlock(int world_x, int world_y)
 {
-    if(wy < 0 || wy >= CHUNK_HEIGHT) return {BlockID::Air, 0};
+    if(world_y < 0 || world_y >= CHUNK_HEIGHT) return {BlockID::Air, 0};
 
-    int chunk_position = (wx >= 0)
-    ? wx / CHUNK_WIDTH
-    : (wx - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
+    int chunk_position = (world_x >= 0) ? world_x / CHUNK_WIDTH : (world_x - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
 
-    // Return Air if chunk doesn't exist
     if(!chunks.contains(chunk_position)) return {BlockID::Air, 0};
 
-    int local_x = wx - chunk_position * CHUNK_WIDTH;
-    int local_y = wy;
+    int local_x = world_x - chunk_position * CHUNK_WIDTH;
+    int local_y = world_y;
 
     return chunks[chunk_position].blocks[local_y][local_x];
 }
@@ -126,7 +122,9 @@ void World::generateFlatWorld()
 
 void World::generateFlatChunk(int chunk_position)
 {
-    Chunk& chunk = getChunk(chunk_position);
+    Chunk& chunk = chunks[chunk_position];
+    chunk.chunk_position = chunk_position;
+
     chunk.dirty = true;
     chunk.meshDirty = true;
     chunk.generated = true;
@@ -160,7 +158,7 @@ void World::loadOrCreateChunk(int chunk_position)
 {
     if (chunks.contains(chunk_position) && chunks[chunk_position].generated) return;
 
-    if (hasChunkFile(chunk_position)) readChunk(chunk_position);
+    if (hasChunkFile(chunk_position)) loadChunk(chunk_position);
     else generateChunk(chunk_position);
 }
 
@@ -211,7 +209,8 @@ Biome World::getBiome(int x) const
 
 void World::generateChunk(int chunk_position)
 {
-    Chunk& chunk = getChunk(chunk_position);
+    Chunk& chunk = chunks[chunk_position];
+    chunk.chunk_position = chunk_position;
 
     if(generation_properties.flat)
     {
@@ -233,7 +232,8 @@ void World::generateChunk(int chunk_position)
 
 void World::generateTerrain(int chunk_position)
 {
-    Chunk& chunk = getChunk(chunk_position);
+    Chunk& chunk = chunks[chunk_position];
+    chunk.chunk_position = chunk_position;
 
     for(int x = 0; x < CHUNK_WIDTH; x++)
     {
@@ -293,7 +293,7 @@ void World::generateCaves(int chunk_position)
 
 void World::generateVein(int x, int y, BlockID ore, int size)
 {
-    uint32_t seed = getSeed() ^ (static_cast<uint32_t>(x) << 16) ^ static_cast<uint32_t>(y);
+    uint32_t seed = this->seed ^ (static_cast<uint32_t>(x) << 16) ^ static_cast<uint32_t>(y);
     std::mt19937 rng(seed);
 
     for(int i=0; i<size; i++)
@@ -308,7 +308,7 @@ void World::generateVein(int x, int y, BlockID ore, int size)
 
 void World::generateOres(int chunk_position)
 {
-    std::mt19937 rng(getSeed() + chunk_position);
+    std::mt19937 rng(seed + chunk_position);
 
     int diamond_height = rng() % 14 + 1; // DIAMONDS 0  -  15
     int gold_height = rng() % 34 + 16;   // GOLD     16 -  50
@@ -324,7 +324,7 @@ void World::generateOres(int chunk_position)
 
 void World::generateTree(int x, int y, int log_height, BlockID log_type, BlockID leaves_type)
 {
-    uint32_t seed = getSeed() ^ (static_cast<uint32_t>(x) << 16) ^ static_cast<uint32_t>(y);
+    uint32_t seed = this->seed ^ (static_cast<uint32_t>(x) << 16) ^ static_cast<uint32_t>(y);
     std::mt19937 rng(seed);
 
     for(int i = 0; i < log_height; i++)
@@ -352,7 +352,7 @@ void World::generateTree(int x, int y, int log_height, BlockID log_type, BlockID
 
 void World::generateNature(int chunk_position)
 {
-    std::mt19937 rng(getSeed() + chunk_position * 31);
+    std::mt19937 rng(seed + chunk_position * 31);
 
     bool tree_spawns = rng() % 100 <= 35;
 
@@ -433,19 +433,47 @@ int World::getHeight(int worldX) const
 }
 
 
-std::vector<Entity>& World::getEntities()
+std::unordered_map<UUID, Entity>& World::getEntities()
 {
     return entities;
 }
 
-const std::vector<Entity>& World::getEntities() const
+const std::unordered_map<UUID, Entity>& World::getEntities() const
 {
     return entities;
 }
 
-uint32_t World::getVersion() const
+void World::addEntity(Entity entity)
 {
-    return version;
+    UUID id = entity.getID();
+
+    if(!entity.hasComponent<TransformComponent>())
+    {
+        Chunk& chunk = getChunk(0);
+        chunk.entity_ids.insert(id);
+        chunk.dirty = true;        
+    }
+    else
+    {
+        Chunk& chunk = getChunk(entity.getComponent<TransformComponent>().chunkPosition());
+        entity.getComponent<TransformComponent>().previous_position = entity.getComponent<TransformComponent>().position;
+        chunk.entity_ids.insert(id);
+        chunk.dirty = true;  
+    }    
+
+    entities.emplace(id, std::move(entity));
+}
+
+Entity& World::getEntity(UUID id)
+{
+    if(entities.contains(id)) return getEntities().at(id);
+
+    throw std::runtime_error("No entity found");
+}
+
+bool World::doesEntityExist(UUID id)
+{
+    return entities.contains(id);
 }
 
 void World::tick(float dt)
@@ -460,6 +488,7 @@ void World::tick(float dt)
 
 void updateFluids(World& world)
 {
+    /*
     int chunk = world.getEntities()[0].getComponent<TransformComponent>().position.x / (CHUNK_WIDTH);
 
     struct Vec2iHash
@@ -552,26 +581,218 @@ void updateFluids(World& world)
     {
         world.setBlock(a.first.x, a.first.y, a.second);
     }
+    */
 }
 
 
-void World::writeManifest() const
-{
-    std::ofstream file(path / "manifest");
 
-    if(!file) throw std::runtime_error("Cannot open file");
-
-    file << name << '\n';
-    file << seed << '\n';
-}
 
 // "BBCK" little-endian: identifies the chunk file format we write today.
 static constexpr uint32_t CHUNK_FILE_MAGIC = 0x4B434242u;
 
-void World::writeChunk(int chunk_position) const
+
+bool World::hasChunkFile(int chunk_position) const
 {
-    auto it = chunks.find(chunk_position);
-    if(it == chunks.end()) return;
+    return std::filesystem::exists(path / ("chunk_" + std::to_string(chunk_position)));
+}
+
+UUID World::spawnPlayer(uint32_t clientId)
+{
+    Entity player(generateUUID());
+
+    player.addComponent(TransformComponent{{0.0f, 0.0f}, {1.0f, 1.0f}, sf::degrees(0.0f)});
+    player.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
+
+    InventoryComponent inv(36);
+    inv.inventory.slots[0] = {ItemID::Dynamite, 16};
+    inv.inventory.slots[1] = {ItemID::Bucket, 1};
+    inv.inventory.slots[2] = {ItemID::Woodcutter, 64};
+    inv.inventory.slots[3] = {ItemID::Lighter, 1};
+    player.addComponent(std::move(inv));
+
+    sf::Vector2<double> spawn = getSpawnPoint();
+    int spawnY = static_cast<int>(spawn.y);
+    if (spawnY == 0)
+    {
+        for (int i = 0; i < 255; i++)
+        {
+            if (getBlock(static_cast<int>(spawn.x), i).id == BlockID::Air)
+            {
+                spawnY = i + 1;
+                break;
+            }
+        }
+    }
+    player.getComponent<TransformComponent>().position = {spawn.x, static_cast<double>(spawnY)};
+
+    player.addComponent(RenderComponent{0, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
+    player.addComponent(HealthComponent{100, 100, false});
+    player.addComponent(PlayerControlledComponent{""});
+
+    entities.emplace(player.getID(), std::move(player));
+
+    return player.getID();
+}
+
+std::vector<UUID> World::getPlayerEntityIDs() const
+{
+    std::vector<UUID> ids;
+    for (const auto& [id, entity] : entities)
+    {
+        if (entity.hasComponent<PlayerControlledComponent>())
+            ids.push_back(entity.getID());
+    }
+    return ids;
+}
+
+std::pair<double, double> World::getSimulationRangeForEntity(const UUID entity)
+{
+    auto& transform = entityWithID(entity, *this).getComponent<TransformComponent>();
+
+    int entity_chunk = transform.position.x / CHUNK_WIDTH;
+
+    return
+    {
+        static_cast<float>((entity_chunk - SIMULATION_DISTANCE) * CHUNK_WIDTH),
+        static_cast<float>((entity_chunk + SIMULATION_DISTANCE) * CHUNK_WIDTH + CHUNK_WIDTH)
+    };
+}
+
+                                                             
+
+
+void World::save()
+{
+    saveManifest();
+    saveData();
+
+    for(auto& [chunk_position, chunk] : chunks)
+    {
+        if(chunk.dirty)
+        {
+            saveChunk(chunk_position);
+        }
+    }
+}
+
+void World::load()
+{
+    if(!std::filesystem::exists(path)) throw std::runtime_error("World path does not exist");
+
+    loadManifest();
+    loadData();
+}
+
+
+void World::saveManifest()
+{
+    BBT root("manifest");
+
+    root["name"] = Tag(name);
+
+
+    std::ofstream file(path / "manifest", std::ios::binary);
+
+    if(!file) throw std::runtime_error("Cannot open manifest file");
+
+
+    std::vector<uint8_t> buffer = root.save();
+
+    file.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+
+
+    file.close();
+}
+
+void World::loadManifest()
+{
+    std::ifstream stream(path / "manifest", std::ios::ate | std::ios::binary);
+
+    if(!stream) throw std::runtime_error("Failed to open manifest file");
+
+    std::streamsize size = stream.tellg();
+    stream.seekg(0, std::ios::beg);
+
+    std::vector<uint8_t> buffer(static_cast<size_t>(size));
+
+    stream.read(reinterpret_cast<char*>(buffer.data()), size);
+
+    stream.close();
+
+
+    BBT root = BBT::load(buffer);
+
+    name = root["name"].get<std::string>();
+}
+
+
+void World::saveData()
+{
+    BBT data("data");
+
+    data["generation_properties"] = TagCompound();
+    data["generation_properties"]["flat"] = Tag(generation_properties.flat);
+    data["generation_properties"]["base_height"] = Tag(generation_properties.base_height);
+    data["generation_properties"]["height_scale"] = Tag(generation_properties.height_scale);
+    data["generation_properties"]["frequency"] = Tag(generation_properties.frequency);
+    data["generation_properties"]["amplitude"] = Tag(generation_properties.amplitude);
+    data["generation_properties"]["persistence"] = Tag(generation_properties.persistence);
+
+    data["seed"] = Tag(seed);
+
+    data["day_time"] = Tag(getDayTime());
+    data["days"] = Tag(days);
+
+    auto buffer = data.save();
+
+    std::ofstream file(path / "data", std::ios::out | std::ios::binary);
+    
+    file.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+}
+
+void World::loadData()
+{
+    std::ifstream file(path / "data", std::ios::ate | std::ios::binary);
+
+    if(!file) throw std::runtime_error("Failed to open data file");
+
+    std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    std::vector<uint8_t> buffer(static_cast<size_t>(size));
+
+    file.read(reinterpret_cast<char*>(buffer.data()), size);
+
+    file.close();
+
+
+    BBT data = BBT::load(buffer);
+
+    dayTime = data["day_time"].get<float>();
+    days = data["days"].get<uint64_t>();
+    
+    generation_properties =
+    {
+        .flat = data["generation_properties"]["flat"].get<bool>(),
+        .base_height = data["generation_properties"]["base_height"].get<float>(),
+        .height_scale = data["generation_properties"]["height_scale"].get<float>(),
+        .frequency = data["generation_properties"]["frequency"].get<float>(),
+        .amplitude = data["generation_properties"]["amplitude"].get<float>(),
+        .persistence = data["generation_properties"]["persistence"].get<float>()
+    };
+}
+
+
+void World::saveChunk(int chunk_position)
+{
+    saveChunkEnvironment(chunk_position);
+    saveChunkEntities(chunk_position);
+}
+
+void World::saveChunkEnvironment(int chunk_position)
+{
+    auto iterator = chunks.find(chunk_position);
+    if(iterator == chunks.end()) return;
 
     size_t block_size = sizeof(BlockID) + sizeof(uint8_t);
     size_t raw_size = CHUNK_WIDTH * CHUNK_HEIGHT * block_size + 16 * sizeof(Climate) + 16 * sizeof(Biome);
@@ -583,7 +804,7 @@ void World::writeChunk(int chunk_position) const
     {
         for(int x = 0; x < CHUNK_WIDTH; x++)
         {
-            const Block& block = it->second.blocks[y][x];
+            const Block& block = iterator->second.blocks[y][x];
 
             std::memcpy(ptr, &block.id, sizeof(BlockID));
             ptr += sizeof(BlockID);
@@ -595,8 +816,8 @@ void World::writeChunk(int chunk_position) const
 
     for(int x = 0; x < 16; x++)
     {
-        const Climate& climate = it->second.climates[x]; 
-        const Biome& biome = it->second.biomes[x];
+        const Climate& climate = iterator->second.climates[x]; 
+        const Biome& biome = iterator->second.biomes[x];
 
         std::memcpy(ptr, &climate, sizeof(Climate));
         ptr += sizeof(Climate);
@@ -612,13 +833,25 @@ void World::writeChunk(int chunk_position) const
 
     if(ZSTD_isError(compressed_size))
     {
-        std::cerr << "ZSTD_compress failed for chunk " << chunk_position
-                  << ": " << ZSTD_getErrorName(compressed_size) << '\n';
+        std::cerr << "ZSTD_compress failed for chunk " << chunk_position << ": " << ZSTD_getErrorName(compressed_size) << '\n';
         return;
     }
 
-    std::filesystem::path final_path = path / ("chunk_" + std::to_string(chunk_position));
-    std::filesystem::path tmp_path = path / ("chunk_" + std::to_string(chunk_position) + ".tmp");
+    std::filesystem::path chunk_dir = path / ("chunk_" + std::to_string(chunk_position));
+
+    std::error_code ec;
+    std::filesystem::create_directories(chunk_dir, ec);
+
+    if(ec)
+    {
+        std::cerr << "Failed to create chunk directory: "
+                << chunk_dir << " : "
+                << ec.message() << '\n';
+        return;
+    }
+
+    std::filesystem::path final_path = path / ("chunk_" + std::to_string(chunk_position)) / "environment";
+    std::filesystem::path tmp_path = path / ("chunk_" + std::to_string(chunk_position)) / ("environment.tmp");
 
     {
         std::ofstream file(tmp_path, std::ios::binary | std::ios::trunc);
@@ -641,161 +874,50 @@ void World::writeChunk(int chunk_position) const
         if(!file)
         {
             std::cerr << "Failed to write chunk " << chunk_position << '\n';
-            std::error_code ec;
-            std::filesystem::remove(tmp_path, ec);
+            std::error_code error_code;
+            std::filesystem::remove(tmp_path, error_code);
             return;
         }
     }
 
-    std::error_code ec;
-    std::filesystem::rename(tmp_path, final_path, ec);
-    if(ec)
+    std::error_code error_code;
+    std::filesystem::rename(tmp_path, final_path, error_code);
+    if(error_code)
     {
-        std::cerr << "Failed to finalize chunk " << chunk_position << ": " << ec.message() << '\n';
-        std::filesystem::remove(tmp_path, ec);
+        std::cerr << "Failed to finalize chunk " << chunk_position << ": " << error_code.message() << '\n';
+        std::filesystem::remove(tmp_path, error_code);
     }
 }
 
-
-void World::writeEntities() const
+void World::saveChunkEntities(int chunk_position)
 {
-    std::ofstream file(path / "entities", std::ios::out);
+    Chunk& chunk = getChunk(chunk_position);
 
-    if(!file) throw std::runtime_error("Failed to open file for writing: " + path.string());
+    BBT root("entities_" + std::to_string(chunk_position));
 
-
-    for(const auto& entity : entities)
-    {
-        file << "Entity ID: " << entity.getID() << '\n';
-
-        for(const auto& [type, component] : entity.getComponents())
-        {
-            file << "Component Type: ";
-
-            if(type == typeid(PhysicsComponent))
-            {
-                file << "Physics" << '\n';
-                file << std::any_cast<PhysicsComponent>(component).serialize();
-            }
-            else if(type == typeid(RenderComponent))
-            {
-                file << "Render" << '\n';
-                file << std::any_cast<RenderComponent>(component).serialize();
-            }
-            else if(type == typeid(AnimationComponent))
-            {
-                file << "Animation" << '\n';
-                file << std::any_cast<AnimationComponent>(component).serialize();
-            }
-            else if(type == typeid(InventoryComponent))
-            {
-                file << "Inventory" << '\n';
-                file << std::any_cast<InventoryComponent>(component).serialize();
-            }
-            else if(type == typeid(HealthComponent))
-            {
-                file << "Health" << '\n';
-                file << std::any_cast<HealthComponent>(component).serialize();
-            }
-            else if(type == typeid(ItemComponent))
-            {
-                file << "Item" << '\n';
-                file << std::any_cast<ItemComponent>(component).serialize();
-            }
-            else if(type == typeid(PreserveComponent))
-            {
-                file << "Preserve" << '\n';
-                file << (std::any_cast<PreserveComponent>(component) == PreserveComponent::Preserve ? "Preserve" : "Destroy") << '\n';
-            }
-            else if(type == typeid(ExplosiveComponent))
-            {
-                file << "Explosive" << '\n';
-                file << std::any_cast<ExplosiveComponent>(component).serialize();
-            }
-            else if(type == typeid(TransformComponent))
-            {
-                file << "Transform" << '\n';
-                file << std::any_cast<TransformComponent>(component).serialize();
-            }
-            else if(type == typeid(AnimationComponent))
-            {
-                file << "Animation" << '\n';
-                file << std::any_cast<AnimationComponent>(component).serialize();
-            }
-            else if(type == typeid(AIComponent))
-            {
-                file << "AI" << "\n";
-                file << std::any_cast<AIComponent>(component).serialize();
-            }
-            else if(type == typeid(PlayerControlledComponent))
-            {
-                file << "PlayerControlled" << '\n';
-                file << std::any_cast<PlayerControlledComponent>(component).serialize();
-            }
-        }
-
-        file << '\n';
+    for(auto& uuid : chunk.entity_ids)
+    {     
+        root[entities.at(uuid).getID().toString()] = entities.at(uuid).serialize();
     }
+
+    std::ofstream stream(path / "entities" / ("entities_" + std::to_string(chunk_position)), std::ios::binary);
+
+    std::vector<uint8_t> buffer = root.save();
+
+    stream.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+
+    stream.close();
 }
 
-void World::save() const
+void World::loadChunk(int chunk_position)
 {
-    writeManifest();
-    writeEntities();
-    writeData();
-
-    for(auto& [chunk_position, chunk] : chunks)
-    {
-        if(chunk.dirty)
-        {
-            writeChunk(chunk_position);
-        }
-    }
-}
-
-void World::writeData() const
-{
-    BBT data("data");
-
-    data["day_time"] = Tag(getDayTime());
-    data["days"] = Tag(days);
-
-    data["generation_properties"] = TagCompound();
-    data["generation_properties"]["flat"] = Tag(generation_properties.flat);
-    data["generation_properties"]["base_height"] = Tag(generation_properties.base_height);
-    data["generation_properties"]["height_scale"] = Tag(generation_properties.height_scale);
-    data["generation_properties"]["frequency"] = Tag(generation_properties.frequency);
-    data["generation_properties"]["amplitude"] = Tag(generation_properties.amplitude);
-    data["generation_properties"]["persistence"] = Tag(generation_properties.persistence);
-
-    auto buffer = data.save();
-
-    std::ofstream file(path / "data", std::ios::out | std::ios::binary);
+    loadChunkEnvironment(chunk_position);
     
-    file.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
 }
 
-
-bool World::hasChunkFile(int chunk_position) const
+void World::loadChunkEnvironment(int chunk_position)
 {
-    return std::filesystem::exists(path / ("chunk_" + std::to_string(chunk_position)));
-}
-
-
-void World::readManifest()
-{
-    std::ifstream file(path / "manifest");
-
-    if(!file) throw std::runtime_error("Cannot open file");
-
-    file >> name;
-    file >> seed;
-    perlin = PerlinNoise(seed);
-}
-
-void World::readChunk(int chunk_position)
-{
-    std::filesystem::path chunk_path = path / ("chunk_" + std::to_string(chunk_position));
+    std::filesystem::path chunk_path = path / ("chunk_" + std::to_string(chunk_position)) / "environment";
 
     size_t expected_raw_size = CHUNK_WIDTH * CHUNK_HEIGHT * (sizeof(BlockID) + sizeof(uint8_t)) + CHUNK_WIDTH * (sizeof(Climate) + sizeof(Biome));
 
@@ -917,356 +1039,30 @@ void World::readChunk(int chunk_position)
     }
 }
 
-void World::readEntities()
+void World::readChunkEntities(int chunk_position)
 {
-    std::cout << "Reading entities from: " << (path / "entities") << '\n';
+    std::ifstream stream(path / "entities" / ("entities_" + std::to_string(chunk_position)), std::ios::ate | std::ios::binary);
 
-    std::ifstream file(path / "entities");
-    if (!file)
-        throw std::runtime_error("Failed to open file for reading: " + path.string());
+    if(!stream) throw std::runtime_error("Failed to open entities file");
 
-    std::string line;
-    std::string bufferedLine;
-    bool hasBuffered = false;
-
-    auto getLine = [&](std::string& out) -> bool
-    {
-        if (hasBuffered)
-        {
-            out = bufferedLine;
-            hasBuffered = false;
-            return true;
-        }
-        return static_cast<bool>(std::getline(file, out));
-    };
-
-    auto pushBackLine = [&](const std::string& l)
-    {
-        bufferedLine = l;
-        hasBuffered = true;
-    };
-
-    while (getLine(line))
-    {
-        if (line.empty())
-            continue;
-
-        if (line.rfind("Entity ID:", 0) == 0)
-        {
-            uint32_t entityID = std::stoul(line.substr(11));
-            Entity entity(entityID);
-
-            std::cout << "\tEntity ID: " << entityID << '\n';
-
-            while (getLine(line))
-            {
-                if (line.empty())
-                    continue;
-
-                if (line.rfind("Entity ID:", 0) == 0)
-                {
-                    pushBackLine(line);
-                    break;
-                }
-
-                if (line.rfind("Component Type:", 0) == 0)
-                {
-                    std::string componentType = line.substr(16);
-                    std::string componentData;
-
-                    while (getLine(line))
-                    {
-                        if (line.empty())
-                            break;
-
-                        if (line.rfind("Component Type:", 0) == 0 ||
-                            line.rfind("Entity ID:", 0) == 0)
-                        {
-                            pushBackLine(line);
-                            break;
-                        }
-
-                        componentData += line + '\n';
-                    }
-
-                    if (componentType == "Physics")
-                    {
-                        PhysicsComponent c;
-                        c.deserialize(componentData);
-                        entity.addComponent<PhysicsComponent>(c);
-                        std::cout << "\t\tPhysicsComponent loaded\n";
-                    }
-                    else if (componentType == "Render")
-                    {
-                        RenderComponent c;
-                        c.deserialize(componentData);
-                        entity.addComponent<RenderComponent>(c);
-                        std::cout << "\t\tRenderComponent loaded\n";
-                    }
-                    else if (componentType == "Animation")
-                    {
-                        AnimationComponent c;
-                        c.deserialize(componentData);
-                        entity.addComponent<AnimationComponent>(c);
-                        std::cout << "\t\tAnimationComponent loaded\n";
-                    }
-                    else if (componentType == "Inventory")
-                    {
-                        InventoryComponent c(1);
-                        c.deserialize(componentData);
-                        entity.addComponent<InventoryComponent>(c);
-                        std::cout << "\t\tInventoryComponent loaded\n";
-                    }
-                    else if (componentType == "Health")
-                    {
-                        HealthComponent c;
-                        c.deserialize(componentData);
-                        entity.addComponent<HealthComponent>(c);
-                        std::cout << "\t\tHealthComponent loaded\n";
-                    }
-                    else if (componentType == "Item")
-                    {
-                        ItemComponent c;
-                        c.deserialize(componentData);
-                        entity.addComponent<ItemComponent>(c);
-                        std::cout << "\t\tItemComponent loaded\n";
-                    }
-                    else if (componentType == "Preserve")
-                    {
-                        PreserveComponent preserve;
-                        preserve = (componentData.find("Preserve") != std::string::npos)
-                                   ? PreserveComponent::Preserve
-                                   : PreserveComponent::Destroy;
-
-                        entity.addComponent<PreserveComponent>(preserve);
-                        std::cout << "\t\tPreserveComponent loaded\n";
-                    }
-                    else if (componentType == "Explosive")
-                    {
-                        ExplosiveComponent c;
-                        c.deserialize(componentData);
-                        entity.addComponent<ExplosiveComponent>(c);
-                        std::cout << "\t\tExplosiveComponent loaded\n";
-                    }
-                    else if (componentType == "Transform")
-                    {
-                        TransformComponent c;
-                        c.deserialize(componentData);
-                        entity.addComponent<TransformComponent>(c);
-                        std::cout << "\t\tTransformComponent loaded\n";
-                    }
-                    else if (componentType == "Animation")
-                    {
-                        AnimationComponent c;
-                        c.deserialize(componentData);
-                        entity.addComponent<AnimationComponent>(c);
-                        std::cout << "\t\tAnimationComponent loaded\n";
-                    }
-                    else if (componentType == "AI")
-                    {
-                        AIComponent c;
-                        c.deserialize(componentData);
-                        entity.addComponent<AIComponent>(c);
-                        std::cout << "\t\tAIComponent loaded\n";
-                    }
-                    else if (componentType == "PlayerControlled")
-                    {
-                        PlayerControlledComponent c;
-                        c.deserialize(componentData);
-                        entity.addComponent<PlayerControlledComponent>(c);
-                        std::cout << "\t\tPlayerControlledComponent loaded\n";
-                    }
-                }
-            }
-
-            entities.push_back(entity);
-            std::cout << "\tEntity loaded succesfully\n";
-        }
-    }
-
-    std::cout << "Entities loaded succesfully\n";
-    std::cout << "Total entities: " << entities.size() << '\n' << '\n';
-}
-
-void World::readData()
-{
-    std::ifstream file(path / "data", std::ios::ate | std::ios::binary);
-
-    if(!file) throw std::runtime_error("Failed to open data file");
-
-    std::streamsize size = file.tellg();
-    file.seekg(0, std::ios::beg);
+    std::streamsize size = stream.tellg();
+    stream.seekg(0, std::ios::beg);
 
     std::vector<uint8_t> buffer(static_cast<size_t>(size));
 
-    file.read(reinterpret_cast<char*>(buffer.data()), size);
+    stream.read(reinterpret_cast<char*>(buffer.data()), size);
 
-    file.close();
+    stream.close();
 
 
-    BBT data = BBT::load(buffer);
+    BBT root = BBT::load(buffer);
 
-    dayTime = data["day_time"].get<float>();
-    days = data["days"].get<uint64_t>();
-    
-    generation_properties =
+    for(auto& [id_string, payload] : root.root())
     {
-        .flat = data["generation_properties"]["flat"].get<bool>(),
-        .base_height = data["generation_properties"]["base_height"].get<float>(),
-        .height_scale = data["generation_properties"]["height_scale"].get<float>(),
-        .frequency = data["generation_properties"]["frequency"].get<float>(),
-        .amplitude = data["generation_properties"]["amplitude"].get<float>(),
-        .persistence = data["generation_properties"]["persistence"].get<float>()
-    };
+        Entity entity(uuidFromString(id_string).value());
 
+        entity.deserialize(payload);
 
-    /*
-    std::string trash;
-
-    file >> trash >> dayTime;
-
-    file >> trash >> days;
-
-    file >> trash >> spawnPoint.x >> spawnPoint.y;
-
-    file >> trash >> generation_properties.flat;
-    file >> trash >> generation_properties.base_height;
-    file >> trash >> generation_properties.height_scale;
-    file >> trash >> generation_properties.frequency;
-    file >> trash >> generation_properties.amplitude;
-    file >> trash >> generation_properties.persistence;
-    */
-
-    std::cout << "Data file: " << std::endl;
-    std::cout << "Daytime: " << dayTime << std::endl;
-    std::cout << "Days: " << days << std::endl;
-
-    std::cout << "Generation Properties:\n";
-    std::cout << "\tFlat: " << ((generation_properties.flat) ? "true" : "false") << '\n';
-    std::cout << "\tBase height: " << generation_properties.base_height << '\n';
-    std::cout << "\tHeight scale: " << generation_properties.height_scale << '\n';
-    std::cout << "\tFrequency: " << generation_properties.frequency << '\n';
-    std::cout << "\tAmplitude: " << generation_properties.amplitude << '\n';
-    std::cout << "\tPersistence: " << generation_properties.persistence << '\n';
+        addEntity(std::move(entity));
+    }
 }
-
-
-void World::load()
-{
-    // Ensure world directory exists
-    if(!std::filesystem::exists(path)) {
-        std::filesystem::create_directories(path);
-    }
-
-    // Manifest
-    if(std::filesystem::exists(path / "manifest")) {
-        try {
-            readManifest();
-        } catch(const std::exception& e) {
-            std::cerr << "Warning: Failed to read manifest: " << e.what() << '\n';
-            name = path.filename().string();
-            seed = static_cast<unsigned int>(std::rand());
-            perlin = PerlinNoise(seed);
-        }
-    } else {
-        // No manifest -> initialize new world and persist
-        name = path.filename().string();
-        seed = static_cast<unsigned int>(std::rand());
-        perlin = PerlinNoise(seed);
-        generateWorldSpawn();
-        try { save(); } catch(const std::exception& e) { std::cerr << "Warning: Failed to save new world: " << e.what() << '\n'; }
-        return;
-    }
-
-    // Entities
-    if(std::filesystem::exists(path / "entities")) {
-        try {
-            readEntities();
-        } catch(const std::exception& e) {
-            std::cerr << "Warning: Failed to read entities: " << e.what() << '\n';
-            entities.clear();
-        }
-    }
-
-    // Data
-    if(std::filesystem::exists(path / "data")) {
-        try {
-            readData();
-        } catch(const std::exception& e) {
-            std::cerr << "Warning: Failed to read data: " << e.what() << '\n';
-            dayTime = 0.0f;
-            days = 0;
-        }
-    } else {
-        // No data file -> write defaults
-        try { writeData(); } catch(const std::exception& e) { std::cerr << "Warning: Failed to write data: " << e.what() << '\n'; }
-    }
-
-    // Persist any missing files
-    try { save(); } catch(const std::exception& e) { std::cerr << "Warning: Failed to save world: " << e.what() << '\n'; }
-}
-
-uint32_t World::spawnPlayer(uint32_t clientId)
-{
-    uint32_t id = getPossibleID();
-
-    Entity player(id);
-
-    player.addComponent(TransformComponent{{0.0f, 0.0f}, {1.0f, 1.0f}, sf::degrees(0.0f)});
-    player.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
-
-    InventoryComponent inv(36);
-    inv.inventory.slots[0] = {ItemID::Dynamite, 16};
-    inv.inventory.slots[1] = {ItemID::Bucket, 1};
-    inv.inventory.slots[2] = {ItemID::Woodcutter, 64};
-    inv.inventory.slots[3] = {ItemID::Lighter, 1};
-    player.addComponent(std::move(inv));
-
-    sf::Vector2<double> spawn = getSpawnPoint();
-    int spawnY = static_cast<int>(spawn.y);
-    if (spawnY == 0)
-    {
-        for (int i = 0; i < 255; i++)
-        {
-            if (getBlock(static_cast<int>(spawn.x), i).id == BlockID::Air)
-            {
-                spawnY = i + 1;
-                break;
-            }
-        }
-    }
-    player.getComponent<TransformComponent>().position = {spawn.x, static_cast<double>(spawnY)};
-
-    player.addComponent(RenderComponent{0, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
-    player.addComponent(HealthComponent{100, 100, false});
-    player.addComponent(PlayerControlledComponent{""});
-
-    entities.push_back(std::move(player));
-
-    return id;
-}
-
-std::vector<uint32_t> World::getPlayerEntityIDs() const
-{
-    std::vector<uint32_t> ids;
-    for (const auto& e : entities)
-    {
-        if (e.hasComponent<PlayerControlledComponent>())
-            ids.push_back(e.getID());
-    }
-    return ids;
-}
-
-std::pair<float, float> World::getSimulationRangeForEntity(const uint32_t entity)
-{
-    auto& transform = entityWithID(entity, *this).getComponent<TransformComponent>();
-
-    int entity_chunk = transform.position.x / CHUNK_WIDTH;
-
-    return
-    {
-        static_cast<float>((entity_chunk - SIMULATION_DISTANCE) * CHUNK_WIDTH),
-        static_cast<float>((entity_chunk + SIMULATION_DISTANCE) * CHUNK_WIDTH + CHUNK_WIDTH)
-    };
-}
-

@@ -10,12 +10,12 @@ class DeathScreenState : public GameState
 private:
 
     Button respawn;
-    uint32_t entityID;
+    UUID entityID;
     World& world;
 
 public:
 
-    DeathScreenState(Game* game, World& world, uint32_t entityID);
+    DeathScreenState(Game* game, World& world, UUID entityID);
 
     void handleEvent(const sf::Event& event) override;
     void update(float dt) override;

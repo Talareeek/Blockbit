@@ -166,12 +166,48 @@ std::wstring PacketReader::readWideString()
     return result;
 }
 
+void PacketWriter::writeChunk(const Chunk& chunk)
+{
+    writeBytes(chunk.blocks, CHUNK_WIDTH * CHUNK_HEIGHT * sizeof(Block));
+    write(chunk.chunk_position);
+    writeBytes(chunk.climates, CHUNK_WIDTH * sizeof(Climate));
+    writeBytes(chunk.biomes, CHUNK_WIDTH * sizeof(Biome));
+
+    write(static_cast<uint32_t>(chunk.entity_ids.size()));
+    
+    for(auto& id : chunk.entity_ids)
+    {
+        write(id);
+    }
+}
+
+Chunk PacketReader::readChunk()
+{
+    Chunk chunk;
+
+    readBytes(chunk.blocks, CHUNK_WIDTH * CHUNK_HEIGHT * sizeof(Block));
+    chunk.chunk_position = read<int>();
+    readBytes(chunk.climates, CHUNK_WIDTH * sizeof(Climate));
+    readBytes(chunk.biomes, CHUNK_WIDTH * sizeof(Biome));
+
+    uint32_t size = read<uint32_t>();
+
+    for(uint32_t i = 0; i < size; i++)
+    {
+        chunk.entity_ids.insert(read<UUID>());
+    }
+
+    chunk.meshDirty = true;
+
+    return chunk;
+}
+
 // ----- serialize -----
 
 std::vector<char> serializePacket(const InitializationPacket& p)
 {
     PacketWriter w(PacketType::Initialization);
-    w.write(p.chunk);
+    w.writeChunk(p.chunk);
     return w.release();
 }
 
@@ -357,7 +393,7 @@ std::vector<char> serializePacket(const RespawnPacket& p)
 InitializationPacket deserializeInitialization(PacketReader& r)
 {
     InitializationPacket p;
-    p.chunk = r.read<Chunk>();
+    p.chunk = r.readChunk();
     return p;
 }
 
@@ -380,7 +416,7 @@ SnapshotPacket deserializeSnapshot(PacketReader& r)
     for (uint32_t i = 0; i < count; i++)
     {
         NetEntity e;
-        e.id        = r.read<uint32_t>();
+        e.id        = r.read<UUID>();
         e.x         = r.read<double>();
         e.y         = r.read<double>();
         e.size_x    = r.read<float>();
@@ -416,21 +452,21 @@ SnapshotPacket deserializeSnapshot(PacketReader& r)
 SpawnPacket deserializeSpawn(PacketReader& r)
 {
     SpawnPacket p;
-    p.id = r.read<uint32_t>();
+    p.id = r.read<UUID>();
     return p;
 }
 
 DespawnPacket deserializeDespawn(PacketReader& r)
 {
     DespawnPacket p;
-    p.id = r.read<uint32_t>();
+    p.id = r.read<UUID>();
     return p;
 }
 
 InputPacket deserializeInput(PacketReader& r)
 {
     InputPacket p;
-    p.id = r.read<uint32_t>();
+    p.id = r.read<UUID>();
 
     uint32_t count = r.read<uint32_t>();
     if (count > 1024) throw std::runtime_error("InputPacket: input batch too large");

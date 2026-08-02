@@ -16,30 +16,21 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
     {ItemID::Cobblestone, {"Cobblestone", 4, 64, ItemRarity::Common, ItemCategory::Block, true}},
     {ItemID::Obsidian, {"Obsidian", 5, 64, ItemRarity::Common, ItemCategory::Block, false}},
     {ItemID::Bedrock, {"Bedrock", 6, 64, ItemRarity::Common, ItemCategory::Block, false}},
-    {ItemID::Dynamite, {"Dynamite", 12, 16, ItemRarity::Rare, ItemCategory::Misc, false, [](World& world, sf::Vector2f mouse, uint32_t user) -> bool
+    {ItemID::Dynamite, {"Dynamite", 12, 16, ItemRarity::Rare, ItemCategory::Misc, false, [](World& world, sf::Vector2f mouse, UUID user) -> bool
         {
-            auto entityWithID = [&world](uint32_t id) -> Entity&
-            {
-                for(auto& entity : world.getEntities())
-                {
-                    if(entity.getID() == id)
-                        return entity;
-                }
-                throw std::runtime_error("Entity with ID " + std::to_string(id) + " does not exist(entityWithID(int, World&))");
-            };
-
-            Entity& player = entityWithID(user);
+            Entity& player = world.getEntity(user);
 
             if(!player.hasComponent<TransformComponent>()) return false;
 
             sf::Vector2<double> playerPos = player.getComponent<TransformComponent>().position;
 
-            world.getEntities().push_back(Entity(world.getPossibleID()));
-            auto& explosiveEntity = world.getEntities().back();
+            Entity explosiveEntity(generateUUID());
             explosiveEntity.addComponent(TransformComponent{playerPos, {1.0, 1.0}, sf::degrees(0.0f)});
             explosiveEntity.addComponent(ExplosiveComponent{3.0f});
             explosiveEntity.addComponent(RenderComponent{12, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
             explosiveEntity.addComponent(PhysicsComponent{(mouse - sf::Vector2f(playerPos)) * 3.0f, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
+
+            world.addEntity(std::move(explosiveEntity));
 
             return true;
             
@@ -49,19 +40,9 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
     {ItemID::Diamond_Ore, {"Diamond Ore", 15, 64, ItemRarity::Common, ItemCategory::Block, false}},
     {ItemID::Oak_Log, {"Oak Log", 16, 64, ItemRarity::Common, ItemCategory::Block, true}},
     {ItemID::Oak_Leaves, {"Oak Leaves", 17, 64, ItemRarity::Common, ItemCategory::Block, true}},
-    {ItemID::Bucket, {"Bucket", 19, 1, ItemRarity::Rare, ItemCategory::Misc, true, [](World& world, sf::Vector2f mouse, uint32_t user) -> bool
+    {ItemID::Bucket, {"Bucket", 19, 1, ItemRarity::Rare, ItemCategory::Misc, true, [](World& world, sf::Vector2f mouse, UUID user) -> bool
         {
-            auto entityWithID = [&world](uint32_t id) -> Entity&
-            {
-                for(auto& entity : world.getEntities())
-                {
-                    if(entity.getID() == id)
-                        return entity;
-                }
-                throw std::runtime_error("Entity with ID " + std::to_string(id) + " does not exist(entityWithID(int, World&))");
-            };
-
-            Entity& player = entityWithID(user);
+            Entity& player = world.getEntity(user);
 
             if(!player.hasComponent<InventoryComponent>()) return false;
 
@@ -80,19 +61,9 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
 
             return false;
         }}},
-    {ItemID::Water_Bucket, {"Water Bucket", 20, 1, ItemRarity::Rare, ItemCategory::Misc, false, [](World& world, sf::Vector2f mouse, uint32_t user)
+    {ItemID::Water_Bucket, {"Water Bucket", 20, 1, ItemRarity::Rare, ItemCategory::Misc, false, [](World& world, sf::Vector2f mouse, UUID user)
         {
-            auto entityWithID = [&world](uint32_t id) -> Entity&
-            {
-                for(auto& entity : world.getEntities())
-                {
-                    if(entity.getID() == id)
-                        return entity;
-                }
-                throw std::runtime_error("Entity with ID " + std::to_string(id) + " does not exist(entityWithID(int, World&))");
-            };
-
-            Entity& player = entityWithID(user);
+            Entity& player = world.getEntity(user);
 
             if(!player.hasComponent<InventoryComponent>()) return false;
 
@@ -112,7 +83,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             return false;
         }}},
         {ItemID::Woodcutter, {"Woodcutter", 22, 64, ItemRarity::Common, ItemCategory::Block}},
-        {ItemID::Lighter, {"Lighter", 24, 1, ItemRarity::Rare, ItemCategory::Misc, false, [](World& world, sf::Vector2f mouse, uint32_t user) -> bool
+        {ItemID::Lighter, {"Lighter", 24, 1, ItemRarity::Rare, ItemCategory::Misc, false, [](World& world, sf::Vector2f mouse, UUID user) -> bool
             {
                 sf::Vector2i position = {static_cast<int>(std::floor(mouse.x)), static_cast<int>(std::floor(mouse.y))};
 

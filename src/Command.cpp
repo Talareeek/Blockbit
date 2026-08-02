@@ -18,6 +18,7 @@
 
 std::unordered_map<std::wstring, Command> commandDatabase =
 {
+    /*
     {L"echo", {false, false, 
         [](std::wstring command, Console& console, Game* game, World* world)
         {
@@ -258,4 +259,5 @@ std::unordered_map<std::wstring, Command> commandDatabase =
             console.writeLine(L"Spawned explosive entity " + std::to_wstring(id) + L" at (" + std::to_wstring(x) + L", " + std::to_wstring(y) + L")");
         }
     }}
+        */
 };

@@ -145,8 +145,9 @@ ClientGameState::~ClientGameState()
 bool ClientGameState::hasPlayerEntity() const
 {
     if (!local_player_entity_id.has_value()) return false;
-    uint32_t player_id = local_player_entity_id.value();
-    for (const auto& entity : local_world.getEntities())
+
+    UUID player_id = local_player_entity_id.value();
+    for (const auto& [id, entity] : local_world.getEntities())
         if (entity.getID() == player_id) return true;
     return false;
 }
@@ -207,7 +208,7 @@ void ClientGameState::rebuildEntitiesFromSnapshot(const SnapshotPacket& snapshot
             entity.addComponent(std::move(inventory_component));
         }
 
-        entities.push_back(std::move(entity));
+        local_world.addEntity(std::move(entity));
     }
 
     local_world.dayTime = snapshot.dayTime;
@@ -269,8 +270,8 @@ void ClientGameState::processIncoming()
                 {
                     auto despawn = deserializeDespawn(reader);
                     auto& entities = local_world.getEntities();
-                    entities.erase(std::remove_if(entities.begin(), entities.end(),
-                        [&](const Entity& entity) { return entity.getID() == despawn.id; }), entities.end());
+
+                    local_world.getEntities().erase(despawn.id);
 
                     break;
                 }
@@ -303,7 +304,7 @@ void ClientGameState::processIncoming()
 void ClientGameState::sendTickInputs()
 {
     if (!transport || !transport->isConnected()) return;
-    if (my_entity_id == 0) return;
+    if (my_entity_id == UUID()) return;
 
     auto polled = getInputs(local_world, game->getWindow());
     inputs.insert(inputs.end(), std::make_move_iterator(polled.begin()), std::make_move_iterator(polled.end()));
@@ -516,7 +517,7 @@ void ClientGameState::update(float dt)
 
     if (since_last_tick > tick_step) since_last_tick = 0.0f;
 
-    PhysicsSystem(local_world.getEntities(), local_world, dt);
+    PhysicsSystem(local_world, dt);
 
     AnimationSystem(local_world, dt);
 

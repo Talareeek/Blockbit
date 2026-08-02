@@ -3,6 +3,8 @@
 
 #include "Component.hpp"
 
+#include "GameCommon.hpp"
+
 #include <SFML/System/Vector2.hpp>
 
 #include <string>
@@ -13,6 +15,8 @@ struct TransformComponent : public Component
     sf::Vector2<double> position;
     sf::Vector2<double> size;
     sf::Angle rotation;
+
+    sf::Vector2<double> previous_position;
 
     void teleport(const sf::Vector2<double>& position);
     void move(const sf::Vector2<double>& offset);
@@ -92,6 +96,26 @@ struct TransformComponent : public Component
         size = tag["size"].get<sf::Vector2<double>>();
 
         rotation = sf::degrees(tag["rotation"].get<float>());
+    }
+
+    int chunkPosition() const
+    {
+        return static_cast<int>(std::floor(position.x) / 16);
+    }
+
+    int previousChunkPosition() const
+    {
+        return positionToChunk(previous_position);
+    }
+
+    bool movedBetweenChunks() const
+    {
+        return chunkPosition() != previousChunkPosition();
+    }
+
+    bool moved() const
+    {
+        return position != previous_position;
     }
 };
 

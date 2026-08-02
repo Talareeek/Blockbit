@@ -29,7 +29,7 @@ void RenderEntities(World& world, const sf::Vector2<double> camera, sf::RenderWi
 
     unsigned int unit_size = window.getSize().y / WORLD_UNIT_SIZE_FACTOR;
 
-    for(auto& entity : world.getEntities())
+    for(auto& [id, entity] : world.getEntities())
     {
         if(!entity.hasComponent<RenderComponent>() || !entity.hasComponent<TransformComponent>()) continue;
 

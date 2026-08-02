@@ -3,7 +3,7 @@
 #include "../include/HealthComponent.hpp"
 #include "../include/TransformComponent.hpp"
 
-DeathScreenState::DeathScreenState(Game* game, World& world, uint32_t entityID) : GameState(game), world(world), entityID(entityID)
+DeathScreenState::DeathScreenState(Game* game, World& world, UUID entityID) : GameState(game), world(world), entityID(entityID)
 {
     respawn = Button{
         sf::Vector2f(300, 200),
@@ -12,7 +12,7 @@ DeathScreenState::DeathScreenState(Game* game, World& world, uint32_t entityID) 
         "Respawn",
         [this]()
         {
-            for(auto& entity : this->world.getEntities())
+            for(auto& [id, entity] : this->world.getEntities())
             {
                 if(entity.getID() == this->entityID)
                 {

@@ -90,7 +90,7 @@ std::vector<Input> getInputsFromEvent(const sf::Event& event, const World& world
     return inputs;
 }
 
-void processWorldInputs(World& world, std::vector<Input> inputs, uint32_t id)
+void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
 {
     auto& entity = entityWithID(id, world);
 
@@ -144,14 +144,14 @@ void processWorldInputs(World& world, std::vector<Input> inputs, uint32_t id)
 
                 if(world.getBlock(block_position.x, block_position.y).id != BlockID::Air && blockDatabase[world.getBlock(block_position.x, block_position.y).id].breakable && isBlockInRange(transform, block_position, 4.0f))
                 {
-                    Entity new_entity(world.getPossibleID());
+                    Entity new_entity(generateUUID());
                     new_entity.addComponent(TransformComponent{{block_position.x + 0.25f, block_position.y - 0.25f}, {0.5f, 0.5f}, sf::degrees(0.0f)});
                     new_entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
                     new_entity.addComponent(ItemComponent{{blockToItem(world.getBlock(block_position.x, block_position.y).id), 1}});
                     new_entity.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[new_entity.getComponent<ItemComponent>().item.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
                     world.setBlock(block_position.x, block_position.y, {BlockID::Air, 0});
 
-                    world.getEntities().push_back(std::move(new_entity));
+                    world.addEntity(std::move(new_entity));
                 }
 
                 break;
@@ -188,7 +188,7 @@ void processWorldInputs(World& world, std::vector<Input> inputs, uint32_t id)
 
                 if(stack.empty()) break;
 
-                Entity item(world.getPossibleID());
+                Entity item(generateUUID());
                 item.addComponent(TransformComponent{transform.position + sf::Vector2<double>(0.0, 1.5), {0.5, 0.5}, sf::degrees(0.0f)});
                 item.addComponent(PhysicsComponent{info.mousePosition - sf::Vector2f(transform.position), {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
                 item.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[stack.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
@@ -209,7 +209,7 @@ void processWorldInputs(World& world, std::vector<Input> inputs, uint32_t id)
                     }
                 }
 
-                world.getEntities().push_back(std::move(item));
+                world.addEntity(std::move(item));
 
                 break;
             }

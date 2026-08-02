@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
     if (!joinAddress.empty())
     {
         std::string host = joinAddress;
-        uint16_t port = 25565;
+        uint16_t port = GameServer::DEFAULT_PORT;
 
         auto colon = joinAddress.find(':');
         if (colon != std::string::npos)
@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
             host = joinAddress.substr(0, colon);
             std::string port_str = joinAddress.substr(colon + 1);
             try { port = static_cast<uint16_t>(std::stoi(port_str)); }
-            catch (...) { port = 25565; }
+            catch (...) { port = GameServer::DEFAULT_PORT; }
         }
 
         std::cerr << "[main] --join " << host << ":" << port << std::endl;
@@ -91,8 +91,8 @@ int main(int argc, char* argv[])
         std::filesystem::path worldPath = std::filesystem::path(std::getenv("HOME")) / "Blockbit" / "saves" / hostWorld;
         if (std::filesystem::exists(worldPath))
         {
-            std::cerr << "[main] --host " << hostWorld << " on 25565" << std::endl;
-            game.pushState(nullptr, std::make_unique<ClientGameState>(&game, worldPath, 25565, nickname));
+            std::cerr << "[main] --host " << hostWorld << " on 34500" << std::endl;
+            game.pushState(nullptr, std::make_unique<ClientGameState>(&game, worldPath, GameServer::DEFAULT_PORT, nickname));
         }
         else
         {

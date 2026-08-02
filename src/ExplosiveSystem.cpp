@@ -10,7 +10,7 @@ void ExplosiveSystem(World& world, float dt)
 {
     auto& entities = world.getEntities();
 
-    for(auto& entity : entities)
+    for(auto& [id, entity] : entities)
     {
         if(!entity.hasComponent<ExplosiveComponent>() || !entity.hasComponent<TransformComponent>()) continue;
 
@@ -21,7 +21,7 @@ void ExplosiveSystem(World& world, float dt)
 
         sf::Vector2f center = sf::Vector2f(entity.getComponent<TransformComponent>().center());
 
-        for(auto& other : entities)
+        for(auto& [id, other] : entities)
         {
             sf::Vector2f diff = sf::Vector2f(other.getComponent<TransformComponent>().center()) - center;
 
@@ -67,8 +67,15 @@ void ExplosiveSystem(World& world, float dt)
         }
     }
 
-    entities.erase(std::remove_if(entities.begin(), entities.end(), [](Entity& entity)
+    std::vector<UUID> to_erase;
+
+    for(auto& [id, entity] : world.getEntities())
     {
-        return entity.hasComponent<ExplosiveComponent>() && entity.getComponent<ExplosiveComponent>().timer >= entity.getComponent<ExplosiveComponent>().fuseTime;
-    }), entities.end());
+        if(entity.hasComponent<ExplosiveComponent>() && entity.getComponent<ExplosiveComponent>().timer >= entity.getComponent<ExplosiveComponent>().fuseTime) to_erase.push_back(id);
+    }
+
+    for(auto& id : to_erase)
+    {
+        world.getEntities().erase(id);
+    }
 }

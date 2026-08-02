@@ -302,7 +302,7 @@ void WorldList::update(float dt)
         if (!text.empty())
         {
             std::string host = text;
-            uint16_t port = 25565;
+            uint16_t port = GameServer::DEFAULT_PORT;
 
             auto colon = text.find(':');
             if (colon != std::string::npos)
@@ -310,7 +310,7 @@ void WorldList::update(float dt)
                 host = text.substr(0, colon);
                 std::string port_str = text.substr(colon + 1);
                 try { port = static_cast<uint16_t>(std::stoi(port_str)); }
-                catch (...) { port = 25565; }
+                catch (...) { port = GameServer::DEFAULT_PORT; }
             }
 
             std::cerr << "[Multiplayer] Connect to: " << host << ':' << port << '\n';
@@ -489,7 +489,7 @@ void WorldList::render(sf::RenderWindow& window)
 
         if(ipField.getText().empty())
         {
-            drawFitText(window, "e.g. 127.0.0.1:25565",
+            drawFitText(window, "e.g. 127.0.0.1:34500",
                         sf::FloatRect(ipField.getPosition(), ipField.getSize()),
                         false, sf::Color(180, 180, 180, 140), 0.0f, sf::Color::Transparent);
         }

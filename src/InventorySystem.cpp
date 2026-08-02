@@ -2,19 +2,21 @@
 #include "../include/Item.hpp"
 #include "../include/ItemComponent.hpp"
 #include "../include/InventoryComponent.hpp"
+#include "../include/TransformComponent.hpp"
+#include "../include/World.hpp"
 
 #include <SFML/Graphics.hpp>
 
-void InventorySystem(std::vector<Entity>& entities)
+void InventorySystem(World& world)
 {
-    for(auto& entity : entities)
+    for(auto& [id, entity] : world.getEntities())
     {
         if(!entity.hasComponent<ItemComponent>() || !entity.hasComponent<TransformComponent>()) continue;
 
         auto& item = entity.getComponent<ItemComponent>();
         auto& itemTransform = entity.getComponent<TransformComponent>();
 
-        for(auto& other : entities)
+        for(auto& [id, other] : world.getEntities())
         {
             if(!other.hasComponent<InventoryComponent>() || !other.hasComponent<TransformComponent>()) continue;
 
@@ -36,13 +38,19 @@ void InventorySystem(std::vector<Entity>& entities)
         }
     }
 
-    entities.erase(std::remove_if(entities.begin(), entities.end(),
-    [](Entity& entity)
+    std::vector<UUID> to_erase;
+
+    for(auto& [id, entity] : world.getEntities())
     {
-        if(!entity.hasComponent<ItemComponent>()) return false;
+        if(!entity.hasComponent<ItemComponent>()) continue;
 
         auto& item = entity.getComponent<ItemComponent>();
 
-        return item.item.empty();
-    }), entities.end());
+        if(item.item.empty()) to_erase.push_back(id);
+    }
+
+    for(auto& id : to_erase)
+    {
+        world.getEntities().erase(id);
+    }
 }

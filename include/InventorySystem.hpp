@@ -1,10 +1,10 @@
 #ifndef INVENTORY_SYSTEM_HPP
 #define INVENTORY_SYSTEM_HPP
 
-#include "TransformComponent.hpp"
+#include "World.hpp"
 #include "Entity.hpp"
 #include <vector>
 
-extern void InventorySystem(std::vector<Entity>& entities);
+extern void InventorySystem(World& world);
 
 #endif // INVENTORY_SYSTEM_HPP

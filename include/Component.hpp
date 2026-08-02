@@ -9,6 +9,8 @@ struct Component
 
     virtual Tag serialize() const = 0;
     virtual void deserialize(const Tag& tag) = 0;
+
+    virtual ~Component() = default;
 };
 
 #endif // COMPONENT_HPP

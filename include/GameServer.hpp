@@ -36,7 +36,7 @@ private:
     bool save_on_destruct = true;
 
     std::unordered_map<uint32_t, std::string> client_to_nickname;
-    std::unordered_map<std::string, uint32_t> nickname_to_entity;
+    std::unordered_map<std::string, UUID> nickname_to_entity;
 
     std::unordered_set<uint32_t> known_clients;
     std::unordered_map<uint32_t, std::deque<std::vector<Input>>> remote_input_queues;
@@ -52,6 +52,8 @@ private:
     void processIncoming();
     void broadcastBlockUpdates();
     void broadcastSnapshot();
+
+    void updatePlayerEntityConnections();
 
 public:
 

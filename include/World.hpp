@@ -33,60 +33,32 @@ inline std::unordered_map<Biome, std::pair<Block, Block>> surface_blocks =
     {Biome::Snow, {{BlockID::Snow, 0}, {BlockID::Snow, 0}}},
 };
 
+
 class World
 {
 private:
 
-    std::filesystem::path path;
+    std::unordered_map<int, Chunk> chunks;
+    std::unordered_map<UUID, Entity> entities;
 
+    float time = 0.0f;
+
+
+    std::filesystem::path path;
     std::string name = "world";
 
     unsigned int seed;
-
     GenerationProperties generation_properties;
-
     PerlinNoise perlin{0};
-
-    std::unordered_map<int, Chunk> chunks;
-    std::vector<Entity> entities;
-
-    uint32_t version;
 
 public:
 
-    World() : version(0) {}
-    World(unsigned int seed, GenerationProperties generation_properties) : perlin(seed), version(0), seed(seed), generation_properties{generation_properties} {}
-
+    World() {};
     World(const std::filesystem::path path);
     World(const std::string name, const std::filesystem::path path, unsigned int seed, GenerationProperties generation_properties);
 
-    void setSeed(unsigned int seed)
-    {
-        this->seed = seed;
-        perlin = PerlinNoise(seed);
-    }
-    unsigned int getSeed() const;
-
-    uint32_t getPossibleID()
-    {
-        for(uint32_t i = 1; i < UINT32_MAX; i++)
-        {
-            bool exists = false;
-            for (const auto& entity : entities)
-            {
-                if (entity.getID() == i)
-                {
-                    exists = true;
-                    break;
-                }
-            }
-            if (!exists) return i;
-        }
-        throw std::runtime_error("No available entity ID found");
-    }
-
     Chunk& getChunk(int chunk_position);
-    Block getBlock(int wx, int wy);
+    Block getBlock(int world_x, int world_y);
     Climate climateAt(int wx);
     Biome biomeAt(int wx);
     void setBlock(int wx, int wy, Block block);
@@ -102,9 +74,9 @@ public:
     // normal world
     void generateWorldSpawn();
 
-    [[deprecated]]uint32_t spawnPlayer(uint32_t clientId);
+    [[deprecated]]UUID spawnPlayer(uint32_t clientId);
 
-    std::vector<uint32_t> getPlayerEntityIDs() const;
+    std::vector<UUID> getPlayerEntityIDs() const;
 
     Climate getClimate(int x) const;
     Biome getBiome(int x) const;
@@ -120,30 +92,16 @@ public:
     void generateTree(int x, int y, int log_height, BlockID log_type, BlockID leaves_type);
     void generateNature(int chunk_position);
 
-    std::vector<Entity>& getEntities();
-
-    const std::vector<Entity>& getEntities() const;
-
-    uint32_t getVersion() const;
+    std::unordered_map<UUID, Entity>& getEntities();
+    const std::unordered_map<UUID, Entity>& getEntities() const;
+    void addEntity(Entity entity);
+    Entity& getEntity(UUID id);
+    bool doesEntityExist(UUID id);
     
     float getHeightNoise(float x) const;
     int getHeight(int worldX) const;
 
     void tick(float dt);
-
-    friend class WorldOutputStream;
-
-    static constexpr float DAY_CYCLE_DURATION = 1200.0f; // 20 MINUTES
-
-    static constexpr int SEA_LEVEL = 75;
-
-    static constexpr float FLUID_TICK = 0.5f;
-
-    static constexpr int SIMULATION_DISTANCE = 10;
-
-    static constexpr int MAX_CHUNKS_LOADED = 24;
-
-    static constexpr int PREFFERED_CHUNKS_LOADED = 16;
 
     float fluidTimer{0.0f};
 
@@ -155,24 +113,31 @@ public:
 
     void setName(const std::string& name) { this->name = name; }
 
-    void writeManifest() const;
-    void writeChunk(int chunk_position) const;
-    void writeEntities() const;
-    void writeData() const;
 
-    void save() const;
+    void save();
+    void load();
+
+    // MANIFEST
+    void saveManifest();
+    void loadManifest();
+
+    // DATA
+    void saveData();
+    void loadData();
+
+    // CHUNK
+    void saveChunk(int chunk_position);
+    void saveChunkEnvironment(int chunk_position);
+    void saveChunkEntities(int chunk_position);
+
+    void loadChunk(int chunk_position);   
+    void loadChunkEnvironment(int chunk_position); 
+    void readChunkEntities(int chunk_position);
+    
 
     bool hasChunkFile(int chunk_position) const;
 
-
-    void readManifest();
-    void readChunk(int chunk_position);
-    void readEntities();
-    void readData();
-
-    void load();
-
-    std::pair<float, float> getSimulationRangeForEntity(const uint32_t entity);
+    std::pair<double, double> getSimulationRangeForEntity(const UUID entity);
 
     bool trackBlockChanges = false;
     std::vector<std::tuple<int, int, Block>> pendingBlockUpdates;
@@ -180,6 +145,13 @@ public:
     float dayTime{0.0f};
 
     uint64_t days{0};
+
+    static constexpr float DAY_CYCLE_DURATION = 1200.0f; // 20 MINUTES
+    static constexpr int SEA_LEVEL = 75;
+    static constexpr float FLUID_TICK = 0.5f;
+    static constexpr int SIMULATION_DISTANCE = 10;
+    static constexpr int MAX_CHUNKS_LOADED = 24;
+    static constexpr int PREFFERED_CHUNKS_LOADED = 16;
 };
 
 extern void updateFluids(World& world);

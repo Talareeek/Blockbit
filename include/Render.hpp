@@ -13,7 +13,7 @@ extern void rebuildChunkMesh(World& world, int chunk_position, unsigned int unit
 
 extern void RenderWorld(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window);
 
-extern void RenderBlockOverlay(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window, uint32_t viewerEntityId);
+extern void RenderBlockOverlay(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window, UUID viewerEntityId);
 
 extern void RenderLightRays(World& world, sf::RenderWindow& window);
 

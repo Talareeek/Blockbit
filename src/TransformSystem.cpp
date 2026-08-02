@@ -1,23 +1,51 @@
 #include "../include/TransformSystem.hpp"
 #include "../include/TransformComponent.hpp"
+#include "../include/HealthComponent.hpp"
 #include "../include/GameCommon.hpp"
 #include "../include/Entity.hpp"
 #include "../include/World.hpp"
+#include "../include/PlayerControlledComponent.hpp"
 
 void TransformSystem(World& world)
 {
-    for (uint32_t playerId : world.getPlayerEntityIDs())
+    for(auto& [id, entity] : world.getEntities())
     {
-        auto player_position = entityWithID(playerId, world).getComponent<TransformComponent>().position;
+        if(!entity.hasComponent<TransformComponent>()) continue;
 
-        int player_chunk_position = player_position.x / CHUNK_WIDTH;
+        auto& transform = entity.getComponent<TransformComponent>();
 
-        int chunk_lowest = player_chunk_position - World::SIMULATION_DISTANCE / 2;
-        int chunk_highest = player_chunk_position + World::SIMULATION_DISTANCE / 2;
-
-        for (int i = chunk_lowest; i <= chunk_highest; i++)
+        if(transform.moved())
         {
-            world.loadOrCreateChunk(i);
+            if(transform.movedBetweenChunks())
+            {
+                int previous_chunk = transform.previousChunkPosition();
+                int current_chunk = transform.chunkPosition();
+
+                world.getChunk(previous_chunk).entity_ids.erase(id);
+                world.getChunk(previous_chunk).dirty = true;
+                world.getChunk(current_chunk).entity_ids.insert(id);
+                world.getChunk(current_chunk).dirty = true;
+            }
+
+            transform.previous_position = transform.position;
+        }
+
+        if(transform.position.y < -50 && entity.hasComponent<HealthComponent>())
+        {
+            auto& health = entity.getComponent<HealthComponent>();
+
+            health.health -= 1;
+        }
+
+        if(entity.hasComponent<PlayerControlledComponent>())
+        {
+            int chunk_lowest = transform.chunkPosition() - World::SIMULATION_DISTANCE / 2;
+            int chunk_highest = transform.chunkPosition() + World::SIMULATION_DISTANCE / 2;
+
+            for (int i = chunk_lowest; i <= chunk_highest; i++)
+            {
+                world.loadOrCreateChunk(i);
+            }
         }
     }
 }

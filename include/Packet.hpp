@@ -44,7 +44,7 @@ struct BlockUpdatePacket
 
 struct NetEntity
 {
-    uint32_t id;
+    UUID id;
 
     double x;
     double y;
@@ -82,17 +82,17 @@ struct SnapshotPacket
 
 struct SpawnPacket
 {
-    uint32_t id;
+    UUID id;
 };
 
 struct DespawnPacket
 {
-    uint32_t id;
+    UUID id;
 };
 
 struct InputPacket
 {
-    uint32_t id;
+    UUID id;
 
     std::vector<Input> inputs;
 };
@@ -150,6 +150,8 @@ public:
     void writeString(const std::string& s);
     void writeWideString(const std::wstring& s);
 
+    void writeChunk(const Chunk& chunk);
+
     const std::vector<char>& buffer() const { return data; }
     std::vector<char> release() { return std::move(data); }
 };
@@ -178,6 +180,8 @@ public:
 
     std::string readString();
     std::wstring readWideString();
+
+    Chunk readChunk();
 
     bool eof() const { return ptr >= end; }
     std::size_t remaining() const { return static_cast<std::size_t>(end - ptr); }

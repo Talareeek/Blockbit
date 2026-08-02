@@ -20,10 +20,10 @@ float randomDouble(double min, double max)
 
 void HealthSystem(World& world)
 {
-    std::vector<uint32_t> toDelete;
+    std::vector<UUID> toDelete;
 
 
-    for(auto entity : world.getEntities())
+    for(auto& [id, entity] : world.getEntities())
     {
         if(!entity.hasComponent<HealthComponent>()) continue;
 
@@ -41,27 +41,20 @@ void HealthSystem(World& world)
 
             for(auto& item : inventory.inventory.slots)
             {
-                Entity drop(world.getPossibleID());
+                Entity drop(generateUUID());
 
                 drop.addComponent(TransformComponent(transform.center(), {0.5, 0.5}));
                 PhysicsComponent{{randomDouble(-2.0, 2.0), randomDouble(0.0, 2.0)}};
                 RenderComponent{static_cast<uint16_t>(itemDatabase[item.itemID].texture), {}, {0.5f,0.5f}};
                 drop.addComponent(ItemComponent{item});
 
-                world.getEntities().push_back(std::move(drop));
+                world.addEntity(std::move(drop));
             }
         }
     }
 
-    world.getEntities().erase(std::remove_if(world.getEntities().begin(), world.getEntities().end(),
-    [toDelete](Entity& entity)
+    for(auto& id : toDelete)
     {
-        for(auto entity_id : toDelete)
-        {
-            if(entity_id = entity.getID()) return true;
-        }
-
-        return false;
-
-    }), world.getEntities().end());
+        world.getEntities().erase(id);
+    }
 }

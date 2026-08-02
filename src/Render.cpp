@@ -268,7 +268,7 @@ void RenderWorld(World& world, const sf::Vector2<double> camera, sf::RenderWindo
     }
 }
 
-void RenderBlockOverlay(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window, uint32_t viewerEntityId)
+void RenderBlockOverlay(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window, UUID viewerEntityId)
 {
     sf::View view({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
 

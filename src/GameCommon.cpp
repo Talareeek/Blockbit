@@ -8,14 +8,21 @@
 #include <stdexcept>
 #include <string>
 
-Entity& entityWithID(uint32_t id, World& world)
+Entity& entityWithID(UUID id, World& world)
 {
-    for(auto& entity : world.getEntities())
-    {
-        if(id == entity.getID()) return entity;
-    }
+    if(world.getEntities().contains(id)) return world.getEntities().at(id);;
 
-    throw std::runtime_error("Entity with ID " + std::to_string(id) + " does not exist (entityWithID)");
+    throw std::runtime_error("No entity with UUID: " + id.toString() + " found");
+}
+
+bool doesEntityExist(UUID id, World& world)
+{
+    return world.getEntities().contains(id);
+}
+
+int positionToChunk(sf::Vector2<double> position)
+{
+    return static_cast<int>(std::floor(position.x) / 16);
 }
 
 bool isInRange(TransformComponent& player, TransformComponent& target, float range)

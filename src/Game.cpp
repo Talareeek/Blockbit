@@ -123,14 +123,6 @@ Game::Game()
 
 }
 
-Entity& Game::entityWithID(uint32_t id)
-{
-    for(auto& a : entities)
-    {
-        if(id == a.getID()) return a;
-    }
-    throw std::runtime_error("Entity with ID " + std::to_string(id) + " does not exist(Game::entityWithID(int))");
-}
 void Game::handleEvents()
 {
     while(auto event = window.pollEvent())

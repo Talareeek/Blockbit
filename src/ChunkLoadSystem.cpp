@@ -8,7 +8,7 @@ void ChunkLoadSystem(World& world, float dt)
         return static_cast<int>(position.x / 16.0);
     };
 
-    for(auto& entity : world.getEntities())
+    for(auto& [id, entity] : world.getEntities())
     {
         world.loadOrCreateChunk(position_to_chunk(entity.getComponent<TransformComponent>().position));
     }

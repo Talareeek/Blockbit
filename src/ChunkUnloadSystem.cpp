@@ -3,11 +3,11 @@
 #include "../include/Entity.hpp"
 #include "../include/TransformComponent.hpp"
 
-static bool isChunkSafe(int chunkPos, const std::vector<uint32_t>& playerIds, World& world)
+static bool isChunkSafe(int chunkPos, const std::vector<UUID>& playerIds, World& world)
 {
-    for (uint32_t playerId : playerIds)
+    for (UUID playerId : playerIds)
     {
-        int player_chunk = entityWithID(playerId, world).getComponent<TransformComponent>().position.x / CHUNK_WIDTH;
+        int player_chunk = world.getEntity(playerId).getComponent<TransformComponent>().position.x / CHUNK_WIDTH;
         int min_safe = player_chunk - World::SIMULATION_DISTANCE / 2;
         int max_safe = player_chunk + World::SIMULATION_DISTANCE / 2;
         if (chunkPos >= min_safe && chunkPos <= max_safe) return true;
@@ -44,13 +44,13 @@ void ChunkUnloadSystem(World& world)
 
         if(!isChunkSafe(min, playerIds, world))
         {
-            world.writeChunk(min);
+            world.saveChunk(min);
             world.getChunks().erase(min);
             erased = true;
         }
         if(world.getChunks().size() > World::PREFFERED_CHUNKS_LOADED && max != min && !isChunkSafe(max, playerIds, world))
         {
-            world.writeChunk(max);
+            world.saveChunk(max);
             world.getChunks().erase(max);
             erased = true;
         }

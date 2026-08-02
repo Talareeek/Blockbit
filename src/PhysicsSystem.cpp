@@ -14,9 +14,9 @@ bool isSubmerged(World& world, const TransformComponent& transform)
     return blockDatabase[world.getBlock(cx, cy).id].liquid;
 }
 
-void PhysicsSystem(std::vector<Entity>& entities, World& world, float deltaTime)
+void PhysicsSystem(World& world, float deltaTime)
 {
-    for(auto& entity : entities)
+    for(auto& [id, entity] : world.getEntities())
     {
         if(!entity.hasComponent<PhysicsComponent>()) continue;
         if(!entity.hasComponent<TransformComponent>()) continue;
