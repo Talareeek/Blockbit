@@ -51,6 +51,6 @@ void InventorySystem(World& world)
 
     for(auto& id : to_erase)
     {
-        world.getEntities().erase(id);
+        world.removeEntity(id);
     }
 }

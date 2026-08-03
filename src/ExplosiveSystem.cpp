@@ -76,6 +76,6 @@ void ExplosiveSystem(World& world, float dt)
 
     for(auto& id : to_erase)
     {
-        world.getEntities().erase(id);
+        world.removeEntity(id);
     }
 }

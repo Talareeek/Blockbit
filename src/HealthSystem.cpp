@@ -55,6 +55,6 @@ void HealthSystem(World& world)
 
     for(auto& id : toDelete)
     {
-        world.getEntities().erase(id);
+        world.removeEntity(id);
     }
 }

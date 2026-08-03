@@ -198,6 +198,7 @@ Chunk PacketReader::readChunk()
     }
 
     chunk.meshDirty = true;
+    chunk.generated = true;
 
     return chunk;
 }

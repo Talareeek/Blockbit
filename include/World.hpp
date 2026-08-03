@@ -95,6 +95,7 @@ public:
     std::unordered_map<UUID, Entity>& getEntities();
     const std::unordered_map<UUID, Entity>& getEntities() const;
     void addEntity(Entity entity);
+    void removeEntity(UUID id);
     Entity& getEntity(UUID id);
     bool doesEntityExist(UUID id);
     
@@ -132,7 +133,7 @@ public:
 
     void loadChunk(int chunk_position);   
     void loadChunkEnvironment(int chunk_position); 
-    void readChunkEntities(int chunk_position);
+    void loadChunkEntities(int chunk_position);
     
 
     bool hasChunkFile(int chunk_position) const;

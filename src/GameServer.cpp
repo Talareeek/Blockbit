@@ -331,7 +331,6 @@ void GameServer::update(float dt)
         }
 
         AISystem(world, dt);
-        TransformSystem(world);
         ExplosiveSystem(world, dt);
         HealthSystem(world);
         PhysicsSystem(world, dt);
@@ -339,6 +338,8 @@ void GameServer::update(float dt)
         ChunkLoadSystem(world, dt);
         ChunkUnloadSystem(world);
         DaycycleSystem(world, dt);
+
+        TransformSystem(world);
 
         world.tick(dt);
 

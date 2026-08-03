@@ -464,6 +464,27 @@ void World::addEntity(Entity entity)
     entities.emplace(id, std::move(entity));
 }
 
+void World::removeEntity(UUID id)
+{
+    auto it = entities.find(id);
+    if (it == entities.end()) return;
+
+    if (it->second.hasComponent<TransformComponent>())
+    {
+        auto& transform = it->second.getComponent<TransformComponent>();
+        int chunk_position = transform.chunkPosition();
+
+        auto chunkIt = chunks.find(chunk_position);
+        if (chunkIt != chunks.end())
+        {
+            chunkIt->second.entity_ids.erase(id);
+            chunkIt->second.dirty = true;
+        }
+    }
+
+    entities.erase(it);
+}
+
 Entity& World::getEntity(UUID id)
 {
     if(entities.contains(id)) return getEntities().at(id);
@@ -900,7 +921,7 @@ void World::saveChunkEntities(int chunk_position)
         root[entities.at(uuid).getID().toString()] = entities.at(uuid).serialize();
     }
 
-    std::ofstream stream(path / "entities" / ("entities_" + std::to_string(chunk_position)), std::ios::binary);
+    std::ofstream stream(path / ("chunk_" + std::to_string(chunk_position)) / "entities", std::ios::binary);
 
     std::vector<uint8_t> buffer = root.save();
 
@@ -912,7 +933,7 @@ void World::saveChunkEntities(int chunk_position)
 void World::loadChunk(int chunk_position)
 {
     loadChunkEnvironment(chunk_position);
-    
+    loadChunkEntities(chunk_position);
 }
 
 void World::loadChunkEnvironment(int chunk_position)
@@ -1039,9 +1060,9 @@ void World::loadChunkEnvironment(int chunk_position)
     }
 }
 
-void World::readChunkEntities(int chunk_position)
+void World::loadChunkEntities(int chunk_position)
 {
-    std::ifstream stream(path / "entities" / ("entities_" + std::to_string(chunk_position)), std::ios::ate | std::ios::binary);
+    std::ifstream stream(path / ("chunk_" + std::to_string(chunk_position)) / "entities", std::ios::ate | std::ios::binary);
 
     if(!stream) throw std::runtime_error("Failed to open entities file");
 
