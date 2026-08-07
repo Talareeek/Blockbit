@@ -10,7 +10,7 @@
 #include "../include/PlayerControlledComponent.hpp"
 #include "../include/Chunk.hpp"
 #include "../include/Packet.hpp"
-
+#include "../include/PlayerControlledSystem.hpp"
 #include "../include/AISystem.hpp"
 #include "../include/TransformSystem.hpp"
 #include "../include/ExplosiveSystem.hpp"
@@ -74,7 +74,7 @@ void GameServer::streamChunksToClients()
     {
         if(nickname_to_entity.contains(nickname))
         {
-            Entity& entity = entityWithID(nickname_to_entity[nickname], world);
+            Entity& entity = world.getEntity(nickname_to_entity[nickname]);
 
             if(!entity.hasComponent<TransformComponent>()) continue;
 
@@ -334,6 +334,7 @@ void GameServer::update(float dt)
         ExplosiveSystem(world, dt);
         HealthSystem(world);
         PhysicsSystem(world, dt);
+        PlayerControlledSystem(world, dt);
         InventorySystem(world);
         ChunkLoadSystem(world, dt);
         ChunkUnloadSystem(world);
@@ -387,7 +388,7 @@ void GameServer::spawnPlayerFor(std::string nickname)
 
 void GameServer::deactivatePlayerFor(std::string nickname)
 {
-    entityWithID(nickname_to_entity[nickname], world).getComponent<PlayerControlledComponent>().active = false;
+    world.getEntity(nickname_to_entity[nickname]).getComponent<PlayerControlledComponent>().active = false;
 
     nickname_to_entity.erase(nickname);
 }

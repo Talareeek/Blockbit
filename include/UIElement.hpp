@@ -44,6 +44,9 @@ protected:
 
 public:
 
+    unsigned int mass = 1;
+    float padding = 0.0f;
+
     UIElement() = default;
     UIElement(const sf::Vector2f& position, const sf::Vector2f& size) : position(position), size(size) {}
     UIElement(const ScreenRelative& sr) : screen_relative(sr) {}
@@ -52,6 +55,8 @@ public:
     virtual void handleEvent(const sf::Event& event) = 0;
     virtual void update(float dt) = 0;
     virtual void render(sf::RenderWindow& window) = 0;
+
+    virtual void updateToBounds(sf::FloatRect bounds);
 
     void setPosition(sf::Vector2f pos);
 

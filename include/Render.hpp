@@ -27,10 +27,16 @@ extern void renderSky(sf::RenderWindow& window, sf::Color top, sf::Color bottom)
 
 extern void renderSunAndMoon(float daytime, sf::RenderWindow& window);
 
-extern sf::Vector2i getMouseBlockPosition(const World& world, const sf::RenderWindow& window);
+[[deprecated]] extern sf::Vector2i getMouseBlockPosition(const World& world, const sf::RenderWindow& window);
 
-extern sf::Vector2f getMouseWorldPosition(const World& world, const sf::RenderWindow& window);
+[[deprecated]] extern sf::Vector2f getMouseWorldPosition(const World& world, const sf::RenderWindow& window);
+
+extern sf::Vector2i getMouseBlockPosition(sf::Vector2<double> camera, const sf::RenderWindow& window);
+
+extern sf::Vector2<double> getMouseWorldPosition(sf::Vector2<double> camera, const sf::RenderWindow& window);
 
 extern sf::Vector2f getSunWorldPosition(const World& world, sf::Vector2f cameraCenter);
+
+extern void renderUIBackground(sf::FloatRect bounds, sf::RenderTarget& target);
 
 #endif // RENDER_HPP

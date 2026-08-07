@@ -668,7 +668,7 @@ std::vector<UUID> World::getPlayerEntityIDs() const
 
 std::pair<double, double> World::getSimulationRangeForEntity(const UUID entity)
 {
-    auto& transform = entityWithID(entity, *this).getComponent<TransformComponent>();
+    auto& transform = getEntity(entity).getComponent<TransformComponent>();
 
     int entity_chunk = transform.position.x / CHUNK_WIDTH;
 

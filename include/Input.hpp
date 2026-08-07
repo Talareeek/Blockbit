@@ -16,8 +16,15 @@ enum class InputType
 {
     MOVE,
     JUMP,
-    USE,
-    ATTACK,
+
+    MOUSE_MOVE,
+
+    ATTACK_START,
+    ATTACK_STOP,
+
+    USE_START,
+    USE_STOP,
+
     DROP,
     CHANGE_SLOT
 };
@@ -32,11 +39,11 @@ struct Input
 {
     InputType type;
 
-    std::variant<std::monostate, sf::Vector2f, uint8_t, bool, DropInfo> value;
+    std::variant<std::monostate, sf::Vector2<double>, uint8_t, bool, DropInfo> value;
 };
 
 std::vector<Input> getInputs(const World& world, const sf::RenderWindow& window);
-std::vector<Input> getInputsFromEvent(const sf::Event& event, const World& world, const sf::RenderWindow& window, uint8_t& selectedSlot);
+std::vector<Input> getInputsFromEvent(const sf::Event& event, sf::Vector2<double> camera, const sf::RenderWindow& window, uint8_t& selectedSlot);
 
 void processWorldInputs(World& world, std::vector<Input> inputs, UUID id);
 

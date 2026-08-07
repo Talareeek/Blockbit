@@ -285,7 +285,7 @@ void RenderBlockOverlay(World& world, const sf::Vector2<double> camera, sf::Rend
     int blockY = static_cast<int>(std::floor(mouseWorldY));
     sf::Vector2i blockPos{blockX, blockY};
 
-    if(world.getBlock(blockX, blockY).id != BlockID::Air && isBlockInRange(entityWithID(viewerEntityId, world).getComponent<TransformComponent>(), blockPos, 4.0f))
+    if(world.getBlock(blockX, blockY).id != BlockID::Air && isBlockInRange(world.getEntity(viewerEntityId).getComponent<TransformComponent>(), blockPos, 4.0f))
     {
         sf::Sprite sprite(AssetManager::getTexture(8));
         sprite.setPosition({
@@ -617,4 +617,29 @@ sf::Texture generateBackground()
 
     rt.display();
     return sf::Texture(rt.getTexture());
+}
+
+void renderUIBackground(sf::FloatRect bounds, sf::RenderTarget& target)
+{
+        
+}
+
+sf::Vector2i getMouseBlockPosition(sf::Vector2<double> camera, const sf::RenderWindow& window)
+{
+    double unit_size = window.getView().getSize().y / static_cast<double>(WORLD_UNIT_SIZE_FACTOR);
+
+    sf::Vector2f mouseWorld = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+
+    sf::Vector2<double> world_position = camera + sf::Vector2<double>{(mouseWorld.x / unit_size), -(mouseWorld.y / unit_size)};
+
+    return {static_cast<int>(std::floor(world_position.x)), static_cast<int>(std::floor(world_position.y))};
+}
+
+sf::Vector2<double> getMouseWorldPosition(sf::Vector2<double> camera, const sf::RenderWindow& window)
+{
+    double unit_size = window.getView().getSize().y / static_cast<double>(WORLD_UNIT_SIZE_FACTOR);
+
+    sf::Vector2f mouseWorld = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+
+    return camera + sf::Vector2<double>{(mouseWorld.x / unit_size), -(mouseWorld.y / unit_size)};
 }

@@ -280,9 +280,10 @@ static void writeInput(PacketWriter& w, const Input& in)
     switch (in.type)
     {
         case InputType::MOVE:
-        case InputType::USE:
-        case InputType::ATTACK:
-            w.write(std::get<sf::Vector2f>(in.value));
+        case InputType::USE_START:
+        case InputType::MOUSE_MOVE:
+        case InputType::ATTACK_START:
+            w.write(std::get<sf::Vector2<double>>(in.value));
             break;
         case InputType::JUMP:
             break;
@@ -307,9 +308,10 @@ static Input readInput(PacketReader& r)
     switch (in.type)
     {
         case InputType::MOVE:
-        case InputType::USE:
-        case InputType::ATTACK:
-            in.value = r.read<sf::Vector2f>();
+        case InputType::MOUSE_MOVE:
+        case InputType::USE_START:
+        case InputType::ATTACK_START:
+            in.value = r.read<sf::Vector2<double>>();
             break;
         case InputType::JUMP:
             in.value = std::monostate{};
@@ -323,6 +325,11 @@ static Input readInput(PacketReader& r)
             d.mousePosition = r.read<sf::Vector2f>();
             d.fullStack = r.read<uint8_t>() != 0;
             in.value = d;
+            break;
+        }
+        case InputType::ATTACK_STOP:
+        case InputType::USE_STOP:
+        {
             break;
         }
         default:

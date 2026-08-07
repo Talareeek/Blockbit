@@ -157,7 +157,7 @@ void ClientGameState::tryInitializePlayerUI()
     if (player_ui_initialized) return;
     if (!hasPlayerEntity()) return;
 
-    auto& player_entity = entityWithID(local_player_entity_id.value(), local_world);
+    auto& player_entity = local_world.getEntity(local_player_entity_id.value());
 
     if (!player_entity.hasComponent<TransformComponent>()) return;
 
@@ -384,19 +384,31 @@ void ClientGameState::handleEvent(const sf::Event& event)
         {
             float unit_size = game->getWindow().getView().getSize().y / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
 
-            sf::View view(
-            {
-                static_cast<float>((entityWithID(local_player_entity_id.value(), local_world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
-                static_cast<float>((entityWithID(local_player_entity_id.value(), local_world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
-            },
-            {
-                (float)game->getWindow().getSize().x,
-                (float)game->getWindow().getSize().y
-            });
+            /*
+            sf::View view{
+                sf::Vector2f{
+                    static_cast<float>(
+                        local_world.getEntity(local_player_entity_id.value())
+                            .getComponent<TransformComponent>()
+                            .position.x + 0.5f
+                    ) * unit_size,
+
+                    static_cast<float>(
+                        local_world.getEntity(local_player_entity_id.value())
+                            .getComponent<TransformComponent>()
+                            .position.y - 0.5f
+                    ) * unit_size
+                },
+                sf::Vector2f{
+                    static_cast<float>(game->getWindow().getSize().x),
+                    static_cast<float>(game->getWindow().getSize().y)
+                }
+            };
 
             view.setSize({view.getSize().x, -view.getSize().y});
 
             game->getWindow().setView(view);
+            */
         }
 
         health_bar.handleEvent(event);
@@ -407,7 +419,7 @@ void ClientGameState::handleEvent(const sf::Event& event)
     uint8_t* slot_pointer = nullptr;
     if (hasPlayerEntity())
     {
-        auto& player_entity = entityWithID(local_player_entity_id.value(), local_world);
+        auto& player_entity = local_world.getEntity(local_player_entity_id.value());
         if (player_entity.hasComponent<InventoryComponent>())
         {
             slot_pointer = &player_entity.getComponent<InventoryComponent>().selectedSlot;
@@ -415,10 +427,10 @@ void ClientGameState::handleEvent(const sf::Event& event)
     }
     if (!slot_pointer) slot_pointer = &local_selected_slot;
 
-    auto new_inputs = ::getInputsFromEvent(event, local_world, game->getWindow(), *slot_pointer);
-    inputs.insert(inputs.end(),
-        std::make_move_iterator(new_inputs.begin()),
-        std::make_move_iterator(new_inputs.end()));
+    game->getWindow().setView(sf::View({0.0f, 0.0f}, {static_cast<float>(game->getWindow().getSize().x), static_cast<float>(game->getWindow().getSize().y)}));
+
+    auto new_inputs = ::getInputsFromEvent(event, camera, game->getWindow(), *slot_pointer);
+    inputs.insert(inputs.end(), std::make_move_iterator(new_inputs.begin()), std::make_move_iterator(new_inputs.end()));
 }
 
 void ClientGameState::update(float dt)
@@ -495,15 +507,25 @@ void ClientGameState::update(float dt)
         {
             float unit_size = game->getWindow().getView().getSize().y / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
 
-            sf::View view(
-            {
-                static_cast<float>((entityWithID(local_player_entity_id.value(), local_world).getComponent<TransformComponent>().position.x + 0.5f) * unit_size),
-                static_cast<float>((entityWithID(local_player_entity_id.value(), local_world).getComponent<TransformComponent>().position.y - 0.5f) * unit_size)
-            },
-            {
-                (float)game->getWindow().getSize().x,
-                (float)game->getWindow().getSize().y
-            });
+            sf::View view{
+                sf::Vector2f{
+                    static_cast<float>(
+                        local_world.getEntity(local_player_entity_id.value())
+                            .getComponent<TransformComponent>()
+                            .position.x + 0.5f
+                    ) * unit_size,
+
+                    static_cast<float>(
+                        local_world.getEntity(local_player_entity_id.value())
+                            .getComponent<TransformComponent>()
+                            .position.y - 0.5f
+                    ) * unit_size
+                },
+                sf::Vector2f{
+                    static_cast<float>(game->getWindow().getSize().x),
+                    static_cast<float>(game->getWindow().getSize().y)
+                }
+            };
 
             view.setSize({view.getSize().x, -view.getSize().y});
 
@@ -530,7 +552,7 @@ void ClientGameState::update(float dt)
 
     if (player_ui_initialized)
     {
-        health_bar.setHealth(&entityWithID(local_player_entity_id.value(), local_world).getComponent<HealthComponent>());
+        health_bar.setHealth(&local_world.getEntity(local_player_entity_id.value()).getComponent<HealthComponent>());
 
         inventory_widget.updateScreenRelative(game->getWindow().getSize());
         hotbar.updateScreenRelative(game->getWindow().getSize());
@@ -554,7 +576,7 @@ void ClientGameState::update(float dt)
         debug = !debug;
     }
 
-    if (player_ui_initialized && entityWithID(local_player_entity_id.value(), local_world).getComponent<HealthComponent>().health <= 0 && this->onTop())
+    if (player_ui_initialized && local_world.getEntity(local_player_entity_id.value()).getComponent<HealthComponent>().health <= 0 && this->onTop())
     {
         World& death_world = local_server.has_value() ? local_server->getWorld() : local_world;
         game->pushState(this, std::make_unique<DeathScreenState>(game, death_world, local_player_entity_id.value()));
@@ -618,7 +640,7 @@ void ClientGameState::render(sf::RenderWindow& window)
     {
         if(hasPlayerEntity())
         {
-            camera = entityWithID(local_player_entity_id.value(), local_world).getComponent<TransformComponent>().position + sf::Vector2<double>(0.5, -0.5);
+            camera = local_world.getEntity(local_player_entity_id.value()).getComponent<TransformComponent>().position + sf::Vector2<double>(0.5, -0.5);
         }
 
         RenderEntities(local_world, camera, window);
@@ -641,7 +663,9 @@ void ClientGameState::render(sf::RenderWindow& window)
 
             if(debug)
             {
+                window.setView(sf::View({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)}));
                 sf::Text debug_text(AssetManager::getFont(0), debugString(), 20);
+                window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
                 debug_text.setPosition({50.0f, 50.0f});
                 debug_text.setFillColor(sf::Color::White);
                 debug_text.setOutlineThickness(2.0f);
@@ -668,11 +692,11 @@ std::string ClientGameState::debugString()
     if (player_ui_initialized)
     {
         auto simulation_range = local_world.getSimulationRangeForEntity(local_player_entity_id.value());
-        Climate climate = local_world.climateAt(static_cast<int>(entityWithID(local_player_entity_id.value(), local_world).getComponent<TransformComponent>().position.x));
+        Climate climate = local_world.climateAt(static_cast<int>(local_world.getEntity(local_player_entity_id.value()).getComponent<TransformComponent>().position.x));
 
         debug_string +=
-            "X: " + std::to_string(entityWithID(local_player_entity_id.value(), local_world).getComponent<TransformComponent>().position.x) +
-            " Y: " + std::to_string(entityWithID(local_player_entity_id.value(), local_world).getComponent<TransformComponent>().position.y) + '\n' +
+            "X: " + std::to_string(local_world.getEntity(local_player_entity_id.value()).getComponent<TransformComponent>().position.x) +
+            " Y: " + std::to_string(local_world.getEntity(local_player_entity_id.value()).getComponent<TransformComponent>().position.y) + '\n' +
             "CHUNKS LOADED: " + std::to_string(local_world.getChunks().size()) + '\n' +
             "SIMULATION RANGE: " + std::to_string(simulation_range.first) + " - " + std::to_string(simulation_range.second) + '\n' +
             "INPUTS: " + std::to_string(inputs.size()) + '\n' +
@@ -681,7 +705,8 @@ std::string ClientGameState::debugString()
             "\tHUMIDITY: " + std::to_string(climate.humidity) + '\n' +
             "\tCONTINENTALNESS: " + std::to_string(climate.continentalness) + '\n' +
             "\tEROSION: " + std::to_string(climate.erosion) + '\n' +
-            "\tWEIRDNESS: " + std::to_string(climate.weirdness) + '\n';
+            "\tWEIRDNESS: " + std::to_string(climate.weirdness) + '\n' + 
+            "CURSOR POSITION: " + std::to_string(getMouseWorldPosition(camera, game->getWindow()).x) + " / " + std::to_string(getMouseWorldPosition(camera, game->getWindow()).y) + '\n';
     }
 
     return debug_string;

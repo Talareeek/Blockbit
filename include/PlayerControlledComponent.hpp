@@ -12,6 +12,15 @@ struct PlayerControlledComponent : public Component
     std::string nickname;
     bool active = true;
 
+    sf::Vector2<double> cursor_position;
+
+    bool mid_attack = false;
+    bool mid_usage = false;
+
+    sf::Vector2i mining_block;
+    float mining_time = 0.0f;
+    
+
     PlayerControlledComponent() = default;
     PlayerControlledComponent(std::string nickname) : nickname{nickname}
     {

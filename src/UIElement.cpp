@@ -88,3 +88,9 @@ void UIElement::updateScreenRelative(const sf::Vector2u& windowSize)
         position = screen_relative->toAbsolutePosition(windowSize);
     }
 }
+
+void UIElement::updateToBounds(sf::FloatRect bounds)
+{
+    size = {bounds.size.x - 2 * padding, bounds.size.y - 2 * padding};
+    position = bounds.position + sf::Vector2f{padding, padding};
+}

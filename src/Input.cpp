@@ -11,11 +11,14 @@
 #include "../include/Block.hpp"
 #include "../include/Item.hpp"
 #include "../include/PhysicsSystem.hpp"
+#include "../include/PlayerControlledComponent.hpp"
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Window/Event.hpp>
 
+#include <iostream>
 #include <cmath>
+
 
 std::vector<Input> getInputs(const World& world, const sf::RenderWindow& window)
 {
@@ -23,35 +26,36 @@ std::vector<Input> getInputs(const World& world, const sf::RenderWindow& window)
 
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
     {
-        inputs.push_back({InputType::MOVE, sf::Vector2f{-1.0f, 0.0f}});
+        inputs.push_back({InputType::MOVE, sf::Vector2<double>{-1.0, 0.0}});
     }
 
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D))
     {
-        inputs.push_back({InputType::MOVE, sf::Vector2f{1.0f, 0.0f}});
+        inputs.push_back({InputType::MOVE, sf::Vector2<double>{1.0, 0.0}});
     }
 
+    /*
     if(sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::X) != 0)
     {
         inputs.push_back({InputType::MOVE, sf::Vector2f{1.0f * sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::X) / 100.0f, 0.0f}});
     }
+    */
 
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space) || sf::Joystick::isButtonPressed(0, 0))
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)/* || sf::Joystick::isButtonPressed(0, 0)*/)
     {
         inputs.push_back({InputType::JUMP, std::monostate{}});
     }
+    
 
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q) || sf::Joystick::isButtonPressed(0, 2))
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q)/* || sf::Joystick::isButtonPressed(0, 2)*/)
     {
-        inputs.push_back({InputType::DROP, DropInfo{
-            getMouseWorldPosition(world, window),
-            sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)}});
+        inputs.push_back({InputType::DROP, DropInfo{getMouseWorldPosition(world, window), sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)}});
     }
 
     return inputs;
 }
 
-std::vector<Input> getInputsFromEvent(const sf::Event& event, const World& world, const sf::RenderWindow& window, uint8_t& selectedSlot)
+std::vector<Input> getInputsFromEvent(const sf::Event& event, sf::Vector2<double> camera, const sf::RenderWindow& window, uint8_t& selectedSlot)
 {
     std::vector<Input> inputs;
 
@@ -61,12 +65,31 @@ std::vector<Input> getInputsFromEvent(const sf::Event& event, const World& world
 
         if(mouse->button == sf::Mouse::Button::Left)
         {
-            inputs.push_back({InputType::ATTACK, getMouseWorldPosition(world, window)});
+            inputs.push_back({InputType::ATTACK_START, getMouseWorldPosition(camera, window)});
         }
         else if(mouse->button == sf::Mouse::Button::Right)
         {
-            inputs.push_back({InputType::USE, getMouseWorldPosition(world, window)});
+            inputs.push_back({InputType::USE_START, getMouseWorldPosition(camera, window)});
         }
+    }
+    else if(event.is<sf::Event::MouseButtonReleased>())
+    {
+        auto mouse = event.getIf<sf::Event::MouseButtonReleased>();
+
+        if(mouse->button == sf::Mouse::Button::Left)
+        {
+            inputs.push_back({InputType::ATTACK_STOP});
+        }
+        else if(mouse->button == sf::Mouse::Button::Right)
+        {
+            inputs.push_back({InputType::USE_STOP});
+        }
+    }
+    else if(event.is<sf::Event::MouseMoved>())
+    {
+        auto mouse = event.getIf<sf::Event::MouseMoved>();
+
+        inputs.push_back({InputType::MOUSE_MOVE, getMouseWorldPosition(camera, window)});
     }
     else if(event.is<sf::Event::MouseWheelScrolled>())
     {
@@ -92,14 +115,15 @@ std::vector<Input> getInputsFromEvent(const sf::Event& event, const World& world
 
 void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
 {
-    auto& entity = entityWithID(id, world);
+    auto& entity = world.getEntity(id);
 
-    if(!entity.hasComponent<PhysicsComponent>() || !entity.hasComponent<RenderComponent>() || !entity.hasComponent<TransformComponent>() || !entity.hasComponent<InventoryComponent>()) return;
+    if(!entity.hasComponent<PhysicsComponent>() || !entity.hasComponent<RenderComponent>() || !entity.hasComponent<TransformComponent>() || !entity.hasComponent<InventoryComponent>() || !entity.hasComponent<PlayerControlledComponent>()) return;
 
     auto& physics = entity.getComponent<PhysicsComponent>();
     auto& render = entity.getComponent<RenderComponent>();
     auto& transform = entity.getComponent<TransformComponent>();
     auto& inventory = entity.getComponent<InventoryComponent>();
+    auto& player = entity.getComponent<PlayerControlledComponent>();
 
     for(const auto& input : inputs)
     {
@@ -107,7 +131,7 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
         {
             case InputType::MOVE:
             {
-                auto direction = std::get<sf::Vector2f>(input.value);
+                auto direction = std::get<sf::Vector2<double>>(input.value);
 
                 int block_x = (int)std::floor(transform.position.x + transform.size.x / 2.0f);
                 int block_y = (int)std::floor(transform.position.y);
@@ -137,47 +161,33 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
 
                 break;
             }
-            case InputType::ATTACK:
+            case InputType::MOUSE_MOVE:
             {
-                auto world_position = std::get<sf::Vector2f>(input.value);
-                sf::Vector2i block_position = {static_cast<int>(std::floor(world_position.x)), static_cast<int>(std::floor(world_position.y))};
-
-                if(world.getBlock(block_position.x, block_position.y).id != BlockID::Air && blockDatabase[world.getBlock(block_position.x, block_position.y).id].breakable && isBlockInRange(transform, block_position, 4.0f))
-                {
-                    Entity new_entity(generateUUID());
-                    new_entity.addComponent(TransformComponent{{block_position.x + 0.25f, block_position.y - 0.25f}, {0.5f, 0.5f}, sf::degrees(0.0f)});
-                    new_entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
-                    new_entity.addComponent(ItemComponent{{blockToItem(world.getBlock(block_position.x, block_position.y).id), 1}});
-                    new_entity.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[new_entity.getComponent<ItemComponent>().item.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
-                    world.setBlock(block_position.x, block_position.y, {BlockID::Air, 0});
-
-                    world.addEntity(std::move(new_entity));
-                }
+                player.cursor_position = std::get<sf::Vector2<double>>(input.value);
 
                 break;
             }
-            case InputType::USE:
+            case InputType::ATTACK_START:
             {
-                auto world_position = std::get<sf::Vector2f>(input.value);
-                sf::Vector2i block_position = {static_cast<int>(std::floor(world_position.x)), static_cast<int>(std::floor(world_position.y))};
+                player.mid_attack = true;
 
-                auto& selected = inventory.inventory.slots[inventory.selectedSlot];
+                break;
+            }
+            case InputType::USE_START:
+            {
+                player.mid_usage = true;
 
-                if(selected.empty()) break;
+                break;
+            }
+            case InputType::ATTACK_STOP:
+            {
+                player.mid_attack = false;
 
-                if((world.getBlock(block_position.x, block_position.y).id == BlockID::Air || world.getBlock(block_position.x, block_position.y).id == BlockID::Water) && isBlockInRange(transform, block_position, 4.0f) && itemDatabase[selected.itemID].category == ItemCategory::Block)
-                {
-                    selected.quantity--;
-
-                    world.setBlock(block_position.x, block_position.y, {itemToBlock(selected.itemID), 0});
-                }
-                else if(itemDatabase[selected.itemID].category != ItemCategory::Block)
-                {
-                    if(itemDatabase[selected.itemID].onUse(world, world_position, id))
-                    {
-                        selected.quantity--;
-                    }
-                }
+                break;
+            }
+            case InputType::USE_STOP:
+            {
+                player.mid_usage = false;
 
                 break;
             }
