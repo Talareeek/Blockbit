@@ -36,7 +36,7 @@ void AnnouncementState::render(sf::RenderWindow& window)
     window.draw(background);
 
 
-    sf::Text text(AssetManager::getFont(0), this->text, 20);
+    sf::Text text(AssetManager::getFont(AssetManager::FontID::PressStart2P), this->text, 20);
 
     text.setPosition({10.0f, 10.0f});
 

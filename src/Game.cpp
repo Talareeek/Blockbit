@@ -41,8 +41,8 @@ Game::Game()
 
     window.draw(background);
 
-    AssetManager::loadFont(0, "resources/fonts/PressStart2P-Regular.ttf");
-    AssetManager::loadFont(1, "resources/fonts/FiraCode-Regular.ttf");
+    AssetManager::loadFont(AssetManager::FontID::PressStart2P, "resources/fonts/PressStart2P-Regular.ttf");
+    AssetManager::loadFont(AssetManager::FontID::FiraCode, "resources/fonts/FiraCode-Regular.ttf");
 
     AssetManager::loadTexture(0, "resources/textures/player.png");
     AssetManager::loadTexture(1, "resources/textures/stone.png");
@@ -73,6 +73,25 @@ Game::Game()
     AssetManager::loadTexture(26, "resources/textures/sand.png");
     AssetManager::loadTexture(27, "resources/textures/coarse_dirt.png");
     AssetManager::loadTexture(28, "resources/textures/snow.png");
+
+    AssetManager::loadTexture(29, "resources/textures/wooden_pickaxe.png");
+    AssetManager::loadTexture(30, "resources/textures/stone_pickaxe.png");
+    AssetManager::loadTexture(31, "resources/textures/gold_pickaxe.png");
+    AssetManager::loadTexture(32, "resources/textures/iron_pickaxe.png");
+    AssetManager::loadTexture(33, "resources/textures/diamond_pickaxe.png");
+
+    AssetManager::loadTexture(34, "resources/textures/wooden_axe.png");
+    AssetManager::loadTexture(35, "resources/textures/stone_axe.png");
+    AssetManager::loadTexture(36, "resources/textures/gold_axe.png");
+    AssetManager::loadTexture(37, "resources/textures/iron_axe.png");
+    AssetManager::loadTexture(38, "resources/textures/diamond_axe.png");
+
+    AssetManager::loadTexture(39, "resources/textures/wooden_shovel.png");
+    AssetManager::loadTexture(40, "resources/textures/stone_shovel.png");
+    AssetManager::loadTexture(41, "resources/textures/gold_shovel.png");
+    AssetManager::loadTexture(42, "resources/textures/iron_shovel.png");
+    AssetManager::loadTexture(43, "resources/textures/diamond_shovel.png");
+
     AssetManager::loadTexture(UINT32_MAX, "resources/textures/nothing.png");
 
     AssetManager::loadSound(AssetManager::SoundID::Click, "resources/sounds/click.wav");

@@ -86,7 +86,7 @@ void Button::render(sf::RenderWindow& window)
 
 
 
-    sf::Text textObj(AssetManager::getFont(0), text, static_cast<unsigned int>(size.y * 0.6f));
+    sf::Text textObj(AssetManager::getFont(AssetManager::FontID::PressStart2P), text, static_cast<unsigned int>(size.y * 0.6f));
 
     sf::FloatRect bounds = textObj.getLocalBounds();
     float text_scale = 1.0f;

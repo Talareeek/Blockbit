@@ -178,7 +178,7 @@ void CreateWorldState::render(sf::RenderWindow& window)
     header.setOutlineThickness(2.0f);
     window.draw(header);
 
-    sf::Text header_text(AssetManager::getFont(0), "Create world",
+    sf::Text header_text(AssetManager::getFont(AssetManager::FontID::PressStart2P), "Create world",
         static_cast<unsigned>(header.getSize().y * 0.55f));
     header_text.setFillColor(sf::Color::White);
     header_text.setOutlineColor(sf::Color::Black);
@@ -202,7 +202,7 @@ void CreateWorldState::render(sf::RenderWindow& window)
     panel_header.setFillColor(sf::Color(40, 55, 85, 230));
     window.draw(panel_header);
 
-    sf::Text panel_title(AssetManager::getFont(0), "World settings",
+    sf::Text panel_title(AssetManager::getFont(AssetManager::FontID::PressStart2P), "World settings",
         static_cast<unsigned>(panel_header.getSize().y * 0.55f));
     panel_title.setFillColor(sf::Color(220, 230, 245));
     panel_title.setOutlineColor(sf::Color::Black);
@@ -217,7 +217,7 @@ void CreateWorldState::render(sf::RenderWindow& window)
 
     auto drawLabel = [&](const std::string& str, float rel_x, float rel_y)
     {
-        sf::Text label(AssetManager::getFont(0), str, static_cast<unsigned>(win_h * 0.022f));
+        sf::Text label(AssetManager::getFont(AssetManager::FontID::PressStart2P), str, static_cast<unsigned>(win_h * 0.022f));
         label.setFillColor(sf::Color(220, 225, 235));
         label.setOutlineColor(sf::Color::Black);
         label.setOutlineThickness(1.0f);

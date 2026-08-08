@@ -85,7 +85,7 @@ void Checkbox::render(sf::RenderWindow& window)
         unsigned font_size = static_cast<unsigned>(box_side * 0.75f);
         if (font_size == 0) font_size = 1;
 
-        sf::Text label_text(AssetManager::getFont(0), label, font_size);
+        sf::Text label_text(AssetManager::getFont(AssetManager::FontID::PressStart2P), label, font_size);
         label_text.setFillColor(sf::Color::White);
         label_text.setOutlineThickness(1.0f);
         label_text.setOutlineColor(sf::Color::Black);

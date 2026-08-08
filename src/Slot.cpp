@@ -57,7 +57,7 @@ void Slot::render(sf::RenderWindow& window)
     window.draw(sprite);
 
 
-    sf::Text text(AssetManager::getFont(0), std::to_string(item_stack.quantity), static_cast<unsigned int>(size.x / 3.0f));
+    sf::Text text(AssetManager::getFont(AssetManager::FontID::PressStart2P), std::to_string(item_stack.quantity), static_cast<unsigned int>(size.x / 3.0f));
 
     text.setPosition(position + sf::Vector2f(size.x / 8.0f, size.y / 8.0f));
 
@@ -74,8 +74,8 @@ void Slot::render(sf::RenderWindow& window)
 
         unsigned int charSize = static_cast<unsigned int>(size.x / 5.0f);
 
-        sf::Text nameText(AssetManager::getFont(0), nameStr, charSize);
-        sf::Text idText(AssetManager::getFont(0), idStr, charSize);
+        sf::Text nameText(AssetManager::getFont(AssetManager::FontID::PressStart2P), nameStr, charSize);
+        sf::Text idText(AssetManager::getFont(AssetManager::FontID::PressStart2P), idStr, charSize);
 
         sf::Color rarityColor;
 

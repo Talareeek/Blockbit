@@ -60,7 +60,7 @@ void InputField::handleEvent(const sf::Event& event)
 
             if (view_start > this->text.size()) view_start = this->text.size();
 
-            sf::Text probe(AssetManager::getFont(0), this->text.substr(view_start), font_size);
+            sf::Text probe(AssetManager::getFont(AssetManager::FontID::PressStart2P), this->text.substr(view_start), font_size);
 
             float click_x = mousepos.x - text_x;
 
@@ -185,7 +185,7 @@ void InputField::render(sf::RenderWindow& window)
 
     if (!text.empty())
     {
-        sf::Text measure(AssetManager::getFont(0), text, font_size);
+        sf::Text measure(AssetManager::getFont(AssetManager::FontID::PressStart2P), text, font_size);
 
         while (view_start < cursor_pos &&
                character_pos_x(measure, cursor_pos) - character_pos_x(measure, view_start) > visible_width)
@@ -207,7 +207,7 @@ void InputField::render(sf::RenderWindow& window)
     bool show_placeholder = text.empty() && !placeholder.empty();
     std::string display = show_placeholder ? placeholder : text.substr(view_start);
 
-    sf::Text text_obj(AssetManager::getFont(0), display, font_size);
+    sf::Text text_obj(AssetManager::getFont(AssetManager::FontID::PressStart2P), display, font_size);
     text_obj.setFillColor(show_placeholder ? sf::Color(160, 160, 160) : sf::Color(20, 20, 20));
 
     while (text_obj.getLocalBounds().size.x > visible_width)

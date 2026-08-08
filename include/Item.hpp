@@ -37,7 +37,26 @@ enum class ItemID : uint32_t
     Lighter = 16,
     Sand = 17,
     Coarse_Dirt = 18,
-    Snow = 19
+    Snow = 19,
+
+    // TOOLS
+    Wooden_Pickaxe,
+    Stone_Pickaxe,
+    Iron_Pickaxe,
+    Gold_Pickaxe,
+    Diamond_Pickaxe,
+
+    Wooden_Axe,
+    Stone_Axe,
+    Iron_Axe,
+    Gold_Axe,
+    Diamond_Axe,
+
+    Wooden_Shovel,
+    Stone_Shovel,
+    Iron_Shovel,
+    Gold_Shovel,
+    Diamond_Shovel,
 };
 
 enum class ItemRarity

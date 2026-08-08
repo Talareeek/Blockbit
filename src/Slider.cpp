@@ -126,7 +126,7 @@ void Slider::render(sf::RenderWindow& window)
         unsigned label_font_size = static_cast<unsigned>(size.y * LABEL_AREA_RATIO * 0.75f);
         if (label_font_size == 0) label_font_size = 1;
 
-        sf::Text label_text(AssetManager::getFont(0), label, label_font_size);
+        sf::Text label_text(AssetManager::getFont(AssetManager::FontID::PressStart2P), label, label_font_size);
         label_text.setFillColor(sf::Color::White);
         label_text.setOutlineThickness(1.0f);
         label_text.setOutlineColor(sf::Color::Black);
@@ -169,7 +169,7 @@ void Slider::render(sf::RenderWindow& window)
     unsigned font_size = static_cast<unsigned>(area_h * 0.75f);
     if (font_size == 0) font_size = 1;
 
-    sf::Text text(AssetManager::getFont(0), ss.str(), font_size);
+    sf::Text text(AssetManager::getFont(AssetManager::FontID::PressStart2P), ss.str(), font_size);
     text.setFillColor(sf::Color::White);
     text.setOutlineThickness(1.0f);
     text.setOutlineColor(sf::Color::Black);

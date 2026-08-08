@@ -12,7 +12,7 @@ void drawFitText(sf::RenderWindow& window, const std::string& str, const sf::Flo
 {
     if(str.empty() || box.size.x <= 0.0f || box.size.y <= 0.0f) return;
 
-    sf::Text txt(AssetManager::getFont(0), str, static_cast<unsigned int>(std::max(1.0f, box.size.y * 0.7f)));
+    sf::Text txt(AssetManager::getFont(AssetManager::FontID::PressStart2P), str, static_cast<unsigned int>(std::max(1.0f, box.size.y * 0.7f)));
 
     auto bounds = txt.getLocalBounds();
     if(bounds.size.x <= 0.0f || bounds.size.y <= 0.0f) return;

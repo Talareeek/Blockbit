@@ -44,8 +44,8 @@ void AccountWidget::render(sf::RenderWindow& window)
 
     float textSize = size.y * 0.45f;
 
-    sf::Text usernameText(AssetManager::getFont(0), account->getUsername(), textSize);
-    sf::Text balanceText(AssetManager::getFont(0), std::to_string(account->getCoins()), textSize);
+    sf::Text usernameText(AssetManager::getFont(AssetManager::FontID::PressStart2P), account->getUsername(), textSize);
+    sf::Text balanceText(AssetManager::getFont(AssetManager::FontID::PressStart2P), std::to_string(account->getCoins()), textSize);
 
     auto usernameBounds = usernameText.getLocalBounds();
     auto balanceBounds = balanceText.getLocalBounds();

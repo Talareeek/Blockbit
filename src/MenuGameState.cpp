@@ -252,7 +252,7 @@ void MenuGameState::render(sf::RenderWindow& window)
         sf::Vector2f fpos = nicknameField.getPosition();
         sf::Vector2f fsize = nicknameField.getSize();
 
-        sf::Text label(AssetManager::getFont(0), "Nickname", static_cast<unsigned>(fsize.y * 0.4f));
+        sf::Text label(AssetManager::getFont(AssetManager::FontID::PressStart2P), "Nickname", static_cast<unsigned>(fsize.y * 0.4f));
         label.setFillColor(sf::Color(230, 230, 230));
         label.setOutlineColor(sf::Color::Black);
         label.setOutlineThickness(1.0f);
@@ -262,7 +262,7 @@ void MenuGameState::render(sf::RenderWindow& window)
     nicknameField.render(window);
 
 
-    sf::Text copyright(AssetManager::getFont(0), L"©2026 Talarek\n(github.com/Talareeek)", 10);
+    sf::Text copyright(AssetManager::getFont(AssetManager::FontID::PressStart2P), L"©2026 Talarek\n(github.com/Talareeek)", 10);
     copyright.setPosition({5.0f, 5.0f});
     copyright.setFillColor(sf::Color(0, 0, 0, 127));
     copyright.setOutlineColor(sf::Color(255, 255, 255, 127));

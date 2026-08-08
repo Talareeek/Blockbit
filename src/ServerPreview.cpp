@@ -133,7 +133,7 @@ void ServerPreview::render(sf::RenderWindow& window)
     unsigned name_size = static_cast<unsigned>(std::clamp(icon_side * 0.26f, 10.0f, 22.0f));
     unsigned body_size = static_cast<unsigned>(std::clamp(icon_side * 0.18f, 9.0f, 16.0f));
 
-    sf::Text name_text(AssetManager::getFont(0), packet->name, name_size);
+    sf::Text name_text(AssetManager::getFont(AssetManager::FontID::PressStart2P), packet->name, name_size);
     name_text.setFillColor(sf::Color(240, 240, 240));
     name_text.setOutlineColor(sf::Color::Black);
     name_text.setOutlineThickness(1.0f);
@@ -147,7 +147,7 @@ void ServerPreview::render(sf::RenderWindow& window)
 
     if (description_y + body_size <= description_bottom)
     {
-        sf::Text description_text(AssetManager::getFont(0), packet->description, body_size);
+        sf::Text description_text(AssetManager::getFont(AssetManager::FontID::PressStart2P), packet->description, body_size);
         description_text.setFillColor(sf::Color(200, 200, 200));
         description_text.setPosition({text_x, description_y});
         fitText(description_text, text_width);
@@ -155,7 +155,7 @@ void ServerPreview::render(sf::RenderWindow& window)
     }
 
     std::string players = std::to_string(packet->players) + " / " + std::to_string(packet->max_players);
-    sf::Text players_text(AssetManager::getFont(0), players, body_size);
+    sf::Text players_text(AssetManager::getFont(AssetManager::FontID::PressStart2P), players, body_size);
     players_text.setFillColor(sf::Color(180, 220, 255));
     players_text.setOutlineColor(sf::Color::Black);
     players_text.setOutlineThickness(1.0f);

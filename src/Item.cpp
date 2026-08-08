@@ -82,22 +82,40 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
 
             return false;
         }}},
-        {ItemID::Woodcutter, {"Woodcutter", 22, 64, ItemRarity::Common, ItemCategory::Block}},
-        {ItemID::Lighter, {"Lighter", 24, 1, ItemRarity::Rare, ItemCategory::Misc, false, [](World& world, sf::Vector2f mouse, UUID user) -> bool
+    {ItemID::Woodcutter, {"Woodcutter", 22, 64, ItemRarity::Common, ItemCategory::Block}},
+    {ItemID::Lighter, {"Lighter", 24, 1, ItemRarity::Rare, ItemCategory::Misc, false, [](World& world, sf::Vector2f mouse, UUID user) -> bool
+        {
+            sf::Vector2i position = {static_cast<int>(std::floor(mouse.x)), static_cast<int>(std::floor(mouse.y))};
+
+            if(world.getBlock(position.x, position.y).id == BlockID::Air && blockDatabase[world.getBlock(position.x, position.y - 1).id].solid)
             {
-                sf::Vector2i position = {static_cast<int>(std::floor(mouse.x)), static_cast<int>(std::floor(mouse.y))};
-
-                if(world.getBlock(position.x, position.y).id == BlockID::Air && blockDatabase[world.getBlock(position.x, position.y - 1).id].solid)
-                {
-                    world.setBlock(position.x, position.y, {BlockID::Fire, 0});
-                }
-
-                return false;
+                world.setBlock(position.x, position.y, {BlockID::Fire, 0});
             }
-        }},
-        {ItemID::Sand, {"Sand", 26, 64, ItemRarity::Common, ItemCategory::Block, true}},
-        {ItemID::Coarse_Dirt, {"Coarse Dirt", 27, 64, ItemRarity::Common, ItemCategory::Block, true}},
-        {ItemID::Snow, {"Snow", 28, 64, ItemRarity::Common, ItemCategory::Block, true}}
+
+            return false;
+        }
+    }},
+    {ItemID::Sand, {"Sand", 26, 64, ItemRarity::Common, ItemCategory::Block, true}},
+    {ItemID::Coarse_Dirt, {"Coarse Dirt", 27, 64, ItemRarity::Common, ItemCategory::Block, true}},
+    {ItemID::Snow, {"Snow", 28, 64, ItemRarity::Common, ItemCategory::Block, true}},
+
+    {ItemID::Wooden_Pickaxe, {"Wooden Pickaxe", 29, 1, ItemRarity::Common, ItemCategory::Tool, false}},
+    {ItemID::Stone_Pickaxe, {"Stone Pickaxe", 30, 1, ItemRarity::Common, ItemCategory::Tool, false}},
+    {ItemID::Gold_Pickaxe, {"Gold Pickaxe", 31, 1, ItemRarity::Common, ItemCategory::Tool, false}},
+    {ItemID::Iron_Pickaxe, {"Iron Pickaxe", 32, 1, ItemRarity::Common, ItemCategory::Tool, false}},
+    {ItemID::Diamond_Pickaxe, {"Diamond Pickaxe", 33, 1, ItemRarity::Common, ItemCategory::Tool, false}},
+
+    {ItemID::Wooden_Axe, {"Wooden Axe", 34, 1, ItemRarity::Common, ItemCategory::Tool, false}},
+    {ItemID::Stone_Axe, {"Stone Axe", 35, 1, ItemRarity::Common, ItemCategory::Tool, false}},
+    {ItemID::Gold_Axe, {"Gold Axe", 36, 1, ItemRarity::Common, ItemCategory::Tool, false}},
+    {ItemID::Iron_Axe, {"Iron Axe", 37, 1, ItemRarity::Common, ItemCategory::Tool, false}},
+    {ItemID::Diamond_Axe, {"Diamond Axe", 38, 1, ItemRarity::Common, ItemCategory::Tool, false}},
+
+    {ItemID::Wooden_Shovel, {"Wooden Shovel", 39, 1, ItemRarity::Common, ItemCategory::Tool, false}},
+    {ItemID::Stone_Shovel, {"Stone Shovel", 40, 1, ItemRarity::Common, ItemCategory::Tool, false}},
+    {ItemID::Gold_Shovel, {"Gold Shovel", 41, 1, ItemRarity::Common, ItemCategory::Tool, false}},
+    {ItemID::Iron_Shovel, {"Iron Shovel", 42, 1, ItemRarity::Common, ItemCategory::Tool, false}},
+    {ItemID::Diamond_Shovel, {"Diamond Shovel", 43, 1, ItemRarity::Common, ItemCategory::Tool, false}},
 };
 
 bool ItemStack::empty() const

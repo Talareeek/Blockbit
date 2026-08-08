@@ -21,12 +21,6 @@ float screenToWorldY(float screenY, float unit_size, float windowHeight)
 
 void RenderEntities(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window)
 {
-    sf::View view({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
-
-    view.setSize({view.getSize().x, -view.getSize().y});
-
-    window.setView(view);
-
     unsigned int unit_size = window.getSize().y / WORLD_UNIT_SIZE_FACTOR;
 
     for(auto& [id, entity] : world.getEntities())

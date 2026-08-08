@@ -150,15 +150,15 @@ std::pair<sf::Color, sf::Color> getSkyGradient(float t)
 
 void renderSky(sf::RenderWindow& window, sf::Color top, sf::Color bottom)
 {
-    const float w = static_cast<float>(window.getSize().x);
-    const float h = static_cast<float>(window.getSize().y);
+    const float width = static_cast<float>(window.getSize().x);
+    const float height = static_cast<float>(window.getSize().y);
 
     sf::VertexArray sky(sf::PrimitiveType::TriangleStrip, 4);
 
     sky[0].position = {0.0f, 0.0f};
-    sky[1].position = {w,    0.0f};
-    sky[2].position = {0.0f, h};
-    sky[3].position = {w,    h};
+    sky[1].position = {width,    0.0f};
+    sky[2].position = {0.0f, height};
+    sky[3].position = {width,    height};
 
     sky[0].color = top;
     sky[1].color = top;
@@ -166,7 +166,7 @@ void renderSky(sf::RenderWindow& window, sf::Color top, sf::Color bottom)
     sky[3].color = bottom;
 
     sf::View previous = window.getView();
-    window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {w, h})));
+    window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {width, height})));
     window.draw(sky);
     window.setView(previous);
 }
@@ -196,8 +196,14 @@ void renderSunAndMoon(float daytime, sf::RenderWindow& window)
         window.draw(body);
     };
 
+    sf::View previous = window.getView();
+
+    window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
+
     drawBody(moon_angle, sf::Color(235, 235, 245));
     drawBody(sun_angle,  sf::Color(255, 235, 140));
+
+    window.setView(previous);
 }
 
 sf::Vector2f getMouseWorldPosition(const World&, const sf::RenderWindow& window)
@@ -234,12 +240,6 @@ sf::Vector2f getSunWorldPosition(const World& world, sf::Vector2f cameraCenter)
 
 void RenderWorld(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window)
 {
-    sf::View view({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
-
-    view.setSize({view.getSize().x, -view.getSize().y});
-
-    window.setView(view);
-
     unsigned int unit_size = window.getSize().y / WORLD_UNIT_SIZE_FACTOR;
 
     int centerChunk = static_cast<int>(std::floor(camera.x / static_cast<double>(CHUNK_WIDTH)));
@@ -305,6 +305,29 @@ void RenderBlockOverlay(World& world, const sf::Vector2<double> camera, sf::Rend
 
         window.draw(sprite);
     }
+}
+
+#include <iostream>
+
+void RenderBlockOutline(const sf::Vector2<double> camera, const sf::Vector2i block, sf::RenderWindow& window)
+{
+    float unit_size = static_cast<float>(window.getSize().y) / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
+
+    sf::RectangleShape shape({unit_size * (14.0f / 16.0f), unit_size * (14.0f / 16.0f)});
+    
+    shape.setFillColor(sf::Color::Transparent);
+
+    shape.setOutlineColor(sf::Color::Black);
+    shape.setOutlineThickness(unit_size * (1.0f / 16.0f));
+
+    shape.setPosition(
+        {
+            (static_cast<float>(static_cast<double>(block.x) - camera.x) + (1.0f / 16.0f)) * unit_size,
+            (static_cast<float>(static_cast<double>(block.y) - camera.y) + (1.0f / 16.0f)) * unit_size
+        }
+    );
+
+    window.draw(shape);
 }
 
 static float wrapToPi(float a)
@@ -626,20 +649,16 @@ void renderUIBackground(sf::FloatRect bounds, sf::RenderTarget& target)
 
 sf::Vector2i getMouseBlockPosition(sf::Vector2<double> camera, const sf::RenderWindow& window)
 {
-    double unit_size = window.getView().getSize().y / static_cast<double>(WORLD_UNIT_SIZE_FACTOR);
-
-    sf::Vector2f mouseWorld = window.mapPixelToCoords(sf::Mouse::getPosition(window));
-
-    sf::Vector2<double> world_position = camera + sf::Vector2<double>{(mouseWorld.x / unit_size), -(mouseWorld.y / unit_size)};
+    auto world_position = getMouseWorldPosition(camera, window);
 
     return {static_cast<int>(std::floor(world_position.x)), static_cast<int>(std::floor(world_position.y))};
 }
 
 sf::Vector2<double> getMouseWorldPosition(sf::Vector2<double> camera, const sf::RenderWindow& window)
 {
-    double unit_size = window.getView().getSize().y / static_cast<double>(WORLD_UNIT_SIZE_FACTOR);
+    double unit_size = static_cast<double>(window.getSize().y) / static_cast<double>(WORLD_UNIT_SIZE_FACTOR);
 
     sf::Vector2f mouseWorld = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
-    return camera + sf::Vector2<double>{(mouseWorld.x / unit_size), -(mouseWorld.y / unit_size)};
+    return camera + sf::Vector2<double>{(mouseWorld.x / unit_size), (mouseWorld.y / unit_size)};
 }

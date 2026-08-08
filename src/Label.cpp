@@ -33,7 +33,7 @@ void Label::update(float dt)
 
 void Label::render(sf::RenderWindow& window)
 {
-    sf::Text text(AssetManager::getFont(1), this->text, size.y);
+    sf::Text text(AssetManager::getFont(AssetManager::FontID::FiraCode), this->text, size.y);
     text.setPosition(position);
     text.setFillColor(sf::Color::White);
     window.draw(text);
@@ -71,7 +71,7 @@ void WLabel::update(float dt)
 
 void WLabel::render(sf::RenderWindow& window)
 {
-    sf::Text text(AssetManager::getFont(1), this->text, size.y);
+    sf::Text text(AssetManager::getFont(AssetManager::FontID::FiraCode), this->text, size.y);
     text.setPosition(position);
     text.setFillColor(sf::Color::White);
     window.draw(text);

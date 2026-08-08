@@ -435,6 +435,22 @@ void ClientGameState::handleEvent(const sf::Event& event)
 
 void ClientGameState::update(float dt)
 {
+    if (connection_failed)
+    {
+
+        std::string title = was_connected ? "Disconnected" : "Cannot connect to server";
+        std::string detail = remote_address.empty() ? "" : remote_address;
+        std::string reason = error_message.empty() ? "" : ("Reason: " + error_message);
+        std::string hint = "Press ESC to go back";
+
+        Game* temp_game = game;
+        game->popState(this);
+
+        game->pushState(this, std::make_unique<AnnouncementState>(temp_game, title + '\n' + detail + '\n' + reason + '\n' + hint));
+
+        return;
+    }
+
     chat_ui.update(dt);
     if (chat_close_cooldown > 0.0f) chat_close_cooldown -= dt;
 
@@ -596,28 +612,12 @@ void ClientGameState::render(sf::RenderWindow& window)
 {
     window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
 
-    if (connection_failed)
-    {
-
-        std::string title = was_connected ? "Disconnected" : "Cannot connect to server";
-        std::string detail = remote_address.empty() ? "" : remote_address;
-        std::string reason = error_message.empty() ? "" : ("Reason: " + error_message);
-        std::string hint = "Press ESC to go back";
-
-        Game* temp_game = game;
-        game->popState(this);
-
-        game->pushState(this, std::make_unique<AnnouncementState>(temp_game, title + '\n' + detail + '\n' + reason + '\n' + hint));
-
-        return;
-    }
-
     if (!isLocalSession() && !initialized)
     {
         auto [sky_top, sky_bottom] = getSkyGradient(local_world.getDayTime() / World::DAY_CYCLE_DURATION);
         renderSky(window, sky_top, sky_bottom);
 
-        sf::Text waiting(AssetManager::getFont(0), "Connecting to " + remote_address + "...", 28);
+        sf::Text waiting(AssetManager::getFont(AssetManager::FontID::PressStart2P), "Connecting to " + remote_address + "...", 28);
         waiting.setFillColor(sf::Color::White);
         waiting.setOutlineColor(sf::Color::Black);
         waiting.setOutlineThickness(2.0f);
@@ -627,51 +627,54 @@ void ClientGameState::render(sf::RenderWindow& window)
         return;
     }
 
+
+    // GAME RENDER
+    sf::View game_view({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
+    game_view.setSize({game_view.getSize().x, -game_view.getSize().y});
+    window.setView(game_view);
+
+    // SKY
     auto [sky_top, sky_bottom] = getSkyGradient(local_world.getDayTime() / World::DAY_CYCLE_DURATION);
     renderSky(window, sky_top, sky_bottom);
 
+    // SUN AND MOON
     renderSunAndMoon(local_world.getDayTime(), window);
 
-    if (!player_ui_initialized)
+    // UPDATING CAMERA
+    if(hasPlayerEntity()) camera = local_world.getEntity(local_player_entity_id.value()).getComponent<TransformComponent>().position + sf::Vector2<double>(0.5, -0.5);
+
+    // ENTITIES
+    RenderEntities(local_world, camera, window);
+
+    // WORLD
+    RenderWorld(local_world, camera, window);
+
+    // BLOCK OUTLINE
+    RenderBlockOutline(camera, getMouseBlockPosition(camera, window), window);
+
+
+    window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
+
+    if (!hide_ui)
     {
-        window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
-    }
-    else
-    {
-        if(hasPlayerEntity())
+        health_bar.render(window);
+        hotbar.render(window);
+
+        if(inventory_widget.isActive())
         {
-            camera = local_world.getEntity(local_player_entity_id.value()).getComponent<TransformComponent>().position + sf::Vector2<double>(0.5, -0.5);
+            inventory_widget.render(window);
         }
 
-        RenderEntities(local_world, camera, window);
-
-        RenderWorld(local_world, camera, window);
-
-        RenderBlockOverlay(local_world, camera, window, local_player_entity_id.value());
-
-        window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
-
-        if (!hide_ui)
+        if(debug)
         {
-            health_bar.render(window);
-            hotbar.render(window);
-
-            if(inventory_widget.isActive())
-            {
-                inventory_widget.render(window);
-            }
-
-            if(debug)
-            {
-                window.setView(sf::View({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)}));
-                sf::Text debug_text(AssetManager::getFont(0), debugString(), 20);
-                window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
-                debug_text.setPosition({50.0f, 50.0f});
-                debug_text.setFillColor(sf::Color::White);
-                debug_text.setOutlineThickness(2.0f);
-                debug_text.setOutlineColor(sf::Color::Black);
-                window.draw(debug_text);
-            }
+            window.setView(sf::View({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)}));
+            sf::Text debug_text(AssetManager::getFont(AssetManager::FontID::PressStart2P), debugString(), 20);
+            window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
+            debug_text.setPosition({50.0f, 50.0f});
+            debug_text.setFillColor(sf::Color::White);
+            debug_text.setOutlineThickness(2.0f);
+            debug_text.setOutlineColor(sf::Color::Black);
+            window.draw(debug_text);
         }
     }
 
@@ -706,7 +709,8 @@ std::string ClientGameState::debugString()
             "\tCONTINENTALNESS: " + std::to_string(climate.continentalness) + '\n' +
             "\tEROSION: " + std::to_string(climate.erosion) + '\n' +
             "\tWEIRDNESS: " + std::to_string(climate.weirdness) + '\n' + 
-            "CURSOR POSITION: " + std::to_string(getMouseWorldPosition(camera, game->getWindow()).x) + " / " + std::to_string(getMouseWorldPosition(camera, game->getWindow()).y) + '\n';
+            "CURSOR POSITION: " + std::to_string(getMouseWorldPosition(camera, game->getWindow()).x) + " / " + std::to_string(getMouseWorldPosition(camera, game->getWindow()).y) + '\n' +
+            "CURSOR BLOCK POSITION: " + std::to_string(getMouseBlockPosition(camera, game->getWindow()).x) + " / " + std::to_string(getMouseBlockPosition(camera, game->getWindow()).y) + '\n';
     }
 
     return debug_string;

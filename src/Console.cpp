@@ -297,7 +297,7 @@ void Console::render(sf::RenderWindow& window)
     titleSeparator.setFillColor(accent);
     window.draw(titleSeparator);
 
-    sf::Text title(AssetManager::getFont(1), L"Console", 13);
+    sf::Text title(AssetManager::getFont(AssetManager::FontID::FiraCode), L"Console", 13);
     title.setFillColor(accent);
     auto titleBounds = title.getLocalBounds();
     title.setOrigin(titleBounds.position);
@@ -330,7 +330,7 @@ void Console::render(sf::RenderWindow& window)
     inputSeparator.setFillColor(separatorColor);
     window.draw(inputSeparator);
 
-    sf::Text prompt(AssetManager::getFont(1), L">", inputCharSize);
+    sf::Text prompt(AssetManager::getFont(AssetManager::FontID::FiraCode), L">", inputCharSize);
     prompt.setFillColor(promptColor);
     auto promptBounds = prompt.getLocalBounds();
     prompt.setOrigin(promptBounds.position);
@@ -339,7 +339,7 @@ void Console::render(sf::RenderWindow& window)
 
     float promptOffset = promptBounds.size.x + 8.0f;
 
-    sf::Text input(AssetManager::getFont(1), incomming, inputCharSize);
+    sf::Text input(AssetManager::getFont(AssetManager::FontID::FiraCode), incomming, inputCharSize);
     input.setFillColor(sf::Color::White);
 
     input.setPosition({position.x + padding + promptOffset, position.y + size.y - inputHeight + 2.0f});
@@ -370,7 +370,7 @@ void Console::render(sf::RenderWindow& window)
         const std::wstring& line = logs[i].text;
         const sf::Color& lineColor = logs[i].color;
 
-        sf::Text text(AssetManager::getFont(1), L"", logCharSize);
+        sf::Text text(AssetManager::getFont(AssetManager::FontID::FiraCode), L"", logCharSize);
 
         std::vector<std::wstring> wrappedLines;
         std::wstring current;
@@ -392,7 +392,7 @@ void Console::render(sf::RenderWindow& window)
 
         for(int j = static_cast<int>(wrappedLines.size()) - 1; j >= 0; --j)
         {
-            sf::Text drawText(AssetManager::getFont(1), wrappedLines[j], logCharSize);
+            sf::Text drawText(AssetManager::getFont(AssetManager::FontID::FiraCode), wrappedLines[j], logCharSize);
             drawText.setFillColor(lineColor);
             drawText.setOutlineColor(sf::Color(0, 0, 0, 200));
             drawText.setOutlineThickness(1.0f);

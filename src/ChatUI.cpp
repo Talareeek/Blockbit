@@ -144,7 +144,7 @@ void ChatUI::render(sf::RenderWindow& window)
 
         for(auto it = messages.begin(); it != messages.end() && drawn < VISIBLE_MESSAGES; ++it, ++drawn)
         {
-            sf::Text line(AssetManager::getFont(0), *it, fontSize);
+            sf::Text line(AssetManager::getFont(AssetManager::FontID::PressStart2P), *it, fontSize);
             auto bounds = line.getLocalBounds();
 
             float lineW = bounds.size.x + padding * 2.0f;
@@ -176,7 +176,7 @@ void ChatUI::render(sf::RenderWindow& window)
     inputBg.setOutlineThickness(1.0f);
     window.draw(inputBg);
 
-    sf::Text prompt(AssetManager::getFont(0), incoming, fontSize);
+    sf::Text prompt(AssetManager::getFont(AssetManager::FontID::PressStart2P), incoming, fontSize);
     auto promptBounds = prompt.getLocalBounds();
     prompt.setFillColor(sf::Color::White);
     prompt.setOutlineColor(sf::Color::Black);
