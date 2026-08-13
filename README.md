@@ -4,22 +4,15 @@
 
 ---
 
-A 2D sandbox game written in **C++20** with **SFML**, inspired by classic block-based games. Explore a procedurally generated world, place and destroy blocks, and build whatever you can imagine.
+A 2D sandbox game written in **C++20** with **SFML**, inspired by classic block-based games. Explore a procedurally generated world, place and destroy blocks, and build whatever you can imagine. Game offers to you:
+- **Procedurally generated world**
+- **World persistence** - Save and load your worlds
+- **Multiplayer** - Host your worlds
 
 ![C++](https://img.shields.io/badge/C++-20-blue?logo=c%2B%2B)
 ![SFML](https://img.shields.io/badge/SFML-3.x-green?logo=sfml)
 ![License](https://img.shields.io/badge/license-MIT-brightgreen)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey)
-
----
-
-## Features
-
-- **Procedurally generated world** — every playthrough is unique
-- **Place and destroy blocks** — full sandbox interaction
-- **World persistence** — save and load named worlds
-- **Fast CMake + Ninja builds** — quick iteration cycle
-- **Debug-ready** — full debug symbols for GDB
 
 ---
 
