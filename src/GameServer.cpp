@@ -354,11 +354,12 @@ void GameServer::update(float dt)
     {
         std::cerr << "[Server] bad_alloc in tick\n";
     }
+    /*
     catch (const std::exception& exception)
     {
         std::cerr << "[Server] exception in tick: " << exception.what() << '\n';
     }
-    
+    */    
 }
 
 void GameServer::spawnPlayerFor(std::string nickname)
@@ -391,6 +392,8 @@ void GameServer::spawnPlayerFor(std::string nickname)
 
 void GameServer::deactivatePlayerFor(std::string nickname)
 {
+    if(!nickname_to_entity.contains(nickname)) return;
+
     world.getEntity(nickname_to_entity[nickname]).getComponent<PlayerControlledComponent>().active = false;
 
     nickname_to_entity.erase(nickname);
