@@ -427,7 +427,9 @@ void ClientGameState::handleEvent(const sf::Event& event)
     }
     if (!slot_pointer) slot_pointer = &local_selected_slot;
 
-    game->getWindow().setView(sf::View({0.0f, 0.0f}, {static_cast<float>(game->getWindow().getSize().x), static_cast<float>(game->getWindow().getSize().y)}));
+    sf::View game_view({0.0f, 0.0f}, {static_cast<float>(game->getWindow().getSize().x), static_cast<float>(game->getWindow().getSize().y)});
+    game_view.setSize({game_view.getSize().x, -game_view.getSize().y});
+    game->getWindow().setView(game_view);
 
     auto new_inputs = ::getInputsFromEvent(event, camera, game->getWindow(), *slot_pointer);
     inputs.insert(inputs.end(), std::make_move_iterator(new_inputs.begin()), std::make_move_iterator(new_inputs.end()));
