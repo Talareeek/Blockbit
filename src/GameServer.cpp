@@ -26,8 +26,6 @@
 
 GameServer::GameServer(std::filesystem::path world_path, std::unique_ptr<ServerTransport> transport) : mode(ServerMode::Listen), transport(std::move(transport)), world(world_path)
 {
-    //world = World(world_path);
-
     this->world.trackBlockChanges = true;
 
     this->transport->start();
@@ -35,8 +33,6 @@ GameServer::GameServer(std::filesystem::path world_path, std::unique_ptr<ServerT
 
 GameServer::GameServer(std::string name, unsigned int seed, GenerationProperties generation_properties, std::unique_ptr<ServerTransport> transport) : mode(ServerMode::Listen), transport(std::move(transport)), world(name, getWorldsPath() / name, seed, generation_properties)
 {
-    //-world = World(name, getWorldsPath() / name, seed, generation_properties);
-
     this->world.trackBlockChanges = true;
 
     this->transport->start();
@@ -215,6 +211,12 @@ void GameServer::processIncoming()
                     
 
                     break;
+                }
+                case PacketType::ClientSnapshot:
+                {
+                    ClientSnapshotPacket client_snapshot = deserializeClientSnapshot(reader);
+
+                    world.getEntity(nickname_to_entity[client_to_nickname[packet.clientId]]).getComponent<PlayerControlledComponent>().cursor_position = {client_snapshot.cursor_x, client_snapshot.cursor_y};
                 }
                 default:
                     break;

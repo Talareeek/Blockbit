@@ -34,20 +34,13 @@ std::vector<Input> getInputs(const World& world, const sf::RenderWindow& window)
         inputs.push_back({InputType::MOVE, sf::Vector2<double>{1.0, 0.0}});
     }
 
-    /*
-    if(sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::X) != 0)
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space))
     {
-        inputs.push_back({InputType::MOVE, sf::Vector2f{1.0f * sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::X) / 100.0f, 0.0f}});
-    }
-    */
-
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)/* || sf::Joystick::isButtonPressed(0, 0)*/)
-    {
-        inputs.push_back({InputType::JUMP, std::monostate{}});
+        inputs.push_back({InputType::JUMP});
     }
     
 
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q)/* || sf::Joystick::isButtonPressed(0, 2)*/)
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q))
     {
         inputs.push_back({InputType::DROP, DropInfo{getMouseWorldPosition(world, window), sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)}});
     }
@@ -65,11 +58,11 @@ std::vector<Input> getInputsFromEvent(const sf::Event& event, sf::Vector2<double
 
         if(mouse->button == sf::Mouse::Button::Left)
         {
-            inputs.push_back({InputType::ATTACK_START, getMouseWorldPosition(camera, window)});
+            inputs.push_back({InputType::ATTACK_START});
         }
         else if(mouse->button == sf::Mouse::Button::Right)
         {
-            inputs.push_back({InputType::USE_START, getMouseWorldPosition(camera, window)});
+            inputs.push_back({InputType::USE_START});
         }
     }
     else if(event.is<sf::Event::MouseButtonReleased>())
@@ -85,12 +78,8 @@ std::vector<Input> getInputsFromEvent(const sf::Event& event, sf::Vector2<double
             inputs.push_back({InputType::USE_STOP});
         }
     }
-    else if(event.is<sf::Event::MouseMoved>())
-    {
-        auto mouse = event.getIf<sf::Event::MouseMoved>();
 
-        inputs.push_back({InputType::MOUSE_MOVE, getMouseWorldPosition(camera, window)});
-    }
+
     else if(event.is<sf::Event::MouseWheelScrolled>())
     {
         auto wheel = event.getIf<sf::Event::MouseWheelScrolled>();
@@ -98,6 +87,8 @@ std::vector<Input> getInputsFromEvent(const sf::Event& event, sf::Vector2<double
         selectedSlot = static_cast<uint8_t>((selectedSlot + delta + 9) % 9);
         inputs.push_back({InputType::CHANGE_SLOT, selectedSlot});
     }
+
+    
     else if(event.is<sf::Event::KeyPressed>())
     {
         auto key = event.getIf<sf::Event::KeyPressed>();
@@ -158,12 +149,6 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
                 {
                     physics.force.y += 60.0f;
                 }
-
-                break;
-            }
-            case InputType::MOUSE_MOVE:
-            {
-                player.cursor_position = std::get<sf::Vector2<double>>(input.value);
 
                 break;
             }

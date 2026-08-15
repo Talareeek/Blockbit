@@ -552,6 +552,15 @@ void ClientGameState::update(float dt)
 
         onTick(tick_step);
 
+
+        sf::View game_view({0.0f, 0.0f}, {static_cast<float>(game->getWindow().getSize().x), static_cast<float>(game->getWindow().getSize().y)});
+        game_view.setSize({game_view.getSize().x, -game_view.getSize().y});
+        game->getWindow().setView(game_view);
+
+        ClientSnapshotPacket packet = {.cursor_x = getMouseWorldPosition(camera, game->getWindow()).x, .cursor_y = getMouseWorldPosition(camera, game->getWindow()).y};
+
+        transport->send(serializePacket(packet));
+
         since_last_tick -= tick_step;
     }
 

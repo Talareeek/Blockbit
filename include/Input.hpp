@@ -17,8 +17,6 @@ enum class InputType
     MOVE,
     JUMP,
 
-    MOUSE_MOVE,
-
     ATTACK_START,
     ATTACK_STOP,
 

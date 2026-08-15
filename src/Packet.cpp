@@ -279,12 +279,10 @@ static void writeInput(PacketWriter& w, const Input& in)
 
     switch (in.type)
     {
-        case InputType::MOVE:
-        case InputType::USE_START:
-        case InputType::MOUSE_MOVE:
+        case InputType::USE_START:        
         case InputType::ATTACK_START:
-            w.write(std::get<sf::Vector2<double>>(in.value));
-            break;
+        case InputType::USE_STOP:
+        case InputType::ATTACK_STOP:
         case InputType::JUMP:
             break;
         case InputType::CHANGE_SLOT:
@@ -295,6 +293,11 @@ static void writeInput(PacketWriter& w, const Input& in)
             const auto& d = std::get<DropInfo>(in.value);
             w.write(d.mousePosition);
             w.write<uint8_t>(d.fullStack ? 1 : 0);
+            break;
+        }
+        case InputType::MOVE:
+        {
+            w.write(std::get<sf::Vector2<double>>(in.value));
             break;
         }
     }
@@ -308,13 +311,7 @@ static Input readInput(PacketReader& r)
     switch (in.type)
     {
         case InputType::MOVE:
-        case InputType::MOUSE_MOVE:
-        case InputType::USE_START:
-        case InputType::ATTACK_START:
             in.value = r.read<sf::Vector2<double>>();
-            break;
-        case InputType::JUMP:
-            in.value = std::monostate{};
             break;
         case InputType::CHANGE_SLOT:
             in.value = r.read<uint8_t>();
@@ -329,6 +326,9 @@ static Input readInput(PacketReader& r)
         }
         case InputType::ATTACK_STOP:
         case InputType::USE_STOP:
+        case InputType::USE_START:
+        case InputType::ATTACK_START:
+        case InputType::JUMP:
         {
             break;
         }
@@ -524,4 +524,24 @@ ChatMessagePacket deserializeChatMessage(PacketReader& r)
 RespawnPacket deserializeRespawn(PacketReader& r)
 {
     return RespawnPacket();
+}
+
+std::vector<char> serializePacket(const ClientSnapshotPacket& p)
+{
+    PacketWriter writer(PacketType::ClientSnapshot);
+
+    writer.write(p.cursor_x);
+    writer.write(p.cursor_y);
+
+    return writer.release();
+}
+
+ClientSnapshotPacket deserializeClientSnapshot(PacketReader& r)
+{
+    ClientSnapshotPacket packet;
+
+    packet.cursor_x = r.read<double>();
+    packet.cursor_y = r.read<double>();
+
+    return packet;
 }
