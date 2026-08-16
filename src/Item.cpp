@@ -9,113 +9,516 @@
 
 std::unordered_map<ItemID, ItemData> itemDatabase =
 {
-    {ItemID::None, {"None", UINT32_MAX, 0, ItemRarity::Common, ItemCategory::Misc, false}},
-    {ItemID::Stone, {"Stone", 1, 64, ItemRarity::Common, ItemCategory::Block, true}},
-    {ItemID::Grass, {"Grass", 2, 64, ItemRarity::Common, ItemCategory::Block, false}},
-    {ItemID::Dirt, {"Dirt", 3, 64, ItemRarity::Common, ItemCategory::Block, false}},
-    {ItemID::Cobblestone, {"Cobblestone", 4, 64, ItemRarity::Common, ItemCategory::Block, true}},
-    {ItemID::Obsidian, {"Obsidian", 5, 64, ItemRarity::Common, ItemCategory::Block, false}},
-    {ItemID::Bedrock, {"Bedrock", 6, 64, ItemRarity::Common, ItemCategory::Block, false}},
-    {ItemID::Dynamite, {"Dynamite", 12, 16, ItemRarity::Rare, ItemCategory::Misc, false, [](World& world, sf::Vector2f mouse, UUID user) -> bool
+    {
+        ItemID::None,
         {
-            Entity& player = world.getEntity(user);
-
-            if(!player.hasComponent<TransformComponent>()) return false;
-
-            sf::Vector2<double> playerPos = player.getComponent<TransformComponent>().position;
-
-            Entity explosiveEntity(generateUUID());
-            explosiveEntity.addComponent(TransformComponent{playerPos, {1.0, 1.0}, sf::degrees(0.0f)});
-            explosiveEntity.addComponent(ExplosiveComponent{3.0f});
-            explosiveEntity.addComponent(RenderComponent{12, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
-            explosiveEntity.addComponent(PhysicsComponent{(mouse - sf::Vector2f(playerPos)) * 3.0f, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
-
-            world.addEntity(std::move(explosiveEntity));
-
-            return true;
-            
-        }}},
-    {ItemID::Iron_Ore, {"Iron Ore", 13, 64, ItemRarity::Common, ItemCategory::Block, false}},
-    {ItemID::Gold_Ore, {"Gold Ore", 14, 64, ItemRarity::Common, ItemCategory::Block, false}},
-    {ItemID::Diamond_Ore, {"Diamond Ore", 15, 64, ItemRarity::Common, ItemCategory::Block, false}},
-    {ItemID::Oak_Log, {"Oak Log", 16, 64, ItemRarity::Common, ItemCategory::Block, true}},
-    {ItemID::Oak_Leaves, {"Oak Leaves", 17, 64, ItemRarity::Common, ItemCategory::Block, true}},
-    {ItemID::Bucket, {"Bucket", 19, 1, ItemRarity::Rare, ItemCategory::Misc, true, [](World& world, sf::Vector2f mouse, UUID user) -> bool
-        {
-            Entity& player = world.getEntity(user);
-
-            if(!player.hasComponent<InventoryComponent>()) return false;
-
-            auto& inventory = player.getComponent<InventoryComponent>().inventory;
-
-            sf::Vector2i block_pos = {static_cast<int>(std::floor(mouse.x)), static_cast<int>(std::floor(mouse.y))};
-
-            if(world.getBlock(block_pos.x, block_pos.y).id == BlockID::Water && world.getBlock(block_pos.x, block_pos.y).metadata == static_cast<uint8_t>(WaterLevel::SOURCE))
-            {
-                world.setBlock(block_pos.x, block_pos.y, {BlockID::Air, 0});
-
-                inventory.removeItemWithLeftover(ItemID::Bucket, 1);
-
-                inventory.addItemWithLeftover(ItemID::Water_Bucket, 1);
-            }
-
-            return false;
-        }}},
-    {ItemID::Water_Bucket, {"Water Bucket", 20, 1, ItemRarity::Rare, ItemCategory::Misc, false, [](World& world, sf::Vector2f mouse, UUID user)
-        {
-            Entity& player = world.getEntity(user);
-
-            if(!player.hasComponent<InventoryComponent>()) return false;
-
-            auto& inventory = player.getComponent<InventoryComponent>().inventory;
-
-            sf::Vector2i block_pos = {static_cast<int>(std::floor(mouse.x)), static_cast<int>(std::floor(mouse.y))};
-
-            if(world.getBlock(block_pos.x, block_pos.y).id == BlockID::Air || (world.getBlock(block_pos.x, block_pos.y).id == BlockID::Water && world.getBlock(block_pos.x, block_pos.y).metadata < static_cast<uint8_t>(WaterLevel::SOURCE)))
-            {
-                world.setBlock(block_pos.x, block_pos.y, {BlockID::Water, static_cast<uint8_t>(WaterLevel::SOURCE)});
-
-                inventory.removeItemWithLeftover(ItemID::Water_Bucket, 1);
-
-                inventory.addItemWithLeftover(ItemID::Bucket, 1);
-            }
-
-            return false;
-        }}},
-    {ItemID::Woodcutter, {"Woodcutter", 22, 64, ItemRarity::Common, ItemCategory::Block}},
-    {ItemID::Lighter, {"Lighter", 24, 1, ItemRarity::Rare, ItemCategory::Misc, false, [](World& world, sf::Vector2f mouse, UUID user) -> bool
-        {
-            sf::Vector2i position = {static_cast<int>(std::floor(mouse.x)), static_cast<int>(std::floor(mouse.y))};
-
-            if(world.getBlock(position.x, position.y).id == BlockID::Air && blockDatabase[world.getBlock(position.x, position.y - 1).id].solid)
-            {
-                world.setBlock(position.x, position.y, {BlockID::Fire, 0});
-            }
-
-            return false;
+            .name = "None",
+            .texture = UINT32_MAX,
+            .maxStackSize = 0,
+            .category = ItemCategory::Misc
         }
-    }},
-    {ItemID::Sand, {"Sand", 26, 64, ItemRarity::Common, ItemCategory::Block, true}},
-    {ItemID::Coarse_Dirt, {"Coarse Dirt", 27, 64, ItemRarity::Common, ItemCategory::Block, true}},
-    {ItemID::Snow, {"Snow", 28, 64, ItemRarity::Common, ItemCategory::Block, true}},
+    },
 
-    {ItemID::Wooden_Pickaxe, {"Wooden Pickaxe", 29, 1, ItemRarity::Common, ItemCategory::Tool, false}},
-    {ItemID::Stone_Pickaxe, {"Stone Pickaxe", 30, 1, ItemRarity::Common, ItemCategory::Tool, false}},
-    {ItemID::Gold_Pickaxe, {"Gold Pickaxe", 31, 1, ItemRarity::Common, ItemCategory::Tool, false}},
-    {ItemID::Iron_Pickaxe, {"Iron Pickaxe", 32, 1, ItemRarity::Common, ItemCategory::Tool, false}},
-    {ItemID::Diamond_Pickaxe, {"Diamond Pickaxe", 33, 1, ItemRarity::Common, ItemCategory::Tool, false}},
+    {
+        ItemID::Stone,
+        {
+            .name = "Stone",
+            .texture = 1,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Grass,
+        {
+            .name = "Grass",
+            .texture = 2,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Dirt,
+        {
+            .name = "Dirt",
+            .texture = 3,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Cobblestone,
+        {
+            .name = "Cobblestone",
+            .texture = 4,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Obsidian,
+        {
+            .name = "Obsidian",
+            .texture = 5,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Bedrock,
+        {
+            .name = "Bedrock",
+            .texture = 6,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Dynamite,
+        {
+            .name = "Dynamite",
+            .texture = 12,
+            .maxStackSize = 16,
+            .rarity = ItemRarity::Rare,
+            .category = ItemCategory::Misc,
+            .onUse = [](World& world, sf::Vector2f mouse, UUID user) -> bool
+            {
+                Entity& player = world.getEntity(user);
 
-    {ItemID::Wooden_Axe, {"Wooden Axe", 34, 1, ItemRarity::Common, ItemCategory::Tool, false}},
-    {ItemID::Stone_Axe, {"Stone Axe", 35, 1, ItemRarity::Common, ItemCategory::Tool, false}},
-    {ItemID::Gold_Axe, {"Gold Axe", 36, 1, ItemRarity::Common, ItemCategory::Tool, false}},
-    {ItemID::Iron_Axe, {"Iron Axe", 37, 1, ItemRarity::Common, ItemCategory::Tool, false}},
-    {ItemID::Diamond_Axe, {"Diamond Axe", 38, 1, ItemRarity::Common, ItemCategory::Tool, false}},
+                if(!player.hasComponent<TransformComponent>())
+                    return false;
 
-    {ItemID::Wooden_Shovel, {"Wooden Shovel", 39, 1, ItemRarity::Common, ItemCategory::Tool, false}},
-    {ItemID::Stone_Shovel, {"Stone Shovel", 40, 1, ItemRarity::Common, ItemCategory::Tool, false}},
-    {ItemID::Gold_Shovel, {"Gold Shovel", 41, 1, ItemRarity::Common, ItemCategory::Tool, false}},
-    {ItemID::Iron_Shovel, {"Iron Shovel", 42, 1, ItemRarity::Common, ItemCategory::Tool, false}},
-    {ItemID::Diamond_Shovel, {"Diamond Shovel", 43, 1, ItemRarity::Common, ItemCategory::Tool, false}},
+                sf::Vector2<double> playerPos =
+                    player.getComponent<TransformComponent>().position;
+
+                Entity explosiveEntity(generateUUID());
+
+                explosiveEntity.addComponent(
+                    TransformComponent{
+                        playerPos,
+                        {1.0, 1.0},
+                        sf::degrees(0.0f)
+                    }
+                );
+
+                explosiveEntity.addComponent(ExplosiveComponent{3.0f});
+
+                explosiveEntity.addComponent(
+                    RenderComponent{
+                        12,
+                        {{0, 0}, {16, 16}},
+                        {1.0f, 1.0f}
+                    }
+                );
+
+                explosiveEntity.addComponent(
+                    PhysicsComponent{
+                        (mouse - sf::Vector2f(playerPos)) * 3.0f,
+                        {0.0f, 0.0f},
+                        {0.0f, 0.0f},
+                        1.0f,
+                        true,
+                        true,
+                        false,
+                        true
+                    }
+                );
+
+                world.addEntity(std::move(explosiveEntity));
+
+                return true;
+            }
+        }
+    },
+    {
+        ItemID::Iron_Ore,
+        {
+            .name = "Iron Ore",
+            .texture = 13,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Gold_Ore,
+        {
+            .name = "Gold Ore",
+            .texture = 14,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Diamond_Ore,
+        {
+            .name = "Diamond Ore",
+            .texture = 15,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Oak_Log,
+        {
+            .name = "Oak Log",
+            .texture = 16,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Oak_Leaves,
+        {
+            .name = "Oak Leaves",
+            .texture = 17,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Bucket,
+        {
+            .name = "Bucket",
+            .texture = 19,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Rare,
+            .category = ItemCategory::Misc,
+            .onUse = [](World& world, sf::Vector2f mouse, UUID user) -> bool
+            {
+                Entity& player = world.getEntity(user);
+
+                if(!player.hasComponent<InventoryComponent>())
+                    return false;
+
+                auto& inventory =
+                    player.getComponent<InventoryComponent>().inventory;
+
+                sf::Vector2i block_pos = {
+                    static_cast<int>(std::floor(mouse.x)),
+                    static_cast<int>(std::floor(mouse.y))
+                };
+
+                if(
+                    world.getBlock(block_pos.x, block_pos.y).id == BlockID::Water &&
+                    world.getBlock(block_pos.x, block_pos.y).metadata ==
+                        static_cast<uint8_t>(WaterLevel::SOURCE)
+                )
+                {
+                    world.setBlock(
+                        block_pos.x,
+                        block_pos.y,
+                        {BlockID::Air, 0}
+                    );
+
+                    inventory.removeItemWithLeftover(ItemID::Bucket, 1);
+                    inventory.addItemWithLeftover(ItemID::Water_Bucket, 1);
+                }
+
+                return false;
+            }
+        }
+    },
+    {
+        ItemID::Water_Bucket,
+        {
+            .name = "Water Bucket",
+            .texture = 20,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Rare,
+            .category = ItemCategory::Misc,
+            .onUse = [](World& world, sf::Vector2f mouse, UUID user)
+            {
+                Entity& player = world.getEntity(user);
+
+                if(!player.hasComponent<InventoryComponent>())
+                    return false;
+
+                auto& inventory =
+                    player.getComponent<InventoryComponent>().inventory;
+
+                sf::Vector2i block_pos = {
+                    static_cast<int>(std::floor(mouse.x)),
+                    static_cast<int>(std::floor(mouse.y))
+                };
+
+                if(
+                    world.getBlock(block_pos.x, block_pos.y).id == BlockID::Air ||
+                    (
+                        world.getBlock(block_pos.x, block_pos.y).id == BlockID::Water &&
+                        world.getBlock(block_pos.x, block_pos.y).metadata <
+                            static_cast<uint8_t>(WaterLevel::SOURCE)
+                    )
+                )
+                {
+                    world.setBlock(
+                        block_pos.x,
+                        block_pos.y,
+                        {
+                            BlockID::Water,
+                            static_cast<uint8_t>(WaterLevel::SOURCE)
+                        }
+                    );
+
+                    inventory.removeItemWithLeftover(ItemID::Water_Bucket, 1);
+                    inventory.addItemWithLeftover(ItemID::Bucket, 1);
+                }
+
+                return false;
+            }
+        }
+    },
+    {
+        ItemID::Woodcutter,
+        {
+            .name = "Woodcutter",
+            .texture = 22,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Lighter,
+        {
+            .name = "Lighter",
+            .texture = 24,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Rare,
+            .category = ItemCategory::Misc,
+            .onUse = [](World& world, sf::Vector2f mouse, UUID user) -> bool
+            {
+                sf::Vector2i position = {
+                    static_cast<int>(std::floor(mouse.x)),
+                    static_cast<int>(std::floor(mouse.y))
+                };
+
+                if(
+                    world.getBlock(position.x, position.y).id == BlockID::Air &&
+                    blockDatabase[
+                        world.getBlock(position.x, position.y - 1).id
+                    ].solid
+                )
+                {
+                    world.setBlock(
+                        position.x,
+                        position.y,
+                        {BlockID::Fire, 0}
+                    );
+                }
+
+                return false;
+            }
+        }
+    },
+    {
+        ItemID::Sand,
+        {
+            .name = "Sand",
+            .texture = 26,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Coarse_Dirt,
+        {
+            .name = "Coarse Dirt",
+            .texture = 27,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Snow,
+        {
+            .name = "Snow",
+            .texture = 28,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+
+    {
+        ItemID::Wooden_Pickaxe,
+        {
+            .name = "Wooden Pickaxe",
+            .texture = 29,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Tool,
+            .tool = ToolProperties{ToolType::Pickaxe, 1}
+        }
+    },
+    {
+        ItemID::Stone_Pickaxe,
+        {
+            .name = "Stone Pickaxe",
+            .texture = 30,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Tool,
+            .tool = ToolProperties{ToolType::Pickaxe, 2}
+        }
+    },
+    {
+        ItemID::Gold_Pickaxe,
+        {
+            .name = "Gold Pickaxe",
+            .texture = 31,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Tool,
+            .tool = ToolProperties{ToolType::Pickaxe, 3}
+        }
+    },
+    {
+        ItemID::Iron_Pickaxe,
+        {
+            .name = "Iron Pickaxe",
+            .texture = 32,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Tool,
+            .tool = ToolProperties{ToolType::Pickaxe, 4}
+        }
+    },
+    {
+        ItemID::Diamond_Pickaxe,
+        {
+            .name = "Diamond Pickaxe",
+            .texture = 33,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Tool,
+            .tool = ToolProperties{ToolType::Pickaxe, 5}
+        }
+    },
+
+    {
+        ItemID::Wooden_Axe,
+        {
+            .name = "Wooden Axe",
+            .texture = 34,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Tool,
+            .tool = ToolProperties{ToolType::Axe, 1}
+        }
+    },
+    {
+        ItemID::Stone_Axe,
+        {
+            .name = "Stone Axe",
+            .texture = 35,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Tool,
+            .tool = ToolProperties{ToolType::Axe, 2}
+        }
+    },
+    {
+        ItemID::Gold_Axe,
+        {
+            .name = "Gold Axe",
+            .texture = 36,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Tool,
+            .tool = ToolProperties{ToolType::Axe, 3}
+        }
+    },
+    {
+        ItemID::Iron_Axe,
+        {
+            .name = "Iron Axe",
+            .texture = 37,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Tool,
+            .tool = ToolProperties{ToolType::Axe, 4}
+        }
+    },
+    {
+        ItemID::Diamond_Axe,
+        {
+            .name = "Diamond Axe",
+            .texture = 38,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Tool,
+            .tool = ToolProperties{ToolType::Axe, 5}
+        }
+    },
+
+    {
+        ItemID::Wooden_Shovel,
+        {
+            .name = "Wooden Shovel",
+            .texture = 39,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Tool,
+            .tool = ToolProperties{ToolType::Shovel, 1}
+        }
+    },
+    {
+        ItemID::Stone_Shovel,
+        {
+            .name = "Stone Shovel",
+            .texture = 40,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Tool,
+            .tool = ToolProperties{ToolType::Shovel, 2}
+        }
+    },
+    {
+        ItemID::Gold_Shovel,
+        {
+            .name = "Gold Shovel",
+            .texture = 41,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Tool,
+            .tool = ToolProperties{ToolType::Shovel, 3}
+        }
+    },
+    {
+        ItemID::Iron_Shovel,
+        {
+            .name = "Iron Shovel",
+            .texture = 42,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Tool,
+            .tool = ToolProperties{ToolType::Shovel, 4}
+        }
+    },
+    {
+        ItemID::Diamond_Shovel,
+        {
+            .name = "Diamond Shovel",
+            .texture = 43,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Tool,
+            .tool = ToolProperties{ToolType::Shovel, 5}
+        }
+    }
 };
 
 bool ItemStack::empty() const

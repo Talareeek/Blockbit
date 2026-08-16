@@ -38,17 +38,37 @@ void PlayerControlledSystem(World& world, float dt)
 
             sf::Vector2i block_position = player.mining_block;
 
-            if(world.getBlock(block_position.x, block_position.y).id != BlockID::Air && blockDatabase[world.getBlock(block_position.x, block_position.y).id].breakable && isBlockInRange(transform, block_position, 4.0f))
-            {
-                Entity new_entity(generateUUID());
-                new_entity.addComponent(TransformComponent{{block_position.x + 0.25f, block_position.y - 0.25f}, {0.5f, 0.5f}, sf::degrees(0.0f)});
-                new_entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
-                new_entity.addComponent(ItemComponent{{blockToItem(world.getBlock(block_position.x, block_position.y).id), 1}});
-                new_entity.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[new_entity.getComponent<ItemComponent>().item.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
-                world.setBlock(block_position.x, block_position.y, {BlockID::Air, 0});
+            Block block = world.getBlock(block_position.x, block_position.y);
 
-                world.addEntity(std::move(new_entity));
-            }
+            ItemStack item = inventory.inventory.slots[inventory.selectedSlot];
+
+            if(blockDatabase[block.id].mining.has_value())
+            {
+                auto& block_data = blockDatabase[block.id];
+                auto& item_data  = itemDatabase[item.itemID];
+
+                bool correct_type = item_data.tool.has_value() && item_data.tool->tool_type ==  block_data.mining->desired_tool.tool_type;
+                int tool_level  = correct_type ? item_data.tool->level : 0;
+
+                float speed = level_based_speed[tool_level];
+                float block_mining_time = (block_data.hardness < 0.0f) ? std::numeric_limits<float>::infinity() : block_data.hardness / speed;
+
+                bool will_drop = correct_type && item_data.tool->level >= block_data.mining->desired_tool.level;
+
+                if(player.mining_time >= block_mining_time && world.getBlock(block_position.x, block_position.y).id != BlockID::Air && blockDatabase[world.getBlock(block_position.x, block_position.y).id].breakable && isBlockInRange(transform, block_position, 4.0f))
+                {
+                    Entity new_entity(generateUUID());
+                    new_entity.addComponent(TransformComponent{{block_position.x + 0.25f, block_position.y - 0.25f}, {0.5f, 0.5f}, sf::degrees(0.0f)});
+                    new_entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
+                    new_entity.addComponent(ItemComponent{{blockToItem(world.getBlock(block_position.x, block_position.y).id), 1}});
+                    new_entity.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[new_entity.getComponent<ItemComponent>().item.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
+                    world.setBlock(block_position.x, block_position.y, {BlockID::Air, 0});
+
+                    world.addEntity(std::move(new_entity));
+
+                    player.mining_time = 0.0f;
+                }
+            }            
         }
 
 

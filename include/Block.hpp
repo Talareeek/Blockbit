@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <unordered_map>
 #include <climits>
+#include <optional>
 #include "Item.hpp"
 
 enum class BlockID : uint32_t
@@ -28,6 +29,13 @@ enum class BlockID : uint32_t
     Snow = 17
 };
 
+struct MiningProperties
+{
+    int mining_resistance;
+
+    ToolProperties desired_tool;
+};
+
 struct BlockData
 {
     bool solid;
@@ -39,6 +47,8 @@ struct BlockData
 
     float hardness;
     uint32_t texture;
+
+    std::optional<MiningProperties> mining;
 };
 
 struct Block
@@ -68,7 +78,8 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 1.5f,
-            .texture = 1
+            .texture = 1,
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 1}}
         }
     },
     { BlockID::Grass,
@@ -79,7 +90,8 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 0.6f,
-            .texture = 2
+            .texture = 2,
+            .mining = MiningProperties{.mining_resistance = 2, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}}
         }
     },
     { BlockID::Dirt,
@@ -90,7 +102,8 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 0.5f,
-            .texture = 3
+            .texture = 3,
+            .mining = MiningProperties{.mining_resistance = 2, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}}
         }
     },
     { BlockID::Cobblestone,
@@ -101,7 +114,8 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 2.0f,
-            .texture = 4
+            .texture = 4,
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 1}}
         }
     },
     { BlockID::Obsidian,
@@ -112,7 +126,8 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 50.0f,
-            .texture = 5
+            .texture = 5,
+            .mining = MiningProperties{.mining_resistance = 50, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 5}}
         }
     },
     { BlockID::Bedrock,
@@ -123,7 +138,8 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = -1.0f,
-            .texture = 6
+            .texture = 6,
+            .mining = MiningProperties{.mining_resistance = INT_MAX, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = INT_MAX}}
         }
     },
     { BlockID::Water,
@@ -145,7 +161,8 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 3.0f,
-            .texture = 13
+            .texture = 13,
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 2}}
         }
     },
     { BlockID::Gold_Ore,
@@ -156,7 +173,8 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 3.0f,
-            .texture = 14
+            .texture = 14,
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 4}}
         }
     },
     { BlockID::Diamond_Ore,
@@ -167,7 +185,8 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 5.0f,
-            .texture = 15
+            .texture = 15,
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 4}}
         }
     },
     { BlockID::Oak_Log,
@@ -178,7 +197,8 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 2.0f,
-            .texture = 16
+            .texture = 16,
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}}
         }
     },
     { BlockID::Oak_Leaves,
@@ -189,7 +209,8 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 0.2f,
-            .texture = 17
+            .texture = 17,
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}}
         }
     },
     { BlockID::Woodcutter,
@@ -200,7 +221,8 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 2.0f,
-            .texture = 22
+            .texture = 22,
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}}
         }
     },
     { BlockID::Fire,
@@ -211,7 +233,8 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 0.0f,
-            .texture = 25
+            .texture = 25,
+            .mining = MiningProperties{.mining_resistance = 0, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}}
         }
     },
     { BlockID::Sand,
@@ -222,7 +245,8 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 0.0f,
-            .texture = 26
+            .texture = 26,
+            .mining = MiningProperties{.mining_resistance = 2, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}}
         }
     },
     { BlockID::Coarse_Dirt,
@@ -233,7 +257,8 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 0.0f,
-            .texture = 27
+            .texture = 27,
+            .mining = MiningProperties{.mining_resistance = 2, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}}
         }
     },
     { BlockID::Snow,
@@ -244,7 +269,8 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 0.0f,
-            .texture = 28
+            .texture = 28,
+            .mining = MiningProperties{.mining_resistance = 1, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}}
         }
     }
 };

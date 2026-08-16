@@ -77,24 +77,38 @@ enum class ItemCategory
     Misc
 };
 
-enum class RecyclingCategory
+enum class ToolType
 {
-    None,
-    Wood,
-    Stone,
-    Organic,
-    Ore
+    Pickaxe,
+    Axe,
+    Shovel,
+    None
 };
 
-struct CraftProperties
+inline constexpr float HAND_SPEED = 1.0f;
+inline constexpr float WOOD_SPEED = 2.0f;
+inline constexpr float STONE_SPEED = 4.0f;
+inline constexpr float GOLD_SPEED = 12.0f;
+inline constexpr float IRON_SPEED = 6.0f;
+inline constexpr float DIAMOND_SPEED = 8.0f;
+
+
+inline std::unordered_map<int, float> level_based_speed =
 {
-    uint32_t wood;
-    uint32_t stone;
-    uint32_t iron;
-    uint32_t gold;
-    uint32_t diamond;
+    {0, HAND_SPEED},
+    {1, WOOD_SPEED},
+    {2, STONE_SPEED},
+    {3, GOLD_SPEED},
+    {4, IRON_SPEED},
+    {5, DIAMOND_SPEED}
 };
 
+struct ToolProperties
+{
+    ToolType tool_type;
+
+    int level;
+};
 
 struct ItemData
 {
@@ -102,15 +116,13 @@ struct ItemData
     uint32_t texture;
     uint32_t maxStackSize;
 
-    ItemRarity rarity;
+    ItemRarity rarity = ItemRarity::Common;
 
     ItemCategory category;
 
-    bool recycleable;
+    std::optional<ToolProperties> tool;
 
     std::function<bool(World& world, sf::Vector2f mouse, UUID user)> onUse = [](World&, sf::Vector2f, UUID) -> bool {return false;};    
-
-    std::optional<CraftProperties> craft_properties;
 };
 
 extern std::unordered_map<ItemID, ItemData> itemDatabase;
