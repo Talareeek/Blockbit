@@ -94,6 +94,8 @@ Game::Game()
 
     AssetManager::loadTexture(UINT32_MAX, "resources/textures/nothing.png");
 
+    AssetManager::loadShader(AssetManager::ShaderID::Sun, "resources/shaders/sun.frag");
+
     AssetManager::loadSound(AssetManager::SoundID::Click, "resources/sounds/click.wav");
 
     AssetManager::loadMusic(AssetManager::MusicID::Alpha, "resources/sounds/music/alpha.wav");

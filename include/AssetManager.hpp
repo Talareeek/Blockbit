@@ -62,6 +62,11 @@ public:
         FiraCode
     };
 
+    enum class ShaderID : uint32_t
+    {
+        Sun
+    };
+
     enum class SoundID : uint32_t
     {
         Click
@@ -76,6 +81,7 @@ public:
 
     static std::unordered_map<uint32_t, sf::Texture> textures;
     static std::unordered_map<FontID, sf::Font> fonts;
+    static std::unordered_map<ShaderID, sf::Shader> shaders;
     static std::unordered_map<SoundID, sf::SoundBuffer> sounds;
     static std::unordered_map<MusicID, sf::Music> musics;
 
@@ -83,11 +89,13 @@ public:
 
     static void loadTexture(uint32_t id, const std::string& path);
     static void loadFont(FontID id, const std::string& path);
+    static void loadShader(ShaderID id, const std::string& path);
     static void loadSound(SoundID id, const std::string& path);
     static void loadMusic(MusicID id, const std::string& path);
 
     static sf::Texture& getTexture(uint32_t id);
     static sf::Font& getFont(FontID id);
+    static sf::Shader& getShader(ShaderID id);
     static sf::SoundBuffer& getSound(SoundID id);
     static sf::Music& getMusic(MusicID id);
 };

@@ -2,6 +2,7 @@
 
 std::unordered_map<uint32_t, sf::Texture> AssetManager::textures;
 std::unordered_map<AssetManager::FontID, sf::Font> AssetManager::fonts;
+std::unordered_map<AssetManager::ShaderID, sf::Shader> AssetManager::shaders;
 std::unordered_map<AssetManager::SoundID, sf::SoundBuffer> AssetManager::sounds;
 std::unordered_map<AssetManager::MusicID, sf::Music> AssetManager::musics;
 
@@ -19,6 +20,14 @@ void AssetManager::loadFont(AssetManager::FontID id, const std::string& path)
     if(!font.openFromFile(path)) throw std::runtime_error(std::string("AssetManager:\n") + "Failed to load font: " + path);
 
     fonts[id] = std::move(font);
+}
+
+void AssetManager::loadShader(AssetManager::ShaderID id, const std::string& path)
+{
+    sf::Shader shader;
+    if(!shader.loadFromFile(path, sf::Shader::Type::Fragment)) throw std::runtime_error(std::string("AssetManager:\n") + "Failed to load shader: " + path);
+
+    shaders[id] = std::move(shader);
 }
 
 void AssetManager::loadSound(AssetManager::SoundID id, const std::string& path)
@@ -47,6 +56,12 @@ sf::Font& AssetManager::getFont(AssetManager::FontID id)
 {
     if(fonts.find(id) == fonts.end()) throw std::runtime_error(std::string("AssetManager:\n") + "Font not found: " + std::to_string(static_cast<uint32_t>(id)));
     return fonts.at(id);
+}
+
+sf::Shader& AssetManager::getShader(AssetManager::ShaderID id)
+{
+    if(shaders.find(id) == shaders.end()) throw std::runtime_error(std::string("AssetManager:\n") + "Shader not found: " + std::to_string(static_cast<uint32_t>(id)));
+    return shaders.at(id);
 }
 
 sf::SoundBuffer& AssetManager::getSound(AssetManager::SoundID id)

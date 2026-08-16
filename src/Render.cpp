@@ -173,6 +173,8 @@ void renderSky(sf::RenderWindow& window, sf::Color top, sf::Color bottom)
 
 void renderSunAndMoon(float daytime, sf::RenderWindow& window)
 {
+    sf::Shader& shader = AssetManager::getShader(AssetManager::ShaderID::Sun);
+
     float passed = daytime / World::DAY_CYCLE_DURATION;
 
     float sun_angle  = passed * 2.0f * static_cast<float>(std::numbers::pi);
@@ -189,11 +191,22 @@ void renderSunAndMoon(float daytime, sf::RenderWindow& window)
         float bx = -std::sin(angle) * radius + W * 0.5f;
         float by =  std::cos(angle) * radius + H;
 
-        sf::RectangleShape body({bodySize, bodySize});
+        float glow = 10.f;
+        float quadSize = bodySize + glow * 2.0f;
+
+        sf::RectangleShape body({quadSize, quadSize});
         body.setFillColor(core);
-        body.setOrigin({bodySize * 0.5f, bodySize * 0.5f});
+        body.setOrigin({quadSize * 0.5f, quadSize * 0.5f});
         body.setPosition({bx, by});
-        window.draw(body);
+
+        shader.setUniform("resolution", sf::Glsl::Vec2(W, H));
+        shader.setUniform("sunCenter", sf::Glsl::Vec2(bx, H - by));
+        shader.setUniform("sunSize", bodySize * 0.5f);
+        shader.setUniform("sunColor", sf::Glsl::Vec4(
+            core.r / 255.f, core.g / 255.f, core.b / 255.f, core.a / 255.f));
+        shader.setUniform("glowSize", glow);
+
+        window.draw(body, &shader);
     };
 
     sf::View previous = window.getView();
