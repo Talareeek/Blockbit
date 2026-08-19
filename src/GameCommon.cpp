@@ -43,3 +43,8 @@ bool isBlockInRange(TransformComponent& player, sf::Vector2i& block, float range
 
     return distance <= range;
 }
+
+float getTickStep(uint16_t tick_rate)
+{
+    return 1.0f / static_cast<float>(tick_rate);
+}

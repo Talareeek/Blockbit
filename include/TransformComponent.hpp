@@ -18,6 +18,8 @@ struct TransformComponent : public Component
 
     sf::Vector2<double> previous_position;
 
+    sf::Vector2<double> render_position;
+
     void teleport(const sf::Vector2<double>& position);
     void move(const sf::Vector2<double>& offset);
 
@@ -28,12 +30,16 @@ struct TransformComponent : public Component
         this->position = position;
         this->size = size;
         this->rotation = rotation;
+
+        render_position = position;
     }
 
     TransformComponent(const sf::Vector2<double> center, const sf::Vector2<double> size)
     {
         position = center - size / 2.0;
         this->size = size;
+
+        render_position = position;
     }
 
     sf::Vector2<double> center() const

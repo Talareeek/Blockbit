@@ -23,6 +23,7 @@
 #include "../include/AnnouncementState.hpp"
 #include "../include/World.hpp"
 #include "../include/Climate.hpp"
+#include "../include/NetworkInterpolationComponent.hpp"
 
 #include <iostream>
 #include <algorithm>
@@ -179,42 +180,87 @@ void ClientGameState::tryInitializePlayerUI()
     player_ui_initialized = true;
 }
 
-void ClientGameState::rebuildEntitiesFromSnapshot(const SnapshotPacket& snapshot)
+void ClientGameState::applySnapshot(const SnapshotPacket& snapshot)
 {
-    auto& entities = local_world.getEntities();
+    latest_tick = snapshot.tick;
 
-    entities.clear();
-    entities.reserve(snapshot.entities.size());
+    std::unordered_set<UUID> present_ids;
+    present_ids.reserve(snapshot.entities.size());
 
-    for (const auto& net_entity : snapshot.entities)
+    for (const NetEntity& net_entity : snapshot.entities)
     {
-        Entity entity(net_entity.id);
+        present_ids.insert(net_entity.id);
 
-        entity.addComponent(TransformComponent{{net_entity.x, net_entity.y}, {net_entity.size_x, net_entity.size_y}, sf::degrees(0.0f)});
-        entity.addComponent(RenderComponent{static_cast<uint16_t>(net_entity.textureID), sf::IntRect{{net_entity.uv_x, net_entity.uv_y}, {net_entity.uv_size_x, net_entity.uv_size_y}}, {net_entity.size_x, net_entity.size_y}});
-        entity.addComponent(HealthComponent{net_entity.health, net_entity.maxHealth, false});
+        bool is_new = !local_world.doesEntityExist(net_entity.id);
 
-        if(!net_entity.inventory.empty())
+        if (is_new)
         {
-            InventoryComponent inventory_component(net_entity.inventory.size());
+            Entity entity(net_entity.id);
 
-            for(size_t i = 0; i < net_entity.inventory.size(); i++)
+            entity.addComponent(TransformComponent{{net_entity.x, net_entity.y}, {net_entity.size_x, net_entity.size_y}, sf::degrees(0.0f)});
+            entity.addComponent(RenderComponent{static_cast<uint16_t>(net_entity.textureID), sf::IntRect{{net_entity.uv_x, net_entity.uv_y}, {net_entity.uv_size_x, net_entity.uv_size_y}}, {net_entity.size_x, net_entity.size_y}});
+            entity.addComponent(HealthComponent{net_entity.health, net_entity.maxHealth, false});
+
+            if (!net_entity.inventory.empty())
             {
-                inventory_component.inventory.slots[i].itemID = static_cast<ItemID>(net_entity.inventory[i].itemID);
-                inventory_component.inventory.slots[i].quantity = net_entity.inventory[i].quantity;
-            }
-            inventory_component.selectedSlot = net_entity.selectedSlot;
+                InventoryComponent inventory_component(net_entity.inventory.size());
 
-            entity.addComponent(std::move(inventory_component));
+                for (size_t i = 0; i < net_entity.inventory.size(); i++)
+                {
+                    inventory_component.inventory.slots[i].itemID = static_cast<ItemID>(net_entity.inventory[i].itemID);
+                    inventory_component.inventory.slots[i].quantity = net_entity.inventory[i].quantity;
+                }
+                inventory_component.selectedSlot = net_entity.selectedSlot;
+
+                entity.addComponent(std::move(inventory_component));
+            }
+
+            local_world.addEntity(std::move(entity));
+
+            if (net_entity.id == local_player_entity_id.value())
+            {
+                player_ui_initialized = false;
+            }
+
+            continue;
         }
 
-        local_world.addEntity(std::move(entity));
+        auto& entity = local_world.getEntity(net_entity.id);
+
+        entity.getComponent<TransformComponent>().teleport({net_entity.x, net_entity.y});
+
+        auto& health = entity.getComponent<HealthComponent>();
+        health.health = net_entity.health;
+        health.maxHealth = net_entity.maxHealth;
+
+        if (entity.hasComponent<InventoryComponent>() && !net_entity.inventory.empty())
+        {
+            auto& inventory = entity.getComponent<InventoryComponent>();
+
+            for (size_t i = 0; i < net_entity.inventory.size() && i < inventory.inventory.slots.size(); i++)
+            {
+                inventory.inventory.slots[i].itemID = static_cast<ItemID>(net_entity.inventory[i].itemID);
+                inventory.inventory.slots[i].quantity = net_entity.inventory[i].quantity;
+            }
+            inventory.selectedSlot = net_entity.selectedSlot;
+        }
+
+        if (net_entity.id != local_player_entity_id.value())
+        {
+            if (!entity.hasComponent<NetworkInterpolationComponent>()) entity.addComponent<NetworkInterpolationComponent>(NetworkInterpolationComponent{});
+
+            entity.getComponent<NetworkInterpolationComponent>().pushSample(snapshot.tick, {net_entity.x, net_entity.y}, sf::Angle{});
+        }
     }
 
-    local_world.dayTime = snapshot.dayTime;
+    std::vector<UUID> to_remove;
+    for (auto& [id, entity] : local_world.getEntities())
+    {
+        if (!present_ids.contains(id)) to_remove.push_back(id);
+    }
+    for (UUID id : to_remove) local_world.removeEntity(id);
 
-    player_ui_initialized = false;
-    tryInitializePlayerUI();
+    local_world.dayTime = snapshot.dayTime;
 }
 
 void ClientGameState::processIncoming()
@@ -235,7 +281,15 @@ void ClientGameState::processIncoming()
             {
                 case PacketType::Initialization:
                 {
-                    auto initialization = deserializeInitialization(reader);
+                    auto init = deserializeInitialization(reader);
+
+                    tick_rate = init.tick_rate;
+
+                    break;
+                }
+                case PacketType::Chunk:
+                {
+                    auto initialization = deserializeChunk(reader);
 
                     auto& chunk = local_world.getChunks()[initialization.chunk.chunk_position];
                     chunk = initialization.chunk;
@@ -249,7 +303,7 @@ void ClientGameState::processIncoming()
                 case PacketType::Snapshot:
                 {
                     auto snapshot = deserializeSnapshot(reader);
-                    rebuildEntitiesFromSnapshot(snapshot);
+                    applySnapshot(snapshot);
 
                     break;
                 }
@@ -570,6 +624,8 @@ void ClientGameState::update(float dt)
 
     AnimationSystem(local_world, dt);
 
+    NetworkInterpolationSystem(local_world, latest_tick, getTickStep(tick_rate));
+
     game->getConsole().assignWorld(local_server.has_value() ? &local_server->getWorld() : &local_world);
 
     if(acceptsPlayerInput() && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
@@ -647,6 +703,8 @@ void ClientGameState::render(sf::RenderWindow& window)
     // SKY
     auto [sky_top, sky_bottom] = getSkyGradient(local_world.getDayTime() / World::DAY_CYCLE_DURATION);
     renderSky(window, sky_top, sky_bottom);
+
+    renderStars(local_world.getDayTime(), window);
 
     // SUN AND MOON
     renderSunAndMoon(local_world.getDayTime(), window);

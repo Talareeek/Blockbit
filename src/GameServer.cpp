@@ -43,7 +43,7 @@ GameServer::GameServer(std::string name, unsigned int seed, GenerationProperties
 
 }*/
 
-void GameServer::sendInitializationTo(uint32_t client_id, int around_chunk_position)
+void GameServer::sendChunkTo(uint32_t client_id, int around_chunk_position)
 {
     constexpr int chunk_count = World::SIMULATION_DISTANCE + 1;
     int start = around_chunk_position - chunk_count / 2;
@@ -55,7 +55,7 @@ void GameServer::sendInitializationTo(uint32_t client_id, int around_chunk_posit
         int chunk_position = start + i;
         world.loadOrCreateChunk(chunk_position);
 
-        InitializationPacket initialization;
+        ChunkPacket initialization;
         initialization.chunk = world.getChunk(chunk_position);
         transport->send(client_id, serializePacket(initialization));
         sent.insert(chunk_position);
@@ -87,7 +87,7 @@ void GameServer::streamChunksToClients()
                 auto iterator = chunks.find(chunk_position);
                 if (iterator == chunks.end() || !iterator->second.generated) continue;
 
-                InitializationPacket initialization;
+                ChunkPacket initialization;
                 initialization.chunk = iterator->second;
                 transport->send(client_id, serializePacket(initialization));
                 sent.insert(chunk_position);
@@ -106,6 +106,7 @@ void GameServer::syncConnections()
         if (!known_clients.contains(client_id))
         {
             known_clients.insert(client_id);
+            transport->send(client_id, serializePacket(InitializationPacket{tick_rate}));
             std::cout << "[Server] Client " << client_id << " connected, waiting for Login\n";
         }
     }
@@ -247,6 +248,9 @@ void GameServer::broadcastSnapshot()
     if (ids.empty()) return;
 
     SnapshotPacket snapshot;
+
+    snapshot.tick = tick;
+
     snapshot.dayTime = world.getDayTime();
     snapshot.days = 0;
 
@@ -346,6 +350,8 @@ void GameServer::update(float dt)
 
         world.tick(dt);
 
+        tick++;
+
         updatePlayerEntityConnections();
 
         streamChunksToClients();
@@ -356,12 +362,10 @@ void GameServer::update(float dt)
     {
         std::cerr << "[Server] bad_alloc in tick\n";
     }
-    /*
     catch (const std::exception& exception)
     {
         std::cerr << "[Server] exception in tick: " << exception.what() << '\n';
     }
-    */    
 }
 
 void GameServer::spawnPlayerFor(std::string nickname)
@@ -426,4 +430,15 @@ GameServer::~GameServer()
 bool isNicknameAllowed(std::string nickname)
 {
     return nickname.length() >= 4 && nickname.length() <= 15 && nickname.find(" ") == std::string::npos;
+}
+
+
+uint16_t GameServer::getTickRate() const
+{
+    return tick_rate;
+}
+
+float GameServer::getTickStep() const
+{
+    return 1.0f / static_cast<float>(tick_rate);
 }

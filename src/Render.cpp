@@ -5,6 +5,7 @@
 #include "../include/TransformComponent.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/BlockAtlas.hpp"
+#include "../include/NetworkInterpolationComponent.hpp"
 
 #include <random>
 #include <numbers>
@@ -674,4 +675,136 @@ sf::Vector2<double> getMouseWorldPosition(sf::Vector2<double> camera, const sf::
     sf::Vector2f mouseWorld = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
     return camera + sf::Vector2<double>{(mouseWorld.x / unit_size), (mouseWorld.y / unit_size)};
+}
+
+
+struct Star
+{
+    sf::Vector2f position;
+    float size;
+    float brightness;
+    float twinkleSpeed;
+    float twinklePhase;
+};
+
+void renderStars(float daytime, sf::RenderWindow& window)
+{
+    static std::vector<Star> stars;
+
+    const float W = static_cast<float>(window.getSize().x);
+    const float H = static_cast<float>(window.getSize().y);
+
+    if (stars.empty())
+    {
+        std::mt19937 rng(12345);
+        std::uniform_real_distribution<float> distX(0.0f, W);
+        std::uniform_real_distribution<float> distY(00.f, H/* * 0.75f*/);
+        std::uniform_int_distribution<int> distSize(2, 4);
+        std::uniform_real_distribution<float> distBright(0.4f, 1.0f);
+        std::uniform_real_distribution<float> distSpeed(0.5f, 2.0f);
+        std::uniform_real_distribution<float> distPhase(0.0f, 6.2831853f);
+
+        constexpr int STAR_COUNT = 250;
+
+        stars.reserve(STAR_COUNT);
+
+        for (int i = 0; i < STAR_COUNT; ++i)
+        {
+            stars.push_back({{std::floor(distX(rng)), std::floor(distY(rng))}, static_cast<float>(distSize(rng)), distBright(rng), distSpeed(rng), distPhase(rng)});
+        }
+    }
+
+    float passed  = daytime / World::DAY_CYCLE_DURATION;
+    float sun_angle = passed * 2.0f * static_cast<float>(std::numbers::pi);
+    float sunHeight = -std::cos(sun_angle);
+
+    float nightFactor = std::clamp(-sunHeight * 1.6f, 0.f, 1.f);
+
+    if (nightFactor <= 0.001f) return;
+
+    sf::VertexArray quads(sf::PrimitiveType::Triangles, stars.size() * 6);
+    std::size_t vi = 0;
+
+    for (const Star& s : stars)
+    {
+        float twinkle = 0.75f + 0.25f * std::sin(daytime * s.twinkleSpeed + s.twinklePhase);
+        auto alpha = static_cast<std::uint8_t>(255.f * s.brightness * twinkle * nightFactor);
+        sf::Color c(255, 255, 255, alpha);
+
+        float x0 = s.position.x;
+        float y0 = s.position.y;
+        float x1 = x0 + s.size;
+        float y1 = y0 + s.size;
+
+        quads[vi+0] = {{x0, y0}, c};
+        quads[vi+1] = {{x1, y0}, c};
+        quads[vi+2] = {{x1, y1}, c};
+        quads[vi+3] = {{x0, y0}, c};
+        quads[vi+4] = {{x1, y1}, c};
+        quads[vi+5] = {{x0, y1}, c};
+
+        vi += 6;
+    }
+
+    sf::View previous = window.getView();
+    window.setView(sf::View(sf::FloatRect({0.f, 0.f}, {W, H})));
+
+    sf::RenderStates states;
+    states.blendMode = sf::BlendAdd;
+    window.draw(quads, states);
+
+    window.setView(previous);
+}
+
+void NetworkInterpolationSystem(World& world, uint64_t latest_tick, float tick_step, float interpolation_delay_seconds)
+{
+    double render_tick = static_cast<double>(latest_tick) - (interpolation_delay_seconds / tick_step);
+
+    for (auto& [id, entity] : world.getEntities())
+    {
+        if (!entity.hasComponent<NetworkInterpolationComponent>() || !entity.hasComponent<TransformComponent>()) continue;
+
+        auto& history = entity.getComponent<NetworkInterpolationComponent>().history;
+        auto& transform = entity.getComponent<TransformComponent>();
+
+        if (history.empty()) continue;
+
+        if (history.size() == 1)
+        {
+            transform.render_position = history.front().position;
+            continue;
+        }
+
+        if (render_tick <= static_cast<double>(history.front().tick))
+        {
+            transform.render_position = history.front().position;
+            continue;
+        }
+
+        if (render_tick >= static_cast<double>(history.back().tick))
+        {
+            transform.render_position = history.back().position;
+            continue;
+        }
+
+        const NetworkInterpolationComponent::Sample* before = &history.front();
+        const NetworkInterpolationComponent::Sample* after  = &history.back();
+
+        for (std::size_t i = 0; i + 1 < history.size(); ++i)
+        {
+            if (static_cast<double>(history[i].tick) <= render_tick && render_tick <= static_cast<double>(history[i + 1].tick))
+            {
+                before = &history[i];
+                after  = &history[i + 1];
+                break;
+            }
+        }
+
+        double span  = static_cast<double>(after->tick) - static_cast<double>(before->tick);
+        double alpha = span > 0.0
+            ? std::clamp((render_tick - static_cast<double>(before->tick)) / span, 0.0, 1.0)
+            : 1.0;
+
+        transform.render_position = before->position + (after->position - before->position) * alpha;
+    }
 }

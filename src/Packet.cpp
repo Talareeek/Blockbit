@@ -208,8 +208,15 @@ Chunk PacketReader::readChunk()
 std::vector<char> serializePacket(const InitializationPacket& p)
 {
     PacketWriter w(PacketType::Initialization);
-    w.writeChunk(p.chunk);
+    w.write<uint16_t>(p.tick_rate);
     return w.release();
+}
+
+std::vector<char> serializePacket(const ChunkPacket& p)
+{
+    PacketWriter writer(PacketType::Chunk);
+    writer.writeChunk(p.chunk);
+    return writer.release();
 }
 
 std::vector<char> serializePacket(const BlockUpdatePacket& p)
@@ -252,6 +259,8 @@ std::vector<char> serializePacket(const SnapshotPacket& p)
         }
         w.write(e.selectedSlot);
     }
+
+    w.write(p.tick);
 
     w.write(p.dayTime);
     w.write(p.days);
@@ -394,6 +403,17 @@ std::vector<char> serializePacket(const RespawnPacket& p)
     return writer.release();
 }
 
+std::vector<char> serializePacket(const ClientSnapshotPacket& p)
+{
+    PacketWriter writer(PacketType::ClientSnapshot);
+
+    writer.write(p.cursor_x);
+    writer.write(p.cursor_y);
+
+    return writer.release();
+}
+
+
 // ----- deserialize -----
 // The type byte is consumed by the network layer before these are called,
 // so the reader points directly at the payload.
@@ -401,6 +421,13 @@ std::vector<char> serializePacket(const RespawnPacket& p)
 InitializationPacket deserializeInitialization(PacketReader& r)
 {
     InitializationPacket p;
+    p.tick_rate = r.read<uint16_t>();
+    return p;
+}
+
+ChunkPacket deserializeChunk(PacketReader& r)
+{
+    ChunkPacket p;
     p.chunk = r.readChunk();
     return p;
 }
@@ -450,6 +477,8 @@ SnapshotPacket deserializeSnapshot(PacketReader& r)
 
         p.entities.push_back(std::move(e));
     }
+
+    p.tick = r.read<uint64_t>();
 
     p.dayTime = r.read<float>();
     p.days    = r.read<uint64_t>();
@@ -524,16 +553,6 @@ ChatMessagePacket deserializeChatMessage(PacketReader& r)
 RespawnPacket deserializeRespawn(PacketReader& r)
 {
     return RespawnPacket();
-}
-
-std::vector<char> serializePacket(const ClientSnapshotPacket& p)
-{
-    PacketWriter writer(PacketType::ClientSnapshot);
-
-    writer.write(p.cursor_x);
-    writer.write(p.cursor_y);
-
-    return writer.release();
 }
 
 ClientSnapshotPacket deserializeClientSnapshot(PacketReader& r)

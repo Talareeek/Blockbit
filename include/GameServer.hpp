@@ -45,7 +45,7 @@ private:
     void spawnPlayerFor(std::string nickname);
     void deactivatePlayerFor(std::string nickname);
 
-    void sendInitializationTo(uint32_t client_id, int around_chunk_position);
+    void sendChunkTo(uint32_t client_id, int around_chunk_position);
     void streamChunksToClients();
 
     void syncConnections();
@@ -54,6 +54,10 @@ private:
     void broadcastSnapshot();
 
     void updatePlayerEntityConnections();
+
+    uint16_t tick_rate = 60;
+
+    uint64_t tick = 0;
 
 public:
 
@@ -73,6 +77,11 @@ public:
     static constexpr uint16_t DEFAULT_PORT = 34500;
 
     ~GameServer();
+
+
+    uint16_t getTickRate() const;
+
+    float getTickStep() const;
 };
 
 extern bool isNicknameAllowed(std::string nickname);

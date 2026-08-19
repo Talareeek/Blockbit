@@ -20,6 +20,7 @@ enum class PacketType : uint8_t
     StatusResponse,
 
     Initialization,
+    Chunk,
     BlockUpdate,
     Snapshot,
     Spawn,
@@ -33,6 +34,11 @@ enum class PacketType : uint8_t
 };
 
 struct InitializationPacket
+{
+    uint16_t tick_rate;
+};
+
+struct ChunkPacket
 {
     Chunk chunk;
 };
@@ -76,6 +82,8 @@ struct NetEntity
 
 struct SnapshotPacket
 {
+    uint64_t tick;
+
     std::vector<NetEntity> entities;
 
     float dayTime;
@@ -196,6 +204,7 @@ public:
 };
 
 std::vector<char> serializePacket(const InitializationPacket& p);
+std::vector<char> serializePacket(const ChunkPacket& p);
 std::vector<char> serializePacket(const BlockUpdatePacket& p);
 std::vector<char> serializePacket(const SnapshotPacket& p);
 std::vector<char> serializePacket(const SpawnPacket& p);
@@ -209,6 +218,7 @@ std::vector<char> serializePacket(const RespawnPacket& p);
 std::vector<char> serializePacket(const ClientSnapshotPacket& p);
 
 InitializationPacket deserializeInitialization(PacketReader& r);
+ChunkPacket deserializeChunk(PacketReader& r);
 BlockUpdatePacket    deserializeBlockUpdate(PacketReader& r);
 SnapshotPacket       deserializeSnapshot(PacketReader& r);
 SpawnPacket          deserializeSpawn(PacketReader& r);

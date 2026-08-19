@@ -26,7 +26,12 @@ private:
     World local_world;
 
     std::unique_ptr<ClientTransport> transport;
+
     std::optional<GameServer> local_server;
+
+    uint16_t tick_rate;
+
+    uint64_t latest_tick;
 
     std::optional<UUID> local_player_entity_id;
     UUID my_entity_id;
@@ -75,7 +80,7 @@ private:
 
     void processIncoming();
     void sendTickInputs();
-    void rebuildEntitiesFromSnapshot(const SnapshotPacket& snapshot);
+    void applySnapshot(const SnapshotPacket& snapshot);
     void saveScreenshot(sf::RenderWindow& window);
 
     void onTick(float tick_step);

@@ -46,9 +46,9 @@ void RenderEntities(World& world, const sf::Vector2<double> camera, sf::RenderWi
 
         auto& transform = entity.getComponent<TransformComponent>();
 
-        sf::Vector2f render_position = {static_cast<float>(transform.position.x - camera.x), static_cast<float>(transform.position.y - camera.y)};
+        sf::Vector2f screen_position = {static_cast<float>(transform.render_position.x - camera.x), static_cast<float>(transform.render_position.y - camera.y)};
 
-        sprite.setPosition({static_cast<float>(render_position.x * unit_size), static_cast<float>(render_position.y * unit_size)});
+        sprite.setPosition({static_cast<float>(screen_position.x * unit_size), static_cast<float>(screen_position.y * unit_size)});
         window.draw(sprite);
     }
 }
