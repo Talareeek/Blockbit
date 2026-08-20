@@ -370,37 +370,46 @@ void GameServer::update(float dt)
 
 void GameServer::spawnPlayerFor(std::string nickname)
 {
-    Entity entity(generateUUID());
+    if(world.playerFileExist(nickname))
+    {
+        nickname_to_entity[nickname] = world.loadPlayer(nickname);
+    }
+    else
+    {
+        Entity entity(generateUUID());
 
-    entity.addComponent(TransformComponent{{0.0f, 0.0f}, {1.0f, 1.0f}, sf::degrees(0.0f)});
-    entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
+        entity.addComponent(TransformComponent{{0.0f, 0.0f}, {1.0f, 1.0f}, sf::degrees(0.0f)});
+        entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
 
-    InventoryComponent inv(36);
-    inv.inventory.slots[0] = {ItemID::Dynamite, 16};
-    inv.inventory.slots[1] = {ItemID::Bucket, 1};
-    inv.inventory.slots[2] = {ItemID::Woodcutter, 64};
-    inv.inventory.slots[3] = {ItemID::Lighter, 1};
-    inv.inventory.slots[4] = {ItemID::Diamond_Pickaxe, 1};
-    inv.inventory.slots[5] = {ItemID::Diamond_Axe, 1};
-    inv.inventory.slots[6] = {ItemID::Diamond_Shovel, 1};
-    entity.addComponent(std::move(inv));
+        InventoryComponent inv(36);
+        inv.inventory.slots[0] = {ItemID::Dynamite, 16};
+        inv.inventory.slots[1] = {ItemID::Bucket, 1};
+        inv.inventory.slots[2] = {ItemID::Woodcutter, 64};
+        inv.inventory.slots[3] = {ItemID::Lighter, 1};
+        inv.inventory.slots[4] = {ItemID::Diamond_Pickaxe, 1};
+        inv.inventory.slots[5] = {ItemID::Diamond_Axe, 1};
+        inv.inventory.slots[6] = {ItemID::Diamond_Shovel, 1};
+        entity.addComponent(std::move(inv));
 
-    entity.getComponent<TransformComponent>().position = world.getSpawnPoint();
+        entity.getComponent<TransformComponent>().position = world.getSpawnPoint();
 
-    entity.addComponent(RenderComponent{0, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
-    entity.addComponent(HealthComponent{100, 100, false});
-    entity.addComponent(PlayerControlledComponent{nickname});
+        entity.addComponent(RenderComponent{0, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
+        entity.addComponent(HealthComponent{100, 100, false});
+        entity.addComponent(PlayerControlledComponent{nickname});
 
-    nickname_to_entity[nickname] = entity.getID();
+        nickname_to_entity[nickname] = entity.getID();
 
-    world.addEntity(std::move(entity));
+        world.addEntity(std::move(entity));
+    }
 }
 
 void GameServer::deactivatePlayerFor(std::string nickname)
 {
     if(!nickname_to_entity.contains(nickname)) return;
 
-    world.getEntity(nickname_to_entity[nickname]).getComponent<PlayerControlledComponent>().active = false;
+    world.savePlayer(nickname_to_entity[nickname]);
+
+    world.removeEntity(nickname_to_entity[nickname]);
 
     nickname_to_entity.erase(nickname);
 }
@@ -416,6 +425,24 @@ void GameServer::updatePlayerEntityConnections()
 GameServer::~GameServer()
 {
     transport->stop();
+
+    std::vector<std::string> connected_nicknames;
+    connected_nicknames.reserve(nickname_to_entity.size());
+
+    for (auto& [nickname, entity_id] : nickname_to_entity)
+        connected_nicknames.push_back(nickname);
+
+    for (auto& nickname : connected_nicknames)
+    {
+        try
+        {
+            deactivatePlayerFor(nickname);
+        }
+        catch (const std::exception& exception)
+        {
+            std::cerr << "[Server] Failed to save player " << nickname << " on shutdown: " << exception.what() << '\n';
+        }
+    }
 
     if (save_on_destruct)
     {

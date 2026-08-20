@@ -1087,3 +1087,65 @@ void World::loadChunkEntities(int chunk_position)
         addEntity(std::move(entity));
     }
 }
+
+void World::savePlayer(UUID entity_id)
+{
+    Entity& entity = getEntity(entity_id);
+
+    if(!entity.hasComponent<PlayerControlledComponent>()) return;
+
+
+    auto& player = entity.getComponent<PlayerControlledComponent>();
+
+
+
+    BBT root(player.nickname);
+
+    root.root() = entities.at(entity_id).serialize().get<TagCompound>();
+
+
+    std::ofstream stream(path / (player.nickname), std::ios::binary);
+
+    std::vector<uint8_t> buffer = root.save();
+
+    stream.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+
+    stream.close();
+}
+
+
+UUID World::loadPlayer(std::string nickname)
+{
+    std::filesystem::path player_path = path / nickname;
+
+    std::ifstream stream(player_path, std::ios::ate | std::ios::binary);
+
+    if(!stream) throw std::runtime_error("Failed to open player file");
+
+    std::streamsize size = stream.tellg();
+    stream.seekg(0, std::ios::beg);
+
+    std::vector<uint8_t> buffer(static_cast<size_t>(size));
+
+    stream.read(reinterpret_cast<char*>(buffer.data()), size);
+
+    stream.close();
+
+
+    BBT root = BBT::load(buffer);
+
+    Entity entity(generateUUID());
+
+    Tag tag = Tag(root.root());
+
+    entity.deserialize(tag);
+
+    addEntity(std::move(entity));
+
+    return entity.getID();
+}
+
+bool World::playerFileExist(std::string nickname) const
+{
+    return std::filesystem::exists(path / (nickname));
+}

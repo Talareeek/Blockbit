@@ -130,13 +130,16 @@ public:
     void saveChunk(int chunk_position);
     void saveChunkEnvironment(int chunk_position);
     void saveChunkEntities(int chunk_position);
+    void savePlayer(UUID entity_id);
 
     void loadChunk(int chunk_position);   
     void loadChunkEnvironment(int chunk_position); 
     void loadChunkEntities(int chunk_position);
+    UUID loadPlayer(std::string nickname);
     
 
     bool hasChunkFile(int chunk_position) const;
+    bool playerFileExist(std::string nickname) const;
 
     std::pair<double, double> getSimulationRangeForEntity(const UUID entity);
 
