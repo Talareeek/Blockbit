@@ -18,7 +18,6 @@
 
 std::unordered_map<std::wstring, Command> commandDatabase =
 {
-    /*
     {L"echo", {false, false, 
         [](std::wstring command, Console& console, Game* game, World* world)
         {
@@ -40,27 +39,34 @@ std::unordered_map<std::wstring, Command> commandDatabase =
         }
     }},
 
-    {L"entities", {false, true,
+    {L"lh_entities", {false, true,
         [](std::wstring command, Console& console, Game* game, World* world)
         {
             console.writeLine(L"Entities:");
 
-            for(auto& entity : world->getEntities())
+            for(auto& [uuid, entity] : world->getEntities())
             {
-                console.writeLine(L"   " + std::to_wstring(entity.getID()));
+                std::string uuid_string = uuid.toString();
+                std::wstring uuid_wstring(uuid_string.begin(), uuid_string.end());
+
+                console.writeLine(L"   " + uuid_wstring);
             }
 
             console.writeLine(L"Players:");
-            for(uint32_t id : world->getPlayerEntityIDs())
+            for(UUID uuid : world->getPlayerEntityIDs())
             {
-                auto& e = entityWithID(id, *world);
+                auto& e = world->getEntity(uuid);
+
+                std::string uuid_string = uuid.toString();
+                std::wstring uuid_wstring(uuid_string.begin(), uuid_string.end());
+
                 std::string nickname = e.getComponent<PlayerControlledComponent>().nickname;
-                console.writeLine(L"   entity " + std::to_wstring(id) + L" (player " + std::wstring(nickname.begin(), nickname.end()) + L")");
+                console.writeLine(L"   entity " + uuid_wstring + L" (player " + std::wstring(nickname.begin(), nickname.end()) + L")");
             }
         }
     }},
 
-    {L"tp", {false, true,
+    {L"lh_tp", {false, true,
         [](std::wstring command, Console& console, Game* game, World* world)
         {
             std::wistringstream stream(command);
@@ -68,8 +74,12 @@ std::unordered_map<std::wstring, Command> commandDatabase =
             std::wstring trash;
             stream >> trash;
 
-            uint32_t id;
-            stream >> id;
+            std::wstring uuid_wstring;
+            stream >> uuid_wstring;
+
+            std::string uuid_string(uuid_wstring.begin(), uuid_wstring.end());
+
+            UUID uuid = (uuidFromString(uuid_string).has_value()) ? uuidFromString(uuid_string).value() : throw CommandException("Non valid UUID");
 
             float x;
             stream >> x;
@@ -79,14 +89,14 @@ std::unordered_map<std::wstring, Command> commandDatabase =
 
             if(!stream) return;
 
-            if(entityWithID(id, *world).hasComponent<TransformComponent>())
+            if(world->getEntity(uuid).hasComponent<TransformComponent>())
             {
-                entityWithID(id, *world).getComponent<TransformComponent>().position = {x, y};
+                world->getEntity(uuid).getComponent<TransformComponent>().position = {x, y};
             }
         }
     }},
 
-    {L"add-velocity", {false, true,
+    {L"lh_add-velocity", {false, true,
         [](std::wstring command, Console& console, Game* game, World* world)
         {
             std::wistringstream stream(command);
@@ -94,8 +104,12 @@ std::unordered_map<std::wstring, Command> commandDatabase =
             std::wstring trash;
             stream >> trash;
 
-            uint32_t id;
-            stream >> id;
+            std::wstring uuid_wstring;
+            stream >> uuid_wstring;
+
+            std::string uuid_string(uuid_wstring.begin(), uuid_wstring.end());
+
+            UUID uuid = (uuidFromString(uuid_string).has_value()) ? uuidFromString(uuid_string).value() : throw CommandException("Non valid UUID");
 
             float x;
             stream >> x;
@@ -105,9 +119,9 @@ std::unordered_map<std::wstring, Command> commandDatabase =
 
             if(!stream) return;
 
-            if(entityWithID(id, *world).hasComponent<TransformComponent>())
+            if(world->getEntity(uuid).hasComponent<TransformComponent>())
             {
-                entityWithID(id, *world).getComponent<PhysicsComponent>().velocity += {x, y};
+                world->getEntity(uuid).getComponent<PhysicsComponent>().velocity += {x, y};
             }
         }
     }},
@@ -132,7 +146,7 @@ std::unordered_map<std::wstring, Command> commandDatabase =
         }
     }},
 
-    {L"spawn-ai", {false, true,
+    {L"lh_spawn-ai", {false, true,
         [](std::wstring command, Console& console, Game* game, World* world)
         {
             std::wistringstream stream(command);
@@ -152,20 +166,17 @@ std::unordered_map<std::wstring, Command> commandDatabase =
                 return;
             }
 
-            uint32_t id = world->getPossibleID();
-            world->getEntities().emplace_back(id);
+            Entity entity(generateUUID());
 
-            Entity& e = entityWithID(id, *world);
-
-            e.addComponent(TransformComponent{{x, y}, {1.0f, 0.75f}, sf::degrees(0.0f)});
-            e.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
-            e.addComponent(RenderComponent{21, {{0, 0}, {16, 12}}, {1.0f, 0.75f}});
-            e.addComponent(HealthComponent{100, 100});
+            entity.addComponent(TransformComponent{{x, y}, {1.0f, 0.75f}, sf::degrees(0.0f)});
+            entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
+            entity.addComponent(RenderComponent{21, {{0, 0}, {16, 12}}, {1.0f, 0.75f}});
+            entity.addComponent(HealthComponent{100, 100});
 
             AIComponent ai;
             ai.personality = AIComponent::Personality::Aggressive;
             ai.state       = AIComponent::State::Idle;
-            e.addComponent(ai);
+            entity.addComponent(ai);
 
             AnimationComponent animation;
 
@@ -177,9 +188,9 @@ std::unordered_map<std::wstring, Command> commandDatabase =
 
             animation.frameSize = {16, 12};
 
-            e.addComponent(animation);
+            entity.addComponent(animation);
 
-            console.writeLine(L"Spawned AI entity " + std::to_wstring(id) + L" at (" + std::to_wstring(x) + L", " + std::to_wstring(y) + L")");
+            world->addEntity(std::move(entity));
         }
     }},
 
@@ -203,7 +214,7 @@ std::unordered_map<std::wstring, Command> commandDatabase =
         }
     }},
 
-    {L"spawn-explosive", {false, true,
+    {L"lh_spawn-explosive", {false, true,
         [](std::wstring command, Console& console, Game* game, World* world)
         {
             std::wistringstream stream(command);
@@ -229,20 +240,17 @@ std::unordered_map<std::wstring, Command> commandDatabase =
                 return;
             }
 
-            uint32_t id = world->getPossibleID();
-            world->getEntities().emplace_back(id);
+            Entity entity(generateUUID());
 
-            Entity& e = entityWithID(id, *world);
-
-            e.addComponent(TransformComponent{{x, y}, {1.0f, 0.75f}, sf::degrees(0.0f)});
-            e.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
-            e.addComponent(RenderComponent{21, {{0, 0}, {16, 12}}, {1.0f, 0.75f}});
-            e.addComponent(HealthComponent{100, 100});
+            entity.addComponent(TransformComponent{{x, y}, {1.0f, 0.75f}, sf::degrees(0.0f)});
+            entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
+            entity.addComponent(RenderComponent{21, {{0, 0}, {16, 12}}, {1.0f, 0.75f}});
+            entity.addComponent(HealthComponent{100, 100});
 
             ExplosiveComponent explosive;
             explosive.force = force;
             explosive.fuseTime = fuse;
-            e.addComponent(explosive);
+            entity.addComponent(explosive);
 
             AnimationComponent animation;
 
@@ -254,10 +262,9 @@ std::unordered_map<std::wstring, Command> commandDatabase =
 
             animation.frameSize = {16, 12};
 
-            e.addComponent(animation);
+            entity.addComponent(animation);
 
-            console.writeLine(L"Spawned explosive entity " + std::to_wstring(id) + L" at (" + std::to_wstring(x) + L", " + std::to_wstring(y) + L")");
+            world->addEntity(std::move(entity));
         }
     }}
-        */
 };
