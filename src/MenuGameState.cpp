@@ -44,6 +44,9 @@ namespace
 
 MenuGameState::MenuGameState(Game* game) : GameState(game), serverPreview(&statusPacket)
 {
+    if(!blockbit_logo.loadFromFile("resources/textures/blockbit_logo_white.png")) throw std::runtime_error("Failed loading resources/textures/blockbit_logo_white.png");
+
+
     UIElement::ScreenRelative quitRelative{{0.01f, 0.92f}, {0.12f, 0.06f}, UIElement::ScreenRelative::ScaleMode::UniformByHeight};
 
     std::string home;
@@ -238,9 +241,18 @@ void MenuGameState::render(sf::RenderWindow& window)
     );
     window.draw(background);
 
-    sf::RectangleShape overlay({static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
-    overlay.setFillColor(sf::Color(255, 255, 255, 75));
-    window.draw(overlay);
+    sf::RectangleShape logo;
+    logo.setTexture(&blockbit_logo);
+
+    logo.setSize({static_cast<float>(logo.getTexture()->getSize().x), static_cast<float>(logo.getTexture()->getSize().y)});
+
+    float factor = (static_cast<float>(window.getSize().x) / 5.0f) / static_cast<float>(logo.getTexture()->getSize().x);
+    logo.setScale({factor, factor});
+
+    logo.setPosition({50.0f, 50.0f});
+
+    window.draw(logo);
+
 
     worldList.render(window);
 
@@ -261,7 +273,7 @@ void MenuGameState::render(sf::RenderWindow& window)
     }
     nicknameField.render(window);
 
-
+    /*
     sf::Text copyright(AssetManager::getFont(AssetManager::FontID::PressStart2P), L"©2026 Talarek\n(github.com/Talareeek)", 10);
     copyright.setPosition({5.0f, 5.0f});
     copyright.setFillColor(sf::Color(0, 0, 0, 127));
@@ -269,4 +281,5 @@ void MenuGameState::render(sf::RenderWindow& window)
     copyright.setOutlineThickness(1.0f);
 
     window.draw(copyright);
+    */
 }

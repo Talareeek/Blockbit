@@ -24,6 +24,8 @@ class MenuGameState : public GameState
 {
 private:
 
+    sf::Texture blockbit_logo;
+
     Button quit;
     WorldList worldList;
     LobbyPlayerElement player;
