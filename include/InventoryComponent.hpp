@@ -106,6 +106,11 @@ struct InventoryComponent : public Component
             inventory.slots[i].quantity = slot.at("quantity").get<uint32_t>();
         }
     }
+
+    std::unique_ptr<Component> clone() const override
+    {
+        return std::make_unique<InventoryComponent>(*this);
+    }
 };
 
 #endif // INVENTORY_COMPONENT_HPP

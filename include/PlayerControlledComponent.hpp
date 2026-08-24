@@ -56,6 +56,11 @@ struct PlayerControlledComponent : public Component
     {
         nickname = tag["nickname"].get<std::string>();
     }
+
+    std::unique_ptr<Component> clone() const override
+    {
+        return std::make_unique<PlayerControlledComponent>(*this);
+    }
 };
 
 #endif // PLAYER_CONTROLLED_COMPONENT_HPP

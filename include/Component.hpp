@@ -10,6 +10,8 @@ struct Component
     virtual Tag serialize() const = 0;
     virtual void deserialize(const Tag& tag) = 0;
 
+    virtual std::unique_ptr<Component> clone() const = 0;
+
     virtual ~Component() = default;
 };
 

@@ -418,7 +418,7 @@ void GameServer::updatePlayerEntityConnections()
 {
     for(auto& [nickname, entity_id] : nickname_to_entity)
     {
-        if(!doesEntityExist(entity_id, world)) nickname_to_entity.erase(nickname);
+        if(!world.doesEntityExist(entity_id)) nickname_to_entity.erase(nickname);
     }
 }
 

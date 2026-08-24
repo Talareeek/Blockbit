@@ -61,6 +61,14 @@ public:
 
     Tag serialize() const;
     void deserialize(Tag& tag);
+
+    Entity cloneAs(UUID newId) const
+    {
+        Entity e(newId);
+        for (auto& [type, comp] : components)
+            e.components[type] = comp->clone();
+        return e;
+    }
 };
 
 #endif // ENTITY_HPP

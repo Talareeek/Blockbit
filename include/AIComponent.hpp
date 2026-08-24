@@ -117,6 +117,11 @@ struct AIComponent : public Component
         wanderDir = tag["wander_dir"].get<int>();
         attackCooldown = tag["attack_cooldown"].get<float>();
     }
+
+    std::unique_ptr<Component> clone() const override
+    {
+        return std::make_unique<AIComponent>(*this);
+    }
 };
 
 #endif // AI_COMPONENT_HPP

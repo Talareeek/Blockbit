@@ -7,7 +7,7 @@ class UILayout : public UIElement
 {
 public:
 
-    std::vector<std::unique_ptr<UIElement>> elements;
+    std::vector<UIElement*> elements;
 
     float margin;
     float spacing;

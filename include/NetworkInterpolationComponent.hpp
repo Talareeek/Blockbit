@@ -26,6 +26,11 @@ struct NetworkInterpolationComponent : public Component
     std::string name() const override { return "NetworkInterpolationComponent"; }
     Tag serialize() const override { return Tag(TagCompound{}); }
     void deserialize(const Tag&) override {}
+
+    std::unique_ptr<Component> clone() const override
+    {
+        return std::make_unique<NetworkInterpolationComponent>(*this);
+    }
 };
 
 #endif // NETWORK_INTERPOLATION_COMPONENT

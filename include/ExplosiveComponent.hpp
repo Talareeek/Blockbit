@@ -82,6 +82,11 @@ struct ExplosiveComponent : public Component
         fuseTime = tag["fuse_time"].get<float>();
         timer = tag["timer"].get<float>();
     }
+
+    std::unique_ptr<Component> clone() const override
+    {
+        return std::make_unique<ExplosiveComponent>(*this);
+    }
 };
 
 #endif // EXPLOSIVE_COMPONENT_HPP

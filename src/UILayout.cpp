@@ -27,56 +27,88 @@ void UILayout::render(sf::RenderWindow& window)
 
 void VerticalStackLayout::updateToBounds(sf::FloatRect bounds)
 {
-    float available = size.y - (margin * 2.0f + spacing * static_cast<float>(elements.size() - 1));
+    float available = size.y -
+        (margin * 2.0f + spacing * static_cast<float>(elements.size() - 1));
 
     unsigned int total_mass = 0;
 
-    for(auto& element : elements) total_mass += element->mass;
+    for (auto& element : elements)
+    {
+        if (element->mass > 0)
+            total_mass += element->mass;
+        else
+            available -= element->size.y;
+    }
 
-    float size_for_mass_unit =  available / static_cast<float>(total_mass);
-
+    float size_for_mass_unit =
+        total_mass > 0
+        ? available / static_cast<float>(total_mass)
+        : 0.0f;
 
     float indicator = position.y + margin;
 
-    for(auto& element : elements)
+    for (auto& element : elements)
     {
-        float height = size_for_mass_unit * static_cast<float>(element->mass);
+        float height;
 
-        sf::FloatRect bounds({position.x + margin, indicator}, {size.x - 2.0f * margin, height});
+        if (element->mass == 0)
+            height = element->size.y;
+        else
+            height = size_for_mass_unit * static_cast<float>(element->mass);
 
-        element->setPosition(bounds.position);
-        element->setSize(bounds.size);
+        sf::FloatRect elementBounds(
+            {position.x + margin, indicator},
+            {size.x - 2.0f * margin, height}
+        );
 
-        element->updateToBounds(bounds);
+        element->position = elementBounds.position;
+        element->size = elementBounds.size;
+        element->updateToBounds(elementBounds);
 
-        indicator += spacing + bounds.size.y;
+        indicator += spacing + elementBounds.size.y;
     }
 }
 
 void HorizontalStackLayout::updateToBounds(sf::FloatRect bounds)
 {
-    float available = size.x - (margin * 2.0f + spacing * static_cast<float>(elements.size() - 1));
+    float available = size.x -
+        (margin * 2.0f + spacing * static_cast<float>(elements.size() - 1));
 
     unsigned int total_mass = 0;
 
-    for(auto& element : elements) total_mass += element->mass;
+    for (auto& element : elements)
+    {
+        if (element->mass > 0)
+            total_mass += element->mass;
+        else
+            available -= element->size.x;
+    }
 
-    float size_for_mass_unit =  available / static_cast<float>(total_mass);
-
+    float size_for_mass_unit =
+        total_mass > 0
+        ? available / static_cast<float>(total_mass)
+        : 0.0f;
 
     float indicator = position.x + margin;
 
-    for(auto& element : elements)
+    for (auto& element : elements)
     {
-        float width = size_for_mass_unit * static_cast<float>(element->mass);
+        float width;
 
-        sf::FloatRect bounds({indicator, position.y + margin}, {width, size.y - 2.0f * margin});
+        if (element->mass == 0)
+            width = element->size.x;
+        else
+            width = size_for_mass_unit * static_cast<float>(element->mass);
 
-        element->setPosition(bounds.position);
-        element->setSize(bounds.size);
+        sf::FloatRect elementBounds(
+            {indicator, position.y + margin},
+            {width, size.y - 2.0f * margin}
+        );
 
-        element->updateToBounds(bounds);
+        element->position = elementBounds.position;
+        element->size = elementBounds.size;
+        element->updateToBounds(elementBounds);
 
-        indicator += spacing + bounds.size.x;
+        indicator += spacing + elementBounds.size.x;
     }
 }

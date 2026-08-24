@@ -56,6 +56,11 @@ struct ItemComponent : public Component
         item.itemID = static_cast<ItemID>(tag["item_id"].get<uint32_t>());
         item.quantity = tag["quantity"].get<uint32_t>();
     }
+
+    std::unique_ptr<Component> clone() const override
+    {
+        return std::make_unique<ItemComponent>(*this);
+    }
 };
 
 #endif // ITEM_COMPONENT_HPP

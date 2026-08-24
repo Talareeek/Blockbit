@@ -360,7 +360,7 @@ void ClientGameState::sendTickInputs()
     if (!transport || !transport->isConnected()) return;
     if (my_entity_id == UUID()) return;
 
-    auto polled = getInputs(local_world, game->getWindow());
+    auto polled = getInputs(local_world, camera, game->getWindow());
     inputs.insert(inputs.end(), std::make_move_iterator(polled.begin()), std::make_move_iterator(polled.end()));
 
     if (inputs.empty()) return;

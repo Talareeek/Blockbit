@@ -97,6 +97,11 @@ struct PhysicsComponent : public Component
     constexpr static float SAFE_FALL_VELOCITY{18.0f};
     constexpr static float FALL_DAMAGE_MULTIPLIER{1.75f};
     constexpr static float TERMINAL_VELOCITY{60.0f};
+
+    std::unique_ptr<Component> clone() const override
+    {
+        return std::make_unique<PhysicsComponent>(*this);
+    }
 };
 
 #endif // PHYSICS_COMPONENT_HPP

@@ -69,8 +69,8 @@ void GenerationPreview::refreshSeedLabel()
 
 void GenerationPreview::layoutChildren()
 {
-    seedButton.setPosition({ position.x, position.y });
-    seedButton.setSize({ size.x, size.y * SEED_AREA_RATIO });
+    seedButton.position = { position.x, position.y };
+    seedButton.size = { size.x, size.y * SEED_AREA_RATIO };
 
     float slider_area_y = position.y + size.y * (SEED_AREA_RATIO + GRAPH_AREA_RATIO);
     float slider_area_h = size.y * SLIDER_AREA_RATIO;
@@ -89,8 +89,8 @@ void GenerationPreview::layoutChildren()
 
     for (int i = 0; i < 5; i++)
     {
-        sliders[i]->setPosition({ position.x, slider_area_y + gap + i * (slider_h + gap) });
-        sliders[i]->setSize({ slider_w, slider_h });
+        sliders[i]->position = { position.x, slider_area_y + gap + i * (slider_h + gap) };
+        sliders[i]->size = { slider_w, slider_h };
     }
 }
 

@@ -20,7 +20,7 @@
 #include <cmath>
 
 
-std::vector<Input> getInputs(const World& world, const sf::RenderWindow& window)
+std::vector<Input> getInputs(const World& world, sf::Vector2<double> camera, const sf::RenderWindow& window)
 {
     std::vector<Input> inputs;
 
@@ -42,7 +42,7 @@ std::vector<Input> getInputs(const World& world, const sf::RenderWindow& window)
 
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q))
     {
-        inputs.push_back({InputType::DROP, DropInfo{getMouseWorldPosition(world, window), sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)}});
+        inputs.push_back({InputType::DROP, DropInfo{getMouseWorldPosition(camera, window), sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift)}});
     }
 
     return inputs;
@@ -185,7 +185,7 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
 
                 Entity item(generateUUID());
                 item.addComponent(TransformComponent{transform.position + sf::Vector2<double>(0.0, 1.5), {0.5, 0.5}, sf::degrees(0.0f)});
-                item.addComponent(PhysicsComponent{info.mousePosition - sf::Vector2f(transform.position), {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
+                item.addComponent(PhysicsComponent{sf::Vector2f(info.mousePosition - transform.position), {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
                 item.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[stack.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
 
                 if(info.fullStack)

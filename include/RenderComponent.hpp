@@ -87,6 +87,10 @@ struct RenderComponent : public Component
         size.y = sizeTag.at("y").get<float>();
     }
 
+    std::unique_ptr<Component> clone() const override
+    {
+        return std::make_unique<RenderComponent>(*this);
+    }
 };
 
 #endif // RENDER_COMPONENT_HPP

@@ -328,7 +328,7 @@ static Input readInput(PacketReader& r)
         case InputType::DROP:
         {
             DropInfo d{};
-            d.mousePosition = r.read<sf::Vector2f>();
+            d.mousePosition = r.read<sf::Vector2<double>>();
             d.fullStack = r.read<uint8_t>() != 0;
             in.value = d;
             break;

@@ -83,8 +83,8 @@ void InventoryWidget::render(sf::RenderWindow& window)
             (slotSize - itemSize) / 2.0f
         );
 
-        slots[i].setPosition(slotPosition);
-        slots[i].setSize({slotSize, slotSize});
+        slots[i].position = slotPosition;
+        slots[i].size = {slotSize, slotSize};
 
         slots[i].render(window);
     }

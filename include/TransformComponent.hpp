@@ -123,6 +123,11 @@ struct TransformComponent : public Component
     {
         return position != previous_position;
     }
+
+    std::unique_ptr<Component> clone() const override
+    {
+        return std::make_unique<TransformComponent>(*this);
+    }
 };
 
 #endif // TRANSFORM_COMPONENT_HPP

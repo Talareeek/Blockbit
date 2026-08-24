@@ -68,6 +68,11 @@ struct HealthComponent : public Component
         killOnZero = tag["kill_on_zero"].get<bool>();
     }
 
+    std::unique_ptr<Component> clone() const override
+    {
+        return std::make_unique<HealthComponent>(*this);
+    }
+
 };
 
 #endif // HEALTH_COMPONENT_HPP

@@ -169,6 +169,11 @@ struct AnimationComponent : public Component
         frameSize.x = frameSizeTag.at("x").get<int32_t>();
         frameSize.y = frameSizeTag.at("y").get<int32_t>();
     }
+
+    std::unique_ptr<Component> clone() const override
+    {
+        return std::make_unique<AnimationComponent>(*this);
+    }
 };
 
 

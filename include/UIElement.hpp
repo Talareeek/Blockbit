@@ -35,14 +35,12 @@ public:
         sf::Vector2f toAbsoluteSize(const sf::Vector2u& windowSize) const;
     };
 
-protected:
+public:
 
     sf::Vector2f position;
     sf::Vector2f size;
 
     std::optional<ScreenRelative> screen_relative;
-
-public:
 
     unsigned int mass = 1;
     float padding = 0.0f;
@@ -58,13 +56,13 @@ public:
 
     virtual void updateToBounds(sf::FloatRect bounds);
 
-    void setPosition(sf::Vector2f pos);
+    [[deprecated]] void setPosition(sf::Vector2f pos);
 
-    sf::Vector2f getPosition() const;
+    [[deprecated]] sf::Vector2f getPosition() const;
 
-    void setSize(sf::Vector2f s);
+    [[deprecated]] void setSize(sf::Vector2f s);
 
-    sf::Vector2f getSize() const;
+    [[deprecated]] sf::Vector2f getSize() const;
 
     void updateScreenRelative(const sf::Vector2u& windowSize);
 };
