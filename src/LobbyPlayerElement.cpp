@@ -43,7 +43,7 @@ void LobbyPlayerElement::render(sf::RenderWindow& window)
     sf::RectangleShape rect(size);
     rect.setPosition(position);
 
-    rect.setTexture(&AssetManager::getTexture(PLAYER_TEXTURE_ID));
+    rect.setTexture(&AssetManager::getGameTexture(AssetManager::GameTextureID::Player));
 
     sf::IntRect texture_rect;
 

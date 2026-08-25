@@ -68,7 +68,7 @@ void PlayerControlledSystem(World& world, float dt)
                     new_entity.addComponent(TransformComponent{{block_position.x + 0.25f, block_position.y - 0.25f}, {0.5f, 0.5f}, sf::degrees(0.0f)});
                     new_entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
                     new_entity.addComponent(ItemComponent(drop));
-                    new_entity.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[new_entity.getComponent<ItemComponent>().item.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
+                    new_entity.addComponent(RenderComponent{itemDatabase[new_entity.getComponent<ItemComponent>().item.itemID].texture, {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
                     world.setBlock(block_position.x, block_position.y, {BlockID::Air, 0});
 
                     world.addEntity(std::move(new_entity));

@@ -27,7 +27,7 @@ void Hotbar::render(sf::RenderWindow& window)
 {
     sf::RectangleShape background(size);
     background.setPosition(position);
-    background.setTexture(&AssetManager::getTexture(10));
+    background.setTexture(&AssetManager::getUITexture(AssetManager::UITextureID::Hotbar));
     window.draw(background);
 
     float slotWidth = size.x * (10.f / 101.f);

@@ -27,7 +27,7 @@ void AuthorGameState::render(sf::RenderWindow& window)
     window.setTitle("Blockbit by Talarek");
 
     sf::RectangleShape logo;
-    logo.setTexture(&AssetManager::getTexture(23));
+    logo.setTexture(&AssetManager::getUITexture(AssetManager::UITextureID::Logo));
 
     logo.setSize({static_cast<float>(logo.getTexture()->getSize().x), static_cast<float>(logo.getTexture()->getSize().y)});
 

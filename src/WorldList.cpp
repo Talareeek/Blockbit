@@ -324,7 +324,7 @@ void WorldList::update(float dt)
 
 void WorldList::render(sf::RenderWindow& window)
 {
-    sf::Texture& background_texture = AssetManager::getTexture(18);
+    sf::Texture& background_texture = AssetManager::getUITexture(AssetManager::UITextureID::UIBackground);
     background_texture.setRepeated(true);
 
     sf::Vector2u texSize = background_texture.getSize();

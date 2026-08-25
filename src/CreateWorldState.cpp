@@ -159,14 +159,6 @@ void CreateWorldState::render(sf::RenderWindow& window)
     const float win_w = static_cast<float>(window.getSize().x);
     const float win_h = static_cast<float>(window.getSize().y);
 
-    sf::Sprite background(AssetManager::getTexture(200135));
-    background.setPosition({0.0f, 0.0f});
-    background.setScale({
-        win_w / background.getTexture().getSize().x,
-        win_h / background.getTexture().getSize().y
-    });
-    window.draw(background);
-
     sf::RectangleShape overlay({win_w, win_h});
     overlay.setFillColor(sf::Color(10, 15, 25, 140));
     window.draw(overlay);

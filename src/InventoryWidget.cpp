@@ -43,7 +43,7 @@ void InventoryWidget::render(sf::RenderWindow& window)
     size = {window.getSize().x * 0.75f, window.getSize().y * 0.75f};
     position = {window.getSize().x * 0.125f, window.getSize().y * 0.125f};
 
-    auto& texture = AssetManager::getTexture(9);
+    auto& texture = AssetManager::getUITexture(AssetManager::UITextureID::Inventory);
 
     sf::RectangleShape background({
         size.x,

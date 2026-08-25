@@ -29,7 +29,7 @@ void RenderEntities(World& world, const sf::Vector2<double> camera, sf::RenderWi
 
         auto& component = entity.getComponent<RenderComponent>();
 
-        sf::Sprite sprite(AssetManager::getTexture(component.textureID), component.uv);
+        sf::Sprite sprite(AssetManager::getGameTexture(component.textureID), component.uv);
 
         const float scaleX = (component.size.x * unit_size) / sprite.getTextureRect().size.x;
         const float scaleY = -((component.size.y * unit_size) / sprite.getTextureRect().size.y);

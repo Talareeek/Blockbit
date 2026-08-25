@@ -2,6 +2,7 @@
 #define RENDER_COMPONENT_HPP
 
 #include "Component.hpp"
+#include "AssetManager.hpp"
 
 #include <cstdint>
 #include <SFML/Graphics/Rect.hpp>
@@ -10,12 +11,12 @@
 
 struct RenderComponent : public Component
 {
-    uint16_t textureID;
+    AssetManager::GameTextureID textureID;
     sf::IntRect uv;
     sf::Vector2f size;
 
     RenderComponent(
-        uint16_t textureID = 0,
+        AssetManager::GameTextureID textureID = static_cast<AssetManager::GameTextureID>(0),
         sf::IntRect uv = {},
         sf::Vector2f size = {}
     )
@@ -23,25 +24,6 @@ struct RenderComponent : public Component
         uv(uv),
         size(size)
     {
-    }
-
-    std::string serialize()
-    {
-        std::string output;
-
-        output += std::to_string(textureID) + '\n';
-        output += std::to_string(uv.position.x) + ' ' + std::to_string(uv.position.y) + ' ' + std::to_string(uv.size.x) + ' ' + std::to_string(uv.size.y) + '\n';
-        output += std::to_string(size.x) + ' ' + std::to_string(size.y) + '\n';
-
-        return output;
-    }
-
-    void deserialize(const std::string& data)
-    {
-        std::istringstream iss(data);
-        iss >> textureID;
-        iss >> uv.position.x >> uv.position.y >> uv.size.x >> uv.size.y;
-        iss >> size.x >> size.y;
     }
 
     std::string name() const override
@@ -53,7 +35,7 @@ struct RenderComponent : public Component
     {
         TagCompound compound;
 
-        compound["texture_id"] = Tag(textureID);
+        compound["texture_id"] = Tag(static_cast<uint32_t>(textureID));
 
         compound["uv"] = Tag(TagCompound({
             {"x", Tag(uv.position.x)},
@@ -72,7 +54,7 @@ struct RenderComponent : public Component
 
     void deserialize(const Tag& tag) override
     {
-        textureID = tag["texture_id"].get<uint16_t>();
+        textureID = static_cast<AssetManager::GameTextureID>(tag["texture_id"].get<uint16_t>());
 
         const auto& uvTag = tag["uv"].get<TagCompound>();
 

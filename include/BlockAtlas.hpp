@@ -6,25 +6,27 @@
 #include <unordered_map>
 #include <vector>
 
+#include "AssetManager.hpp"
+
 class BlockAtlas
 {
 private:
 
-    inline static std::vector<uint32_t> textureIDs;
+    inline static std::vector<AssetManager::GameTextureID> textureIDs;
 
-    inline static std::unordered_map<uint32_t, sf::IntRect> uvMap;
+    inline static std::unordered_map<AssetManager::GameTextureID, sf::IntRect> uvMap;
 
     inline static sf::Texture atlasTexture;
 
 public:
 
-    static void add(uint32_t textureID);
+    static void add(AssetManager::GameTextureID textureID);
 
     static bool build();
 
     static const sf::Texture& getTexture();
 
-    static const sf::IntRect& getUV(uint32_t textureID);
+    static const sf::IntRect& getUV(AssetManager::GameTextureID textureID);
 };
 
 #endif // BLOCK_ATLAS_HPP

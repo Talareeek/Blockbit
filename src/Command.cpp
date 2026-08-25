@@ -170,7 +170,7 @@ std::unordered_map<std::wstring, Command> commandDatabase =
 
             entity.addComponent(TransformComponent{{x, y}, {1.0f, 0.75f}, sf::degrees(0.0f)});
             entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
-            entity.addComponent(RenderComponent{21, {{0, 0}, {16, 12}}, {1.0f, 0.75f}});
+            entity.addComponent(RenderComponent{AssetManager::GameTextureID::Pig, {{0, 0}, {16, 12}}, {1.0f, 0.75f}});
             entity.addComponent(HealthComponent{100, 100});
 
             AIComponent ai;
@@ -244,7 +244,7 @@ std::unordered_map<std::wstring, Command> commandDatabase =
 
             entity.addComponent(TransformComponent{{x, y}, {1.0f, 0.75f}, sf::degrees(0.0f)});
             entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
-            entity.addComponent(RenderComponent{21, {{0, 0}, {16, 12}}, {1.0f, 0.75f}});
+            entity.addComponent(RenderComponent{AssetManager::GameTextureID::Pig, {{0, 0}, {16, 12}}, {1.0f, 0.75f}});
             entity.addComponent(HealthComponent{100, 100});
 
             ExplosiveComponent explosive;

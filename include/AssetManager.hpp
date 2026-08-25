@@ -24,6 +24,7 @@ public:
         Iron_Ore,
         Gold_Ore,
         Diamond_Ore,
+        Ruby_Ore,
         Oak_Log,
         Oak_Leaves,
         Woodcutter,
@@ -38,11 +39,30 @@ public:
         Bucket,
         Water_Bucket,
         Lighter,
+        Ruby,
 
 
         // ENTITIES
         Player,
         Pig,
+
+        Wooden_Pickaxe,
+        Stone_Pickaxe,
+        Iron_Pickaxe,
+        Gold_Pickaxe,
+        Diamond_Pickaxe,
+
+        Wooden_Axe,
+        Stone_Axe,
+        Iron_Axe,
+        Gold_Axe,
+        Diamond_Axe,
+
+        Wooden_Shovel,
+        Stone_Shovel,
+        Iron_Shovel,
+        Gold_Shovel,
+        Diamond_Shovel
     };
 
     enum class UITextureID : uint32_t
@@ -88,7 +108,7 @@ public:
 
 public:    
 
-    [[deprecated]] static void loadTexture(uint32_t id, const std::string& path);
+    //[[deprecated]] static void loadTexture(uint32_t id, const std::string& path);
     static void loadGameTexture(GameTextureID id, const std::string& path);
     static void loadUITexture(UITextureID id, const std::string& path);
     static void loadFont(FontID id, const std::string& path);
@@ -96,7 +116,7 @@ public:
     static void loadSound(SoundID id, const std::string& path);
     static void loadMusic(MusicID id, const std::string& path);
 
-    [[deprecated]] static sf::Texture& getTexture(uint32_t id);
+    //[[deprecated]] static sf::Texture& getTexture(uint32_t id);
     static sf::Texture& getGameTexture(GameTextureID id);
     static sf::Texture& getUITexture(UITextureID id);
     static sf::Font& getFont(FontID id);

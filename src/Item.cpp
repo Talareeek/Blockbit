@@ -13,7 +13,6 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::None,
         {
             .name = "None",
-            .texture = UINT32_MAX,
             .maxStackSize = 0,
             .category = ItemCategory::Misc
         }
@@ -23,7 +22,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Stone,
         {
             .name = "Stone",
-            .texture = 1,
+            .texture = AssetManager::GameTextureID::Stone,
             .maxStackSize = 64,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Block
@@ -33,7 +32,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Grass,
         {
             .name = "Grass",
-            .texture = 2,
+            .texture = AssetManager::GameTextureID::Grass,
             .maxStackSize = 64,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Block
@@ -43,7 +42,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Dirt,
         {
             .name = "Dirt",
-            .texture = 3,
+            .texture = AssetManager::GameTextureID::Dirt,
             .maxStackSize = 64,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Block
@@ -53,7 +52,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Cobblestone,
         {
             .name = "Cobblestone",
-            .texture = 4,
+            .texture = AssetManager::GameTextureID::Cobblestone,
             .maxStackSize = 64,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Block
@@ -63,7 +62,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Obsidian,
         {
             .name = "Obsidian",
-            .texture = 5,
+            .texture = AssetManager::GameTextureID::Obsidian,
             .maxStackSize = 64,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Block
@@ -73,7 +72,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Bedrock,
         {
             .name = "Bedrock",
-            .texture = 6,
+            .texture = AssetManager::GameTextureID::Bedrock,
             .maxStackSize = 64,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Block
@@ -83,7 +82,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Dynamite,
         {
             .name = "Dynamite",
-            .texture = 12,
+            .texture = AssetManager::GameTextureID::Dynamite,
             .maxStackSize = 16,
             .rarity = ItemRarity::Rare,
             .category = ItemCategory::Misc,
@@ -111,7 +110,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
 
                 explosiveEntity.addComponent(
                     RenderComponent{
-                        12,
+                        AssetManager::GameTextureID::Dynamite,
                         {{0, 0}, {16, 16}},
                         {1.0f, 1.0f}
                     }
@@ -140,7 +139,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Iron_Ore,
         {
             .name = "Iron Ore",
-            .texture = 13,
+            .texture = AssetManager::GameTextureID::Iron_Ore,
             .maxStackSize = 64,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Block
@@ -150,7 +149,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Gold_Ore,
         {
             .name = "Gold Ore",
-            .texture = 14,
+            .texture = AssetManager::GameTextureID::Gold_Ore,
             .maxStackSize = 64,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Block
@@ -160,7 +159,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Diamond_Ore,
         {
             .name = "Diamond Ore",
-            .texture = 15,
+            .texture = AssetManager::GameTextureID::Diamond_Ore,
             .maxStackSize = 64,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Block
@@ -170,7 +169,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Oak_Log,
         {
             .name = "Oak Log",
-            .texture = 16,
+            .texture = AssetManager::GameTextureID::Oak_Log,
             .maxStackSize = 64,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Block
@@ -180,7 +179,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Oak_Leaves,
         {
             .name = "Oak Leaves",
-            .texture = 17,
+            .texture = AssetManager::GameTextureID::Oak_Leaves,
             .maxStackSize = 64,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Block
@@ -190,7 +189,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Bucket,
         {
             .name = "Bucket",
-            .texture = 19,
+            .texture = AssetManager::GameTextureID::Bucket,
             .maxStackSize = 1,
             .rarity = ItemRarity::Rare,
             .category = ItemCategory::Misc,
@@ -233,7 +232,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Water_Bucket,
         {
             .name = "Water Bucket",
-            .texture = 20,
+            .texture = AssetManager::GameTextureID::Water_Bucket,
             .maxStackSize = 1,
             .rarity = ItemRarity::Rare,
             .category = ItemCategory::Misc,
@@ -282,7 +281,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Woodcutter,
         {
             .name = "Woodcutter",
-            .texture = 22,
+            .texture = AssetManager::GameTextureID::Woodcutter,
             .maxStackSize = 64,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Block
@@ -292,7 +291,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Lighter,
         {
             .name = "Lighter",
-            .texture = 24,
+            .texture = AssetManager::GameTextureID::Lighter,
             .maxStackSize = 1,
             .rarity = ItemRarity::Rare,
             .category = ItemCategory::Misc,
@@ -325,7 +324,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Sand,
         {
             .name = "Sand",
-            .texture = 26,
+            .texture = AssetManager::GameTextureID::Sand,
             .maxStackSize = 64,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Block
@@ -335,7 +334,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Coarse_Dirt,
         {
             .name = "Coarse Dirt",
-            .texture = 27,
+            .texture = AssetManager::GameTextureID::Coarse_Dirt,
             .maxStackSize = 64,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Block
@@ -345,7 +344,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Snow,
         {
             .name = "Snow",
-            .texture = 28,
+            .texture = AssetManager::GameTextureID::Snow,
             .maxStackSize = 64,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Block
@@ -356,7 +355,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Wooden_Pickaxe,
         {
             .name = "Wooden Pickaxe",
-            .texture = 29,
+            .texture = AssetManager::GameTextureID::Wooden_Pickaxe,
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
@@ -367,7 +366,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Stone_Pickaxe,
         {
             .name = "Stone Pickaxe",
-            .texture = 30,
+            .texture = AssetManager::GameTextureID::Stone_Pickaxe,
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
@@ -378,7 +377,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Gold_Pickaxe,
         {
             .name = "Gold Pickaxe",
-            .texture = 31,
+            .texture = AssetManager::GameTextureID::Gold_Pickaxe,
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
@@ -389,7 +388,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Iron_Pickaxe,
         {
             .name = "Iron Pickaxe",
-            .texture = 32,
+            .texture = AssetManager::GameTextureID::Iron_Pickaxe,
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
@@ -400,7 +399,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Diamond_Pickaxe,
         {
             .name = "Diamond Pickaxe",
-            .texture = 33,
+            .texture = AssetManager::GameTextureID::Diamond_Pickaxe,
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
@@ -412,7 +411,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Wooden_Axe,
         {
             .name = "Wooden Axe",
-            .texture = 34,
+            .texture = AssetManager::GameTextureID::Wooden_Axe,
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
@@ -423,7 +422,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Stone_Axe,
         {
             .name = "Stone Axe",
-            .texture = 35,
+            .texture = AssetManager::GameTextureID::Stone_Axe,
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
@@ -434,7 +433,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Gold_Axe,
         {
             .name = "Gold Axe",
-            .texture = 36,
+            .texture = AssetManager::GameTextureID::Gold_Axe,
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
@@ -445,7 +444,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Iron_Axe,
         {
             .name = "Iron Axe",
-            .texture = 37,
+            .texture = AssetManager::GameTextureID::Iron_Axe,
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
@@ -456,7 +455,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Diamond_Axe,
         {
             .name = "Diamond Axe",
-            .texture = 38,
+            .texture = AssetManager::GameTextureID::Diamond_Axe,
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
@@ -468,7 +467,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Wooden_Shovel,
         {
             .name = "Wooden Shovel",
-            .texture = 39,
+            .texture = AssetManager::GameTextureID::Wooden_Shovel,
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
@@ -479,7 +478,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Stone_Shovel,
         {
             .name = "Stone Shovel",
-            .texture = 40,
+            .texture = AssetManager::GameTextureID::Stone_Shovel,
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
@@ -490,7 +489,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Gold_Shovel,
         {
             .name = "Gold Shovel",
-            .texture = 41,
+            .texture = AssetManager::GameTextureID::Gold_Shovel,
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
@@ -501,7 +500,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Iron_Shovel,
         {
             .name = "Iron Shovel",
-            .texture = 42,
+            .texture = AssetManager::GameTextureID::Iron_Shovel,
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
@@ -512,7 +511,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Diamond_Shovel,
         {
             .name = "Diamond Shovel",
-            .texture = 43,
+            .texture = AssetManager::GameTextureID::Diamond_Shovel,
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
@@ -523,7 +522,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Ruby_Ore,
         {
             .name = "Ruby Ore",
-            .texture = 44,
+            .texture = AssetManager::GameTextureID::Ruby_Ore,
             .maxStackSize = 64,
             .category = ItemCategory::Block,
         }
@@ -532,7 +531,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         ItemID::Ruby,
         {
             .name = "Ruby",
-            .texture = 45,
+            .texture = AssetManager::GameTextureID::Ruby,
             .maxStackSize = 64,
             .category = ItemCategory::Misc,
         }

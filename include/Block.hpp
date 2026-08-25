@@ -6,6 +6,7 @@
 #include <climits>
 #include <optional>
 #include "Item.hpp"
+#include "AssetManager.hpp"
 
 enum class BlockID : uint32_t
 {
@@ -56,7 +57,7 @@ struct BlockData
     float drag = 1.0f;
 
     float hardness;
-    uint32_t texture;
+    AssetManager::GameTextureID texture;
 
     std::optional<MiningProperties> mining;
     std::optional<DropProperties> drop;
@@ -77,8 +78,7 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .breakable = false,
             .liquid = false,
             .drag = 1.0f,
-            .hardness = 0.0f,
-            .texture = INT_MAX
+            .hardness = 0.0,
         }
     },
     { BlockID::Stone,
@@ -89,7 +89,7 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 1.5f,
-            .texture = 1,
+            .texture = AssetManager::GameTextureID::Stone,
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 1}},
             .drop = DropProperties{.drop = ItemID::Cobblestone}
         }
@@ -102,7 +102,7 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 0.6f,
-            .texture = 2,
+            .texture = AssetManager::GameTextureID::Grass,
             .mining = MiningProperties{.mining_resistance = 2, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}},
             .drop = DropProperties{.drop = ItemID::Dirt}
         }
@@ -115,7 +115,7 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 0.5f,
-            .texture = 3,
+            .texture = AssetManager::GameTextureID::Dirt,
             .mining = MiningProperties{.mining_resistance = 2, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}},
             .drop = DropProperties{.drop = ItemID::Dirt}
         }
@@ -128,7 +128,7 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 2.0f,
-            .texture = 4,
+            .texture = AssetManager::GameTextureID::Cobblestone,
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 1}},
             .drop = DropProperties{.drop = ItemID::Cobblestone}
         }
@@ -141,7 +141,7 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 50.0f,
-            .texture = 5,
+            .texture = AssetManager::GameTextureID::Obsidian,
             .mining = MiningProperties{.mining_resistance = 50, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 5}},
             .drop = DropProperties{.drop = ItemID::Obsidian}
         }
@@ -154,7 +154,7 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = -1.0f,
-            .texture = 6,
+            .texture = AssetManager::GameTextureID::Bedrock,
             .mining = MiningProperties{.mining_resistance = INT_MAX, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = INT_MAX}}
         }
     },
@@ -166,7 +166,7 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = true,
             .drag = 4.0f,
             .hardness = 0.0f,
-            .texture = 11
+            .texture = AssetManager::GameTextureID::Water
         }
     },
     { BlockID::Iron_Ore,
@@ -177,7 +177,7 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 3.0f,
-            .texture = 13,
+            .texture = AssetManager::GameTextureID::Iron_Ore,
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 2}},
             .drop = DropProperties{.drop = ItemID::Iron_Ore}
         }
@@ -190,7 +190,7 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 3.0f,
-            .texture = 14,
+            .texture = AssetManager::GameTextureID::Gold_Ore,
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 4}},
             .drop = DropProperties{.drop = ItemID::Gold_Ore}
         }
@@ -203,7 +203,7 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 5.0f,
-            .texture = 15,
+            .texture = AssetManager::GameTextureID::Diamond_Ore,
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 4}},
             .drop = DropProperties{.drop = ItemID::Diamond_Ore}
         }
@@ -216,7 +216,7 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 5.0f,
-            .texture = 44,
+            .texture = AssetManager::GameTextureID::Ruby_Ore,
             .mining = MiningProperties{.mining_resistance = 6, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 5}},
             .drop = DropProperties{.drop = ItemID::Ruby}
         }
@@ -229,7 +229,7 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 2.0f,
-            .texture = 16,
+            .texture = AssetManager::GameTextureID::Oak_Log,
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
             .drop = DropProperties{.drop = ItemID::Oak_Log}
         }
@@ -242,7 +242,7 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 0.2f,
-            .texture = 17,
+            .texture = AssetManager::GameTextureID::Oak_Leaves,
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
             .drop = DropProperties{.drop = ItemID::Oak_Leaves}
         }
@@ -255,7 +255,7 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 2.0f,
-            .texture = 22,
+            .texture = AssetManager::GameTextureID::Woodcutter,
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
             .drop = DropProperties{.drop = ItemID::Woodcutter}
         }
@@ -268,7 +268,7 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 0.0f,
-            .texture = 25,
+            .texture = AssetManager::GameTextureID::Fire,
             .mining = MiningProperties{.mining_resistance = 0, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}}
         }
     },
@@ -280,7 +280,7 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 0.0f,
-            .texture = 26,
+            .texture = AssetManager::GameTextureID::Sand,
             .mining = MiningProperties{.mining_resistance = 2, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}},
             .drop = DropProperties{.drop = ItemID::Sand}
         }
@@ -293,7 +293,7 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 0.0f,
-            .texture = 27,
+            .texture = AssetManager::GameTextureID::Coarse_Dirt,
             .mining = MiningProperties{.mining_resistance = 2, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}},
             .drop = DropProperties{.drop = ItemID::Coarse_Dirt}
         }
@@ -306,7 +306,7 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 0.0f,
-            .texture = 28,
+            .texture = AssetManager::GameTextureID::Snow,
             .mining = MiningProperties{.mining_resistance = 1, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}},
             .drop = DropProperties{.drop = ItemID::Snow}
         }

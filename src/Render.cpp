@@ -79,7 +79,7 @@ void rebuildChunkMesh(World& world, int chunk_position, unsigned int unit_size)
             if (block.id == BlockID::Air)
                 continue;
 
-            uint32_t texID = blockDatabase[block.id].texture;
+            auto texID = blockDatabase[block.id].texture;
 
             const sf::IntRect& uv = BlockAtlas::getUV(texID);
 
@@ -301,7 +301,7 @@ void RenderBlockOverlay(World& world, const sf::Vector2<double> camera, sf::Rend
 
     if(world.getBlock(blockX, blockY).id != BlockID::Air && isBlockInRange(world.getEntity(viewerEntityId).getComponent<TransformComponent>(), blockPos, 4.0f))
     {
-        sf::Sprite sprite(AssetManager::getTexture(8));
+        sf::Sprite sprite(AssetManager::getUITexture(AssetManager::UITextureID::Block_Overlay));
         sprite.setPosition({
             static_cast<float>((static_cast<double>(blockX) - camera.x) * static_cast<double>(unit_size)),
             static_cast<float>((static_cast<double>(blockY) - camera.y) * static_cast<double>(unit_size))
@@ -636,8 +636,8 @@ sf::Texture generateBackground()
 
             const BlockID id = (wy == h - 1) ? BlockID::Grass : BlockID::Dirt;
 
-            const uint32_t texID = blockDatabase[id].texture;
-            sf::Sprite sprite(AssetManager::getTexture(texID));
+            const auto texID = blockDatabase[id].texture;
+            sf::Sprite sprite(AssetManager::getGameTexture(texID));
 
             const float py = (cameraY + viewBlocksH * 0.5f - static_cast<float>(wy + 1)) * UNIT_SIZE;
             sprite.setPosition({px, py});

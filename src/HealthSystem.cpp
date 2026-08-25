@@ -45,7 +45,7 @@ void HealthSystem(World& world)
 
                 drop.addComponent(TransformComponent(transform.center(), {0.5, 0.5}));
                 PhysicsComponent{{randomDouble(-2.0, 2.0), randomDouble(0.0, 2.0)}};
-                RenderComponent{static_cast<uint16_t>(itemDatabase[item.itemID].texture), {}, {0.5f,0.5f}};
+                RenderComponent{itemDatabase[item.itemID].texture, {}, {0.5f,0.5f}};
                 drop.addComponent(ItemComponent{item});
 
                 world.addEntity(std::move(drop));

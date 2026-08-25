@@ -50,20 +50,6 @@ else()
     endif()
 endif()
 
-# SQLite (amalgamation in external/sqlite)
-add_library(sqlite3 STATIC ${CMAKE_SOURCE_DIR}/external/sqlite/sqlite3.c)
-target_include_directories(sqlite3 PUBLIC ${CMAKE_SOURCE_DIR}/external/sqlite)
-target_compile_definitions(sqlite3 PRIVATE
-    SQLITE_ENABLE_FTS5
-    SQLITE_ENABLE_JSON1
-    SQLITE_THREADSAFE=1
-)
-if(UNIX AND NOT APPLE)
-    target_link_libraries(sqlite3 PUBLIC ${CMAKE_DL_LIBS} Threads::Threads m)
-elseif(APPLE)
-    target_link_libraries(sqlite3 PUBLIC ${CMAKE_DL_LIBS} Threads::Threads)
-endif()
-
 # Source files
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 

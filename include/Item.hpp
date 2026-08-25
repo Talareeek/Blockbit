@@ -14,6 +14,8 @@
 
 #include "../include/Entity.hpp"
 
+#include "AssetManager.hpp"
+
 class World;
 
 enum class ItemID : uint32_t
@@ -118,7 +120,7 @@ struct ToolProperties
 struct ItemData
 {
     std::string name;
-    uint32_t texture;
+    AssetManager::GameTextureID texture;
     uint32_t maxStackSize;
 
     ItemRarity rarity = ItemRarity::Common;

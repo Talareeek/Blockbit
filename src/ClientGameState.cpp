@@ -198,7 +198,7 @@ void ClientGameState::applySnapshot(const SnapshotPacket& snapshot)
             Entity entity(net_entity.id);
 
             entity.addComponent(TransformComponent{{net_entity.x, net_entity.y}, {net_entity.size_x, net_entity.size_y}, sf::degrees(0.0f)});
-            entity.addComponent(RenderComponent{static_cast<uint16_t>(net_entity.textureID), sf::IntRect{{net_entity.uv_x, net_entity.uv_y}, {net_entity.uv_size_x, net_entity.uv_size_y}}, {net_entity.size_x, net_entity.size_y}});
+            entity.addComponent(RenderComponent{static_cast<AssetManager::GameTextureID>(net_entity.textureID), sf::IntRect{{net_entity.uv_x, net_entity.uv_y}, {net_entity.uv_size_x, net_entity.uv_size_y}}, {net_entity.size_x, net_entity.size_y}});
             entity.addComponent(HealthComponent{net_entity.health, net_entity.maxHealth, false});
 
             if (!net_entity.inventory.empty())

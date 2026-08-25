@@ -267,7 +267,7 @@ void GameServer::broadcastSnapshot()
         net_entity.y         = transform.position.y;
         net_entity.size_x    = transform.size.x;
         net_entity.size_y    = transform.size.y;
-        net_entity.textureID = render.textureID;
+        net_entity.textureID = static_cast<uint32_t>(render.textureID);
         net_entity.uv_x      = render.uv.position.x;
         net_entity.uv_y      = render.uv.position.y;
         net_entity.uv_size_x = render.uv.size.x;
@@ -393,7 +393,7 @@ void GameServer::spawnPlayerFor(std::string nickname)
 
         entity.getComponent<TransformComponent>().position = world.getSpawnPoint();
 
-        entity.addComponent(RenderComponent{0, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
+        entity.addComponent(RenderComponent{AssetManager::GameTextureID::Player, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
         entity.addComponent(HealthComponent{100, 100, false});
         entity.addComponent(PlayerControlledComponent{nickname});
 

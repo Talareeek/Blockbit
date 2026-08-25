@@ -1,7 +1,7 @@
 #include "../include/BlockAtlas.hpp"
 #include "../include/AssetManager.hpp"
 
-void BlockAtlas::add(uint32_t textureID)
+void BlockAtlas::add(AssetManager::GameTextureID textureID)
 {
     textureIDs.push_back(textureID);
 }
@@ -10,7 +10,7 @@ bool BlockAtlas::build()
 {
     if (textureIDs.empty()) return false;
 
-    const sf::Texture& firstTexture = AssetManager::getTexture(textureIDs[0]);
+    const sf::Texture& firstTexture = AssetManager::getGameTexture(textureIDs[0]);
 
     const uint32_t tileSize = firstTexture.getSize().x;
 
@@ -20,9 +20,9 @@ bool BlockAtlas::build()
 
     uint32_t x = 0;
 
-    for (uint32_t id : textureIDs)
+    for (AssetManager::GameTextureID id : textureIDs)
     {
-        const sf::Texture& tex = AssetManager::getTexture(id);
+        const sf::Texture& tex = AssetManager::getGameTexture(id);
 
         sf::Image img = tex.copyToImage();
 
@@ -47,7 +47,7 @@ const sf::Texture& BlockAtlas::getTexture()
     return atlasTexture;
 }
 
-const sf::IntRect& BlockAtlas::getUV(uint32_t textureID)
+const sf::IntRect& BlockAtlas::getUV(AssetManager::GameTextureID textureID)
 {
     return uvMap.at(textureID);
 }
