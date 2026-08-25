@@ -19,25 +19,28 @@ class World;
 enum class ItemID : uint32_t
 {
     None = 0,
-    Stone = 1,
-    Grass = 2,
-    Dirt = 3,
-    Cobblestone = 4,
-    Obsidian = 5,
-    Bedrock = 6,
-    Dynamite = 7,
-    Iron_Ore = 8,
-    Gold_Ore = 9,
-    Diamond_Ore = 10,
-    Oak_Log = 11,
-    Oak_Leaves = 12,
-    Bucket = 13,
-    Water_Bucket = 14,
-    Woodcutter = 15,
-    Lighter = 16,
-    Sand = 17,
-    Coarse_Dirt = 18,
-    Snow = 19,
+    Stone,
+    Grass,
+    Dirt,
+    Cobblestone,
+    Obsidian,
+    Bedrock,
+    Dynamite,
+
+    Iron_Ore,
+    Gold_Ore,
+    Diamond_Ore,
+    Ruby_Ore,
+
+    Oak_Log,
+    Oak_Leaves,
+    Bucket,
+    Water_Bucket,
+    Woodcutter,
+    Lighter,
+    Sand,
+    Coarse_Dirt,
+    Snow,
 
     // TOOLS
     Wooden_Pickaxe,
@@ -57,6 +60,8 @@ enum class ItemID : uint32_t
     Iron_Shovel,
     Gold_Shovel,
     Diamond_Shovel,
+
+    Ruby
 };
 
 enum class ItemRarity

@@ -9,6 +9,9 @@
 
 void PlayerControlledSystem(World& world, float dt)
 {
+    static std::random_device rd;
+    static std::mt19937 rng(rd());
+
     for(auto& [id, entity] : world.getEntities())
     {
         if(!entity.hasComponent<PlayerControlledComponent>() || !entity.hasComponent<TransformComponent>() || !entity.hasComponent<InventoryComponent>()) continue;
@@ -47,20 +50,24 @@ void PlayerControlledSystem(World& world, float dt)
                 auto& block_data = blockDatabase[block.id];
                 auto& item_data  = itemDatabase[item.itemID];
 
-                bool correct_type = item_data.tool.has_value() && item_data.tool->tool_type ==  block_data.mining->desired_tool.tool_type;
+                bool correct_type = item_data.tool.has_value() && item_data.tool->tool_type == block_data.mining->desired_tool.tool_type;
                 int tool_level  = correct_type ? item_data.tool->level : 0;
 
                 float speed = level_based_speed[tool_level];
                 float block_mining_time = (block_data.hardness < 0.0f) ? std::numeric_limits<float>::infinity() : block_data.hardness / speed;
 
-                bool will_drop = correct_type && item_data.tool->level >= block_data.mining->desired_tool.level;
+                bool will_drop = (correct_type && item_data.tool->level >= block_data.mining->desired_tool.level) || (block_data.drop.has_value() && block_data.drop->always_drop);
 
-                if(player.mining_time >= block_mining_time && world.getBlock(block_position.x, block_position.y).id != BlockID::Air && blockDatabase[world.getBlock(block_position.x, block_position.y).id].breakable && isBlockInRange(transform, block_position, 4.0f))
+                if(player.mining_time >= block_mining_time && world.getBlock(block_position.x, block_position.y).id != BlockID::Air && blockDatabase[world.getBlock(block_position.x, block_position.y).id].breakable && isBlockInRange(transform, block_position, 4.0f) && will_drop)
                 {
+                    std::uniform_int_distribution drop_range(block_data.drop->min_amount, block_data.drop->max_amount);
+
+                    ItemStack drop = {block_data.drop->drop, drop_range(rng)};
+
                     Entity new_entity(generateUUID());
                     new_entity.addComponent(TransformComponent{{block_position.x + 0.25f, block_position.y - 0.25f}, {0.5f, 0.5f}, sf::degrees(0.0f)});
                     new_entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
-                    new_entity.addComponent(ItemComponent{{blockToItem(world.getBlock(block_position.x, block_position.y).id), 1}});
+                    new_entity.addComponent(ItemComponent(drop));
                     new_entity.addComponent(RenderComponent{static_cast<unsigned short>(itemDatabase[new_entity.getComponent<ItemComponent>().item.itemID].texture), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
                     world.setBlock(block_position.x, block_position.y, {BlockID::Air, 0});
 

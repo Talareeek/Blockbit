@@ -302,7 +302,7 @@ void World::generateVein(int x, int y, BlockID ore, int size)
             setBlock(x, y, {ore, 0});
 
         x += rng() % 3 - 1;
-        y += rng() % 3 - 1; // suspicious
+        y += rng() % 3 - 1;
     }
 }
 
@@ -310,6 +310,7 @@ void World::generateOres(int chunk_position)
 {
     std::mt19937 rng(seed + chunk_position);
 
+    int ruby_height = rng() % 14 + 1;
     int diamond_height = rng() % 14 + 1; // DIAMONDS 0  -  15
     int gold_height = rng() % 34 + 16;   // GOLD     16 -  50
     int iron_height = rng() % 204 + 51;  // IRON     51 - 255
@@ -319,7 +320,7 @@ void World::generateOres(int chunk_position)
     generateVein(x + rng() % CHUNK_WIDTH, diamond_height, BlockID::Diamond_Ore, 8);
     generateVein(x + rng() % CHUNK_WIDTH, gold_height, BlockID::Gold_Ore, 10);
     generateVein(x + rng() % CHUNK_WIDTH, iron_height, BlockID::Iron_Ore, 12);
-
+    generateVein(x + rng() % CHUNK_WIDTH, ruby_height, BlockID::Ruby_Ore, 6);
 }
 
 void World::generateTree(int x, int y, int log_height, BlockID log_type, BlockID leaves_type)

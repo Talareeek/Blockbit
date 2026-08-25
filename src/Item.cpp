@@ -518,6 +518,24 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .category = ItemCategory::Tool,
             .tool = ToolProperties{ToolType::Shovel, 5}
         }
+    },
+    {
+        ItemID::Ruby_Ore,
+        {
+            .name = "Ruby Ore",
+            .texture = 44,
+            .maxStackSize = 64,
+            .category = ItemCategory::Block,
+        }
+    },
+    {
+        ItemID::Ruby,
+        {
+            .name = "Ruby",
+            .texture = 45,
+            .maxStackSize = 64,
+            .category = ItemCategory::Misc,
+        }
     }
 };
 

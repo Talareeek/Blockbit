@@ -92,6 +92,9 @@ Game::Game()
     AssetManager::loadTexture(42, "resources/textures/iron_shovel.png");
     AssetManager::loadTexture(43, "resources/textures/diamond_shovel.png");
 
+    AssetManager::loadTexture(44, "resources/textures/ruby_ore.png");
+    AssetManager::loadTexture(45, "resources/textures/ruby.png");
+
     AssetManager::loadTexture(UINT32_MAX, "resources/textures/nothing.png");
 
     AssetManager::loadShader(AssetManager::ShaderID::Sun, "resources/shaders/sun.frag");
@@ -117,6 +120,7 @@ Game::Game()
     BlockAtlas::add(26);
     BlockAtlas::add(27);
     BlockAtlas::add(28);
+    BlockAtlas::add(44);
     BlockAtlas::build();
 
     std::filesystem::path savePath;
