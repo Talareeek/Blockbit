@@ -1,6 +1,8 @@
 #include "../include/AssetManager.hpp"
 
 std::unordered_map<uint32_t, sf::Texture> AssetManager::textures;
+std::unordered_map<AssetManager::GameTextureID, sf::Texture> AssetManager::game_textures;
+std::unordered_map<AssetManager::UITextureID, sf::Texture> AssetManager::ui_textures;
 std::unordered_map<AssetManager::FontID, sf::Font> AssetManager::fonts;
 std::unordered_map<AssetManager::ShaderID, sf::Shader> AssetManager::shaders;
 std::unordered_map<AssetManager::SoundID, sf::SoundBuffer> AssetManager::sounds;
@@ -74,4 +76,32 @@ sf::Music& AssetManager::getMusic(AssetManager::MusicID id)
 {
     if(musics.find(id) == musics.end()) throw std::runtime_error(std::string("AssetManager:\n") + "Music not found: " + std::to_string(static_cast<uint32_t>(id)));
     return musics.at(id);
+}
+
+void AssetManager::loadGameTexture(AssetManager::GameTextureID id, const std::string& path)
+{
+    sf::Texture texture;
+    if(!texture.loadFromFile(path)) throw std::runtime_error(std::string("AssetManager:\n") + "Failed to load game texture: " + path);
+    
+    game_textures[id] = std::move(texture);
+}
+
+void AssetManager::loadUITexture(AssetManager::UITextureID id, const std::string& path)
+{
+    sf::Texture texture;
+    if(!texture.loadFromFile(path)) throw std::runtime_error(std::string("AssetManager:\n") + "Failed to load UI texture: " + path);
+    
+    ui_textures[id] = std::move(texture);
+}
+
+sf::Texture& AssetManager::getGameTexture(AssetManager::GameTextureID id)
+{
+    if(game_textures.find(id) == game_textures.end()) throw std::runtime_error(std::string("AssetManager:\n") + "Game texture not found: " + std::to_string(static_cast<uint32_t>(id)));
+    return game_textures.at(id);
+}
+
+sf::Texture& AssetManager::getUITexture(AssetManager::UITextureID id)
+{
+    if(ui_textures.find(id) == ui_textures.end()) throw std::runtime_error(std::string("AssetManager:\n") + "UI texture not found: " + std::to_string(static_cast<uint32_t>(id)));
+    return ui_textures.at(id);
 }

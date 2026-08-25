@@ -11,19 +11,8 @@ class AssetManager
 {
 public:
 
-    enum class TextureID : uint32_t
+    enum class GameTextureID : uint32_t
     {
-        
-        
-        Coin,
-        Block_Overlay,
-        Inventory,
-        Hotbar,
-        UIBackground,
-        Logo,   
-        
-
-
         // BLOCKS
         Stone,
         Grass,
@@ -56,6 +45,16 @@ public:
         Pig,
     };
 
+    enum class UITextureID : uint32_t
+    {
+        Coin,
+        Block_Overlay,
+        Inventory,
+        Hotbar,
+        UIBackground,
+        Logo
+    };
+
     enum class FontID : uint32_t
     {
         PressStart2P,
@@ -80,6 +79,8 @@ public:
 //private:
 
     static std::unordered_map<uint32_t, sf::Texture> textures;
+    static std::unordered_map<GameTextureID, sf::Texture> game_textures;
+    static std::unordered_map<UITextureID, sf::Texture> ui_textures;
     static std::unordered_map<FontID, sf::Font> fonts;
     static std::unordered_map<ShaderID, sf::Shader> shaders;
     static std::unordered_map<SoundID, sf::SoundBuffer> sounds;
@@ -87,13 +88,17 @@ public:
 
 public:    
 
-    static void loadTexture(uint32_t id, const std::string& path);
+    [[deprecated]] static void loadTexture(uint32_t id, const std::string& path);
+    static void loadGameTexture(GameTextureID id, const std::string& path);
+    static void loadUITexture(UITextureID id, const std::string& path);
     static void loadFont(FontID id, const std::string& path);
     static void loadShader(ShaderID id, const std::string& path);
     static void loadSound(SoundID id, const std::string& path);
     static void loadMusic(MusicID id, const std::string& path);
 
-    static sf::Texture& getTexture(uint32_t id);
+    [[deprecated]] static sf::Texture& getTexture(uint32_t id);
+    static sf::Texture& getGameTexture(GameTextureID id);
+    static sf::Texture& getUITexture(UITextureID id);
     static sf::Font& getFont(FontID id);
     static sf::Shader& getShader(ShaderID id);
     static sf::SoundBuffer& getSound(SoundID id);
