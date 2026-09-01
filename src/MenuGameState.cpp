@@ -78,12 +78,22 @@ MenuGameState::MenuGameState(Game* game) : GameState(game), serverPreview(&statu
     nicknameField = InputField(InputField({0.0f, 0.0f}, {0.0f, 0.0f}), "Player", "Nickname");
 
     backgroundTexture = generateBackground();
+
+    sf::Music background_music = std::move(AssetManager::getMusic(AssetManager::MusicID::Dream));
+
+    background_music.setVolume(25.0f);
+
+    background_music.setLooping(true);
+
+    game->jukebox.playMusic(background_music);
 }
 
 MenuGameState::~MenuGameState()
 {
     cancelActiveProbe();
     if (probeThread.joinable()) probeThread.detach();
+
+    game->jukebox.reset();
 }
 
 void MenuGameState::cancelActiveProbe()
@@ -272,4 +282,11 @@ void MenuGameState::render(sf::RenderWindow& window)
         window.draw(label);
     }
     nicknameField.render(window);
+}
+
+void MenuGameState::onObscured()
+{
+    GameState::onObscured();
+
+    game->jukebox.reset();
 }

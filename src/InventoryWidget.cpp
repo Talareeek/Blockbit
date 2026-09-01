@@ -57,8 +57,9 @@ void InventoryWidget::handleEvent(const sf::Event& event)
         }
         crafting_button.handleEvent(event);
 
-        if(craft_clicked)
-        {
+        if(craft_clicked && !recipes.contains(selected_stack))
+        {            
+
             auto& recipe = recipes[selected_stack];
 
             bool craftable = true;

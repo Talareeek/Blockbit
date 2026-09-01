@@ -64,6 +64,8 @@ public:
     void handleEvent(const sf::Event& event) override;
     void update(float dt) override;
     void render(sf::RenderWindow& window) override;
+
+    void onObscured() override;
 };
 
 #endif // MENU_GAME_STATE_HPP

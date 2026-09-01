@@ -10,6 +10,7 @@
 #include "GameState.hpp"
 #include "Account.hpp"
 #include "Console.hpp"
+#include "Jukebox.hpp"
 
 struct GameStateAction
 {
@@ -76,7 +77,7 @@ public:
 
     Console& getConsole();
 
-
+    Jukebox jukebox;
 };
 
 #endif // GAME_HPP

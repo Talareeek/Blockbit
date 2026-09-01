@@ -108,7 +108,7 @@ Game::Game()
 
     AssetManager::loadSound(AssetManager::SoundID::Click, "resources/sounds/click.wav");
 
-    AssetManager::loadMusic(AssetManager::MusicID::Alpha, "resources/sounds/music/alpha.wav");
+    AssetManager::loadMusic(AssetManager::MusicID::Dream, "resources/sounds/music/dream.mp3");
 
     
 

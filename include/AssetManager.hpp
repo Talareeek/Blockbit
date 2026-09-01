@@ -96,7 +96,7 @@ public:
 
     enum class MusicID : uint32_t
     {
-        Alpha // Talarek - Alpha
+        Dream // https://opengameart.org/content/mainmenu-music
     };
 
 //private:
