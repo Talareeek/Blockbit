@@ -808,3 +808,84 @@ void NetworkInterpolationSystem(World& world, uint64_t latest_tick, float tick_s
         transform.render_position = before->position + (after->position - before->position) * alpha;
     }
 }
+
+sf::Color getRarityColor(ItemRarity rarity)
+{
+    switch(rarity)
+    {
+    case ItemRarity::Common:
+
+        return sf::Color::White;
+
+    case ItemRarity::Rare:
+
+        return sf::Color::Green;
+
+    case ItemRarity::Super_Rare:
+
+        return sf::Color::Blue;
+
+    case ItemRarity::Epic:
+
+        return sf::Color(128, 0, 128);
+
+    case ItemRarity::Mythic:
+
+        return sf::Color::Red;
+    }
+}
+
+
+constexpr int TEXT_SIZE = 20;
+
+void renderItemInfo(sf::Vector2f position, const ItemStack& item, sf::RenderTarget& target)
+{
+    const auto& item_data = itemDatabase[item.itemID];
+
+    auto font = AssetManager::getFont(AssetManager::FontID::PressStart2P);
+
+    std::string name_str = item_data.name;
+    std::string id_str = "ID: " + std::to_string(static_cast<uint32_t>(item.itemID));
+
+    sf::Text nameText(AssetManager::getFont(AssetManager::FontID::PressStart2P), name_str, TEXT_SIZE);
+    sf::Text idText(AssetManager::getFont(AssetManager::FontID::PressStart2P), id_str, TEXT_SIZE);
+
+    nameText.setFillColor(getRarityColor(item_data.rarity));
+    idText.setFillColor(sf::Color::White);
+
+    float padding = static_cast<float>(TEXT_SIZE) * 0.4f;
+    float lineSpacing = static_cast<float>(TEXT_SIZE) * 0.3f;
+
+    sf::FloatRect nameBounds = nameText.getLocalBounds();
+    sf::FloatRect idBounds = idText.getLocalBounds();
+
+    float frameWidth = std::max(nameBounds.size.x, idBounds.size.x) + padding * 2.0f;
+    float frameHeight = nameBounds.size.y + idBounds.size.y + lineSpacing + padding * 2.0f;
+
+    sf::Vector2f framePos = position + sf::Vector2f(15.0f, 15.0f);
+
+    sf::Vector2u windowSize = target.getSize();
+
+    if(framePos.x + frameWidth > windowSize.x)
+    {
+        framePos.x = windowSize.x - frameWidth;
+    }
+    if(framePos.y + frameHeight > windowSize.y)
+    {
+        framePos.y = windowSize.y - frameHeight;
+    }
+
+    sf::RectangleShape frame({frameWidth, frameHeight});
+    frame.setPosition(framePos);
+    frame.setFillColor(sf::Color(0, 0, 0, 200));
+    frame.setOutlineColor(sf::Color::White);
+    frame.setOutlineThickness(1.0f);
+    target.draw(frame);
+
+    nameText.setPosition(framePos + sf::Vector2f(padding, padding));
+    idText.setPosition(framePos + sf::Vector2f(padding, padding + nameBounds.size.y + lineSpacing));
+
+    target.draw(nameText);
+    target.draw(idText);
+
+}

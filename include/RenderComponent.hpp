@@ -54,7 +54,7 @@ struct RenderComponent : public Component
 
     void deserialize(const Tag& tag) override
     {
-        textureID = static_cast<AssetManager::GameTextureID>(tag["texture_id"].get<uint16_t>());
+        textureID = static_cast<AssetManager::GameTextureID>(tag["texture_id"].get<uint32_t>());
 
         const auto& uvTag = tag["uv"].get<TagCompound>();
 

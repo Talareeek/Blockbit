@@ -17,6 +17,9 @@ struct PlayerControlledComponent : public Component
     bool mid_attack = false;
     bool mid_usage = false;
 
+    bool drops = false;
+    bool drops_full_stack = false;
+
     sf::Vector2i mining_block;
     float mining_time = 0.0f;
     

@@ -45,4 +45,8 @@ extern void renderUIBackground(sf::FloatRect bounds, sf::RenderTarget& target);
 
 extern void NetworkInterpolationSystem(World& world, uint64_t latest_tick, float tick_step, float interpolation_delay_seconds = 0.1f);
 
+extern void renderItemInfo(sf::Vector2f position, const ItemStack& item, sf::RenderTarget& target);
+
+extern sf::Color getRarityColor(ItemRarity rarity);
+
 #endif // RENDER_HPP

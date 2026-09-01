@@ -1112,6 +1112,8 @@ void World::savePlayer(UUID entity_id)
     stream.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
 
     stream.close();
+
+    std::cout << "Saved entity for player " << player.nickname << '\n';
 }
 
 
@@ -1142,6 +1144,8 @@ UUID World::loadPlayer(std::string nickname)
     entity.deserialize(tag);
 
     addEntity(std::move(entity));
+
+    std::cout << "Loaded entity for player " << nickname << '\n';
 
     return entity.getID();
 }

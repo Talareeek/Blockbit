@@ -1,5 +1,6 @@
 #include "../include/Slot.hpp"
 #include "../include/AssetManager.hpp"
+#include "../include/Render.hpp"
 
 #include <string>
 #include <algorithm>
@@ -28,6 +29,13 @@ void Slot::handleEvent(const sf::Event& event)
 
         mouse_pos = static_cast<sf::Vector2f>(event.getIf<sf::Event::MouseMoved>()->position);
     }
+    else if(event.is<sf::Event::MouseButtonPressed>())
+    {
+        if(hovered)
+        {
+            clicked = event.getIf<sf::Event::MouseButtonPressed>()->button == sf::Mouse::Button::Left;
+        }
+    }
 }
 
 void Slot::update(float dt)
@@ -40,8 +48,8 @@ void Slot::render(sf::RenderWindow& window)
     sf::RectangleShape background(size * 0.9f);
     background.setPosition(position + size * 0.05f);
     sf::Color color(0, 0, 0, 128);
-    background.setFillColor(color);
-    background.setOutlineColor((hovered) ? sf::Color::White : sf::Color::Black);
+    background.setFillColor(background_color);
+    background.setOutlineColor((hovered) ? sf::Color::White : outline_color);
     background.setOutlineThickness(size.x / 20.0f);
     window.draw(background);
 
@@ -67,82 +75,7 @@ void Slot::render(sf::RenderWindow& window)
 
     if(hovered && show_item_info)
     {
-        const auto& itemData = itemDatabase[item_stack.itemID];
-
-        std::string nameStr = itemData.name;
-        std::string idStr = "ID: " + std::to_string(static_cast<uint32_t>(item_stack.itemID));
-
-        unsigned int charSize = static_cast<unsigned int>(size.x / 5.0f);
-
-        sf::Text nameText(AssetManager::getFont(AssetManager::FontID::PressStart2P), nameStr, charSize);
-        sf::Text idText(AssetManager::getFont(AssetManager::FontID::PressStart2P), idStr, charSize);
-
-        sf::Color rarityColor;
-
-        switch(itemDatabase[item_stack.itemID].rarity)
-        {
-        case ItemRarity::Common:
-
-            rarityColor = sf::Color::White;
-            break;
-
-        case ItemRarity::Rare:
-
-            rarityColor = sf::Color::Green;
-            break;
-
-        case ItemRarity::Super_Rare:
-
-            rarityColor = sf::Color::Blue;
-            break;
-
-        case ItemRarity::Epic:
-
-            rarityColor = sf::Color(128, 0, 128);
-            break;
-
-        case ItemRarity::Mythic:
-
-            rarityColor = sf::Color::Red;
-            break;
-        }
-
-        nameText.setFillColor(rarityColor);
-        idText.setFillColor(sf::Color::White);
-
-        float padding = static_cast<float>(charSize) * 0.4f;
-        float lineSpacing = static_cast<float>(charSize) * 0.3f;
-
-        sf::FloatRect nameBounds = nameText.getLocalBounds();
-        sf::FloatRect idBounds = idText.getLocalBounds();
-
-        float frameWidth = std::max(nameBounds.size.x, idBounds.size.x) + padding * 2.0f;
-        float frameHeight = nameBounds.size.y + idBounds.size.y + lineSpacing + padding * 2.0f;
-
-        sf::Vector2f framePos = mouse_pos + sf::Vector2f(15.0f, 15.0f);
-
-        sf::Vector2u windowSize = window.getSize();
-        if(framePos.x + frameWidth > windowSize.x)
-        {
-            framePos.x = windowSize.x - frameWidth;
-        }
-        if(framePos.y + frameHeight > windowSize.y)
-        {
-            framePos.y = windowSize.y - frameHeight;
-        }
-
-        sf::RectangleShape frame({frameWidth, frameHeight});
-        frame.setPosition(framePos);
-        frame.setFillColor(sf::Color(0, 0, 0, 200));
-        frame.setOutlineColor(sf::Color::White);
-        frame.setOutlineThickness(1.0f);
-        window.draw(frame);
-
-        nameText.setPosition(framePos + sf::Vector2f(padding, padding));
-        idText.setPosition(framePos + sf::Vector2f(padding, padding + nameBounds.size.y + lineSpacing));
-
-        window.draw(nameText);
-        window.draw(idText);
+        renderItemInfo(window.mapPixelToCoords(sf::Mouse::getPosition(window)), item_stack, window);
     }
 }
 

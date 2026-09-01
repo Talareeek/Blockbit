@@ -27,17 +27,11 @@ enum class InputType
     CHANGE_SLOT
 };
 
-struct DropInfo
-{
-    sf::Vector2<double> mousePosition;
-    bool fullStack;
-};
-
 struct Input
 {
     InputType type;
 
-    std::variant<std::monostate, sf::Vector2<double>, uint8_t, bool, DropInfo> value;
+    std::variant<std::monostate, sf::Vector2<double>, uint8_t, bool> value;
 };
 
 std::vector<Input> getInputs(const World& world, sf::Vector2<double> camera, const sf::RenderWindow& window);

@@ -9,15 +9,13 @@ class Slot : public UIElement
 
 private:
 
-    ItemStack item_stack;
-
     bool hovered = false;
-
-    bool show_item_info = true;
 
     sf::Vector2f mouse_pos;
 
 public:
+
+    ItemStack item_stack;
 
     using UIElement::UIElement;
 
@@ -33,6 +31,12 @@ public:
     void update(float dt) override;
     void render(sf::RenderWindow& window) override;
 
+    bool show_item_info = false;
+
+    sf::Color background_color{0, 0, 0, 128};
+    sf::Color outline_color{sf::Color::Black};
+
+    bool clicked = false;
 };
 
 #endif // SLOT_HPP

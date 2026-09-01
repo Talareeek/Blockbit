@@ -13,8 +13,10 @@ ItemID blockToItem(BlockID block)
         case BlockID::Iron_Ore: return ItemID::Iron_Ore;
         case BlockID::Gold_Ore: return ItemID::Gold_Ore;
         case BlockID::Diamond_Ore: return ItemID::Diamond_Ore;
+        case BlockID::Ruby_Ore: return ItemID::Ruby_Ore;
         case BlockID::Oak_Log: return ItemID::Oak_Log;
         case BlockID::Oak_Leaves: return ItemID::Oak_Leaves;
+        case BlockID::Oak_Planks: return ItemID::Oak_Planks;
         case BlockID::Woodcutter: return ItemID::Woodcutter;
         case BlockID::Sand: return ItemID::Sand;
         case BlockID::Coarse_Dirt: return ItemID::Coarse_Dirt;
@@ -35,8 +37,10 @@ BlockID itemToBlock(ItemID item)
         case ItemID::Iron_Ore: return BlockID::Iron_Ore;
         case ItemID::Gold_Ore: return BlockID::Gold_Ore;
         case ItemID::Diamond_Ore: return BlockID::Diamond_Ore;
+        case ItemID::Ruby_Ore: return BlockID::Ruby_Ore;
         case ItemID::Oak_Log: return BlockID::Oak_Log;
         case ItemID::Oak_Leaves: return BlockID::Oak_Leaves;
+        case ItemID::Oak_Planks: return BlockID::Oak_Planks;
         case ItemID::Woodcutter: return BlockID::Woodcutter;
         case ItemID::Sand: return BlockID::Sand;
         case ItemID::Snow: return BlockID::Snow;

@@ -59,6 +59,7 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Iron_Shovel, "resources/textures/iron_shovel.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Diamond_Shovel, "resources/textures/diamond_shovel.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Ruby, "resources/textures/ruby.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Stick, "resources/textures/stick.png");
 
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Stone, "resources/textures/stone.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Grass, "resources/textures/grass.png");
@@ -72,6 +73,7 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Diamond_Ore, "resources/textures/diamond_ore.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Oak_Log, "resources/textures/oak_log.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Oak_Leaves, "resources/textures/oak_leaves.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Oak_Planks, "resources/textures/oak_planks.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Woodcutter, "resources/textures/woodcutter.png");    
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Fire, "resources/textures/fire.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Sand, "resources/textures/sand.png");
@@ -92,6 +94,7 @@ Game::Game()
     BlockAtlas::add(AssetManager::GameTextureID::Diamond_Ore);
     BlockAtlas::add(AssetManager::GameTextureID::Oak_Log);
     BlockAtlas::add(AssetManager::GameTextureID::Oak_Leaves);
+    BlockAtlas::add(AssetManager::GameTextureID::Oak_Planks);
     BlockAtlas::add(AssetManager::GameTextureID::Woodcutter);
     BlockAtlas::add(AssetManager::GameTextureID::Fire);
     BlockAtlas::add(AssetManager::GameTextureID::Sand);
@@ -101,6 +104,7 @@ Game::Game()
     BlockAtlas::build();
 
     AssetManager::loadShader(AssetManager::ShaderID::Sun, "resources/shaders/sun.frag");
+    AssetManager::loadShader(AssetManager::ShaderID::Brightness, "resources/shaders/brightness.frag");
 
     AssetManager::loadSound(AssetManager::SoundID::Click, "resources/sounds/click.wav");
 

@@ -101,5 +101,37 @@ void PlayerControlledSystem(World& world, float dt)
                 }
             }
         }
+
+        if(player.drops)
+        {
+            player.drops = false;
+
+            auto& stack = inventory.inventory.slots[inventory.selectedSlot];
+
+            if(stack.empty()) break;
+
+            Entity item(generateUUID());
+            item.addComponent(TransformComponent{transform.position + sf::Vector2<double>(0.0, 1.5), {0.5, 0.5}, sf::degrees(0.0f)});
+            item.addComponent(PhysicsComponent{sf::Vector2f(player.cursor_position - transform.position), {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
+            item.addComponent(RenderComponent{itemDatabase[stack.itemID].texture, {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
+
+            if(player.drops_full_stack)
+            {
+                item.addComponent(ItemComponent{stack});
+
+                stack = {ItemID::None, 0};
+            }
+            else
+            {
+                item.addComponent(ItemComponent{{stack.itemID, 1}});
+
+                if(--stack.quantity == 0)
+                {
+                    stack.itemID = ItemID::None;
+                }
+            }
+
+            world.addEntity(std::move(item));            
+        }
     }
 }

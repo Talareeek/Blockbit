@@ -209,23 +209,57 @@ void GameServer::processIncoming()
                 }
                 case PacketType::Respawn:
                 {
-                    
-
                     break;
                 }
                 case PacketType::ClientSnapshot:
                 {
                     ClientSnapshotPacket client_snapshot = deserializeClientSnapshot(reader);
 
-                    world.getEntity(nickname_to_entity[client_to_nickname[packet.clientId]]).getComponent<PlayerControlledComponent>().cursor_position = {client_snapshot.cursor_x, client_snapshot.cursor_y};
+                    auto nick_it = client_to_nickname.find(packet.clientId);
+                    if (nick_it == client_to_nickname.end()) break;
+
+                    auto entity_it = nickname_to_entity.find(nick_it->second);
+                    if (entity_it == nickname_to_entity.end()) break;
+
+                    if (!world.doesEntityExist(entity_it->second)) break;
+
+                    world.getEntity(entity_it->second).getComponent<PlayerControlledComponent>().cursor_position = {client_snapshot.cursor_x, client_snapshot.cursor_y};
+
+                    break;
+                }
+                case PacketType::Craft:
+                {
+                    CraftPacket craft = deserializeCraft(reader);
+
+                    auto& recipe = recipes[craft.requested_craft];
+
+                    auto nick_it = client_to_nickname.find(packet.clientId);
+                    if (nick_it == client_to_nickname.end()) break;
+
+                    auto entity_it = nickname_to_entity.find(nick_it->second);
+                    if (entity_it == nickname_to_entity.end()) break;
+
+                    
+                    for(auto& ingredient : recipe.ingredients)
+                    {
+                        world.getEntity(entity_it->second).getComponent<InventoryComponent>().inventory.removeItemWithLeftover(ingredient.itemID, ingredient.quantity);
+                    }                    
+
+                    world.getEntity(entity_it->second).getComponent<InventoryComponent>().inventory.addItemWithLeftover(craft.requested_craft.itemID, craft.requested_craft.quantity);
+
+                    break;
                 }
                 default:
+                {
+                    std::cerr << "[Server] Unrecognised packet (" << std::to_string(static_cast<uint8_t>(packet.type)) << ") from client " << std::to_string(packet.clientId) << '\n';
+
                     break;
+                }
             }
         }
         catch (const std::exception& exception)
         {
-            std::cerr << "[Server] Bad packet from client " << packet.clientId << ": " << exception.what() << '\n';
+            std::cerr << "[Server] Bad packet (" << std::to_string(static_cast<uint8_t>(packet.type)) << ") from client " << packet.clientId << ": " << exception.what() << '\n';
         }
     }
 }
@@ -401,27 +435,37 @@ void GameServer::spawnPlayerFor(std::string nickname)
 
         world.addEntity(std::move(entity));
     }
+
+    std::cout << "[Server] Spawned player for " << nickname << '\n';
 }
 
 void GameServer::deactivatePlayerFor(std::string nickname)
 {
-    if(!nickname_to_entity.contains(nickname)) return;
+    auto it = nickname_to_entity.find(nickname);
+    if (it == nickname_to_entity.end()) return;
 
-    world.savePlayer(nickname_to_entity[nickname]);
+    UUID entity_id = it->second;
 
-    world.removeEntity(nickname_to_entity[nickname]);
+    if (world.doesEntityExist(entity_id))
+    {
+        world.savePlayer(entity_id);
+        world.removeEntity(entity_id);
+    }
 
-    nickname_to_entity.erase(nickname);
+    nickname_to_entity.erase(it);
+
+    std::cout << "[Server] Despawned player for " << nickname << '\n';
 }
-
 void GameServer::updatePlayerEntityConnections()
 {
-    for(auto& [nickname, entity_id] : nickname_to_entity)
+    for(auto it = nickname_to_entity.begin(); it != nickname_to_entity.end();)
     {
-        if(!world.doesEntityExist(entity_id)) nickname_to_entity.erase(nickname);
+        if(!world.doesEntityExist(it->second))
+            it = nickname_to_entity.erase(it);
+        else
+            ++it;
     }
 }
-
 GameServer::~GameServer()
 {
     transport->stop();

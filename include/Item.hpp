@@ -36,6 +36,7 @@ enum class ItemID : uint32_t
 
     Oak_Log,
     Oak_Leaves,
+    Oak_Planks,
     Bucket,
     Water_Bucket,
     Woodcutter,
@@ -63,7 +64,8 @@ enum class ItemID : uint32_t
     Gold_Shovel,
     Diamond_Shovel,
 
-    Ruby
+    Ruby,
+    Stick
 };
 
 enum class ItemRarity
@@ -134,7 +136,6 @@ struct ItemData
 
 extern std::unordered_map<ItemID, ItemData> itemDatabase;
 
-
 struct ItemStack
 {
     ItemID itemID;
@@ -155,5 +156,34 @@ struct Inventory
 };
 
 extern bool addItem(Inventory& inventory, ItemID itemID, uint32_t quantity);
+
+
+struct Recipe
+{
+    std::vector<ItemStack> ingredients;
+    bool requires_crafting_table = false;
+};
+
+inline bool operator==(const ItemStack& a, const ItemStack& b)
+{
+    return a.itemID == b.itemID && a.quantity == b.quantity;
+}
+
+namespace std
+{
+    template<>
+    struct hash<ItemStack>
+    {
+        size_t operator()(const ItemStack& stack) const noexcept
+        {
+            size_t h1 = std::hash<uint32_t>{}(static_cast<uint32_t>(stack.itemID));
+            size_t h2 = std::hash<uint32_t>{}(stack.quantity);
+
+            return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
+        }
+    };
+}
+
+extern std::unordered_map<ItemStack, Recipe> recipes;
 
 #endif // ITEM_HPP

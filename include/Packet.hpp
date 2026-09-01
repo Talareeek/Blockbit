@@ -29,6 +29,7 @@ enum class PacketType : uint8_t
     Input,
     ChatMessage,
     Respawn,
+    Craft,
 
     ClientSnapshot
 };
@@ -143,6 +144,11 @@ struct ClientSnapshotPacket
     double cursor_y;
 };
 
+struct CraftPacket
+{
+    ItemStack requested_craft;
+};
+
 class PacketWriter
 {
 private:
@@ -216,6 +222,7 @@ std::vector<char> serializePacket(const LoginPacket& p);
 std::vector<char> serializePacket(const ChatMessagePacket& p);
 std::vector<char> serializePacket(const RespawnPacket& p);
 std::vector<char> serializePacket(const ClientSnapshotPacket& p);
+std::vector<char> serializePacket(const CraftPacket& p);
 
 InitializationPacket deserializeInitialization(PacketReader& r);
 ChunkPacket deserializeChunk(PacketReader& r);
@@ -230,5 +237,5 @@ LoginPacket deserializeLogin(PacketReader& r);
 ChatMessagePacket deserializeChatMessage(PacketReader& r);
 RespawnPacket deserializeRespawn(PacketReader& r);
 ClientSnapshotPacket deserializeClientSnapshot(PacketReader& r);
-
+CraftPacket deserializeCraft(PacketReader& r);
 #endif // PACKET_HPP

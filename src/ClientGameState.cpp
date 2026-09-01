@@ -170,8 +170,12 @@ void ClientGameState::tryInitializePlayerUI()
 
     if (player_entity.hasComponent<InventoryComponent>())
     {
-        inventory_widget = InventoryWidget(&player_entity.getComponent<InventoryComponent>());
-        inventory_widget.updateScreenRelative(game->getWindow().getSize());
+        inventory_widget.emplace(&player_entity.getComponent<InventoryComponent>());
+        inventory_widget->updateScreenRelative(game->getWindow().getSize());
+        inventory_widget->on_craft = [this](const ItemStack stack)
+        {
+            transport->send(serializePacket(CraftPacket{stack}));
+        };
 
         hotbar = Hotbar(&player_entity.getComponent<InventoryComponent>());
         hotbar.updateScreenRelative(game->getWindow().getSize());
@@ -466,7 +470,7 @@ void ClientGameState::handleEvent(const sf::Event& event)
         }
 
         health_bar.handleEvent(event);
-        inventory_widget.handleEvent(event);
+        if (inventory_widget) inventory_widget->handleEvent(event);
         hotbar.handleEvent(event);
     }
 
@@ -637,20 +641,20 @@ void ClientGameState::update(float dt)
     {
         health_bar.setHealth(&local_world.getEntity(local_player_entity_id.value()).getComponent<HealthComponent>());
 
-        inventory_widget.updateScreenRelative(game->getWindow().getSize());
+        if (inventory_widget) inventory_widget->updateScreenRelative(game->getWindow().getSize());
         hotbar.updateScreenRelative(game->getWindow().getSize());
 
         health_bar.update(dt);
         hotbar.update(dt);
 
-        if(acceptsPlayerInput() && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E))
+        if(acceptsPlayerInput() && InputManager::isLazyKeyPressed(sf::Keyboard::Key::E) && inventory_widget)
         {
-            inventory_widget.setActive(!inventory_widget.isActive());
+            inventory_widget->setActive(!inventory_widget->isActive());
         }
 
-        if(inventory_widget.isActive())
+        if(inventory_widget && inventory_widget->isActive())
         {
-            inventory_widget.update(dt);
+            inventory_widget->update(dt);
         }
     }
 
@@ -729,9 +733,9 @@ void ClientGameState::render(sf::RenderWindow& window)
         health_bar.render(window);
         hotbar.render(window);
 
-        if(inventory_widget.isActive())
+        if(inventory_widget && inventory_widget->isActive())
         {
-            inventory_widget.render(window);
+            inventory_widget->render(window);
         }
 
         if(debug)

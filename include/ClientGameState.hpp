@@ -51,7 +51,7 @@ private:
     uint8_t local_selected_slot = 0;
 
     HealthBar health_bar;
-    InventoryWidget inventory_widget{nullptr};
+    std::optional<InventoryWidget> inventory_widget{nullptr};
     Hotbar hotbar;
 
     bool player_ui_initialized = false;

@@ -24,6 +24,7 @@ enum class BlockID : uint32_t
     Ruby_Ore,
     Oak_Log,
     Oak_Leaves,
+    Oak_Planks,
     Woodcutter,
     Fire,
     Sand,
@@ -245,6 +246,19 @@ inline std::unordered_map<BlockID, BlockData> blockDatabase =
             .texture = AssetManager::GameTextureID::Oak_Leaves,
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
             .drop = DropProperties{.drop = ItemID::Oak_Leaves}
+        }
+    },
+    { BlockID::Oak_Planks,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 0.2f,
+            .texture = AssetManager::GameTextureID::Oak_Planks,
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
+            .drop = DropProperties{.drop = ItemID::Oak_Planks}
         }
     },
     { BlockID::Woodcutter,

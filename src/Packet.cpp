@@ -299,9 +299,7 @@ static void writeInput(PacketWriter& w, const Input& in)
             break;
         case InputType::DROP:
         {
-            const auto& d = std::get<DropInfo>(in.value);
-            w.write(d.mousePosition);
-            w.write<uint8_t>(d.fullStack ? 1 : 0);
+            w.write<bool>(std::get<bool>(in.value));
             break;
         }
         case InputType::MOVE:
@@ -327,10 +325,7 @@ static Input readInput(PacketReader& r)
             break;
         case InputType::DROP:
         {
-            DropInfo d{};
-            d.mousePosition = r.read<sf::Vector2<double>>();
-            d.fullStack = r.read<uint8_t>() != 0;
-            in.value = d;
+            in.value = r.read<bool>();
             break;
         }
         case InputType::ATTACK_STOP:
@@ -561,6 +556,25 @@ ClientSnapshotPacket deserializeClientSnapshot(PacketReader& r)
 
     packet.cursor_x = r.read<double>();
     packet.cursor_y = r.read<double>();
+
+    return packet;
+}
+
+std::vector<char> serializePacket(const CraftPacket& p)
+{
+    PacketWriter writer(PacketType::Craft);
+
+    writer.write(static_cast<uint32_t>(p.requested_craft.itemID));
+    writer.write(p.requested_craft.quantity);
+
+    return writer.release();
+}
+
+CraftPacket deserializeCraft(PacketReader& r)
+{
+    CraftPacket packet;
+
+    packet.requested_craft = {.itemID = static_cast<ItemID>(r.read<uint32_t>()), .quantity = r.read<uint32_t>()};
 
     return packet;
 }

@@ -4,6 +4,8 @@
 #include "UIElement.hpp"
 #include "InventoryComponent.hpp"
 #include "Slot.hpp"
+#include "Item.hpp"
+#include "Button.hpp"
 
 #include <iostream>
 
@@ -15,6 +17,21 @@ private:
     bool active = false;
 
     Slot slots[36] = {};
+
+    uint8_t page = 0;
+
+    std::vector<Slot> crafting_slots;
+
+    uint8_t crafting_scroll_value = 0;
+
+    ItemStack selected_stack;
+
+    bool craft_clicked = false;
+
+    Button crafting_button;
+
+    
+    void renderPages(sf::RenderWindow& window);
 
 public:
 
@@ -33,6 +50,8 @@ public:
     {
         active = a;
     }
+
+    std::function<void(const ItemStack)> on_craft = [](const ItemStack stack){return;};
 };
 
 #endif // INVENTORY_WIDGET_HPP

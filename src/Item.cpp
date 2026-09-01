@@ -186,6 +186,16 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         }
     },
     {
+        ItemID::Oak_Planks,
+        {
+            .name = "Oak Planks",
+            .texture = AssetManager::GameTextureID::Oak_Planks,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
         ItemID::Bucket,
         {
             .name = "Bucket",
@@ -535,6 +545,15 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 64,
             .category = ItemCategory::Misc,
         }
+    },
+    {
+        ItemID::Stick,
+        {
+            .name = "Stick",
+            .texture = AssetManager::GameTextureID::Stick,
+            .maxStackSize = 64,
+            .category = ItemCategory::Misc,
+        }
     }
 };
 
@@ -641,3 +660,10 @@ ItemStack Inventory::removeItemWithLeftover(ItemID itemID, uint32_t quantity)
 
     return {itemID, quantity};
 }
+
+std::unordered_map<ItemStack, Recipe> recipes
+{
+    {{.itemID = ItemID::Oak_Planks, .quantity = 4}, {{{ItemID::Oak_Log, 1}}, false}},
+    {{.itemID = ItemID::Stick, .quantity = 4}, {{{ItemID::Oak_Planks, 2}}, false}},
+
+};

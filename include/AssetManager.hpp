@@ -27,6 +27,7 @@ public:
         Ruby_Ore,
         Oak_Log,
         Oak_Leaves,
+        Oak_Planks,
         Woodcutter,
         Fire,
         Sand,
@@ -40,6 +41,7 @@ public:
         Water_Bucket,
         Lighter,
         Ruby,
+        Stick,
 
 
         // ENTITIES
@@ -83,7 +85,8 @@ public:
 
     enum class ShaderID : uint32_t
     {
-        Sun
+        Sun,
+        Brightness
     };
 
     enum class SoundID : uint32_t
