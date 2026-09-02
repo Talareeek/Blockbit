@@ -20,6 +20,7 @@
 #include <cmath>
 #include <cstring>
 #include <fstream>
+#include <algorithm>
 #include <any>
 
 World::World(const std::filesystem::path path) : path{path}
@@ -422,7 +423,7 @@ int World::getHeight(int worldX) const
 
     float x = static_cast<float>(worldX);
 
-    float base = generation_properties.base_height + climate.continentalness * 0.30f;
+    float base = generation_properties.base_height + climate.continentalness * 30.0f;
 
     float scale = generation_properties.height_scale * (1.0f - climate.erosion * 0.35f);
 
