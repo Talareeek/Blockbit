@@ -22,7 +22,6 @@ struct Chunk
     Block blocks[CHUNK_HEIGHT][CHUNK_WIDTH];
 
     Climate climates[CHUNK_WIDTH];
-
     Biome biomes[CHUNK_WIDTH];
 
     bool dirty;

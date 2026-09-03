@@ -17,6 +17,8 @@ struct PlayerControlledComponent : public Component
     bool mid_attack = false;
     bool mid_usage = false;
 
+    float since_last_use = 0.0f;
+
     bool drops = false;
     bool drops_full_stack = false;
 

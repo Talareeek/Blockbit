@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <deque>
+#include <queue>
 #include <vector>
 #include <functional>
 #include <cstdint>
@@ -20,6 +21,11 @@ enum class ServerMode
 {
     Listen,
     Dedicated
+};
+
+struct BlockUpdate
+{
+
 };
 
 class GameServer

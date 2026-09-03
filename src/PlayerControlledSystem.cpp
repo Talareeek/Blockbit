@@ -78,8 +78,9 @@ void PlayerControlledSystem(World& world, float dt)
             }            
         }
 
+        player.since_last_use += dt;
 
-        if(player.mid_usage)
+        if(player.mid_usage && player.since_last_use >= 0.05f)
         {
             sf::Vector2i block_position = block_from_position(player.cursor_position);
 
@@ -100,6 +101,8 @@ void PlayerControlledSystem(World& world, float dt)
                     selected.quantity--;
                 }
             }
+
+            player.since_last_use = 0.0f;
         }
 
         if(player.drops)
