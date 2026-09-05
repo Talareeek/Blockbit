@@ -90,9 +90,32 @@ void PlayerControlledSystem(World& world, float dt)
 
             if((world.getBlock(block_position.x, block_position.y).id == BlockID::Air || world.getBlock(block_position.x, block_position.y).id == BlockID::Water) && isBlockInRange(transform, block_position, 4.0f) && itemDatabase[selected.itemID].category == ItemCategory::Block)
             {
-                selected.quantity--;
+                bool collides = false;
 
-                world.setBlock(block_position.x, block_position.y, {itemToBlock(selected.itemID), 0});
+
+                sf::Vector2<double> position = {static_cast<double>(block_position.x), static_cast<double>(block_position.y)};
+                sf::Vector2<double> size = {1.0f, 1.0f};
+
+                for(auto& [uuid, entity] : world.getEntities())
+                {
+                    if(!entity.hasComponent<TransformComponent>()) continue;
+
+                    auto transform = entity.getComponent<TransformComponent>();
+
+
+                    if(transform.intersects(position, size))
+                    {
+                        collides = true;
+                        break;
+                    }
+                }
+
+                if(!collides)
+                {
+                    selected.quantity--;
+
+                    world.setBlock(block_position.x, block_position.y, {itemToBlock(selected.itemID), 0});
+                }
             }
             else if(itemDatabase[selected.itemID].category != ItemCategory::Block)
             {

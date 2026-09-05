@@ -9,7 +9,7 @@
 
 extern std::unordered_map<int, ChunkMesh> chunkMeshes;
 
-extern void rebuildChunkMesh(World& world, int chunk_position, unsigned int unit_size);
+extern void rebuildChunkMesh(World& world, int chunk_position, float unit_size);
 
 extern void RenderWorld(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window);
 

@@ -8,6 +8,12 @@
 #include "Item.hpp"
 #include "AssetManager.hpp"
 
+struct PostPlaceBlockUpdate
+{
+    sf::Vector2i target;
+    sf::Vector2i sender;
+};
+
 enum class BlockID : uint32_t
 {
     Air,
@@ -32,6 +38,12 @@ enum class BlockID : uint32_t
     Snow
 };
 
+struct Block
+{
+    BlockID id;
+    uint8_t metadata;
+};
+
 struct MiningProperties
 {
     int mining_resistance;
@@ -48,6 +60,13 @@ struct DropProperties
     uint8_t max_amount = 1;
 };
 
+struct RenderProperties
+{
+    AssetManager::GameTextureID texture;
+    std::function<sf::FloatRect(Block block_instance)> render_bounds = [](Block block_instance) -> sf::FloatRect{return {{0.0f, 0.0f}, {0.0f, 0.0f}};};
+    std::function<sf::IntRect(Block block_instance)> rect = [](Block block_instance) -> sf::IntRect{return {{0, 0}, {0, 0}};};
+};
+
 struct BlockData
 {
     bool solid;
@@ -58,275 +77,38 @@ struct BlockData
     float drag = 1.0f;
 
     float hardness;
-    AssetManager::GameTextureID texture;
 
+    std::optional<RenderProperties> render;
     std::optional<MiningProperties> mining;
     std::optional<DropProperties> drop;
+    std::optional<std::function<void(PostPlaceBlockUpdate, World)>> update;
 };
 
-struct Block
+extern std::unordered_map<BlockID, BlockData> blockDatabase;
+
+inline auto default_render_bounds = [](Block block_instance) -> sf::FloatRect
 {
-    BlockID id;
-    uint8_t metadata;
+    return {{0.0f, 0.0f}, {1.0f, 1.0f}};
 };
 
-inline std::unordered_map<BlockID, BlockData> blockDatabase = 
+inline auto default_render_rect = [](Block block_instance) -> sf::IntRect
 {
-    { BlockID::Air,
-        {
-            .solid = false,
-            .transparent = true,
-            .breakable = false,
-            .liquid = false,
-            .drag = 1.0f,
-            .hardness = 0.0,
-        }
-    },
-    { BlockID::Stone,
-        {
-            .solid = true,
-            .transparent = false,
-            .breakable = true,
-            .liquid = false,
-            .drag = 1.0f,
-            .hardness = 1.5f,
-            .texture = AssetManager::GameTextureID::Stone,
-            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Cobblestone}
-        }
-    },
-    { BlockID::Grass,
-        {
-            .solid = true,
-            .transparent = false,
-            .breakable = true,
-            .liquid = false,
-            .drag = 1.0f,
-            .hardness = 0.6f,
-            .texture = AssetManager::GameTextureID::Grass,
-            .mining = MiningProperties{.mining_resistance = 2, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Dirt}
-        }
-    },
-    { BlockID::Dirt,
-        {
-            .solid = true,
-            .transparent = false,
-            .breakable = true,
-            .liquid = false,
-            .drag = 1.0f,
-            .hardness = 0.5f,
-            .texture = AssetManager::GameTextureID::Dirt,
-            .mining = MiningProperties{.mining_resistance = 2, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Dirt}
-        }
-    },
-    { BlockID::Cobblestone,
-        {
-            .solid = true,
-            .transparent = false,
-            .breakable = true,
-            .liquid = false,
-            .drag = 1.0f,
-            .hardness = 2.0f,
-            .texture = AssetManager::GameTextureID::Cobblestone,
-            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Cobblestone}
-        }
-    },
-    { BlockID::Obsidian,
-        {
-            .solid = true,
-            .transparent = false,
-            .breakable = true,
-            .liquid = false,
-            .drag = 1.0f,
-            .hardness = 50.0f,
-            .texture = AssetManager::GameTextureID::Obsidian,
-            .mining = MiningProperties{.mining_resistance = 50, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 5}},
-            .drop = DropProperties{.drop = ItemID::Obsidian}
-        }
-    },
-    { BlockID::Bedrock,
-        {
-            .solid = true,
-            .transparent = false,
-            .breakable = false,
-            .liquid = false,
-            .drag = 1.0f,
-            .hardness = -1.0f,
-            .texture = AssetManager::GameTextureID::Bedrock,
-            .mining = MiningProperties{.mining_resistance = INT_MAX, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = INT_MAX}}
-        }
-    },
-    { BlockID::Water,
-        {
-            .solid = false,
-            .transparent = true,
-            .breakable = false,
-            .liquid = true,
-            .drag = 4.0f,
-            .hardness = 0.0f,
-            .texture = AssetManager::GameTextureID::Water
-        }
-    },
-    { BlockID::Iron_Ore,
-        {
-            .solid = true,
-            .transparent = false,
-            .breakable = true,
-            .liquid = false,
-            .drag = 1.0f,
-            .hardness = 3.0f,
-            .texture = AssetManager::GameTextureID::Iron_Ore,
-            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 2}},
-            .drop = DropProperties{.drop = ItemID::Iron_Ore}
-        }
-    },
-    { BlockID::Gold_Ore,
-        {
-            .solid = true,
-            .transparent = false,
-            .breakable = true,
-            .liquid = false,
-            .drag = 1.0f,
-            .hardness = 3.0f,
-            .texture = AssetManager::GameTextureID::Gold_Ore,
-            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 4}},
-            .drop = DropProperties{.drop = ItemID::Gold_Ore}
-        }
-    },
-    { BlockID::Diamond_Ore,
-        {
-            .solid = true,
-            .transparent = false,
-            .breakable = true,
-            .liquid = false,
-            .drag = 1.0f,
-            .hardness = 5.0f,
-            .texture = AssetManager::GameTextureID::Diamond_Ore,
-            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 4}},
-            .drop = DropProperties{.drop = ItemID::Diamond_Ore}
-        }
-    },
-    { BlockID::Ruby_Ore,
-        {
-            .solid = true,
-            .transparent = false,
-            .breakable = true,
-            .liquid = false,
-            .drag = 1.0f,
-            .hardness = 5.0f,
-            .texture = AssetManager::GameTextureID::Ruby_Ore,
-            .mining = MiningProperties{.mining_resistance = 6, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 5}},
-            .drop = DropProperties{.drop = ItemID::Ruby}
-        }
-    },
-    { BlockID::Oak_Log,
-        {
-            .solid = true,
-            .transparent = false,
-            .breakable = true,
-            .liquid = false,
-            .drag = 1.0f,
-            .hardness = 2.0f,
-            .texture = AssetManager::GameTextureID::Oak_Log,
-            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Oak_Log}
-        }
-    },
-    { BlockID::Oak_Leaves,
-        {
-            .solid = true,
-            .transparent = true,
-            .breakable = true,
-            .liquid = false,
-            .drag = 1.0f,
-            .hardness = 0.2f,
-            .texture = AssetManager::GameTextureID::Oak_Leaves,
-            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Oak_Leaves}
-        }
-    },
-    { BlockID::Oak_Planks,
-        {
-            .solid = true,
-            .transparent = false,
-            .breakable = true,
-            .liquid = false,
-            .drag = 1.0f,
-            .hardness = 0.2f,
-            .texture = AssetManager::GameTextureID::Oak_Planks,
-            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Oak_Planks}
-        }
-    },
-    { BlockID::Woodcutter,
-        {
-            .solid = true,
-            .transparent = false,
-            .breakable = true,
-            .liquid = false,
-            .drag = 1.0f,
-            .hardness = 2.0f,
-            .texture = AssetManager::GameTextureID::Woodcutter,
-            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Woodcutter}
-        }
-    },
-    { BlockID::Fire,
-        {
-            .solid = false,
-            .transparent = true,
-            .breakable = true,
-            .liquid = false,
-            .drag = 1.0f,
-            .hardness = 0.0f,
-            .texture = AssetManager::GameTextureID::Fire,
-            .mining = MiningProperties{.mining_resistance = 0, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}}
-        }
-    },
-    { BlockID::Sand,
-        {
-            .solid = true,
-            .transparent = false,
-            .breakable = true,
-            .liquid = false,
-            .drag = 1.0f,
-            .hardness = 0.0f,
-            .texture = AssetManager::GameTextureID::Sand,
-            .mining = MiningProperties{.mining_resistance = 2, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Sand}
-        }
-    },
-    { BlockID::Coarse_Dirt,
-        {
-            .solid = true,
-            .transparent = false,
-            .breakable = true,
-            .liquid = false,
-            .drag = 1.0f,
-            .hardness = 0.0f,
-            .texture = AssetManager::GameTextureID::Coarse_Dirt,
-            .mining = MiningProperties{.mining_resistance = 2, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Coarse_Dirt}
-        }
-    },
-    { BlockID::Snow,
-        {
-            .solid = true,
-            .transparent = false,
-            .breakable = true,
-            .liquid = false,
-            .drag = 1.0f,
-            .hardness = 0.0f,
-            .texture = AssetManager::GameTextureID::Snow,
-            .mining = MiningProperties{.mining_resistance = 1, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Snow}
-        }
-    }
+    auto data = blockDatabase[block_instance.id];
+
+    return {{0, 0}, {static_cast<int>(AssetManager::getGameTexture(data.render->texture).getSize().x), static_cast<int>(AssetManager::getGameTexture(data.render->texture).getSize().y)}};
 };
 
+inline auto water_render_bounds = [](Block block_instance) -> sf::FloatRect
+{
+    return {{0.0f, 0.0f}, {1.0f, static_cast<float>(16 - (9 - block_instance.metadata)) / 16.0f}};
+};
+
+inline auto water_render_rect = [](Block block_instance) -> sf::IntRect
+{
+    auto data = blockDatabase[block_instance.id];
+
+    return {{0, 0}, {16, 16 - (9 - block_instance.metadata)}};
+};
 
 enum class WaterLevel : uint8_t
 {

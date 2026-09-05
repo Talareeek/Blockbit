@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <filesystem>
 #include <optional>
+#include <deque>
 
 #include <SFML/System/Vector2.hpp>
 
@@ -40,9 +41,6 @@ private:
 
     std::unordered_map<int, Chunk> chunks;
     std::unordered_map<UUID, Entity> entities;
-
-    float time = 0.0f;
-
 
     std::filesystem::path path;
     std::string name = "world";
@@ -146,11 +144,15 @@ public:
     bool trackBlockChanges = false;
     std::vector<std::tuple<int, int, Block>> pendingBlockUpdates;
 
+    std::deque<PostPlaceBlockUpdate> pending_post_place_block_updates;
+
+    //void handlePostPlaceBlockUpdates();
+
     float dayTime{0.0f};
 
     uint64_t days{0};
 
-    static constexpr float DAY_CYCLE_DURATION = 1200.0f; // 20 MINUTES
+    static constexpr float DAY_CYCLE_DURATION = 1200.0f;
     static constexpr int SEA_LEVEL = 75;
     static constexpr float FLUID_TICK = 0.5f;
     static constexpr int SIMULATION_DISTANCE = 10;

@@ -23,11 +23,6 @@ enum class ServerMode
     Dedicated
 };
 
-struct BlockUpdate
-{
-
-};
-
 class GameServer
 {
 private:
@@ -48,6 +43,9 @@ private:
     std::unordered_map<uint32_t, std::deque<std::vector<Input>>> remote_input_queues;
     std::unordered_map<uint32_t, std::unordered_set<int>> sent_chunks;
 
+    uint16_t tick_rate = 60;
+    uint64_t tick = 0;
+
     void spawnPlayerFor(std::string nickname);
     void deactivatePlayerFor(std::string nickname);
 
@@ -61,9 +59,7 @@ private:
 
     void updatePlayerEntityConnections();
 
-    uint16_t tick_rate = 60;
-
-    uint64_t tick = 0;
+    void handleBlockUpdates();
 
 public:
 

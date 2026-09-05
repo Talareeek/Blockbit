@@ -5,7 +5,9 @@
 
 #include "GameCommon.hpp"
 
-#include <SFML/System/Vector2.hpp>
+#include <SFML/System.hpp>
+
+#include <SFML/Graphics.hpp>
 
 #include <string>
 #include <sstream>
@@ -122,6 +124,14 @@ struct TransformComponent : public Component
     bool moved() const
     {
         return position != previous_position;
+    }
+
+    bool intersects(sf::Vector2<double> position, sf::Vector2<double> size) const
+    {
+        sf::Rect<double> this_rect;
+        sf::Rect<double> other_rect;
+
+        return this_rect.findIntersection(other_rect).has_value();
     }
 
     std::unique_ptr<Component> clone() const override

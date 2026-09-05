@@ -29,9 +29,9 @@ namespace
         return t * t * (3.0f - 2.0f * t);
     }
 
-    void appendQuad(sf::VertexArray& va, const sf::Vector2f& pos, const sf::Vector2f& size, const sf::IntRect& uv)
+    void appendQuad(sf::VertexArray& vertex_array, const sf::FloatRect& bounds, const sf::IntRect& uv)
     {
-        sf::Vertex v0, v1, v2, v3;
+        sf::Vertex vertex0, vertex1, vertex2, vertex3;
 
         const sf::Vector2f uvPos  = sf::Vector2f(static_cast<float>(uv.position.x), static_cast<float>(uv.position.y));
         const sf::Vector2f uvSize = sf::Vector2f(static_cast<float>(uv.size.x), static_cast<float>(uv.size.y));
@@ -41,34 +41,32 @@ namespace
         const float u1 = uvPos.x + uvSize.x;
         const float v1y = uvPos.y + uvSize.y;
 
-        v0.position = {pos.x, pos.y};
-        v1.position = {pos.x + size.x, pos.y};
-        v2.position = {pos.x + size.x, pos.y + size.y};
-        v3.position = {pos.x, pos.y + size.y};
+        vertex0.position = {bounds.position.x, bounds.position.y};
+        vertex1.position = {bounds.position.x + bounds.size.x, bounds.position.y};
+        vertex2.position = {bounds.position.x + bounds.size.x, bounds.position.y + bounds.size.y};
+        vertex3.position = {bounds.position.x, bounds.position.y + bounds.size.y};
 
-        v0.texCoords = {u0, v1y};
-        v1.texCoords = {u1, v1y};
-        v2.texCoords = {u1, v0y};
-        v3.texCoords = {u0, v0y};
+        vertex0.texCoords = {u0, v1y};
+        vertex1.texCoords = {u1, v1y};
+        vertex2.texCoords = {u1, v0y};
+        vertex3.texCoords = {u0, v0y};
 
-        va.append(v0);
-        va.append(v1);
-        va.append(v2);
+        vertex_array.append(vertex0);
+        vertex_array.append(vertex1);
+        vertex_array.append(vertex2);
 
-        va.append(v0);
-        va.append(v2);
-        va.append(v3);
+        vertex_array.append(vertex0);
+        vertex_array.append(vertex2);
+        vertex_array.append(vertex3);
     }
 }
 
-void rebuildChunkMesh(World& world, int chunk_position, unsigned int unit_size)
+void rebuildChunkMesh(World& world, int chunk_position, float unit_size)
 {
     Chunk& chunk = world.getChunk(chunk_position);
     ChunkMesh& mesh = chunkMeshes[chunk_position];
 
     mesh.vertices.clear();
-
-    const float size = (float)unit_size;
 
     for (int y = 0; y < CHUNK_HEIGHT; y++)
     {
@@ -76,38 +74,21 @@ void rebuildChunkMesh(World& world, int chunk_position, unsigned int unit_size)
         {
             Block& block = chunk.blocks[y][x];
 
-            if (block.id == BlockID::Air)
-                continue;
+            auto block_data = blockDatabase[block.id];
 
-            auto texID = blockDatabase[block.id].texture;
+            if(!block_data.render.has_value()) continue;
 
-            const sf::IntRect& uv = BlockAtlas::getUV(texID);
+            auto texture_id = block_data.render->texture;
 
-            float worldX = x * size;
-            float worldY = y * size;
+            const sf::IntRect& texture_uv = BlockAtlas::getUV(texture_id);
 
-            float heightFactor = 1.0f;
+            sf::IntRect final_uv = {texture_uv.position + block_data.render->rect(block).position, block_data.render->rect(block).size};
 
-            if (block.id == BlockID::Water)
-            {
-                uint8_t level = block.metadata;
+            sf::Vector2f position(x * unit_size, y * unit_size);
+            
+            sf::FloatRect final_rect = {{position + block_data.render->render_bounds(block).position}, {block_data.render->render_bounds(block).size * unit_size}};
 
-                if (level == 9)
-                    level = 8;
-
-                BlockID above =
-                    world.getBlock(
-                        chunk_position * CHUNK_WIDTH + x,
-                        y + 1).id;
-
-                if (above != BlockID::Water)
-                    heightFactor = level / 9.0f;
-            }
-
-            sf::Vector2f pos(worldX, worldY);
-            sf::Vector2f blockSize(size, size * heightFactor);
-
-            appendQuad(mesh.vertices, pos, blockSize, uv);
+            appendQuad(mesh.vertices, final_rect, final_uv);
         }
     }
 
@@ -254,7 +235,7 @@ sf::Vector2f getSunWorldPosition(const World& world, sf::Vector2f cameraCenter)
 
 void RenderWorld(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window)
 {
-    unsigned int unit_size = window.getSize().y / WORLD_UNIT_SIZE_FACTOR;
+    float unit_size = window.getSize().y / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
 
     int centerChunk = static_cast<int>(std::floor(camera.x / static_cast<double>(CHUNK_WIDTH)));
 
@@ -271,12 +252,12 @@ void RenderWorld(World& world, const sf::Vector2<double> camera, sf::RenderWindo
             rebuildChunkMesh(world, i, unit_size);
         }
 
-        float tx = static_cast<float>((static_cast<double>(i * CHUNK_WIDTH) - camera.x) * static_cast<double>(unit_size));
-        float ty = static_cast<float>(-camera.y * static_cast<double>(unit_size));
+        float translate_x = static_cast<float>((static_cast<double>(i * CHUNK_WIDTH) - camera.x)) * unit_size;
+        float translate_y = static_cast<float>(-camera.y) * unit_size;
 
         sf::RenderStates states;
         states.texture = &BlockAtlas::getTexture();
-        states.transform.translate({tx, ty});
+        states.transform.translate({translate_x, translate_y});
 
         window.draw(mesh.vertices, states);
     }
@@ -636,7 +617,7 @@ sf::Texture generateBackground()
 
             const BlockID id = (wy == h - 1) ? BlockID::Grass : BlockID::Dirt;
 
-            const auto texID = blockDatabase[id].texture;
+            const auto texID = blockDatabase[id].render->texture;
             sf::Sprite sprite(AssetManager::getGameTexture(texID));
 
             const float py = (cameraY + viewBlocksH * 0.5f - static_cast<float>(wy + 1)) * UNIT_SIZE;
