@@ -1,25 +1,5 @@
 #include "../include/UIElement.hpp"
 
-void UIElement::setPosition(sf::Vector2f pos)
-{
-    position = pos;
-}
-
-sf::Vector2f UIElement::getPosition() const
-{
-    return position;
-}
-
-void UIElement::setSize(sf::Vector2f s)
-{
-    size = s;
-}
-
-sf::Vector2f UIElement::getSize() const
-{
-    return size;
-}
-
 sf::Vector2f UIElement::ScreenRelative::toAbsolutePosition(const sf::Vector2u& windowSize) const
 {
     switch(mode)

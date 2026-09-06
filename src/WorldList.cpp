@@ -201,8 +201,8 @@ void WorldList::update(float dt)
     sf::FloatRect list_area = getListArea();
 
     sf::FloatRect create_area = getCreateButtonArea();
-    createButton.setPosition(create_area.position);
-    createButton.setSize(create_area.size);
+    createButton.position = create_area.position;
+    createButton.size = create_area.size;
 
     if(selection == Selection::SINGLEPLAYER && createButton.clicked())
     {
@@ -227,8 +227,8 @@ void WorldList::update(float dt)
 
         float y = list_area.position.y + i * (entry_h + gap) - scroll_offset;
 
-        entry.setPosition({list_area.position.x, y});
-        entry.setSize({list_area.size.x, entry_h});
+        entry.position = {list_area.position.x, y};
+        entry.size = {list_area.size.x, entry_h};
 
         entry.update(dt);
     }
@@ -290,11 +290,11 @@ void WorldList::update(float dt)
     float field_x = position.x + strip_w + (content_w - field_w) * 0.5f;
     float field_y = list_area.position.y + size.y * 0.04f;
 
-    ipField.setPosition({field_x, field_y});
-    ipField.setSize({field_w, field_h});
+    ipField.position = {field_x, field_y};
+    ipField.size = {field_w, field_h};
 
-    connectButton.setPosition({field_x, field_y + field_h + size.y * 0.025f});
-    connectButton.setSize({field_w, field_h * 1.2f});
+    connectButton.position = {field_x, field_y + field_h + size.y * 0.025f};
+    connectButton.size = {field_w, field_h * 1.2f};
 
     if (connectButton.clicked() && !pendingConnect.has_value())
     {
@@ -437,7 +437,7 @@ void WorldList::render(sf::RenderWindow& window)
 
             for(auto& entry : entries)
             {
-                sf::FloatRect ebounds{entry.getPosition(), entry.getSize()};
+                sf::FloatRect ebounds{entry.position, entry.size};
                 if(ebounds.findIntersection(list_area))
                 {
                     entry.render(window);
@@ -470,15 +470,15 @@ void WorldList::render(sf::RenderWindow& window)
     {
         drawFitText(window, "Connect to server", header_box, true, sf::Color(220, 220, 220), 1.0f, sf::Color::Black);
 
-        float label_h = ipField.getSize().y * 0.6f;
+        float label_h = ipField.size.y * 0.6f;
         sf::FloatRect label_box{
-            {ipField.getPosition().x, ipField.getPosition().y - label_h - 4.0f},
-            {ipField.getSize().x, label_h}
+            {ipField.position.x, ipField.position.y - label_h - 4.0f},
+            {ipField.size.x, label_h}
         };
         drawFitText(window, "Server IP", label_box, false, sf::Color(220, 220, 220), 1.0f, sf::Color::Black);
 
-        sf::RectangleShape field_bg(ipField.getSize());
-        field_bg.setPosition(ipField.getPosition());
+        sf::RectangleShape field_bg(ipField.size);
+        field_bg.setPosition(ipField.position);
         field_bg.setFillColor(sf::Color(20, 20, 20, 200));
         field_bg.setOutlineColor(sf::Color(120, 200, 255, 180));
         field_bg.setOutlineThickness(1.5f);
@@ -490,7 +490,7 @@ void WorldList::render(sf::RenderWindow& window)
         if(ipField.getText().empty())
         {
             drawFitText(window, "e.g. 127.0.0.1:34500",
-                        sf::FloatRect(ipField.getPosition(), ipField.getSize()),
+                        sf::FloatRect(ipField.position, ipField.size),
                         false, sf::Color(180, 180, 180, 140), 0.0f, sf::Color::Transparent);
         }
     }

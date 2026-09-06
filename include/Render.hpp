@@ -31,10 +31,6 @@ extern void renderSunAndMoon(float daytime, sf::RenderWindow& window);
 
 extern void renderStars(float daytime, sf::RenderWindow& window);
 
-[[deprecated]] extern sf::Vector2i getMouseBlockPosition(const World& world, const sf::RenderWindow& window);
-
-[[deprecated]] extern sf::Vector2f getMouseWorldPosition(const World& world, const sf::RenderWindow& window);
-
 extern sf::Vector2i getMouseBlockPosition(sf::Vector2<double> camera, const sf::RenderWindow& window);
 
 extern sf::Vector2<double> getMouseWorldPosition(sf::Vector2<double> camera, const sf::RenderWindow& window);

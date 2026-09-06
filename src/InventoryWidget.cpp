@@ -241,7 +241,7 @@ void InventoryWidget::renderPages(sf::RenderWindow& window)
 
         sf::RectangleShape background(sf::Vector2f{static_cast<float>(TEXTURE_RECT_WIDTH) * scale, static_cast<float>(TEXTURE_RECT_HEIGHT) * scale});
         background.setTexture(&inventory_texture);
-        background.setTextureRect({{TEXTURE_RECT_WIDTH * page, 0}, {TEXTURE_RECT_WIDTH, TEXTURE_RECT_HEIGHT}});
+        background.setTextureRect({{static_cast<int>(TEXTURE_RECT_WIDTH) * page, 0}, {static_cast<int>(TEXTURE_RECT_WIDTH), TEXTURE_RECT_HEIGHT}});
         background.setPosition(position);
 
         if(page == this->page)  window.draw(background);

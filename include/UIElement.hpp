@@ -56,14 +56,6 @@ public:
 
     virtual void updateToBounds(sf::FloatRect bounds);
 
-    [[deprecated]] void setPosition(sf::Vector2f pos);
-
-    [[deprecated]] sf::Vector2f getPosition() const;
-
-    [[deprecated]] void setSize(sf::Vector2f s);
-
-    [[deprecated]] sf::Vector2f getSize() const;
-
     void updateScreenRelative(const sf::Vector2u& windowSize);
 };
 

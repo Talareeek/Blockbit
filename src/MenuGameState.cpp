@@ -180,15 +180,15 @@ void MenuGameState::update(float dt)
     quit.updateScreenRelative(size);
     worldList.updateScreenRelative(size);
 
-    worldList.setPosition({size.x * 0.75f, 0.0f});
-    worldList.setSize({size.x * 0.25f, static_cast<float>(size.y)});
+    worldList.position = {size.x * 0.75f, 0.0f};
+    worldList.size = {size.x * 0.25f, static_cast<float>(size.y)};
 
     float fieldW = size.y * 0.32f;
     float fieldH = size.y * 0.06f;
     float fieldX = (size.x * 0.75f - fieldW) * 0.5f;
     float fieldY = size.y * 0.78f;
-    nicknameField.setPosition({fieldX, fieldY});
-    nicknameField.setSize({fieldW, fieldH});
+    nicknameField.position = {fieldX, fieldY};
+    nicknameField.size = {fieldW, fieldH};
 
     worldList.setNickname(nicknameField.getText());
 
@@ -231,8 +231,8 @@ void MenuGameState::update(float dt)
     }
 
     sf::FloatRect preview_rect = worldList.serverPreviewArea();
-    serverPreview.setPosition(preview_rect.position);
-    serverPreview.setSize(preview_rect.size);
+    serverPreview.position = preview_rect.position;
+    serverPreview.size = preview_rect.size;
     serverPreview.update(dt);
 }
 
@@ -271,8 +271,8 @@ void MenuGameState::render(sf::RenderWindow& window)
     player.render(window);
 
     {
-        sf::Vector2f fpos = nicknameField.getPosition();
-        sf::Vector2f fsize = nicknameField.getSize();
+        sf::Vector2f fpos = nicknameField.position;
+        sf::Vector2f fsize = nicknameField.size;
 
         sf::Text label(AssetManager::getFont(AssetManager::FontID::PressStart2P), "Nickname", static_cast<unsigned>(fsize.y * 0.4f));
         label.setFillColor(sf::Color(230, 230, 230));

@@ -814,6 +814,8 @@ sf::Color getRarityColor(ItemRarity rarity)
 
         return sf::Color::Red;
     }
+
+    return sf::Color::Black;
 }
 
 
