@@ -641,6 +641,8 @@ void ClientGameState::update(float dt)
     {
         health_bar.setHealth(&local_world.getEntity(local_player_entity_id.value()).getComponent<HealthComponent>());
 
+        local_health_points = {local_world.getEntity(local_player_entity_id.value()).getComponent<HealthComponent>().health, local_world.getEntity(local_player_entity_id.value()).getComponent<HealthComponent>().maxHealth};
+
         if (inventory_widget) inventory_widget->updateScreenRelative(game->getWindow().getSize());
         hotbar.updateScreenRelative(game->getWindow().getSize());
 
@@ -656,6 +658,10 @@ void ClientGameState::update(float dt)
         {
             inventory_widget->update(dt);
         }
+    }
+    else
+    {
+        local_health_points = std::nullopt;
     }
 
     if(acceptsPlayerInput() && InputManager::isLazyKeyPressed(sf::Keyboard::Key::F3))
@@ -730,7 +736,14 @@ void ClientGameState::render(sf::RenderWindow& window)
 
     if (!hide_ui)
     {
-        health_bar.render(window);
+        sf::FloatRect bounds
+        {
+            {50.0f, static_cast<float>(window.getSize().y) - static_cast<float>(window.getSize().x) * 0.025f - 50.0f},
+            {static_cast<float>(window.getSize().x) * 0.1f, static_cast<float>(window.getSize().x) * 0.025f}
+        };
+
+        if(local_health_points.has_value()) renderBar(static_cast<int>(local_health_points->second), static_cast<int>(local_health_points->first), sf::Color::Red, sf::Color(166, 28, 46), bounds, window);
+        //health_bar.render(window);
         hotbar.render(window);
 
         if(inventory_widget && inventory_widget->isActive())

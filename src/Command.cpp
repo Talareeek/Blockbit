@@ -13,6 +13,7 @@
 #include "../include/AnimationComponent.hpp"
 #include "../include/ExplosiveComponent.hpp"
 #include "../include/PlayerControlledComponent.hpp"
+#include "../include/InventoryComponent.hpp"
 
 #include <sstream>
 
@@ -263,6 +264,47 @@ std::unordered_map<std::wstring, Command> commandDatabase =
             animation.frameSize = {16, 12};
 
             entity.addComponent(animation);
+
+            world->addEntity(std::move(entity));
+        }
+    }},
+
+    {L"lh_spawn-mannequin", {false, true,
+        [](std::wstring command, Console& console, Game* game, World* world)
+        {
+            std::wistringstream stream(command);
+
+            std::wstring trash;
+            stream >> trash;
+
+            float x;
+            stream >> x;
+
+            float y;
+            stream >> y;
+
+            if(!stream)
+            {
+                console.writeLine(L"Usage: spawn-mannequin <x> <y>");
+                return;
+            }
+
+            Entity entity(generateUUID());
+
+            entity.addComponent(TransformComponent{{x, y}, {1.0f, 1.0f}, sf::degrees(0.0f)});
+            entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
+
+            InventoryComponent inv(36);
+            inv.inventory.slots[0] = {ItemID::Dynamite, 16};
+            inv.inventory.slots[1] = {ItemID::Bucket, 1};
+            inv.inventory.slots[2] = {ItemID::Woodcutter, 64};
+            inv.inventory.slots[3] = {ItemID::Lighter, 1};
+            inv.inventory.slots[4] = {ItemID::Diamond_Pickaxe, 1};
+            inv.inventory.slots[5] = {ItemID::Diamond_Axe, 1};
+            inv.inventory.slots[6] = {ItemID::Diamond_Shovel, 1};
+            entity.addComponent(std::move(inv));
+            entity.addComponent(RenderComponent{AssetManager::GameTextureID::Player, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
+            entity.addComponent(HealthComponent{100, 100, false});
 
             world->addEntity(std::move(entity));
         }

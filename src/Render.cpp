@@ -870,3 +870,29 @@ void renderItemInfo(sf::Vector2f position, const ItemStack& item, sf::RenderTarg
     target.draw(idText);
 
 }
+
+void renderBar(int max, int value, sf::Color primary_color, sf::Color secondary_color, sf::FloatRect bounds, sf::RenderTarget& target)
+{
+    sf::RectangleShape background(bounds.size);
+    background.setPosition(bounds.position);
+    background.setFillColor(sf::Color(72, 72, 72, 125));
+
+    target.draw(background);
+
+
+    float factor = static_cast<float>(value) / static_cast<float>(max);
+
+    sf::VertexArray vertex_array(sf::PrimitiveType::TriangleStrip, 4);
+
+    vertex_array[0].position = bounds.position;
+    vertex_array[1].position = bounds.position + sf::Vector2f{0.0f, bounds.size.y};
+    vertex_array[2].position = bounds.position + sf::Vector2f{bounds.size.x * factor, 0.0f};
+    vertex_array[3].position = bounds.position + sf::Vector2f{bounds.size.x * factor, bounds.size.y};
+
+    vertex_array[0].color = secondary_color;
+    vertex_array[1].color = secondary_color;
+    vertex_array[2].color = primary_color;
+    vertex_array[3].color = primary_color;
+
+    target.draw(vertex_array);
+}

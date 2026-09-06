@@ -49,4 +49,6 @@ extern void renderItemInfo(sf::Vector2f position, const ItemStack& item, sf::Ren
 
 extern sf::Color getRarityColor(ItemRarity rarity);
 
+extern void renderBar(int max, int value, sf::Color primary_color, sf::Color secondary_color, sf::FloatRect bounds, sf::RenderTarget& target);
+
 #endif // RENDER_HPP

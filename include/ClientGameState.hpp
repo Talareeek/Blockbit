@@ -50,6 +50,8 @@ private:
 
     uint8_t local_selected_slot = 0;
 
+    std::optional<std::pair<uint32_t, uint32_t>> local_health_points;
+
     HealthBar health_bar;
     std::optional<InventoryWidget> inventory_widget{nullptr};
     Hotbar hotbar;
