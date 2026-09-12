@@ -52,7 +52,6 @@ private:
 
     std::optional<std::pair<uint32_t, uint32_t>> local_health_points;
     std::optional<InventoryWidget> inventory_widget{nullptr};
-    Hotbar hotbar;
 
     bool player_ui_initialized = false;
 

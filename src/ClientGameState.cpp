@@ -172,9 +172,6 @@ void ClientGameState::tryInitializePlayerUI()
         {
             transport->send(serializePacket(CraftPacket{stack}));
         };
-
-        hotbar = Hotbar(&player_entity.getComponent<InventoryComponent>());
-        hotbar.updateScreenRelative(game->getWindow().getSize());
     }
 
     player_ui_initialized = true;
@@ -466,7 +463,6 @@ void ClientGameState::handleEvent(const sf::Event& event)
         }
 
         if (inventory_widget) inventory_widget->handleEvent(event);
-        hotbar.handleEvent(event);
     }
 
     uint8_t* slot_pointer = nullptr;
@@ -637,9 +633,6 @@ void ClientGameState::update(float dt)
         local_health_points = {local_world.getEntity(local_player_entity_id.value()).getComponent<HealthComponent>().health, local_world.getEntity(local_player_entity_id.value()).getComponent<HealthComponent>().maxHealth};
 
         if (inventory_widget) inventory_widget->updateScreenRelative(game->getWindow().getSize());
-        hotbar.updateScreenRelative(game->getWindow().getSize());
-
-        hotbar.update(dt);
 
         if(acceptsPlayerInput() && InputManager::isLazyKeyPressed(sf::Keyboard::Key::E) && inventory_widget)
         {
@@ -728,19 +721,26 @@ void ClientGameState::render(sf::RenderWindow& window)
 
     if (!hide_ui)
     {
-        sf::FloatRect bounds
+        if(local_player_entity_id.has_value())
         {
-            {50.0f, static_cast<float>(window.getSize().y) - static_cast<float>(window.getSize().x) * 0.025f - 50.0f},
-            {static_cast<float>(window.getSize().x) * 0.1f, static_cast<float>(window.getSize().x) * 0.025f}
-        };
+            auto& health = local_world.getEntity(local_player_entity_id.value()).getComponent<HealthComponent>();
+            auto& inventory = local_world.getEntity(local_player_entity_id.value()).getComponent<InventoryComponent>();
 
-        if(local_health_points.has_value()) renderBar(static_cast<int>(local_health_points->second), static_cast<int>(local_health_points->first), sf::Color::Red, sf::Color(166, 28, 46), bounds, window);
-        //health_bar.render(window);
-        hotbar.render(window);
+            sf::FloatRect bounds
+            {
+                {50.0f, static_cast<float>(window.getSize().y) - static_cast<float>(window.getSize().x) * 0.025f - 50.0f},
+                {static_cast<float>(window.getSize().x) * 0.1f, static_cast<float>(window.getSize().x) * 0.025f}
+            };
 
-        if(inventory_widget && inventory_widget->isActive())
-        {
-            inventory_widget->render(window);
+            renderBar(static_cast<int>(health.maxHealth), static_cast<int>(health.health), sf::Color::Red, sf::Color(166, 28, 46), bounds, window);
+            std::array<ItemStack, 9> array;
+            std::copy_n(inventory.inventory.slots.begin(), array.size(), array.begin());
+            renderHotbar(array, inventory.selectedSlot, window);
+
+            if(inventory_widget && inventory_widget->isActive())
+            {
+                inventory_widget->render(window);
+            }
         }
 
         if(debug)

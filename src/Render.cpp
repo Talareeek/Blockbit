@@ -902,8 +902,8 @@ void renderBar(int max, int value, sf::Color primary_color, sf::Color secondary_
 
 void renderHotbar(std::array<ItemStack, 9> items, uint8_t selected_slot, sf::RenderTarget& target)
 {
-    sf::Vector2f position = {static_cast<float>(target.getSize().y) * 0.2f, static_cast<float>(target.getSize().y) * 0.8f};
-    sf::Vector2f size = {static_cast<float>(target.getSize().x) * 0.6f, static_cast<float>(target.getSize().x) * 0.6f * (13.0f / 101.0f)};
+    sf::Vector2f size = {static_cast<float>(target.getSize().x) * 0.5f, static_cast<float>(target.getSize().x) * 0.5f * (13.0f / 101.0f)};
+    sf::Vector2f position = {(static_cast<float>(target.getSize().x) - size.x) / 2.f, static_cast<float>(target.getSize().y) * 0.8f};
 
     sf::RectangleShape background(size);
     background.setPosition(position);
@@ -921,12 +921,10 @@ void renderHotbar(std::array<ItemStack, 9> items, uint8_t selected_slot, sf::Ren
     {
         ItemStack& stack = items[i];
 
-        Slot slot(position + sf::Vector2f(slotStart + (slotWidth + slotSpacing) * i,verticalOffset), {slotWidth, slotWidth});
+        Slot slot(position + sf::Vector2f(slotStart + (slotWidth + slotSpacing) * i, verticalOffset), {slotWidth, slotWidth});
 
         slot.setItemStack(stack);
-
         slot.setHovered(i == selected_slot);
-
         slot.render(target);
     }
 }
