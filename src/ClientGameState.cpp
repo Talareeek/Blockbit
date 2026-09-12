@@ -162,11 +162,7 @@ void ClientGameState::tryInitializePlayerUI()
 
     if (!player_entity.hasComponent<TransformComponent>()) return;
 
-    if (player_entity.hasComponent<HealthComponent>())
-    {
-        health_bar = HealthBar(&player_entity.getComponent<HealthComponent>());
-        health_bar.updateScreenRelative(game->getWindow().getSize());
-    }
+    //health-bar
 
     if (player_entity.hasComponent<InventoryComponent>())
     {
@@ -203,7 +199,7 @@ void ClientGameState::applySnapshot(const SnapshotPacket& snapshot)
 
             entity.addComponent(TransformComponent{{net_entity.x, net_entity.y}, {net_entity.size_x, net_entity.size_y}, sf::degrees(0.0f)});
             entity.addComponent(RenderComponent{static_cast<AssetManager::GameTextureID>(net_entity.textureID), sf::IntRect{{net_entity.uv_x, net_entity.uv_y}, {net_entity.uv_size_x, net_entity.uv_size_y}}, {net_entity.size_x, net_entity.size_y}});
-            entity.addComponent(HealthComponent{net_entity.health, net_entity.maxHealth, false});
+            entity.addComponent(HealthComponent{net_entity.health, net_entity.maxHealth});
 
             if (!net_entity.inventory.empty())
             {
@@ -469,7 +465,6 @@ void ClientGameState::handleEvent(const sf::Event& event)
             */
         }
 
-        health_bar.handleEvent(event);
         if (inventory_widget) inventory_widget->handleEvent(event);
         hotbar.handleEvent(event);
     }
@@ -489,7 +484,7 @@ void ClientGameState::handleEvent(const sf::Event& event)
     game_view.setSize({game_view.getSize().x, -game_view.getSize().y});
     game->getWindow().setView(game_view);
 
-    auto new_inputs = ::getInputsFromEvent(event, camera, game->getWindow(), *slot_pointer);
+    auto new_inputs = ::getInputsFromEvent(event, camera, game->getWindow());
     inputs.insert(inputs.end(), std::make_move_iterator(new_inputs.begin()), std::make_move_iterator(new_inputs.end()));
 }
 
@@ -639,14 +634,11 @@ void ClientGameState::update(float dt)
 
     if (player_ui_initialized)
     {
-        health_bar.setHealth(&local_world.getEntity(local_player_entity_id.value()).getComponent<HealthComponent>());
-
         local_health_points = {local_world.getEntity(local_player_entity_id.value()).getComponent<HealthComponent>().health, local_world.getEntity(local_player_entity_id.value()).getComponent<HealthComponent>().maxHealth};
 
         if (inventory_widget) inventory_widget->updateScreenRelative(game->getWindow().getSize());
         hotbar.updateScreenRelative(game->getWindow().getSize());
 
-        health_bar.update(dt);
         hotbar.update(dt);
 
         if(acceptsPlayerInput() && InputManager::isLazyKeyPressed(sf::Keyboard::Key::E) && inventory_widget)

@@ -27,15 +27,21 @@ enum class InputType
     CHANGE_SLOT
 };
 
+struct ChangeSlotData
+{
+    bool scroll;
+    int8_t value;
+};
+
 struct Input
 {
     InputType type;
 
-    std::variant<std::monostate, sf::Vector2<double>, uint8_t, bool> value;
+    std::variant<std::monostate, sf::Vector2<double>, uint8_t, bool, ChangeSlotData> value;
 };
 
 std::vector<Input> getInputs(const World& world, sf::Vector2<double> camera, const sf::RenderWindow& window);
-std::vector<Input> getInputsFromEvent(const sf::Event& event, sf::Vector2<double> camera, const sf::RenderWindow& window, uint8_t& selectedSlot);
+std::vector<Input> getInputsFromEvent(const sf::Event& event, sf::Vector2<double> camera, const sf::RenderWindow& window);
 
 void processWorldInputs(World& world, std::vector<Input> inputs, UUID id);
 

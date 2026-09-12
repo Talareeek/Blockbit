@@ -79,6 +79,42 @@ void Slot::render(sf::RenderWindow& window)
     }
 }
 
+void Slot::render(sf::RenderTarget& window)
+{
+    sf::RectangleShape background(size * 0.9f);
+    background.setPosition(position + size * 0.05f);
+    sf::Color color(0, 0, 0, 128);
+    background.setFillColor(background_color);
+    background.setOutlineColor((hovered) ? sf::Color::White : outline_color);
+    background.setOutlineThickness(size.x / 20.0f);
+    window.draw(background);
+
+    if(item_stack.empty())
+    {
+        return;
+    }
+
+    sf::Sprite sprite(AssetManager::getGameTexture(itemDatabase[item_stack.itemID].texture));
+    sprite.setTextureRect({{0, 0}, {16, 16}});
+    sprite.setPosition(position + sf::Vector2f(size.x / 10.0f, size.y / 10.0f));
+    sprite.setScale({size.x * 0.8f / sprite.getLocalBounds().size.x, size.y * 0.8f / sprite.getLocalBounds().size.y});
+    window.draw(sprite);
+
+
+    sf::Text text(AssetManager::getFont(AssetManager::FontID::PressStart2P), std::to_string(item_stack.quantity), static_cast<unsigned int>(size.x / 3.0f));
+
+    text.setPosition(position + sf::Vector2f(size.x / 8.0f, size.y / 8.0f));
+
+    text.setFillColor(sf::Color::White);
+
+    window.draw(text);
+
+    if(hovered && show_item_info)
+    {
+        //renderItemInfo(window.mapPixelToCoords(sf::Mouse::getPosition(window)), item_stack, window);
+    }
+}
+
 
 void Slot::setHovered(bool hovered)
 {

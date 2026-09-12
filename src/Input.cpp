@@ -48,7 +48,7 @@ std::vector<Input> getInputs(const World& world, sf::Vector2<double> camera, con
     return inputs;
 }
 
-std::vector<Input> getInputsFromEvent(const sf::Event& event, sf::Vector2<double> camera, const sf::RenderWindow& window, uint8_t& selectedSlot)
+std::vector<Input> getInputsFromEvent(const sf::Event& event, sf::Vector2<double> camera, const sf::RenderWindow& window)
 {
     std::vector<Input> inputs;
 
@@ -79,13 +79,12 @@ std::vector<Input> getInputsFromEvent(const sf::Event& event, sf::Vector2<double
         }
     }
 
-
     else if(event.is<sf::Event::MouseWheelScrolled>())
     {
         auto wheel = event.getIf<sf::Event::MouseWheelScrolled>();
-        int delta = -(static_cast<int>(wheel->delta));
-        selectedSlot = static_cast<uint8_t>((selectedSlot + delta + 9) % 9);
-        inputs.push_back({InputType::CHANGE_SLOT, selectedSlot});
+        int delta = (static_cast<int>(wheel->delta));
+
+        inputs.push_back({InputType::CHANGE_SLOT, ChangeSlotData{true, static_cast<int8_t>(delta)}});
     }
 
     
@@ -96,8 +95,7 @@ std::vector<Input> getInputsFromEvent(const sf::Event& event, sf::Vector2<double
         if(key->code >= sf::Keyboard::Key::Num1 && key->code <= sf::Keyboard::Key::Num9)
         {
             uint8_t slot = static_cast<uint8_t>(static_cast<int>(key->code) - static_cast<int>(sf::Keyboard::Key::Num1));
-            selectedSlot = slot;
-            inputs.push_back({InputType::CHANGE_SLOT, slot});
+            inputs.push_back({InputType::CHANGE_SLOT, ChangeSlotData{false, static_cast<int8_t>(slot)}});
         }
     }
 
@@ -185,8 +183,7 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
             }
             case InputType::CHANGE_SLOT:
             {
-                uint8_t slot = std::get<uint8_t>(input.value);
-                inventory.selectedSlot = slot % 9;
+                player.change_slot = std::get<ChangeSlotData>(input.value);
 
                 break;
             }

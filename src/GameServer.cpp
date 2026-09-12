@@ -428,7 +428,7 @@ void GameServer::spawnPlayerFor(std::string nickname)
         entity.getComponent<TransformComponent>().position = world.getSpawnPoint();
 
         entity.addComponent(RenderComponent{AssetManager::GameTextureID::Player, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
-        entity.addComponent(HealthComponent{100, 100, false});
+        entity.addComponent(HealthComponent{100, 100});
         entity.addComponent(PlayerControlledComponent{nickname});
 
         nickname_to_entity[nickname] = entity.getID();

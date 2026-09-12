@@ -649,7 +649,7 @@ UUID World::spawnPlayer(uint32_t clientId)
     player.getComponent<TransformComponent>().position = {spawn.x, static_cast<double>(spawnY)};
 
     player.addComponent(RenderComponent{AssetManager::GameTextureID::Player, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
-    player.addComponent(HealthComponent{100, 100, false});
+    player.addComponent(HealthComponent{100, 100});
     player.addComponent(PlayerControlledComponent{""});
 
     entities.emplace(player.getID(), std::move(player));

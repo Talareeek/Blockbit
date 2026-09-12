@@ -29,7 +29,7 @@ void HealthSystem(World& world)
 
         auto& health = entity.getComponent<HealthComponent>();
 
-        if(health.health <= 0 && health.killOnZero)
+        if(health.health <= 0)
         {
             toDelete.push_back(entity.getID());
 

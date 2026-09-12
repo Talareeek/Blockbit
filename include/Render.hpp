@@ -47,4 +47,6 @@ extern sf::Color getRarityColor(ItemRarity rarity);
 
 extern void renderBar(int max, int value, sf::Color primary_color, sf::Color secondary_color, sf::FloatRect bounds, sf::RenderTarget& target);
 
+extern void renderHotbar(std::array<ItemStack, 9> items, uint8_t selected_slot, sf::RenderTarget& target);
+
 #endif // RENDER_HPP

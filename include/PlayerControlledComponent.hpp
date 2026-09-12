@@ -2,6 +2,7 @@
 #define PLAYER_CONTROLLED_COMPONENT_HPP
 
 #include "Component.hpp"
+#include "Input.hpp"
 
 #include <cstdint>
 #include <string>
@@ -24,6 +25,8 @@ struct PlayerControlledComponent : public Component
 
     sf::Vector2i mining_block;
     float mining_time = 0.0f;
+
+    std::optional<ChangeSlotData> change_slot;
     
 
     PlayerControlledComponent() = default;

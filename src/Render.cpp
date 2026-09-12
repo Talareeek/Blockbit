@@ -6,6 +6,7 @@
 #include "../include/AssetManager.hpp"
 #include "../include/BlockAtlas.hpp"
 #include "../include/NetworkInterpolationComponent.hpp"
+#include "../include/Slot.hpp"
 
 #include <random>
 #include <numbers>
@@ -897,4 +898,35 @@ void renderBar(int max, int value, sf::Color primary_color, sf::Color secondary_
     vertex_array[3].color = primary_color;
 
     target.draw(vertex_array);
+}
+
+void renderHotbar(std::array<ItemStack, 9> items, uint8_t selected_slot, sf::RenderTarget& target)
+{
+    sf::Vector2f position = {static_cast<float>(target.getSize().y) * 0.2f, static_cast<float>(target.getSize().y) * 0.8f};
+    sf::Vector2f size = {static_cast<float>(target.getSize().x) * 0.6f, static_cast<float>(target.getSize().x) * 0.6f * (13.0f / 101.0f)};
+
+    sf::RectangleShape background(size);
+    background.setPosition(position);
+    background.setTexture(&AssetManager::getUITexture(AssetManager::UITextureID::Hotbar));
+    target.draw(background);
+
+    float slotWidth = size.x * (10.f / 101.f);
+    float slotSpacing = size.x * (2.f / 202.f);
+    float slotStart = size.x * (3.f / 202.f);
+    float verticalOffset = size.y * (3.f / 26.f);
+
+    float itemSize = slotWidth - slotSpacing;
+
+    for(int i = 0; i < 9; i++)
+    {
+        ItemStack& stack = items[i];
+
+        Slot slot(position + sf::Vector2f(slotStart + (slotWidth + slotSpacing) * i,verticalOffset), {slotWidth, slotWidth});
+
+        slot.setItemStack(stack);
+
+        slot.setHovered(i == selected_slot);
+
+        slot.render(target);
+    }
 }

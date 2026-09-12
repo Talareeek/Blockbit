@@ -159,5 +159,23 @@ void PlayerControlledSystem(World& world, float dt)
 
             world.addEntity(std::move(item));            
         }
+
+        if(player.change_slot.has_value())
+        {
+            auto& data = player.change_slot.value();
+
+            if(data.scroll)
+            {
+                inventory.selectedSlot += (data.value + 9);
+            }
+            else
+            {
+                inventory.selectedSlot = data.value;
+            }
+
+            inventory.selectedSlot %= 9;
+
+            player.change_slot = std::nullopt;
+        }
     }
 }

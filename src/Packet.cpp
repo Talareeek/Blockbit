@@ -295,8 +295,13 @@ static void writeInput(PacketWriter& w, const Input& in)
         case InputType::JUMP:
             break;
         case InputType::CHANGE_SLOT:
-            w.write<uint8_t>(std::get<uint8_t>(in.value));
+        {
+            auto data = std::get<ChangeSlotData>(in.value);
+
+            w.write<bool>(data.scroll);
+            w.write<int8_t>(data.value);
             break;
+        }
         case InputType::DROP:
         {
             w.write<bool>(std::get<bool>(in.value));
@@ -321,8 +326,15 @@ static Input readInput(PacketReader& r)
             in.value = r.read<sf::Vector2<double>>();
             break;
         case InputType::CHANGE_SLOT:
-            in.value = r.read<uint8_t>();
+        {
+            ChangeSlotData data;
+
+            data.scroll = r.read<bool>();
+            data.value = r.read<int8_t>();
+
+            in.value = data;
             break;
+        }
         case InputType::DROP:
         {
             in.value = r.read<bool>();

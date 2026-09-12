@@ -304,7 +304,7 @@ std::unordered_map<std::wstring, Command> commandDatabase =
             inv.inventory.slots[6] = {ItemID::Diamond_Shovel, 1};
             entity.addComponent(std::move(inv));
             entity.addComponent(RenderComponent{AssetManager::GameTextureID::Player, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
-            entity.addComponent(HealthComponent{100, 100, false});
+            entity.addComponent(HealthComponent{100, 100});
 
             world->addEntity(std::move(entity));
         }

@@ -30,6 +30,7 @@ public:
     void handleEvent(const sf::Event& event) override;
     void update(float dt) override;
     void render(sf::RenderWindow& window) override;
+    void render(sf::RenderTarget& window);
 
     bool show_item_info = false;
 
