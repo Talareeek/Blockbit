@@ -82,7 +82,7 @@ std::vector<Input> getInputsFromEvent(const sf::Event& event, sf::Vector2<double
     else if(event.is<sf::Event::MouseWheelScrolled>())
     {
         auto wheel = event.getIf<sf::Event::MouseWheelScrolled>();
-        int delta = (static_cast<int>(wheel->delta));
+        int delta = -(static_cast<int>(wheel->delta));
 
         inputs.push_back({InputType::CHANGE_SLOT, ChangeSlotData{true, static_cast<int8_t>(delta)}});
     }

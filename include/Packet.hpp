@@ -23,8 +23,8 @@ enum class PacketType : uint8_t
     Chunk,
     BlockUpdate,
     Snapshot,
-    Spawn,
-    Despawn,
+    Track,
+    StopTracking,
 
     Input,
     ChatMessage,
@@ -91,12 +91,7 @@ struct SnapshotPacket
     uint64_t days;
 };
 
-struct SpawnPacket
-{
-    UUID id;
-};
-
-struct DespawnPacket
+struct TrackPacket
 {
     UUID id;
 };
@@ -136,6 +131,11 @@ struct ChatMessagePacket
 struct RespawnPacket
 {
 
+};
+
+struct StopTrackingPacket
+{
+    
 };
 
 struct ClientSnapshotPacket
@@ -213,8 +213,8 @@ std::vector<char> serializePacket(const InitializationPacket& p);
 std::vector<char> serializePacket(const ChunkPacket& p);
 std::vector<char> serializePacket(const BlockUpdatePacket& p);
 std::vector<char> serializePacket(const SnapshotPacket& p);
-std::vector<char> serializePacket(const SpawnPacket& p);
-std::vector<char> serializePacket(const DespawnPacket& p);
+std::vector<char> serializePacket(const TrackPacket& p);
+std::vector<char> serializePacket(const StopTrackingPacket& p);
 std::vector<char> serializePacket(const InputPacket& p);
 std::vector<char> serializePacket(const StatusRequestPacket& p);
 std::vector<char> serializePacket(const StatusResponsePacket& p);
@@ -228,8 +228,7 @@ InitializationPacket deserializeInitialization(PacketReader& r);
 ChunkPacket deserializeChunk(PacketReader& r);
 BlockUpdatePacket    deserializeBlockUpdate(PacketReader& r);
 SnapshotPacket       deserializeSnapshot(PacketReader& r);
-SpawnPacket          deserializeSpawn(PacketReader& r);
-DespawnPacket        deserializeDespawn(PacketReader& r);
+TrackPacket          deserializeTrack(PacketReader& r);
 InputPacket          deserializeInput(PacketReader& r);
 StatusRequestPacket deserializeStatusRequest(PacketReader& r);
 StatusResponsePacket deserializeStatusResponse(PacketReader& r);

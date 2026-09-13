@@ -268,17 +268,16 @@ std::vector<char> serializePacket(const SnapshotPacket& p)
     return w.release();
 }
 
-std::vector<char> serializePacket(const SpawnPacket& p)
+std::vector<char> serializePacket(const TrackPacket& p)
 {
-    PacketWriter w(PacketType::Spawn);
+    PacketWriter w(PacketType::Track);
     w.write(p.id);
     return w.release();
 }
 
-std::vector<char> serializePacket(const DespawnPacket& p)
+std::vector<char> serializePacket(const StopTrackingPacket& p)
 {
-    PacketWriter w(PacketType::Despawn);
-    w.write(p.id);
+    PacketWriter w(PacketType::StopTracking);
     return w.release();
 }
 
@@ -493,16 +492,9 @@ SnapshotPacket deserializeSnapshot(PacketReader& r)
     return p;
 }
 
-SpawnPacket deserializeSpawn(PacketReader& r)
+TrackPacket deserializeTrack(PacketReader& r)
 {
-    SpawnPacket p;
-    p.id = r.read<UUID>();
-    return p;
-}
-
-DespawnPacket deserializeDespawn(PacketReader& r)
-{
-    DespawnPacket p;
+    TrackPacket p;
     p.id = r.read<UUID>();
     return p;
 }

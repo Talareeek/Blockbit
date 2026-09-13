@@ -157,7 +157,7 @@ void GameServer::processIncoming()
                         spawnPlayerFor(login.nickname);
 
                         UUID entity_id = nickname_to_entity[login.nickname];
-                        transport->send(packet.clientId, serializePacket(SpawnPacket{entity_id}));
+                        transport->send(packet.clientId, serializePacket(TrackPacket{entity_id}));
 
                         std::cout << "[Server] Logged " << packet.clientId << " as " << login.nickname << '\n';
                     }
@@ -364,7 +364,7 @@ void GameServer::update(float dt)
 
             auto iterator = nickname_to_entity.find(nickname);
             if (iterator == nickname_to_entity.end()) continue;
-            if (queue.empty()) continue;
+            if (queue.empty() || !world.doesEntityExist(iterator->second)) continue;
 
             processWorldInputs(world, std::move(queue.front()), iterator->second);
             queue.pop_front();
@@ -381,6 +381,19 @@ void GameServer::update(float dt)
         DaycycleSystem(world, dt);
 
         TransformSystem(world);
+
+        for(auto& [client_id, nickname] : client_to_nickname)
+        {
+            for(auto& [nickname_, uuid] : nickname_to_entity)
+            {
+                if(!world.doesEntityExist(uuid))
+                {
+                    nickname_to_entity.erase(nickname);
+
+                    transport->send(client_id, serializePacket(StopTrackingPacket{}));
+                }
+            }
+        }
 
         world.tick(dt);
 

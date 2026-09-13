@@ -310,20 +310,17 @@ void ClientGameState::processIncoming()
                     local_world.setBlock(block_update.x, block_update.y, block_update.block);
                     break;
                 }
-                case PacketType::Spawn:
+                case PacketType::Track:
                 {
-                    auto spawn = deserializeSpawn(reader);
+                    auto spawn = deserializeTrack(reader);
                     my_entity_id = spawn.id;
                     local_player_entity_id = my_entity_id;
                     break;
                 }
-                case PacketType::Despawn:
+                case PacketType::StopTracking:
                 {
-                    auto despawn = deserializeDespawn(reader);
-                    auto& entities = local_world.getEntities();
-
-                    local_world.getEntities().erase(despawn.id);
-
+                    local_player_entity_id = std::nullopt;
+                    my_entity_id = UUID();
                     break;
                 }
                 case PacketType::ChatMessage:
@@ -464,17 +461,6 @@ void ClientGameState::handleEvent(const sf::Event& event)
 
         if (inventory_widget) inventory_widget->handleEvent(event);
     }
-
-    uint8_t* slot_pointer = nullptr;
-    if (hasPlayerEntity())
-    {
-        auto& player_entity = local_world.getEntity(local_player_entity_id.value());
-        if (player_entity.hasComponent<InventoryComponent>())
-        {
-            slot_pointer = &player_entity.getComponent<InventoryComponent>().selectedSlot;
-        }
-    }
-    if (!slot_pointer) slot_pointer = &local_selected_slot;
 
     sf::View game_view({0.0f, 0.0f}, {static_cast<float>(game->getWindow().getSize().x), static_cast<float>(game->getWindow().getSize().y)});
     game_view.setSize({game_view.getSize().x, -game_view.getSize().y});
@@ -630,8 +616,6 @@ void ClientGameState::update(float dt)
 
     if (player_ui_initialized)
     {
-        local_health_points = {local_world.getEntity(local_player_entity_id.value()).getComponent<HealthComponent>().health, local_world.getEntity(local_player_entity_id.value()).getComponent<HealthComponent>().maxHealth};
-
         if (inventory_widget) inventory_widget->updateScreenRelative(game->getWindow().getSize());
 
         if(acceptsPlayerInput() && InputManager::isLazyKeyPressed(sf::Keyboard::Key::E) && inventory_widget)
@@ -646,7 +630,6 @@ void ClientGameState::update(float dt)
     }
     else
     {
-        local_health_points = std::nullopt;
     }
 
     if(acceptsPlayerInput() && InputManager::isLazyKeyPressed(sf::Keyboard::Key::F3))

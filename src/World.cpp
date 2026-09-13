@@ -791,6 +791,8 @@ void World::loadData()
 
     BBT data = BBT::load(buffer);
 
+    seed = data["seed"].get<unsigned int>();
+
     dayTime = data["day_time"].get<float>();
     days = data["days"].get<uint64_t>();
     

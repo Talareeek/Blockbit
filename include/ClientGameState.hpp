@@ -47,10 +47,7 @@ private:
     uint16_t pending_port = 0;
     std::string nickname;
     bool login_sent = false;
-
-    uint8_t local_selected_slot = 0;
-
-    std::optional<std::pair<uint32_t, uint32_t>> local_health_points;
+    
     std::optional<InventoryWidget> inventory_widget{nullptr};
 
     bool player_ui_initialized = false;
