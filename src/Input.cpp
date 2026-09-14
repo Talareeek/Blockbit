@@ -12,6 +12,7 @@
 #include "../include/Item.hpp"
 #include "../include/PhysicsSystem.hpp"
 #include "../include/PlayerControlledComponent.hpp"
+#include "../include/AnimationComponent.hpp"
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Window/Event.hpp>
@@ -113,6 +114,7 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
     auto& transform = entity.getComponent<TransformComponent>();
     auto& inventory = entity.getComponent<InventoryComponent>();
     auto& player = entity.getComponent<PlayerControlledComponent>();
+    auto& animation = entity.getComponent<AnimationComponent>();
 
     for(const auto& input : inputs)
     {
@@ -128,11 +130,11 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
 
                 if(direction.x < 0.0f)
                 {
-                    render.uv = {{0, 32}, {16, 16}};
+                    animation.direction = AnimationComponent::Direction::Left;
                 }
                 else if(direction.x > 0.0f)
                 {
-                    render.uv = {{32, 32}, {16, 16}};
+                    animation.direction = AnimationComponent::Direction::Right;
                 }
 
                 break;

@@ -5,6 +5,7 @@
 #include "../include/AssetManager.hpp"
 #include "../include/HealthComponent.hpp"
 #include "../include/GameCommon.hpp"
+#include "../include/PlayerControlledComponent.hpp"
 #include "../include/World.hpp"
 
 #include <cmath>
@@ -50,5 +51,10 @@ void RenderEntities(World& world, const sf::Vector2<double> camera, sf::RenderWi
 
         sprite.setPosition({static_cast<float>(screen_position.x * unit_size), static_cast<float>(screen_position.y * unit_size)});
         window.draw(sprite);
+
+        if(entity.hasComponent<PlayerControlledComponent>())
+        {
+            auto& player = entity.getComponent<PlayerControlledComponent>();
+        }
     }
 }

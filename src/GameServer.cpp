@@ -20,6 +20,7 @@
 #include "../include/ChunkLoadSystem.hpp"
 #include "../include/ChunkUnloadSystem.hpp"
 #include "../include/DaycycleSystem.hpp"
+#include "../include/AnimationComponent.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -425,7 +426,7 @@ void GameServer::spawnPlayerFor(std::string nickname)
     {
         Entity entity(generateUUID());
 
-        entity.addComponent(TransformComponent{{0.0f, 0.0f}, {1.0f, 1.0f}, sf::degrees(0.0f)});
+        entity.addComponent(TransformComponent{{0.0f, 0.0f}, {0.75f, 1.0f}, sf::degrees(0.0f)});
         entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
 
         InventoryComponent inv(36);
@@ -440,7 +441,20 @@ void GameServer::spawnPlayerFor(std::string nickname)
 
         entity.getComponent<TransformComponent>().position = world.getSpawnPoint();
 
-        entity.addComponent(RenderComponent{AssetManager::GameTextureID::Player, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
+        entity.addComponent(RenderComponent{AssetManager::GameTextureID::Player, {{0, 0}, {12, 16}}, {1.0f, 1.0f}});
+
+        AnimationComponent animation;
+
+            animation.animations =
+            {
+                {AnimationState::Idle, AnimationClip{0, 2, 0.5f, true}},
+                {AnimationState::Walking, AnimationClip{2, 2, 0.5f, true}}
+            };
+
+            animation.frameSize = {12, 16};
+
+            entity.addComponent(animation);
+
         entity.addComponent(HealthComponent{100, 100});
         entity.addComponent(PlayerControlledComponent{nickname});
 
