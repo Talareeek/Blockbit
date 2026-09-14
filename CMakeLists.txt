@@ -1,17 +1,14 @@
 cmake_minimum_required(VERSION 3.24)
 project(Blockbit C CXX)
 
-# Set C++ standard
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Set output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-# Compiler flags for debugging
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     # Debug information: -g3 for full debug info
     # Optimization: -O0 for accurate debugging
@@ -50,6 +47,8 @@ else()
     endif()
 endif()
 
+find_package(tinyxml2 REQUIRED)
+
 # Source files
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
@@ -69,7 +68,7 @@ target_link_libraries(Blockbit PRIVATE
     SFML::System
     SFML::Audio
     Threads::Threads
-    sqlite3
+    tinyxml2::tinyxml2
     ${ZSTD_TARGET}
 )
 
