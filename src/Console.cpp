@@ -272,24 +272,24 @@ void Console::render(sf::RenderWindow& window)
 {
     if(!active) return;
 
-    const sf::Color accent(80, 200, 220);
-    const sf::Color bgColor(14, 18, 26, 230);
-    const sf::Color titleBgColor(26, 32, 44, 245);
-    const sf::Color separatorColor(60, 72, 92, 180);
-    const sf::Color promptColor(120, 220, 140);
+    const sf::Color accent(255, 255, 255);
+    const sf::Color background_color(15, 15, 15, 230);
+    const sf::Color title_background_color(26, 32, 44, 245);
+    const sf::Color separator_color(60, 72, 92, 180);
+    const sf::Color prompt_color(120, 220, 140);
 
     sf::RectangleShape background(size);
     background.setPosition(position);
-    background.setFillColor(bgColor);
+    background.setFillColor(background_color);
     background.setOutlineThickness(2.0f);
     background.setOutlineColor(accent);
     window.draw(background);
 
-    const float titleBarHeight = 22.0f;
+    const float titleBarHeight = 30.0f;
 
     sf::RectangleShape titleBar({size.x, titleBarHeight});
     titleBar.setPosition(position);
-    titleBar.setFillColor(titleBgColor);
+    titleBar.setFillColor(title_background_color);
     window.draw(titleBar);
 
     sf::RectangleShape titleSeparator({size.x, 1.0f});
@@ -297,11 +297,12 @@ void Console::render(sf::RenderWindow& window)
     titleSeparator.setFillColor(accent);
     window.draw(titleSeparator);
 
-    sf::Text title(AssetManager::getFont(AssetManager::FontID::FiraCode), L"Console", 13);
+    sf::Text title(AssetManager::getFont(AssetManager::FontID::FiraCode), L"CONSOLE", 17);
     title.setFillColor(accent);
-    auto titleBounds = title.getLocalBounds();
-    title.setOrigin(titleBounds.position);
-    title.setPosition({position.x + 8.0f, position.y + (titleBarHeight - titleBounds.size.y) * 0.5f - 1.0f});
+    auto title_bounds = title.getLocalBounds();
+    title.setOrigin(title_bounds.position);
+    title.setStyle(sf::Text::Bold);
+    title.setPosition({position.x + 8.0f, position.y + (titleBarHeight - title_bounds.size.y) * 0.5f - 1.0f});
     window.draw(title);
 
     for(int i = 0; i < 3; ++i)
@@ -327,11 +328,11 @@ void Console::render(sf::RenderWindow& window)
 
     sf::RectangleShape inputSeparator({size.x - padding * 2, 1.0f});
     inputSeparator.setPosition({position.x + padding, inputAreaTop});
-    inputSeparator.setFillColor(separatorColor);
+    inputSeparator.setFillColor(separator_color);
     window.draw(inputSeparator);
 
     sf::Text prompt(AssetManager::getFont(AssetManager::FontID::FiraCode), L">", inputCharSize);
-    prompt.setFillColor(promptColor);
+    prompt.setFillColor(prompt_color);
     auto promptBounds = prompt.getLocalBounds();
     prompt.setOrigin(promptBounds.position);
     prompt.setPosition({position.x + padding + 2.0f, position.y + size.y - inputHeight + 2.0f});
