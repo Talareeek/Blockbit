@@ -65,7 +65,9 @@ enum class ItemID : uint32_t
     Diamond_Shovel,
 
     Ruby,
-    Stick
+    Stick,
+
+    Chest
 };
 
 enum class ItemRarity

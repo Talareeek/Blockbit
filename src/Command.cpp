@@ -14,6 +14,7 @@
 #include "../include/ExplosiveComponent.hpp"
 #include "../include/PlayerControlledComponent.hpp"
 #include "../include/InventoryComponent.hpp"
+#include "../include/BlockAtlas.hpp"
 
 #include <sstream>
 
@@ -23,6 +24,22 @@ std::unordered_map<std::wstring, Command> commandDatabase =
         [](std::wstring command, Console& console, Game* game, World* world)
         {
             console.writeLine(command.substr(5));
+        }
+    }},
+
+    {L"export_block_atlas", {false, false, 
+        [](std::wstring command, Console& console, Game* game, World* world)
+        {
+            sf::Image image = BlockAtlas::getTexture().copyToImage();
+
+            if(!image.saveToFile(getHomePath() / "Blockbit" / ("blockatlas_" + std::to_string(std::time(nullptr)) + ".png")))
+            {
+                console.writeLine(L"BlockAtlas export failed!", sf::Color::Red);
+            }
+            else
+            {
+                console.writeLine(L"BlockAtlas exported", sf::Color::Green);
+            }
         }
     }},
 

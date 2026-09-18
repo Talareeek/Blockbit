@@ -35,7 +35,8 @@ enum class BlockID : uint32_t
     Fire,
     Sand,
     Coarse_Dirt,
-    Snow
+    Snow,
+    Chest
 };
 
 struct Block
@@ -108,6 +109,16 @@ inline auto water_render_rect = [](Block block_instance) -> sf::IntRect
     auto data = blockDatabase[block_instance.id];
 
     return {{0, 0}, {16, 16 - (9 - block_instance.metadata)}};
+};
+
+inline auto chest_render_bounds = [](Block block_instance) -> sf::FloatRect
+{
+    return {{1.0f / 16.0f, 0.0f}, {14.0f / 16.0f, 14.0f / 16.0f}};
+};
+
+inline auto chest_render_rect = [](Block block_instance) -> sf::IntRect
+{
+    return {{1, 2}, {14, 14}};
 };
 
 enum class WaterLevel : uint8_t

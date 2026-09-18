@@ -554,7 +554,17 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 64,
             .category = ItemCategory::Misc,
         }
-    }
+    },
+    {
+        ItemID::Chest,
+        {
+            .name = "Chest",
+            .texture = AssetManager::GameTextureID::Chest,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
 };
 
 bool ItemStack::empty() const

@@ -33,6 +33,7 @@ public:
         Sand,
         Coarse_Dirt,
         Snow,
+        Chest,
 
 
         // ITEMS

@@ -44,6 +44,7 @@ BlockID itemToBlock(ItemID item)
         case ItemID::Woodcutter: return BlockID::Woodcutter;
         case ItemID::Sand: return BlockID::Sand;
         case ItemID::Snow: return BlockID::Snow;
+        case ItemID::Chest: return BlockID::Chest;
         default: return BlockID::Air;
     }
 }
@@ -302,5 +303,18 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .mining = MiningProperties{.mining_resistance = 1, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}},
             .drop = DropProperties{.drop = ItemID::Snow}
         }
-    }
+    },
+    { BlockID::Chest,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 2.0f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Chest, .render_bounds = chest_render_bounds, .rect = chest_render_rect},
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
+            .drop = DropProperties{.drop = ItemID::Chest}
+        }
+    },
 };

@@ -80,7 +80,7 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Coarse_Dirt, "resources/textures/coarse_dirt.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Snow, "resources/textures/snow.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Ruby_Ore, "resources/textures/ruby_ore.png");
-    
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Chest, "resources/textures/chest.png");
 
     BlockAtlas::add(AssetManager::GameTextureID::Stone);
     BlockAtlas::add(AssetManager::GameTextureID::Grass);
@@ -101,6 +101,7 @@ Game::Game()
     BlockAtlas::add(AssetManager::GameTextureID::Coarse_Dirt);
     BlockAtlas::add(AssetManager::GameTextureID::Snow);
     BlockAtlas::add(AssetManager::GameTextureID::Ruby_Ore);
+    BlockAtlas::add(AssetManager::GameTextureID::Chest);
     BlockAtlas::build();
 
     AssetManager::loadShader(AssetManager::ShaderID::Sun, "resources/shaders/sun.frag");

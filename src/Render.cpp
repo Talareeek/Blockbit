@@ -87,7 +87,12 @@ void rebuildChunkMesh(World& world, int chunk_position, float unit_size)
 
             sf::Vector2f position(x * unit_size, y * unit_size);
             
-            sf::FloatRect final_rect = {{position + block_data.render->render_bounds(block).position}, {block_data.render->render_bounds(block).size * unit_size}};
+            auto bounds = block_data.render->render_bounds(block);
+
+            sf::FloatRect final_rect = {
+                position + bounds.position * unit_size,
+                bounds.size * unit_size
+            };
 
             appendQuad(mesh.vertices, final_rect, final_uv);
         }

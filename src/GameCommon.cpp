@@ -48,3 +48,18 @@ float getTickStep(uint16_t tick_rate)
 {
     return 1.0f / static_cast<float>(tick_rate);
 }
+
+std::filesystem::path getHomePath()
+{
+    std::filesystem::path directory;
+
+    #ifdef _WIN32
+        const char* appdata = std::getenv("APPDATA");
+        directory = appdata ? std::filesystem::path(appdata) : std::filesystem::temp_directory_path();
+    #else
+        const char* home = std::getenv("HOME");
+        directory = home ? std::filesystem::path(home) : std::filesystem::temp_directory_path();
+    #endif
+
+    return directory;
+}

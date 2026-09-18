@@ -437,6 +437,7 @@ void GameServer::spawnPlayerFor(std::string nickname)
         inv.inventory.slots[4] = {ItemID::Diamond_Pickaxe, 1};
         inv.inventory.slots[5] = {ItemID::Diamond_Axe, 1};
         inv.inventory.slots[6] = {ItemID::Diamond_Shovel, 1};
+        inv.inventory.slots[7] = {ItemID::Chest, 64};
         entity.addComponent(std::move(inv));
 
         entity.getComponent<TransformComponent>().position = world.getSpawnPoint();
