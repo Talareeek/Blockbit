@@ -95,7 +95,7 @@ public:
     void addEntity(Entity entity);
     void removeEntity(UUID id);
     Entity& getEntity(UUID id);
-    bool doesEntityExist(UUID id);
+    bool doesEntityExist(UUID id) const;
     
     float getHeightNoise(float x) const;
     int getHeight(int worldX) const;

@@ -494,7 +494,7 @@ Entity& World::getEntity(UUID id)
     throw std::runtime_error("No entity found");
 }
 
-bool World::doesEntityExist(UUID id)
+bool World::doesEntityExist(UUID id) const
 {
     return entities.contains(id);
 }

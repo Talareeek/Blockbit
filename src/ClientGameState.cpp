@@ -147,10 +147,7 @@ bool ClientGameState::hasPlayerEntity() const
 {
     if (!local_player_entity_id.has_value()) return false;
 
-    UUID player_id = local_player_entity_id.value();
-    for (const auto& [id, entity] : local_world.getEntities())
-        if (entity.getID() == player_id) return true;
-    return false;
+    return local_world.doesEntityExist(local_player_entity_id.value());
 }
 
 void ClientGameState::tryInitializePlayerUI()
@@ -214,7 +211,7 @@ void ClientGameState::applySnapshot(const SnapshotPacket& snapshot)
 
             local_world.addEntity(std::move(entity));
 
-            if (net_entity.id == local_player_entity_id.value())
+            if (local_player_entity_id == net_entity.id)
             {
                 player_ui_initialized = false;
             }
@@ -242,7 +239,7 @@ void ClientGameState::applySnapshot(const SnapshotPacket& snapshot)
             inventory.selectedSlot = net_entity.selectedSlot;
         }
 
-        if (net_entity.id != local_player_entity_id.value())
+        if (local_player_entity_id != net_entity.id)
         {
             if (!entity.hasComponent<NetworkInterpolationComponent>()) entity.addComponent<NetworkInterpolationComponent>(NetworkInterpolationComponent{});
 
@@ -255,7 +252,15 @@ void ClientGameState::applySnapshot(const SnapshotPacket& snapshot)
     {
         if (!present_ids.contains(id)) to_remove.push_back(id);
     }
-    for (UUID id : to_remove) local_world.removeEntity(id);
+    for (UUID id : to_remove)
+    {
+        if (local_player_entity_id == id)
+        {
+            player_ui_initialized = false;
+            inventory_widget.reset();
+        }
+        local_world.removeEntity(id);
+    }
 
     local_world.dayTime = snapshot.dayTime;
 }
@@ -321,6 +326,8 @@ void ClientGameState::processIncoming()
                 {
                     local_player_entity_id = std::nullopt;
                     my_entity_id = UUID();
+                    player_ui_initialized = false;
+                    inventory_widget.reset();
                     break;
                 }
                 case PacketType::ChatMessage:
@@ -704,7 +711,7 @@ void ClientGameState::render(sf::RenderWindow& window)
 
     if (!hide_ui)
     {
-        if(local_player_entity_id.has_value())
+        if(hasPlayerEntity())
         {
             auto& health = local_world.getEntity(local_player_entity_id.value()).getComponent<HealthComponent>();
             auto& inventory = local_world.getEntity(local_player_entity_id.value()).getComponent<InventoryComponent>();
