@@ -49,6 +49,25 @@ endif()
 
 find_package(tinyxml2 REQUIRED)
 
+# Dear ImGui + ImGui-SFML (fetched at configure time, no submodules to init)
+include(FetchContent)
+FetchContent_Declare(imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui
+    GIT_TAG v1.91.9b
+    GIT_SHALLOW ON
+)
+FetchContent_MakeAvailable(imgui)
+
+set(IMGUI_DIR ${imgui_SOURCE_DIR})
+set(IMGUI_SFML_FIND_SFML OFF)   # SFML already found above
+set(IMGUI_SFML_IMGUI_DEMO ON)   # ImGui::ShowDemoWindow()
+FetchContent_Declare(imgui-sfml
+    GIT_REPOSITORY https://github.com/SFML/imgui-sfml
+    GIT_TAG v3.0
+    GIT_SHALLOW ON
+)
+FetchContent_MakeAvailable(imgui-sfml)
+
 # Source files
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
@@ -69,6 +88,7 @@ target_link_libraries(Blockbit PRIVATE
     SFML::Audio
     Threads::Threads
     tinyxml2::tinyxml2
+    ImGui-SFML::ImGui-SFML
     ${ZSTD_TARGET}
 )
 

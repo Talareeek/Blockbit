@@ -14,6 +14,9 @@
 #include "../include/BlockAtlas.hpp"
 #include "../include/AuthorGameState.hpp"
 
+#include <imgui.h>
+#include <imgui-SFML.h>
+
 Game::Game()
 {
     window.create(sf::VideoMode::getDesktopMode(), "Blockbit");
@@ -21,6 +24,8 @@ Game::Game()
 	if (!icon.loadFromFile("resources/textures/grass.png")) throw std::runtime_error("Failed loading an icon");
 	
 	window.setIcon(icon);
+
+    if (!ImGui::SFML::Init(window)) throw std::runtime_error("Failed initializing ImGui-SFML");
 
     unit_size = window.getSize().y / 9;
 
@@ -144,6 +149,8 @@ void Game::handleEvents()
     {
         try
         {
+            ImGui::SFML::ProcessEvent(window, *event);
+
             if(event->is<sf::Event::Closed>())
             {
                 window.close();
@@ -162,6 +169,8 @@ void Game::handleEvents()
                 {
                     fullscreen = !fullscreen;
 
+                    ImGui::SFML::Shutdown(window);
+
                     window.close();
 
                     window.create(
@@ -171,6 +180,8 @@ void Game::handleEvents()
                         fullscreen ? sf::State::Fullscreen
                                 : sf::State::Windowed
                     );
+
+                    if (!ImGui::SFML::Init(window)) throw std::runtime_error("Failed re-initializing ImGui-SFML");
 
                     sf::View view(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)}));
                     window.setView(view);
@@ -197,6 +208,10 @@ void Game::handleEvents()
 
 void Game::update()
 {
+    ImGui::SFML::Update(window, sf::seconds(dt));
+
+    ImGui::ShowDemoWindow();   // sanity check — skasuj, gdy wstawisz własne okna
+
     handleBufferedStateActions();
 
     if(gameStates.empty()) return;
@@ -232,6 +247,8 @@ void Game::render()
 
     console.render(window);
 
+    ImGui::SFML::Render(window);
+
     window.display();
 }
 
@@ -245,6 +262,8 @@ void Game::run()
         update();
         render();
     }
+
+    ImGui::SFML::Shutdown();
 }
 
 void Game::pushState(GameState* sender, std::unique_ptr<GameState> state)
