@@ -63,3 +63,13 @@ std::filesystem::path getHomePath()
 
     return directory;
 }
+
+std::string wstringToString(const std::wstring wstring)
+{
+    return std::string(wstring.begin(), wstring.end());
+}
+
+ImVec4 SFMLColorToImGuiColor(const sf::Color color)
+{
+    return ImVec4((float)color.r / 255.0f, (float)color.g / 255.0f, (float)color.b / 255.0f, (float)color.a / 255.0f);
+}

@@ -165,13 +165,12 @@ void Game::handleEvents()
 
             else if (event->is<sf::Event::KeyPressed>())
             {
-                if (event->getIf<sf::Event::KeyPressed>()->code == sf::Keyboard::Key::F11)
+                if(event->getIf<sf::Event::KeyPressed>()->code == sf::Keyboard::Key::F11)
                 {
                     fullscreen = !fullscreen;
 
-                    ImGui::SFML::Shutdown(window);
-
                     window.close();
+                    ImGui::SFML::Shutdown(window);
 
                     window.create(
                         fullscreen ? sf::VideoMode::getDesktopMode()
@@ -185,6 +184,11 @@ void Game::handleEvents()
 
                     sf::View view(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)}));
                     window.setView(view);
+                    window.setIcon(icon);
+                }
+                else if(event->getIf<sf::Event::KeyPressed>()->code == sf::Keyboard::Key::Grave)
+                {
+                    console_visible = !console_visible;
                 }
             }
 
@@ -209,8 +213,6 @@ void Game::handleEvents()
 void Game::update()
 {
     ImGui::SFML::Update(window, sf::seconds(dt));
-
-    ImGui::ShowDemoWindow();   // sanity check — skasuj, gdy wstawisz własne okna
 
     handleBufferedStateActions();
 
@@ -245,7 +247,7 @@ void Game::render()
         exit(0);
     }
 
-    console.render(window);
+    console.render();
 
     ImGui::SFML::Render(window);
 

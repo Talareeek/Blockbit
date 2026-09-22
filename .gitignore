@@ -50,3 +50,4 @@ Blockbit.exe
 .gitignore
 /.github/
 .aider*
+imgui.ini

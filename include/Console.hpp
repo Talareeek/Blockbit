@@ -42,7 +42,7 @@ private:
     std::mutex mutex;
 };
 
-class Console : public UIElement
+class Console
 {
 private:
 
@@ -71,11 +71,18 @@ private:
 
     bool moving = false;
 
-    bool active = false;
+    bool open = false;
 
     std::vector<LogEntry> logs;
 
-    std::wstring incomming;
+
+    static constexpr size_t INPUT_BUFFER_SIZE = 256;
+    char input[INPUT_BUFFER_SIZE];
+
+    std::optional<std::wstring> to_proceed;
+
+    void submitInput();
+
 
     float cursorTimer = 0.0f;
 
@@ -85,11 +92,9 @@ private:
 
 public:
 
-    using UIElement::UIElement;
-
-    void handleEvent(const sf::Event& event) override;
-    void update(float dt) override;
-    void render(sf::RenderWindow& window) override;
+    void handleEvent(const sf::Event& event);
+    void update(float dt);
+    void render();
 
     void writeLine(std::wstring string);
     void writeLine(std::wstring string, sf::Color color);

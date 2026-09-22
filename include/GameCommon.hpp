@@ -7,6 +7,8 @@
 #include <SFML/System.hpp>
 #include <optional>
 
+#include <imgui.h>
+
 class World;
 class Entity;
 struct TransformComponent;
@@ -25,5 +27,9 @@ constexpr unsigned int WORLD_UNIT_SIZE_FACTOR = 12;
 constexpr uint8_t WORLD_TICKS_PER_SECOND = 60;
 
 std::filesystem::path getHomePath();
+
+std::string wstringToString(const std::wstring wstring);
+
+ImVec4 SFMLColorToImGuiColor(const sf::Color color);
 
 #endif // GAME_COMMON_HPP

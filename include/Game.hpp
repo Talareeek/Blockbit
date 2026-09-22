@@ -55,7 +55,9 @@ private:
 
     sf::Image icon;
 
-    Console console{{100.0f, 100.0f}, {250.0f, 200.0f}};
+    bool console_visible = false;
+
+    Console console;
 
 
 public:

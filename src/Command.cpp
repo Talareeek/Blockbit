@@ -20,6 +20,18 @@
 
 std::unordered_map<std::wstring, Command> commandDatabase =
 {
+    {L"help", {false, false, 
+        [](std::wstring command, Console& console, Game* game, World* world)
+        {
+            console.writeLine(L"Available commands", sf::Color::Green);
+
+            for(auto& [key, value] : commandDatabase)
+            {
+                console.writeLine(L"\t" + key, sf::Color::Green);
+            }
+        }
+    }},
+
     {L"echo", {false, false, 
         [](std::wstring command, Console& console, Game* game, World* world)
         {
