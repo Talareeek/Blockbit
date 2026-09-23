@@ -678,11 +678,17 @@ void renderStars(float daytime, sf::RenderWindow& window)
 {
     static std::vector<Star> stars;
 
+    static sf::Vector2u window_size_generated;
+
     const float W = static_cast<float>(window.getSize().x);
     const float H = static_cast<float>(window.getSize().y);
 
-    if (stars.empty())
+    if (stars.empty() || window_size_generated != window.getSize())
     {
+        stars.clear();
+
+        window_size_generated = window.getSize();
+
         std::mt19937 rng(12345);
         std::uniform_real_distribution<float> distX(0.0f, W);
         std::uniform_real_distribution<float> distY(00.f, H/* * 0.75f*/);
