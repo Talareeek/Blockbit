@@ -677,8 +677,8 @@ struct Star
 void renderStars(float daytime, sf::RenderWindow& window)
 {
     static std::vector<Star> stars;
-
     static sf::Vector2u window_size_generated;
+    static sf::Clock twinkleClock;
 
     const float W = static_cast<float>(window.getSize().x);
     const float H = static_cast<float>(window.getSize().y);
@@ -691,10 +691,10 @@ void renderStars(float daytime, sf::RenderWindow& window)
 
         std::mt19937 rng(12345);
         std::uniform_real_distribution<float> distX(0.0f, W);
-        std::uniform_real_distribution<float> distY(00.f, H/* * 0.75f*/);
+        std::uniform_real_distribution<float> distY(0.0f, H);
         std::uniform_int_distribution<int> distSize(2, 4);
         std::uniform_real_distribution<float> distBright(0.4f, 1.0f);
-        std::uniform_real_distribution<float> distSpeed(0.5f, 2.0f);
+        std::uniform_real_distribution<float> distSpeed(0.5f, 2.5f);
         std::uniform_real_distribution<float> distPhase(0.0f, 6.2831853f);
 
         constexpr int STAR_COUNT = 250;
@@ -715,12 +715,19 @@ void renderStars(float daytime, sf::RenderWindow& window)
 
     if (nightFactor <= 0.001f) return;
 
+    float t = twinkleClock.getElapsedTime().asSeconds();
+
     sf::VertexArray quads(sf::PrimitiveType::Triangles, stars.size() * 6);
     std::size_t vi = 0;
 
     for (const Star& s : stars)
     {
-        float twinkle = 0.75f + 0.25f * std::sin(daytime * s.twinkleSpeed + s.twinklePhase);
+        float twinkle = 0.5f
+            + 0.35f * std::sin(t * s.twinkleSpeed + s.twinklePhase)
+            + 0.15f * std::sin(t * s.twinkleSpeed * 2.7f + s.twinklePhase * 1.3f);
+
+        twinkle = std::clamp(twinkle, 0.0f, 1.0f);
+
         auto alpha = static_cast<std::uint8_t>(255.f * s.brightness * twinkle * nightFactor);
         sf::Color c(255, 255, 255, alpha);
 
