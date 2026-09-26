@@ -89,6 +89,8 @@ configure() {
     cd "$BUILD_DIR"
     cmake -G Ninja \
         -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+        -DCMAKE_C_COMPILER="${CC:-clang}" \
+        -DCMAKE_CXX_COMPILER="${CXX:-clang++}" \
         -DCMAKE_INSTALL_PREFIX="$BUILD_DIR/install" \
         ${VERBOSE:+-DCMAKE_VERBOSE_MAKEFILE=ON} \
         "$SCRIPT_DIR"

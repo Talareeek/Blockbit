@@ -12,6 +12,7 @@
 #include "Input.hpp"
 #include "Chat.hpp"
 #include "ChatUI.hpp"
+#include "RCon.hpp"
 
 #include <memory>
 #include <optional>
@@ -28,6 +29,8 @@ private:
     std::unique_ptr<ClientTransport> transport;
 
     std::optional<GameServer> local_server;
+
+    RCon rcon;
 
     uint16_t tick_rate;
 

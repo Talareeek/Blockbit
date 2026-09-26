@@ -475,6 +475,8 @@ void ClientGameState::handleEvent(const sf::Event& event)
 
     auto new_inputs = ::getInputsFromEvent(event, camera, game->getWindow());
     inputs.insert(inputs.end(), std::make_move_iterator(new_inputs.begin()), std::make_move_iterator(new_inputs.end()));
+
+    if(local_server.has_value()) rcon.handleEvent(event);
 }
 
 void ClientGameState::update(float dt)
@@ -754,6 +756,8 @@ void ClientGameState::render(sf::RenderWindow& window)
         pending_screenshot = false;
         saveScreenshot(window);
     }
+
+    if(local_server.has_value()) rcon.performImGui(local_server.value());
 }
 
 std::string ClientGameState::debugString()
