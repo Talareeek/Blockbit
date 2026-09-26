@@ -25,7 +25,7 @@ extern sf::Texture generateBackground();
 
 extern std::pair<sf::Color, sf::Color> getSkyGradient(float t);
 
-extern void renderSky(sf::RenderWindow& window, sf::Color top, sf::Color bottom);
+extern void renderSky(sf::RenderTarget& target, sf::Color top, sf::Color bottom);
 
 extern void renderSunAndMoon(float daytime, sf::RenderWindow& window);
 
@@ -48,5 +48,7 @@ extern sf::Color getRarityColor(ItemRarity rarity);
 extern void renderBar(int max, int value, sf::Color primary_color, sf::Color secondary_color, sf::FloatRect bounds, sf::RenderTarget& target);
 
 extern void renderHotbar(std::array<ItemStack, 9> items, uint8_t selected_slot, sf::RenderTarget& target);
+
+extern void RenderMinimap(World& world, sf::Vector2<double> camera, sf::RenderTarget& target);
 
 #endif // RENDER_HPP

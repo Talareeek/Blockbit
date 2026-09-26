@@ -133,10 +133,10 @@ std::pair<sf::Color, sf::Color> getSkyGradient(float t)
     return {top, bottom};
 }
 
-void renderSky(sf::RenderWindow& window, sf::Color top, sf::Color bottom)
+void renderSky(sf::RenderTarget& target, sf::Color top, sf::Color bottom)
 {
-    const float width = static_cast<float>(window.getSize().x);
-    const float height = static_cast<float>(window.getSize().y);
+    const float width = static_cast<float>(target.getSize().x);
+    const float height = static_cast<float>(target.getSize().y);
 
     sf::VertexArray sky(sf::PrimitiveType::TriangleStrip, 4);
 
@@ -150,10 +150,10 @@ void renderSky(sf::RenderWindow& window, sf::Color top, sf::Color bottom)
     sky[2].color = bottom;
     sky[3].color = bottom;
 
-    sf::View previous = window.getView();
-    window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {width, height})));
-    window.draw(sky);
-    window.setView(previous);
+    sf::View previous = target.getView();
+    target.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {width, height})));
+    target.draw(sky);
+    target.setView(previous);
 }
 
 void renderSunAndMoon(float daytime, sf::RenderWindow& window)
@@ -943,4 +943,56 @@ void renderHotbar(std::array<ItemStack, 9> items, uint8_t selected_slot, sf::Ren
         slot.setHovered(i == selected_slot);
         slot.render(target);
     }
+}
+
+void RenderMinimap(World& world, sf::Vector2<double> camera, sf::RenderTarget& target)
+{
+    constexpr unsigned int MAX_MINIMAP_TEXTURE_WIDTH = 512;
+
+    sf::Vector2u texture_size = {std::min(target.getSize().x / 10, MAX_MINIMAP_TEXTURE_WIDTH), std::min(target.getSize().x / 10, MAX_MINIMAP_TEXTURE_WIDTH)};
+
+    sf::RenderTexture render_texture(texture_size);
+    render_texture.clear(sf::Color::Transparent);
+
+    sf::View view({0.0f, 0.0f}, {static_cast<float>(texture_size.x), static_cast<float>(texture_size.y)});
+    view.setSize({view.getSize().x, -(view.getSize().y)});
+    render_texture.setView(view);
+
+    auto [sky_top, sky_bottom] = getSkyGradient(world.getDayTime() / World::DAY_CYCLE_DURATION);
+    renderSky(render_texture, sky_top, sky_bottom);
+
+    float unit_size = static_cast<float>(texture_size.x) / 80.0f;
+    
+    for(int i = positionToChunk(camera) - 5; i <= positionToChunk(camera) + 5; i++)
+    {
+        Chunk& chunk = world.getChunk(i);
+        ChunkMesh& mesh = chunkMeshes[i];
+
+        if(!chunk.generated || !mesh.built) continue;
+
+        float translate_x = static_cast<float>((static_cast<double>(i * CHUNK_WIDTH) - camera.x)) * unit_size;
+        float translate_y = static_cast<float>(-camera.y) * unit_size;
+
+        sf::RenderStates states;
+
+        states.texture = &BlockAtlas::getTexture();
+        states.transform.translate({translate_x, translate_y});
+        states.transform.scale({unit_size, unit_size});
+
+        render_texture.draw(mesh.vertices, states);
+    }
+
+    render_texture.display();
+
+
+    sf::RectangleShape minimap({static_cast<float>(target.getSize().x) / 10.0f, static_cast<float>(target.getSize().x) / 10.0f});
+
+    minimap.setTexture(&render_texture.getTexture());
+
+    minimap.setPosition({50.0f, 50.0f});
+
+    minimap.setOutlineThickness(5.0f);
+    minimap.setOutlineColor(sf::Color(72, 72, 72));
+
+    target.draw(minimap);
 }

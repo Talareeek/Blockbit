@@ -733,6 +733,8 @@ void ClientGameState::render(sf::RenderWindow& window)
             {
                 inventory_widget->render(window);
             }
+
+            RenderMinimap(local_world, camera, window);
         }
 
         if(debug)
