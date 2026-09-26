@@ -62,7 +62,7 @@ namespace
     }
 }
 
-void rebuildChunkMesh(World& world, int chunk_position, float unit_size)
+void BuildChunkMesh(World& world, int chunk_position)
 {
     Chunk& chunk = world.getChunk(chunk_position);
     ChunkMesh& mesh = chunkMeshes[chunk_position];
@@ -85,14 +85,11 @@ void rebuildChunkMesh(World& world, int chunk_position, float unit_size)
 
             sf::IntRect final_uv = {texture_uv.position + block_data.render->rect(block).position, block_data.render->rect(block).size};
 
-            sf::Vector2f position(x * unit_size, y * unit_size);
+            sf::Vector2f position(x, y);
             
             auto bounds = block_data.render->render_bounds(block);
 
-            sf::FloatRect final_rect = {
-                position + bounds.position * unit_size,
-                bounds.size * unit_size
-            };
+            sf::FloatRect final_rect = {position + bounds.position, bounds.size};
 
             appendQuad(mesh.vertices, final_rect, final_uv);
         }
@@ -255,7 +252,7 @@ void RenderWorld(World& world, const sf::Vector2<double> camera, sf::RenderWindo
 
         if (chunk.meshDirty || !mesh.built)
         {
-            rebuildChunkMesh(world, i, unit_size);
+            BuildChunkMesh(world, i);
         }
 
         float translate_x = static_cast<float>((static_cast<double>(i * CHUNK_WIDTH) - camera.x)) * unit_size;
@@ -264,6 +261,7 @@ void RenderWorld(World& world, const sf::Vector2<double> camera, sf::RenderWindo
         sf::RenderStates states;
         states.texture = &BlockAtlas::getTexture();
         states.transform.translate({translate_x, translate_y});
+        states.transform.scale({unit_size, unit_size});
 
         window.draw(mesh.vertices, states);
     }
