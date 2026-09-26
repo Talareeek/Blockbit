@@ -704,6 +704,8 @@ void World::load()
 
     loadManifest();
     loadData();
+
+    perlin = PerlinNoise(seed);
 }
 
 
