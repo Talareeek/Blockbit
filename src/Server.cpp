@@ -3,9 +3,9 @@
 
 #include <iostream>
 
-ServerSession::ServerSession(asio::ip::tcp::socket s, Server& srv, uint32_t id)
-    : socket(std::move(s)), server(srv), clientId(id)
+ServerSession::ServerSession(asio::ip::tcp::socket s, Server& srv, uint32_t id) : socket(std::move(s)), server(srv), clientId(id)
 {
+    socket.set_option(asio::ip::tcp::no_delay(true));
 }
 
 void ServerSession::start()

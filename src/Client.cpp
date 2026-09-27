@@ -77,6 +77,8 @@ bool Client::connect(const std::string& host, uint16_t port, std::chrono::millis
             return false;
         }
 
+        socket.set_option(asio::ip::tcp::no_delay(true));
+
         io.restart();
 
         connected = true;
