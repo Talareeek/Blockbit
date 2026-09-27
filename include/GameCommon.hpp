@@ -32,4 +32,38 @@ std::string wstringToString(const std::wstring wstring);
 
 ImVec4 SFMLColorToImGuiColor(const sf::Color color);
 
+struct Hour
+{
+    uint8_t hours;
+    uint8_t minutes;
+};
+
+struct Date
+{
+    uint8_t day;
+
+    enum class Month : uint8_t
+    {
+        January,
+        February,
+        March,
+        April,
+        May,
+        June,
+        July,
+        August,
+        September,
+        October,
+        November,
+        December
+    } month;
+
+    uint32_t year;
+};
+
+Hour daytimeToHour(float daytime);
+Date daysToDate(uint64_t days);
+
+std::string dateAndHourString(Date date, Hour hour);
+
 #endif // GAME_COMMON_HPP

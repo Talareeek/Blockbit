@@ -5,6 +5,8 @@
 #include <cstring>
 #include <string>
 
+#include <imgui-SFML.h>
+
 sf::Texture getTextureFromIcon(const uint8_t* icon)
 {
     constexpr unsigned WIDTH  = 64;
@@ -100,15 +102,22 @@ void ServerPreview::render(sf::RenderWindow& window)
     if (!packet) return;
     if (size.x <= 0.0f || size.y <= 0.0f) return;
 
-    sf::RectangleShape panel(size);
-    panel.setPosition(position);
-    panel.setFillColor(sf::Color(0, 0, 0, 180));
-    panel.setOutlineColor(sf::Color(120, 200, 255, 180));
-    panel.setOutlineThickness(1.5f);
-    window.draw(panel);
+    ImGui::SetNextWindowPos(ImVec2(position.x, position.y));
+    ImGui::SetNextWindowSize(ImVec2(size.x, size.y));
 
-    float padding = std::clamp(size.y * 0.10f, 4.0f, 12.0f);
-    float icon_side = std::max(0.0f, std::min({size.y - padding * 2.0f, size.x * 0.40f, 96.0f}));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 180.0f / 255.0f));
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(120.0f / 255.0f, 200.0f / 255.0f, 255.0f / 255.0f, 180.0f / 255.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.5f);
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+                              ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+                              ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings |
+                              ImGuiWindowFlags_NoInputs;
+
+    ImGui::Begin("##server_preview", nullptr, flags);
+
+    float padding = 8.0f;
+    float icon_side = std::min({size.y - padding * 2.0f, 64.0f});
 
     if (!has_icon_texture || std::memcmp(cached_icon, packet->icon, 8192) != 0)
     {
@@ -117,50 +126,31 @@ void ServerPreview::render(sf::RenderWindow& window)
         has_icon_texture = true;
     }
 
+    ImVec2 window_pos = ImGui::GetWindowPos();
+
+    ImGui::SetCursorPos(ImVec2(padding, padding));
     if (icon_side > 0.0f)
-    {
-        sf::RectangleShape icon({icon_side, icon_side});
-        icon.setTexture(&icon_texture);
-        icon.setPosition({position.x + padding, position.y + padding});
-        window.draw(icon);
-    }
+        ImGui::Image(icon_texture, sf::Vector2f(icon_side, icon_side));
 
-    float text_x = position.x + padding + (icon_side > 0.0f ? icon_side + padding : 0.0f);
-    float text_right = position.x + size.x - padding;
-    float text_width = std::max(0.0f, text_right - text_x);
-    float text_top = position.y + padding;
-
-    unsigned name_size = static_cast<unsigned>(std::clamp(icon_side * 0.26f, 10.0f, 22.0f));
-    unsigned body_size = static_cast<unsigned>(std::clamp(icon_side * 0.18f, 9.0f, 16.0f));
-
-    sf::Text name_text(AssetManager::getFont(AssetManager::FontID::PressStart2P), packet->name, name_size);
-    name_text.setFillColor(sf::Color(240, 240, 240));
-    name_text.setOutlineColor(sf::Color::Black);
-    name_text.setOutlineThickness(1.0f);
-    name_text.setPosition({text_x, text_top});
-    fitText(name_text, text_width);
-    window.draw(name_text);
-
-    float description_y = text_top + static_cast<float>(name_size) + 4.0f;
-    float players_h = static_cast<float>(body_size) + 4.0f;
-    float description_bottom = position.y + size.y - padding - players_h;
-
-    if (description_y + body_size <= description_bottom)
-    {
-        sf::Text description_text(AssetManager::getFont(AssetManager::FontID::PressStart2P), packet->description, body_size);
-        description_text.setFillColor(sf::Color(200, 200, 200));
-        description_text.setPosition({text_x, description_y});
-        fitText(description_text, text_width);
-        window.draw(description_text);
-    }
+    ImGui::SameLine();
+    ImGui::BeginGroup();
+    ImGui::Text("%s", packet->name.c_str());
+    ImGui::TextColored(ImVec4(0.78f, 0.78f, 0.78f, 1.0f), "%s", packet->description.c_str());
+    ImGui::EndGroup();
 
     std::string players = std::to_string(packet->players) + " / " + std::to_string(packet->max_players);
-    sf::Text players_text(AssetManager::getFont(AssetManager::FontID::PressStart2P), players, body_size);
-    players_text.setFillColor(sf::Color(180, 220, 255));
-    players_text.setOutlineColor(sf::Color::Black);
-    players_text.setOutlineThickness(1.0f);
-    fitText(players_text, text_width);
-    sf::FloatRect pb = players_text.getLocalBounds();
-    players_text.setPosition({text_right - pb.size.x, position.y + size.y - pb.size.y - padding});
-    window.draw(players_text);
+    ImVec2 players_size = ImGui::CalcTextSize(players.c_str());
+    ImGui::SetCursorScreenPos(ImVec2(window_pos.x + size.x - padding - players_size.x,
+                                      window_pos.y + size.y - padding - players_size.y));
+    ImGui::TextColored(ImVec4(0.7f, 0.86f, 1.0f, 1.0f), "%s", players.c_str());
+
+    std::string datetime_str = dateAndHourString(packet->date, packet->hour);
+    ImVec2 datetime_size = ImGui::CalcTextSize(datetime_str.c_str());
+    ImGui::SetCursorScreenPos(ImVec2(window_pos.x + padding,
+                                      window_pos.y + size.y - padding - datetime_size.y));
+    ImGui::TextColored(ImVec4(0.7f, 0.86f, 1.0f, 1.0f), "%s", datetime_str.c_str());
+
+    ImGui::End();
+    ImGui::PopStyleVar();
+    ImGui::PopStyleColor(2);
 }

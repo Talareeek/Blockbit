@@ -777,6 +777,7 @@ std::string ClientGameState::debugString()
             "CHUNKS LOADED: " + std::to_string(local_world.getChunks().size()) + '\n' +
             "SIMULATION RANGE: " + std::to_string(simulation_range.first) + " - " + std::to_string(simulation_range.second) + '\n' +
             "INPUTS: " + std::to_string(inputs.size()) + '\n' +
+            "TIME: " + dateAndHourString(daysToDate(local_world.days), daytimeToHour(local_world.dayTime)) + '\n' +
             "CLIMATE:\n" +
             "\tTEMPERATURE: " + std::to_string(climate.temperature) + '\n' +
             "\tHUMIDITY: " + std::to_string(climate.humidity) + '\n' +

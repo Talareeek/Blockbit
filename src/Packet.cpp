@@ -382,6 +382,13 @@ std::vector<char> serializePacket(const StatusResponsePacket& p)
     writer.write(p.max_players);
     writer.writeBytes(p.icon, 8192);
 
+    writer.write(p.date.day);
+    writer.write(static_cast<uint8_t>(p.date.month));
+    writer.write(p.date.year);
+
+    writer.write(p.hour.hours);
+    writer.write(p.hour.minutes);
+
     return writer.release();
 }
 
@@ -529,6 +536,13 @@ StatusResponsePacket deserializeStatusResponse(PacketReader& r)
     p.max_players = r.read<uint32_t>();
 
     r.readBytes(p.icon, 8192);
+
+    p.date.day = r.read<uint8_t>();
+    p.date.month = static_cast<Date::Month>(r.read<uint8_t>());
+    p.date.year = r.read<uint32_t>();
+
+    p.hour.hours = r.read<uint8_t>();
+    p.hour.minutes = r.read<uint8_t>();
 
     return p;
 }

@@ -73,3 +73,90 @@ ImVec4 SFMLColorToImGuiColor(const sf::Color color)
 {
     return ImVec4((float)color.r / 255.0f, (float)color.g / 255.0f, (float)color.b / 255.0f, (float)color.a / 255.0f);
 }
+
+Hour daytimeToHour(float daytime)
+{
+    float passed = daytime / World::DAY_CYCLE_DURATION;
+
+    uint16_t total_minutes = static_cast<uint16_t>(1440.0f * passed);
+
+    return {static_cast<uint8_t>(total_minutes / 60), static_cast<uint8_t>(total_minutes % 60)};
+}
+
+constexpr bool isLeapYear(uint32_t year)
+{
+    return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+}
+
+constexpr uint16_t daysInYear(uint32_t year)
+{
+    return isLeapYear(year) ? 366 : 365;
+}
+
+constexpr uint8_t daysInMonth(Date::Month month, uint32_t year)
+{
+    switch (month)
+    {
+        case Date::Month::January:   return 31;
+        case Date::Month::February:  return isLeapYear(year) ? 29 : 28;
+        case Date::Month::March:     return 31;
+        case Date::Month::April:     return 30;
+        case Date::Month::May:       return 31;
+        case Date::Month::June:      return 30;
+        case Date::Month::July:      return 31;
+        case Date::Month::August:    return 31;
+        case Date::Month::September: return 30;
+        case Date::Month::October:   return 31;
+        case Date::Month::November:  return 30;
+        case Date::Month::December:  return 31;
+    }
+    return 30;
+}
+
+Date daysToDate(uint64_t days)
+{
+    constexpr uint64_t DAYS_PER_400_YEARS = 146097;
+
+    uint64_t cycles400 = days / DAYS_PER_400_YEARS;
+    uint64_t remainingDays = days % DAYS_PER_400_YEARS;
+
+    uint32_t year = static_cast<uint32_t>(cycles400 * 400);
+
+    while (true)
+    {
+        uint16_t diy = daysInYear(year);
+        if (remainingDays < diy) break;
+        remainingDays -= diy;
+        ++year;
+    }
+
+    Date::Month month = Date::Month::January;
+
+    while (true)
+    {
+        uint8_t dim = daysInMonth(month, year);
+        if (remainingDays < dim) break;
+        remainingDays -= dim;
+        month = static_cast<Date::Month>(static_cast<uint8_t>(month) + 1);
+    }
+
+    Date result;
+    result.year = year;
+    result.day = static_cast<uint8_t>(remainingDays + 1);
+    result.month = month;
+
+    return result;
+}
+
+std::string dateAndHourString(Date date, Hour hour)
+{
+    std::ostringstream stream;
+
+    stream << std::setw(2) << std::setfill('0') << static_cast<int>(hour.hours) << ':'
+           << std::setw(2) << std::setfill('0') << static_cast<int>(hour.minutes) << "   "
+           << static_cast<int>(date.day) << '.'
+           << (static_cast<int>(date.month) + 1) << '.'
+           << date.year;
+
+    return stream.str();
+}

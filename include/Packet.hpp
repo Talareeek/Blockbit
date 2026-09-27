@@ -11,6 +11,7 @@
 #include "Chunk.hpp"
 #include "World.hpp"
 #include "Input.hpp"
+#include "GameCommon.hpp"
 
 enum class PacketType : uint8_t
 {
@@ -121,6 +122,9 @@ struct StatusResponsePacket
     uint32_t max_players;
 
     uint8_t icon[8192];
+
+    Date date;
+    Hour hour;
 };
 
 struct ChatMessagePacket
