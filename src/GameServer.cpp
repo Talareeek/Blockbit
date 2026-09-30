@@ -193,6 +193,9 @@ void GameServer::processIncoming()
                     response.players = static_cast<uint32_t>(client_to_nickname.size());
                     response.max_players = 20;
 
+                    response.date = daysToDate(world.days);
+                    response.hour = daytimeToHour(world.dayTime);
+
                     transport->send(packet.clientId, serializePacket(response));
 
                     break;
@@ -354,6 +357,8 @@ void GameServer::update(float dt)
 {
     try
     {
+        update_clock.restart();
+
         syncConnections();
         processIncoming();
 
@@ -361,14 +366,17 @@ void GameServer::update(float dt)
         {
             if(!client_to_nickname.contains(client_id)) continue;
 
-            std::string nickname = client_to_nickname[client_id];
+            while(!queue.empty())
+            {
+                std::string nickname = client_to_nickname[client_id];
 
-            auto iterator = nickname_to_entity.find(nickname);
-            if (iterator == nickname_to_entity.end()) continue;
-            if (queue.empty() || !world.doesEntityExist(iterator->second)) continue;
+                auto iterator = nickname_to_entity.find(nickname);
+                if (iterator == nickname_to_entity.end()) continue;
+                if (!world.doesEntityExist(iterator->second)) continue;
 
-            processWorldInputs(world, std::move(queue.front()), iterator->second);
-            queue.pop_front();
+                processWorldInputs(world, std::move(queue.front()), iterator->second);
+                queue.pop_front();
+            }
         }
 
         AISystem(world, dt);
@@ -405,6 +413,19 @@ void GameServer::update(float dt)
         streamChunksToClients();
         broadcastBlockUpdates();
         broadcastSnapshot();
+
+        update_clock.stop();
+
+        float time = update_clock.getElapsedTime().asSeconds();
+
+        if(std::max(time - 0.1f, getTickStep()) == time - 0.1f)
+        {
+            std::cerr << "[Server] Server late in tick: " << tick << " by: " << time - getTickStep() << "s (is server overloaded?)" << '\n'; 
+        }
+        else if(std::min(time + 0.1f, getTickStep()) == time + 0.1f)
+        {
+            std::cerr << "[Server] Server ahead in tick: " << tick << " by: " << getTickStep() - time << "s" << '\n'; 
+        }
     }
     catch(const std::bad_alloc&)
     {

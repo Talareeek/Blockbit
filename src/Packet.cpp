@@ -205,6 +205,11 @@ Chunk PacketReader::readChunk()
 
 // ----- serialize -----
 
+std::vector<char> serializePlainPacket(PacketType type)
+{
+    return PacketWriter(type).release();
+}
+
 std::vector<char> serializePacket(const InitializationPacket& p)
 {
     PacketWriter w(PacketType::Initialization);
@@ -367,12 +372,6 @@ std::vector<char> serializePacket(const InputPacket& p)
     return w.release();
 }
 
-std::vector<char> serializePacket(const StatusRequestPacket& p)
-{
-    PacketWriter writer(PacketType::StatusRequest);
-    return writer.release();
-}
-
 std::vector<char> serializePacket(const StatusResponsePacket& p)
 {
     PacketWriter writer(PacketType::StatusResponse);
@@ -422,6 +421,64 @@ std::vector<char> serializePacket(const ClientSnapshotPacket& p)
 
     writer.write(p.cursor_x);
     writer.write(p.cursor_y);
+
+    return writer.release();
+}
+
+std::vector<char> serializePacket(const OpenViewPacket& p)
+{
+    PacketWriter writer(PacketType::OpenView);
+
+    writer.write(p.type);
+
+    return writer.release();
+}
+
+std::vector<char> serializePacket(const SetContentPacket& p)
+{
+    PacketWriter writer(PacketType::SetContent);
+
+    writer.write(p.target);
+
+    auto index = p.value.index();
+
+    switch(index)
+    {
+    case 0:
+
+        writer.write(std::get<ItemStack>(p.value));
+        break;
+
+    case 1:
+
+        writer.writeString(std::get<std::string>(p.value));
+        break;
+    }
+
+    return writer.release();
+}
+
+std::vector<char> serializePacket(const ViewEventPacket& p)
+{
+    PacketWriter writer(PacketType::ViewEvent);
+
+    writer.write(p.sender);
+    writer.write(p.action);
+    
+    auto index = p.value.index();
+
+    switch(index)
+    {
+    case 0:
+
+        writer.write(std::get<ItemStack>(p.value));
+        break;
+
+    case 1:
+
+        writer.writeString(std::get<std::string>(p.value));
+        break;
+    }
 
     return writer.release();
 }
@@ -518,11 +575,6 @@ InputPacket deserializeInput(PacketReader& r)
     for (uint32_t i = 0; i < count; i++) p.inputs.push_back(readInput(r));
 
     return p;
-}
-
-StatusRequestPacket deserializeStatusRequest(PacketReader& r)
-{
-    return StatusRequestPacket();
 }
 
 StatusResponsePacket deserializeStatusResponse(PacketReader& r)

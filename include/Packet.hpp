@@ -12,6 +12,7 @@
 #include "World.hpp"
 #include "Input.hpp"
 #include "GameCommon.hpp"
+#include "View.hpp"
 
 enum class PacketType : uint8_t
 {
@@ -32,7 +33,12 @@ enum class PacketType : uint8_t
     Respawn,
     Craft,
 
-    ClientSnapshot
+    ClientSnapshot,
+
+    OpenView,
+    CloseView,
+    SetContent,
+    ViewEvent
 };
 
 struct InitializationPacket
@@ -109,11 +115,6 @@ struct LoginPacket
     std::string nickname;
 };
 
-struct StatusRequestPacket
-{
-
-};
-
 struct StatusResponsePacket
 {
     std::string name;
@@ -153,6 +154,25 @@ struct CraftPacket
     ItemStack requested_craft;
 };
 
+struct OpenViewPacket
+{
+    ViewType type;
+};
+
+struct SetContentPacket
+{
+    uint16_t target;
+    std::variant<ItemStack, std::string> value;
+};
+
+struct ViewEventPacket
+{
+    uint16_t sender;
+
+    uint8_t action;
+    std::variant<ItemStack, std::string> value;
+};
+
 class PacketWriter
 {
 private:
@@ -171,6 +191,19 @@ public:
     {
         static_assert(std::is_trivially_copyable_v<T>, "PacketWriter::write requires trivially copyable T");
         writeBytes(&value, sizeof(T));
+    }
+
+    template<typename T>
+    void writeOptional(const std::optional<T>& value)
+    {
+        static_assert(std::is_trivially_copyable_v<T>, "PacketWriter::writeOptional requires trivially copyable T");
+
+        write<bool>(value.has_value());
+
+        if(value.has_value())
+        {
+            write(value.value());
+        }
     }
 
     void writeString(const std::string& s);
@@ -204,6 +237,20 @@ public:
         return value;
     }
 
+    template<typename T>
+    std::optional<T> readOptional()
+    {
+        static_assert(std::is_trivially_copyable_v<T>, "PacketReader::readOptional requires trivially copyable T");
+
+        bool has_value = read<bool>();
+
+        if(!has_value) return std::nullopt;
+
+        std::optional<T> optional = read<T>();
+
+        return optional;
+    }
+
     std::string readString();
     std::wstring readWideString();
 
@@ -213,6 +260,8 @@ public:
     std::size_t remaining() const { return static_cast<std::size_t>(end - ptr); }
 };
 
+std::vector<char> serializePlainPacket(PacketType type);
+
 std::vector<char> serializePacket(const InitializationPacket& p);
 std::vector<char> serializePacket(const ChunkPacket& p);
 std::vector<char> serializePacket(const BlockUpdatePacket& p);
@@ -220,13 +269,15 @@ std::vector<char> serializePacket(const SnapshotPacket& p);
 std::vector<char> serializePacket(const TrackPacket& p);
 std::vector<char> serializePacket(const StopTrackingPacket& p);
 std::vector<char> serializePacket(const InputPacket& p);
-std::vector<char> serializePacket(const StatusRequestPacket& p);
 std::vector<char> serializePacket(const StatusResponsePacket& p);
 std::vector<char> serializePacket(const LoginPacket& p);
 std::vector<char> serializePacket(const ChatMessagePacket& p);
 std::vector<char> serializePacket(const RespawnPacket& p);
 std::vector<char> serializePacket(const ClientSnapshotPacket& p);
 std::vector<char> serializePacket(const CraftPacket& p);
+std::vector<char> serializePacket(const OpenViewPacket& p);
+std::vector<char> serializePacket(const SetContentPacket& p);
+std::vector<char> serializePacket(const ViewEventPacket& p);
 
 InitializationPacket deserializeInitialization(PacketReader& r);
 ChunkPacket deserializeChunk(PacketReader& r);
@@ -234,7 +285,6 @@ BlockUpdatePacket    deserializeBlockUpdate(PacketReader& r);
 SnapshotPacket       deserializeSnapshot(PacketReader& r);
 TrackPacket          deserializeTrack(PacketReader& r);
 InputPacket          deserializeInput(PacketReader& r);
-StatusRequestPacket deserializeStatusRequest(PacketReader& r);
 StatusResponsePacket deserializeStatusResponse(PacketReader& r);
 LoginPacket deserializeLogin(PacketReader& r);
 ChatMessagePacket deserializeChatMessage(PacketReader& r);

@@ -37,6 +37,7 @@ private:
     bool save_on_destruct = true;
 
     std::unordered_map<uint32_t, std::string> client_to_nickname;
+    std::unordered_map<uint32_t, std::unique_ptr<ServerView>> client_views;
     std::unordered_map<std::string, UUID> nickname_to_entity;
 
     std::unordered_set<uint32_t> known_clients;
@@ -45,6 +46,7 @@ private:
 
     uint16_t tick_rate = 60;
     uint64_t tick = 0;
+    sf::Clock update_clock;
 
     void spawnPlayerFor(std::string nickname);
     void deactivatePlayerFor(std::string nickname);

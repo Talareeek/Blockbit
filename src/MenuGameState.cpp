@@ -126,7 +126,7 @@ void MenuGameState::beginProbe(const std::string& text)
                 return;
             }
 
-            client.send(serializePacket(StatusRequestPacket{}));
+            client.send(serializePlainPacket(PacketType::StatusRequest));
 
             auto deadline = std::chrono::steady_clock::now() + PROBE_RESPONSE_TIMEOUT;
             while (!state->cancelled && client.isConnected() && std::chrono::steady_clock::now() < deadline)
