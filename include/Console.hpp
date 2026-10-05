@@ -77,7 +77,7 @@ private:
 
 
     static constexpr size_t INPUT_BUFFER_SIZE = 256;
-    char input[INPUT_BUFFER_SIZE];
+    char input[INPUT_BUFFER_SIZE] = {};
 
     std::optional<std::wstring> to_proceed;
 

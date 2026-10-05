@@ -15,7 +15,7 @@ static bool isChunkSafe(int chunkPos, const std::vector<UUID>& playerIds, World&
     return false;
 }
 
-void ChunkUnloadSystem(World& world)
+void ChunkUnloadSystem(ServerWorld& world)
 {
     if(world.getChunks().size() <= World::MAX_CHUNKS_LOADED) return;
 

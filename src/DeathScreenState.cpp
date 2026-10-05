@@ -17,7 +17,7 @@ DeathScreenState::DeathScreenState(Game* game, World& world, UUID entityID) : Ga
                 if(entity.getID() == this->entityID)
                 {
                     entity.getComponent<HealthComponent>().health = entity.getComponent<HealthComponent>().maxHealth;
-                    entity.getComponent<TransformComponent>().position = sf::Vector2<double>(this->world.getSpawnPoint());
+                    //entity.getComponent<TransformComponent>().position = sf::Vector2<double>(this->world.getSpawnPoint());
                     break;
                 }
             }

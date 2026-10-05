@@ -1,8 +1,8 @@
 #ifndef CHUNK_LOAD_SYSTEM
 #define CHUNK_LOAD_SYSTEM
 
-#include "World.hpp"
+#include "ServerWorld.hpp"
 
-extern void ChunkLoadSystem(World& world, float dt);
+extern void ChunkLoadSystem(ServerWorld& world, float dt);
 
 #endif // CHUNK_LOAD_SYSTEM

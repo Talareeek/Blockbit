@@ -1,7 +1,6 @@
 #ifndef PERLIN_NOISE_HPP
 #define PERLIN_NOISE_HPP
 
-
 #include <vector>
 #include <numeric>
 #include <random>
@@ -12,27 +11,27 @@ class PerlinNoise
 {
 private:
 
-    std::vector<int> p; // permutation table
+    std::vector<int> p;
 
-    static float fade(float t)
+    static double fade(double t)
     {
-        return t * t * t * (t * (t * 6 - 15) + 10);
+        return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
     }
 
-    static float lerp(float a, float b, float t)
+    static double lerp(double a, double b, double t)
     {
         return a + t * (b - a);
     }
 
-    static float grad(int hash, float x, float y)
+    static double grad(int hash, double x, double y)
     {
-        switch(hash & 3)
+        switch (hash & 3)
         {
             case 0: return  x + y;
             case 1: return -x + y;
             case 2: return  x - y;
             case 3: return -x - y;
-            default: return 0;
+            default: return 0.0;
         }
     }
 
@@ -49,37 +48,35 @@ public:
         p.insert(p.end(), p.begin(), p.end());
     }
 
-    float noise(float x, float y) const
+    double noise(double x, double y) const
     {
-        int xi = (int)std::floor(x) & 255;
-        int yi = (int)std::floor(y) & 255;
+        const int xi = static_cast<int>(std::floor(x)) & 255;
+        const int yi = static_cast<int>(std::floor(y)) & 255;
 
-        float xf = x - std::floor(x);
-        float yf = y - std::floor(y);
+        const double xf = x - std::floor(x);
+        const double yf = y - std::floor(y);
 
-        float u = fade(xf);
-        float v = fade(yf);
+        const double u = fade(xf);
+        const double v = fade(yf);
 
-        int aa = p[p[xi] + yi];
-        int ab = p[p[xi] + yi + 1];
-        int ba = p[p[xi + 1] + yi];
-        int bb = p[p[xi + 1] + yi + 1];
+        const int aa = p[p[xi] + yi];
+        const int ab = p[p[xi] + yi + 1];
+        const int ba = p[p[xi + 1] + yi];
+        const int bb = p[p[xi + 1] + yi + 1];
 
-        float x1 = lerp
-        (
+        const double x1 = lerp(
             grad(aa, xf, yf),
-            grad(ba, xf - 1, yf),
+            grad(ba, xf - 1.0, yf),
             u
         );
 
-        float x2 = lerp
-        (
-            grad(ab, xf, yf - 1),
-            grad(bb, xf - 1, yf - 1),
+        const double x2 = lerp(
+            grad(ab, xf, yf - 1.0),
+            grad(bb, xf - 1.0, yf - 1.0),
             u
         );
 
-        return (lerp(x1, x2, v) + 1.0f) / 2.0f;
+        return (lerp(x1, x2, v) + 1.0) / 2.0;
     }
 };
 

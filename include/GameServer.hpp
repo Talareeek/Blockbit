@@ -3,7 +3,7 @@
 
 #include <filesystem>
 
-#include "World.hpp"
+#include "ServerWorld.hpp"
 #include "ServerTransport.hpp"
 #include "Input.hpp"
 
@@ -31,7 +31,7 @@ private:
 
     std::filesystem::path server_path;
 
-    World world;
+    ServerWorld world;
     
     std::unique_ptr<ServerTransport> transport;
     bool save_on_destruct = true;

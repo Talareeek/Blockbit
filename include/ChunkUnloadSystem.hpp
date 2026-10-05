@@ -1,8 +1,8 @@
 #ifndef CHUNK_UNLOAD_SYSTEM
 #define CHUNK_UNLOAD_SYSTEM
 
-#include "World.hpp"
+#include "ServerWorld.hpp"
 
-extern void ChunkUnloadSystem(World& world);
+extern void ChunkUnloadSystem(ServerWorld& world);
 
 #endif // CHUNK_UNLOAD_SYSTEM

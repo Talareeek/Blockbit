@@ -1,7 +1,7 @@
 #include "../include/ChunkLoadSystem.hpp"
 #include "../include/TransformComponent.hpp"
 
-void ChunkLoadSystem(World& world, float dt)
+void ChunkLoadSystem(ServerWorld& world, float dt)
 {
     auto position_to_chunk = [](sf::Vector2<double> position) -> int
     {

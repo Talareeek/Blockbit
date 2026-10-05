@@ -107,9 +107,25 @@ std::unordered_map<std::wstring, Command> commandDatabase =
             std::wstring uuid_wstring;
             stream >> uuid_wstring;
 
-            std::string uuid_string(uuid_wstring.begin(), uuid_wstring.end());
+            UUID uuid;
 
-            UUID uuid = (uuidFromString(uuid_string).has_value()) ? uuidFromString(uuid_string).value() : throw CommandException("Non valid UUID");
+            if(uuid_wstring != L"@p")
+            {
+                std::string uuid_string(uuid_wstring.begin(), uuid_wstring.end());
+
+                uuid = (uuidFromString(uuid_string).has_value()) ? uuidFromString(uuid_string).value() : throw CommandException("Non valid UUID");
+            }
+            else
+            {
+                for(auto& [entity_uuid, entity] : world->getEntities())
+                {
+                    if(entity.hasComponent<PlayerControlledComponent>())
+                    {
+                        uuid = entity_uuid;
+                        break;
+                    }
+                }
+            }
 
             float x;
             stream >> x;

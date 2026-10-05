@@ -3,10 +3,10 @@
 #include "../include/HealthComponent.hpp"
 #include "../include/GameCommon.hpp"
 #include "../include/Entity.hpp"
-#include "../include/World.hpp"
+#include "../include/ServerWorld.hpp"
 #include "../include/PlayerControlledComponent.hpp"
 
-void TransformSystem(World& world)
+void TransformSystem(ServerWorld& world)
 {
     for(auto& [id, entity] : world.getEntities())
     {

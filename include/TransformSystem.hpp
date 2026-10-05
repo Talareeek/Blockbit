@@ -1,8 +1,8 @@
 #ifndef TRANSFORM_SYSTEM_HPP
 #define TRANSFORM_SYSTEM_HPP
 
-#include "World.hpp"
+#include "ServerWorld.hpp"
 
-extern void TransformSystem(World& world);
+extern void TransformSystem(ServerWorld& world);
 
 #endif // TRANSFORM_SYSTEM_HPP
