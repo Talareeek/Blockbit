@@ -26,10 +26,11 @@ private:
 
     sf::Texture blockbit_logo;
 
+
+    AccountWidget account;
     Button quit;
     WorldList worldList;
     LobbyPlayerElement player;
-    InputField nicknameField;
 
     StatusResponsePacket statusPacket{};
     bool hasStatus = false;

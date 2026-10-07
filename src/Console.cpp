@@ -114,7 +114,7 @@ void Console::update(float dt)
 {
     for(auto& msg : ConsoleSink::drain())
     {
-        logs.push_back({std::move(msg.text), msg.color});
+        appendLog(std::move(msg.text), msg.color);
     }
 
     if(to_proceed.has_value())
@@ -151,18 +151,13 @@ void Console::render()
 {
     if(!open) return;
 
-    ImGui::Begin("Console", &open);
+    ImGui::Begin("Console", &open, ImGuiWindowFlags_NoCollapse);
 
-    ImGui::BeginChild("ConsoleLogs", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, SFMLColorToImGuiColor(sf::Color::Transparent));
 
-    for (const auto& log : logs)
-    {
-        ImGui::TextColored(SFMLColorToImGuiColor(log.color), "%s", wstringToString(log.text).c_str());
-    }
+    ImGui::InputTextMultiline("##ConsoleLogs", logBuffer.data(), logBuffer.size() + 1, ImVec2(-FLT_MIN, -ImGui::GetFrameHeightWithSpacing()), ImGuiInputTextFlags_ReadOnly);
 
-    ImGui::EndChild();
-
-    ImGui::BeginChild("InputCollection");
+    ImGui::PopStyleColor();
 
     bool enter_pressed = ImGui::InputText("##Input", input, INPUT_BUFFER_SIZE, ImGuiInputTextFlags_EnterReturnsTrue);
     ImGui::SameLine();
@@ -170,20 +165,29 @@ void Console::render()
 
     if(enter_pressed || send_clicked) submitInput();
 
-    ImGui::EndChild();
-
     ImGui::End();
 }
 
 
 void Console::writeLine(std::wstring string)
 {
-    logs.push_back({std::move(string), sf::Color::White});
+    appendLog(std::move(string), sf::Color::White);
 }
 
 void Console::writeLine(std::wstring string, sf::Color color)
 {
-    logs.push_back({std::move(string), color});
+    appendLog(std::move(string), color);
+}
+
+void Console::submitInput()
+{
+    if(std::strlen(input) == 0) return;
+
+    to_proceed = std::wstring(input, input + std::strlen(input));
+
+    std::memset(input, 0, INPUT_BUFFER_SIZE);
+
+    appendLog(L"::> " + to_proceed.value(), sf::Color(255, 255, 255, 127));
 }
 
 void Console::assignWorld(World* world)
@@ -196,13 +200,9 @@ void Console::assignGame(Game* game)
     this->game = game;
 }
 
-void Console::submitInput()
+void Console::appendLog(std::wstring text, sf::Color color)
 {
-    if(std::strlen(input) == 0) return;
-
-    to_proceed = std::wstring(input, input + std::strlen(input));
-
-    std::memset(input, 0, INPUT_BUFFER_SIZE);
-
-    logs.push_back({L"::> " + to_proceed.value(), sf::Color(255, 255, 255, 127)});
+    logBuffer += wstringToString(text);
+    logBuffer += '\n';
+    logs.push_back({std::move(text), color});
 }

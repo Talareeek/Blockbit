@@ -240,14 +240,14 @@ void WorldList::update(float dt)
         {
             auto world_path = entries[i].getPath();
             entries[i].clearRequests();
-            game->pushState(&game->currentState(), std::make_unique<ClientGameState>(game, world_path, 0, nickname));
+            game->pushState(&game->currentState(), std::make_unique<ClientGameState>(game, world_path, 0, Account::username));
             return;
         }
         if(entries[i].wasHostRequested())
         {
             auto world_path = entries[i].getPath();
             entries[i].clearRequests();
-            game->pushState(&game->currentState(), std::make_unique<ClientGameState>(game, world_path, ClientGameState::DEFAULT_PORT, nickname));
+            game->pushState(&game->currentState(), std::make_unique<ClientGameState>(game, world_path, ClientGameState::DEFAULT_PORT, Account::username));
             return;
         }
         if(entries[i].wasDeleteRequested())
@@ -270,7 +270,7 @@ void WorldList::update(float dt)
         pendingConnect.reset();
         try
         {
-            game->pushState(&game->currentState(), std::make_unique<ClientGameState>(game, host, port, nickname));
+            game->pushState(&game->currentState(), std::make_unique<ClientGameState>(game, host, port, Account::username));
         }
         catch (const std::bad_alloc&)
         {

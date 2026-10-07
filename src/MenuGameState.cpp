@@ -75,8 +75,6 @@ MenuGameState::MenuGameState(Game* game) : GameState(game), serverPreview(&statu
 
     UIElement::ScreenRelative sliderRelative{{0.30f, 0.45f}, {0.30f, 0.08f}, UIElement::ScreenRelative::ScaleMode::UniformByHeight};
 
-    nicknameField = InputField(InputField({0.0f, 0.0f}, {0.0f, 0.0f}), "Player", "Nickname");
-
     backgroundTexture = generateBackground();
 
     sf::Music background_music = std::move(AssetManager::getMusic(AssetManager::MusicID::Dream));
@@ -170,7 +168,6 @@ void MenuGameState::handleEvent(const sf::Event& event)
     worldList.handleEvent(event);
     quit.handleEvent(event);
     player.handleEvent(event);
-    nicknameField.handleEvent(event);
 }
 
 void MenuGameState::update(float dt)
@@ -187,16 +184,11 @@ void MenuGameState::update(float dt)
     float fieldH = size.y * 0.06f;
     float fieldX = (size.x * 0.75f - fieldW) * 0.5f;
     float fieldY = size.y * 0.78f;
-    nicknameField.position = {fieldX, fieldY};
-    nicknameField.size = {fieldW, fieldH};
-
-    worldList.setNickname(nicknameField.getText());
 
     worldList.update(dt);
     quit.update(dt);
 
     player.update(dt);
-    nicknameField.update(dt);
 
     if (activeProbe && activeProbe->done)
     {
@@ -263,25 +255,14 @@ void MenuGameState::render(sf::RenderWindow& window)
 
     window.draw(logo);
 
+    account.performImGui();
+
 
     worldList.render(window);
 
     if (hasStatus && worldList.multiplayerActive()) serverPreview.render(window);
     quit.render(window);
     player.render(window);
-
-    {
-        sf::Vector2f fpos = nicknameField.position;
-        sf::Vector2f fsize = nicknameField.size;
-
-        sf::Text label(AssetManager::getFont(AssetManager::FontID::PressStart2P), "Nickname", static_cast<unsigned>(fsize.y * 0.4f));
-        label.setFillColor(sf::Color(230, 230, 230));
-        label.setOutlineColor(sf::Color::Black);
-        label.setOutlineThickness(1.0f);
-        label.setPosition({fpos.x, fpos.y - fsize.y * 0.55f});
-        window.draw(label);
-    }
-    nicknameField.render(window);
 }
 
 void MenuGameState::onObscured()

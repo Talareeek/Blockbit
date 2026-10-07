@@ -75,6 +75,9 @@ private:
 
     std::vector<LogEntry> logs;
 
+    std::string logBuffer;
+    void appendLog(std::wstring text, sf::Color color);
+
 
     static constexpr size_t INPUT_BUFFER_SIZE = 256;
     char input[INPUT_BUFFER_SIZE] = {};

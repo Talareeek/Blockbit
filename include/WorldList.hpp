@@ -31,8 +31,6 @@ private:
 
     std::optional<std::pair<std::string, uint16_t>> pendingConnect;
 
-    std::string nickname = "Player";
-
     float scroll_offset = 0.0f;
     float content_height = 0.0f;
 
@@ -72,8 +70,6 @@ public:
 
     WorldList() = default;
     WorldList(std::filesystem::path path, Game* game);
-
-    void setNickname(std::string value) { nickname = value.empty() ? std::string{"Player"} : std::move(value); }
 
     std::string getIpText() const { return ipField.getText(); }
     bool multiplayerActive() const { return mode == Mode::VISIBLE && selection == Selection::MULTIPLAYER; }

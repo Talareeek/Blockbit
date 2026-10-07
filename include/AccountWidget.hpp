@@ -4,22 +4,19 @@
 #include "UIElement.hpp"
 #include "Account.hpp"
 
-class AccountWidget : public UIElement
+class AccountWidget
 {
 private:
 
-    Account* account = nullptr;
-
     bool hovered = false;
+
+    char input[16] = {};
+
+    bool editing = false;
 
 public:
 
-    AccountWidget();
-    AccountWidget(Account* account);
-
-    void handleEvent(const sf::Event& event) override;
-    void update(float dt) override;
-    void render(sf::RenderWindow& window) override;
+    void performImGui();
 };
 
 #endif // ACCOUNT_WIDGET_HPP

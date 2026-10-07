@@ -116,28 +116,6 @@ Game::Game()
 
     AssetManager::loadMusic(AssetManager::MusicID::Dream, "resources/sounds/music/dream.mp3");
 
-    
-
-    std::filesystem::path savePath;
-    
-    #ifdef _WIN32
-        const char* appdata = std::getenv("APPDATA");
-        if (appdata) {
-            savePath = appdata;
-        } else {
-            savePath = std::filesystem::temp_directory_path();
-        }
-    #else
-        const char* home = std::getenv("HOME");
-        savePath = (home ? home : std::filesystem::temp_directory_path());
-        savePath /= ".local/share";
-    #endif
-    
-    savePath /= "Blockbit";
-    savePath /= "account";
-    
-    std::filesystem::create_directories(savePath.parent_path());
-    account = new Account(savePath);
 
     console.assignGame(this);
 
