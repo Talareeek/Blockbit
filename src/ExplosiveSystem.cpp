@@ -19,32 +19,31 @@ void ExplosiveSystem(World& world, float dt)
 
         if(explosive.timer < explosive.fuseTime) continue;
 
-        sf::Vector2f center = sf::Vector2f(entity.getComponent<TransformComponent>().center());
+        sf::Vector2<double> center = entity.getComponent<TransformComponent>().center();
 
         for(auto& [id, other] : entities)
         {
-            sf::Vector2f diff = sf::Vector2f(other.getComponent<TransformComponent>().center()) - center;
+            sf::Vector2<double> diff = sf::Vector2<double>(other.getComponent<TransformComponent>().center()) - center;
 
-            float dist = std::sqrt(diff.x * diff.x + diff.y * diff.y);
+            double dist = std::sqrt(diff.x * diff.x + diff.y * diff.y);
 
-            if(dist > explosive.force || dist == 0) continue;
+            if(dist > static_cast<double>(explosive.force) || dist == 0.0) continue;
 
-            sf::Vector2f dir = diff / dist;
+            sf::Vector2<double> dir = diff / dist;
 
-            float factor = 1.f - dist / explosive.force;
-            factor = std::clamp(factor, 0.f, 1.f);
+            double factor = 1.f - dist / explosive.force;
+            factor = std::clamp(factor, 0.0, 1.0);
 
             float damage = factor * factor;
             if(other.hasComponent<HealthComponent>())
             {
-                other.getComponent<HealthComponent>().health -= damage;
+                other.getComponent<HealthComponent>().health -= static_cast<uint8_t>(damage);
             }
 
-            float impulse = std::sqrt(factor) * (2.f + explosive.force * 0.5f);
+            float impulse = std::sqrt(factor) * (2.0f + explosive.force * 0.5f);
             other.getComponent<PhysicsComponent>().velocity += sf::Vector2f(dir.x, dir.y - 0.6f) * impulse;
         }
 
-        // DESTROY BLOCKS
         int minX = static_cast<int>(center.x - explosive.force);
         int maxX = static_cast<int>(center.x + explosive.force);
         int minY = static_cast<int>(center.y - explosive.force);
@@ -54,10 +53,10 @@ void ExplosiveSystem(World& world, float dt)
         {
             for(int y = minY; y <= maxY; y++)
             {
-                float dx = x + 0.5f - center.x;
-                float dy = y + 0.5f - center.y;
+                double dx = x + 0.5 - center.x;
+                double dy = y + 0.5 - center.y;
 
-                float dist = std::sqrt(dx*dx + dy*dy);
+                double dist = std::sqrt(dx*dx + dy*dy);
 
                 if(dist <= explosive.force && blockDatabase[world.getBlock(x, y).id].breakable != false)
                 {

@@ -67,6 +67,11 @@ public:
     void render(sf::RenderWindow& window) override;
 
     void onObscured() override;
+
+    bool renderWhenObscured() override
+    {
+        return false;
+    }
 };
 
 #endif // MENU_GAME_STATE_HPP

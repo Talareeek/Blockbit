@@ -217,7 +217,7 @@ void Game::render()
     {
         for(auto& state : gameStates)
         {
-            state->render(window);
+            if(state->renderWhenObscured() || gameStates.back() == state) state->render(window);
         }
     }
     else

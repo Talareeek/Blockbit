@@ -3,11 +3,11 @@
 
 struct Climate
 {
-    float temperature;
-    float humidity;
-    float continentalness;
-    float erosion;
-    float weirdness;
+    double temperature;
+    double humidity;
+    double continentalness;
+    double erosion;
+    double weirdness;
 };
 
 enum class Biome

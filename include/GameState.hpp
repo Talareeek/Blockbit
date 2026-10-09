@@ -25,6 +25,8 @@ public:
 
     virtual bool alwaysUpdated() const;
 
+    virtual bool renderWhenObscured();
+
     virtual void onObscured();
     virtual void onRevealed();
 

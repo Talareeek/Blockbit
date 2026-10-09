@@ -25,3 +25,8 @@ void GameState::onRevealed()
 {
     on_top = true;
 }
+
+bool GameState::renderWhenObscured()
+{
+    return true;
+}
