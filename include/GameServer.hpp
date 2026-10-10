@@ -44,7 +44,7 @@ private:
     std::unordered_map<uint32_t, std::deque<std::vector<Input>>> remote_input_queues;
     std::unordered_map<uint32_t, std::unordered_set<int>> sent_chunks;
 
-    uint16_t tick_rate = 60;
+    uint16_t tick_rate = 120;
     uint64_t tick = 0;
     sf::Clock update_clock;
 

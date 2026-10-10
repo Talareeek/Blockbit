@@ -556,14 +556,11 @@ void ClientGameState::update(float dt)
 
     tryInitializePlayerUI();
 
-    float tick_step = 1.0f / static_cast<float>(WORLD_TICKS_PER_SECOND);
-
-    if (dt > tick_step * 4.0f) dt = tick_step;
+    float tick_step = 1.0f / static_cast<float>(tick_rate);
 
     since_last_tick += dt;
 
-    int max_ticks_per_frame = 4;
-    while(since_last_tick >= tick_step && max_ticks_per_frame-- > 0)
+    while(since_last_tick >= tick_step)
     {
         if (player_ui_initialized)
         {
@@ -596,7 +593,6 @@ void ClientGameState::update(float dt)
 
         onTick(tick_step);
 
-
         sf::View game_view({0.0f, 0.0f}, {static_cast<float>(game->getWindow().getSize().x), static_cast<float>(game->getWindow().getSize().y)});
         game_view.setSize({game_view.getSize().x, -game_view.getSize().y});
         game->getWindow().setView(game_view);
@@ -608,7 +604,7 @@ void ClientGameState::update(float dt)
         since_last_tick -= tick_step;
     }
 
-    if (since_last_tick > tick_step) since_last_tick = 0.0f;
+    if (since_last_tick > tick_step) since_last_tick -= dt;
 
     PhysicsSystem(local_world, dt);
 

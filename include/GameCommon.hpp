@@ -24,8 +24,6 @@ bool isBlockInRange(TransformComponent& player, sf::Vector2i& block, float range
 float getTickStep(uint16_t tick_rate);
 
 constexpr unsigned int WORLD_UNIT_SIZE_FACTOR = 12;
-constexpr uint8_t WORLD_TICKS_PER_SECOND = 60;
-
 std::filesystem::path getHomePath();
 
 std::string wstringToString(const std::wstring wstring);

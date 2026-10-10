@@ -15,6 +15,7 @@
 #include "RCon.hpp"
 
 #include <memory>
+#include "ClientWorld.hpp"
 #include <optional>
 #include <string>
 #include <vector>
@@ -24,7 +25,7 @@ class ClientGameState : public GameState
 {
 private:
 
-    World local_world;
+    ClientWorld local_world;
 
     std::unique_ptr<ClientTransport> transport;
 
@@ -32,9 +33,9 @@ private:
 
     RCon rcon;
 
-    uint16_t tick_rate;
+    uint16_t tick_rate = 60;
 
-    uint64_t latest_tick;
+    uint64_t latest_tick = 0;
 
     std::optional<UUID> local_player_entity_id;
     UUID my_entity_id;
