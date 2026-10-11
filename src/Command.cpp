@@ -336,7 +336,7 @@ std::unordered_map<std::wstring, Command> commandDatabase =
 
             Entity entity(generateUUID());
 
-            entity.addComponent(TransformComponent{{x, y}, {1.0f, 1.0f}, sf::degrees(0.0f)});
+            entity.addComponent(TransformComponent{{x, y}, {0.75f, 1.0f}, sf::degrees(0.0f)});
             entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
 
             InventoryComponent inv(36);

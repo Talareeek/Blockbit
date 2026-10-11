@@ -2,6 +2,7 @@
 #define SERVER_WORLD_HPP
 
 #include "World.hpp"
+#include "Prefab.hpp"
 
 class ServerWorld : public World
 {
@@ -23,6 +24,8 @@ public:
 
     const std::string& getName() const { return name; }
     void setName(const std::string& name) { this->name = name; }
+
+    UUID spawn(PrefabID prefab_id, sf::Vector2<double> position);
 
     sf::Vector2<double> getSpawnPoint();
     void generateWorldSpawn();

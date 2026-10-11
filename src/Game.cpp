@@ -13,6 +13,7 @@
 #include "../include/World.hpp"
 #include "../include/BlockAtlas.hpp"
 #include "../include/AuthorGameState.hpp"
+#include "../include/Prefab.hpp"
 
 #include <imgui.h>
 #include <imgui-SFML.h>
@@ -115,6 +116,8 @@ Game::Game()
     AssetManager::loadSound(AssetManager::SoundID::Click, "resources/sounds/click.wav");
 
     AssetManager::loadMusic(AssetManager::MusicID::Dream, "resources/sounds/music/dream.mp3");
+
+    PrefabRegistry::init();
 
 
     console.assignGame(this);

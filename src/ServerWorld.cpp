@@ -1,6 +1,7 @@
 #include "../include/ServerWorld.hpp"
 #include "../include/NormalWorldGenerator.hpp"
 #include "../include/PlayerControlledComponent.hpp"
+#include "../include/TransformComponent.hpp"
 
 #include <fstream>
 #include <zstd.h>
@@ -571,4 +572,15 @@ void ServerWorld::generateWorldSpawn()
     {
         chunks[i] = world_generator->generateChunk(i);
     }
+}
+
+UUID ServerWorld::spawn(PrefabID prefab_id, sf::Vector2<double> position)
+{
+    Entity entity = PrefabRegistry::get(prefab_id).cloneAs(generateUUID());
+
+    if(entity.hasComponent<TransformComponent>()) entity.getComponent<TransformComponent>().position = position;
+
+    addEntity(std::move(entity));
+
+    return entity.getID();
 }

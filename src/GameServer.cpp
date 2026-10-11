@@ -21,6 +21,7 @@
 #include "../include/ChunkUnloadSystem.hpp"
 #include "../include/DaycycleSystem.hpp"
 #include "../include/AnimationComponent.hpp"
+#include "../include/Prefab.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -445,39 +446,10 @@ void GameServer::spawnPlayerFor(std::string nickname)
     }
     else
     {
-        Entity entity(generateUUID());
+        Entity entity = PrefabRegistry::get(PrefabID::Player).cloneAs(generateUUID());
 
-        entity.addComponent(TransformComponent{{0.0f, 0.0f}, {0.75f, 1.0f}, sf::degrees(0.0f)});
-        entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
+        if(entity.hasComponent<TransformComponent>()) entity.getComponent<TransformComponent>().position = world.getSpawnPoint();
 
-        InventoryComponent inv(36);
-        inv.inventory.slots[0] = {ItemID::Dynamite, 16};
-        inv.inventory.slots[1] = {ItemID::Bucket, 1};
-        inv.inventory.slots[2] = {ItemID::Woodcutter, 64};
-        inv.inventory.slots[3] = {ItemID::Lighter, 1};
-        inv.inventory.slots[4] = {ItemID::Diamond_Pickaxe, 1};
-        inv.inventory.slots[5] = {ItemID::Diamond_Axe, 1};
-        inv.inventory.slots[6] = {ItemID::Diamond_Shovel, 1};
-        inv.inventory.slots[7] = {ItemID::Chest, 64};
-        entity.addComponent(std::move(inv));
-
-        entity.getComponent<TransformComponent>().position = world.getSpawnPoint();
-
-        entity.addComponent(RenderComponent{AssetManager::GameTextureID::Player, {{0, 0}, {12, 16}}, {1.0f, 1.0f}});
-
-        AnimationComponent animation;
-
-            animation.animations =
-            {
-                {AnimationState::Idle, AnimationClip{0, 2, 0.5f, true}},
-                {AnimationState::Walking, AnimationClip{2, 2, 0.5f, true}}
-            };
-
-            animation.frameSize = {12, 16};
-
-            entity.addComponent(animation);
-
-        entity.addComponent(HealthComponent{100, 100});
         entity.addComponent(PlayerControlledComponent{nickname});
 
         nickname_to_entity[nickname] = entity.getID();
