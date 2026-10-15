@@ -28,6 +28,9 @@ struct PlayerControlledComponent : public Component
 
     std::optional<ChangeSlotData> change_slot;
     
+    bool jump = false;
+
+    sf::Vector2<double> move_direction;
 
     PlayerControlledComponent() = default;
     PlayerControlledComponent(std::string nickname) : nickname{nickname}

@@ -9,6 +9,8 @@
 #include <iosfwd>
 #include "Command.hpp"
 
+struct ImGuiInputTextCallbackData;
+
 class ConsoleSink
 {
 public:
@@ -85,6 +87,16 @@ private:
     std::optional<std::wstring> to_proceed;
 
     void submitInput();
+
+    std::vector<std::string> history;
+    int historyPos = -1;
+
+    bool reclaimFocus = false;
+
+    static int inputTextCallbackStub(ImGuiInputTextCallbackData* data);
+    int inputTextCallback(ImGuiInputTextCallbackData* data);
+
+    std::vector<std::string> findMatches(const std::string& prefix) const;
 
 
     float cursorTimer = 0.0f;

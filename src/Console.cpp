@@ -6,6 +6,9 @@
 
 #include <iostream>
 #include <deque>
+#include <algorithm>
+#include <cctype>
+#include <cstring>
 
 #include <imgui.h>
 
@@ -155,15 +158,68 @@ void Console::render()
 
     ImGui::PushStyleColor(ImGuiCol_FrameBg, SFMLColorToImGuiColor(sf::Color::Transparent));
 
-    ImGui::InputTextMultiline("##ConsoleLogs", logBuffer.data(), logBuffer.size() + 1, ImVec2(-FLT_MIN, -ImGui::GetFrameHeightWithSpacing()), ImGuiInputTextFlags_ReadOnly);
+    const float suggestionsHeight = (input[0] != '\0') ? ImGui::GetTextLineHeightWithSpacing() * 4.0f + ImGui::GetStyle().FramePadding.y * 2.0f : 0.0f;
+    const float reservedBottom = ImGui::GetFrameHeightWithSpacing() + suggestionsHeight;
+
+    ImGui::InputTextMultiline("##ConsoleLogs", logBuffer.data(), logBuffer.size() + 1, ImVec2(-FLT_MIN, -reservedBottom), ImGuiInputTextFlags_ReadOnly);
 
     ImGui::PopStyleColor();
 
-    bool enter_pressed = ImGui::InputText("##Input", input, INPUT_BUFFER_SIZE, ImGuiInputTextFlags_EnterReturnsTrue);
+    if(input[0] != '\0')
+    {
+        std::string current(input);
+        size_t spacePos = current.find(' ');
+        std::string prefix = (spacePos == std::string::npos) ? current : current.substr(0, spacePos);
+        std::vector<std::string> matches = findMatches(prefix);
+
+        ImGui::BeginChild("##Suggestions", ImVec2(0, suggestionsHeight), true, ImGuiWindowFlags_HorizontalScrollbar);
+        if(matches.empty())
+        {
+            ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "no matching commands");
+        }
+        else
+        {
+            for(const auto& match : matches)
+            {
+                if(ImGui::Selectable(match.c_str()))
+                {
+                    std::string replacement = match;
+                    if(spacePos != std::string::npos)
+                    {
+                        replacement += current.substr(spacePos);
+                    }
+                    else
+                    {
+                        replacement += " ";
+                    }
+                    std::strncpy(input, replacement.c_str(), INPUT_BUFFER_SIZE - 1);
+                    input[INPUT_BUFFER_SIZE - 1] = '\0';
+                    reclaimFocus = true;
+                }
+            }
+        }
+        ImGui::EndChild();
+    }
+
+    ImGuiInputTextFlags inputFlags = ImGuiInputTextFlags_EnterReturnsTrue
+                                   | ImGuiInputTextFlags_CallbackHistory
+                                   | ImGuiInputTextFlags_CallbackCompletion;
+
+    if(reclaimFocus)
+    {
+        ImGui::SetKeyboardFocusHere();
+        reclaimFocus = false;
+    }
+
+    bool enter_pressed = ImGui::InputText("##Input", input, INPUT_BUFFER_SIZE, inputFlags, &Console::inputTextCallbackStub, this);
     ImGui::SameLine();
     bool send_clicked = ImGui::Button("Send");
 
-    if(enter_pressed || send_clicked) submitInput();
+    if(enter_pressed || send_clicked)
+    {
+        submitInput();
+        reclaimFocus = true;
+    }
 
     ImGui::End();
 }
@@ -183,11 +239,128 @@ void Console::submitInput()
 {
     if(std::strlen(input) == 0) return;
 
+    std::string entered(input);
+
     to_proceed = std::wstring(input, input + std::strlen(input));
+
+    for(auto it = history.begin(); it != history.end(); )
+    {
+        if(*it == entered) it = history.erase(it);
+        else ++it;
+    }
+    history.push_back(entered);
+    historyPos = -1;
 
     std::memset(input, 0, INPUT_BUFFER_SIZE);
 
     appendLog(L"::> " + to_proceed.value(), sf::Color(255, 255, 255, 127));
+}
+
+std::vector<std::string> Console::findMatches(const std::string& prefix) const
+{
+    std::vector<std::string> matches;
+    for(const auto& [key, value] : commandDatabase)
+    {
+        std::string keyStr = wstringToString(key);
+        if(keyStr.size() < prefix.size()) continue;
+
+        bool match = true;
+        for(size_t i = 0; i < prefix.size(); ++i)
+        {
+            if(std::tolower(static_cast<unsigned char>(keyStr[i])) !=
+               std::tolower(static_cast<unsigned char>(prefix[i])))
+            {
+                match = false;
+                break;
+            }
+        }
+        if(match) matches.push_back(keyStr);
+    }
+    std::sort(matches.begin(), matches.end());
+    return matches;
+}
+
+int Console::inputTextCallbackStub(ImGuiInputTextCallbackData* data)
+{
+    Console* self = static_cast<Console*>(data->UserData);
+    return self->inputTextCallback(data);
+}
+
+int Console::inputTextCallback(ImGuiInputTextCallbackData* data)
+{
+    switch(data->EventFlag)
+    {
+        case ImGuiInputTextFlags_CallbackHistory:
+        {
+            if(history.empty()) break;
+
+            const int prevPos = historyPos;
+            if(data->EventKey == ImGuiKey_UpArrow)
+            {
+                if(historyPos == -1)
+                    historyPos = static_cast<int>(history.size()) - 1;
+                else if(historyPos > 0)
+                    historyPos--;
+            }
+            else if(data->EventKey == ImGuiKey_DownArrow)
+            {
+                if(historyPos != -1)
+                {
+                    historyPos++;
+                    if(historyPos >= static_cast<int>(history.size()))
+                        historyPos = -1;
+                }
+            }
+
+            if(prevPos != historyPos)
+            {
+                const char* historyStr = (historyPos >= 0) ? history[historyPos].c_str() : "";
+                data->DeleteChars(0, data->BufTextLen);
+                data->InsertChars(0, historyStr);
+            }
+            break;
+        }
+        case ImGuiInputTextFlags_CallbackCompletion:
+        {
+            std::string current(data->Buf, data->BufTextLen);
+            size_t spacePos = current.find(' ');
+            std::string prefix = (spacePos == std::string::npos) ? current : current.substr(0, spacePos);
+
+            std::vector<std::string> matches = findMatches(prefix);
+            if(matches.empty()) break;
+
+            if(matches.size() == 1)
+            {
+                data->DeleteChars(0, static_cast<int>(prefix.size()));
+                data->InsertChars(0, matches[0].c_str());
+                if(spacePos == std::string::npos)
+                    data->InsertChars(data->CursorPos, " ");
+            }
+            else
+            {
+                std::string common = matches[0];
+                for(size_t i = 1; i < matches.size(); ++i)
+                {
+                    size_t j = 0;
+                    while(j < common.size() && j < matches[i].size() &&
+                          std::tolower(static_cast<unsigned char>(common[j])) ==
+                          std::tolower(static_cast<unsigned char>(matches[i][j])))
+                    {
+                        ++j;
+                    }
+                    common.resize(j);
+                }
+
+                if(common.size() > prefix.size())
+                {
+                    data->DeleteChars(0, static_cast<int>(prefix.size()));
+                    data->InsertChars(0, common.c_str());
+                }
+            }
+            break;
+        }
+    }
+    return 0;
 }
 
 void Console::assignWorld(World* world)
