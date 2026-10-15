@@ -2,28 +2,40 @@
 #define CREATE_WORLD_STATE_HPP
 
 #include "GameState.hpp"
-#include "InputField.hpp"
-#include "Button.hpp"
-#include "Checkbox.hpp"
-#include "GenerationPreview.hpp"
-#include "World.hpp"
+#include "FlatWorldGenerator.hpp"
 
-#include <optional>
+#include <SFML/Graphics/Texture.hpp>
+
+#include <vector>
 
 class CreateWorldState : public GameState
 {
 private:
 
-    Button quit;
+    enum class Mode : int
+    {
+        Normal = 0,
+        Flat   = 1
+    };
 
-    InputField name;
-    InputField seed;
+    Mode mode = Mode::Normal;
 
-    Checkbox flat;
+    char name_buffer[64] = {};
+    char seed_buffer[32] = {};
 
-    Button create;
+    float base_height  = 55.0f;
+    float height_scale = 35.0f;
+    float frequency    = 0.035f;
+    float amplitude    = 1.0f;
+    float persistence  = 0.55f;
 
-    GenerationPreview preview;
+    std::vector<FlatWorldLayer> flat_layers;
+
+    sf::Texture background_texture;
+
+    bool should_close = false;
+
+    void createWorld();
 
 public:
 

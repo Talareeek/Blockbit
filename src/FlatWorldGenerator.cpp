@@ -13,17 +13,27 @@ Chunk FlatWorldGenerator::generateChunk(int chunk_position)
     {
         for (int x = 0; x < CHUNK_WIDTH; ++x)
         {
-            if (y == 0)
-                chunk.blocks[y][x] = {BlockID::Bedrock, 0};
-            else if (y < 5)
-                chunk.blocks[y][x] = {BlockID::Stone, 0};
-            else if (y == 5)
-                chunk.blocks[y][x] = {BlockID::Dirt, 0};
-            else if (y == 6)
-                chunk.blocks[y][x] = {BlockID::Grass, 0};
-            else
-                chunk.blocks[y][x] = {BlockID::Air, 0};
+            chunk.blocks[y][x] = {BlockID::Air, 0};
         }
+    }
+
+    int y = 0;
+    for (const FlatWorldLayer& layer : properties.layers)
+    {
+        if (layer.count <= 0) continue;
+
+        int top = std::min(CHUNK_HEIGHT, y + layer.count);
+
+        for (int ly = y; ly < top; ++ly)
+        {
+            for (int x = 0; x < CHUNK_WIDTH; ++x)
+            {
+                chunk.blocks[ly][x] = {layer.block, 0};
+            }
+        }
+
+        y = top;
+        if (y >= CHUNK_HEIGHT) break;
     }
 
     return chunk;

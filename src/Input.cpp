@@ -144,6 +144,7 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
                 if(physics.onGround)
                 {
                     physics.velocity.y += 10.0f;
+                    physics.onGround = false;
                 }
                 else if(isSubmerged(world, transform))
                 {

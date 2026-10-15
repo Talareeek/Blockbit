@@ -6,11 +6,13 @@
 #include "PerlinNoise.hpp"
 #include "Climate.hpp"
 #include "WorldGenerator.hpp"
+#include "FlatWorldGenerator.hpp"
 
 #include <unordered_map>
 #include <filesystem>
 #include <optional>
 #include <deque>
+#include <vector>
 
 #include <SFML/System/Vector2.hpp>
 
@@ -22,6 +24,8 @@ struct GenerationProperties
     float frequency;
     float amplitude;
     float persistence;
+
+    std::vector<FlatWorldLayer> flat_layers = FlatWorldProperties::defaults().layers;
 };
 
 class World

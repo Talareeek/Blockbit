@@ -1,11 +1,38 @@
 #include "../include/ServerWorld.hpp"
 #include "../include/NormalWorldGenerator.hpp"
+#include "../include/FlatWorldGenerator.hpp"
 #include "../include/PlayerControlledComponent.hpp"
 #include "../include/TransformComponent.hpp"
 
 #include <fstream>
 #include <zstd.h>
 #include <iostream>
+
+static std::unique_ptr<WorldGenerator> makeWorldGenerator(unsigned int seed, const GenerationProperties& generation_properties)
+{
+    if (generation_properties.flat)
+    {
+        FlatWorldProperties flat_properties;
+        flat_properties.layers = generation_properties.flat_layers;
+        if (flat_properties.layers.empty())
+        {
+            flat_properties = FlatWorldProperties::defaults();
+        }
+
+        return std::make_unique<FlatWorldGenerator>(std::move(flat_properties));
+    }
+
+    NormalWorldGeneratorProperties properties
+    {
+        .base_height = generation_properties.base_height,
+        .height_scale = generation_properties.height_scale,
+        .frequency = generation_properties.frequency,
+        .amplitude = generation_properties.amplitude,
+        .persistence = generation_properties.persistence
+    };
+
+    return std::make_unique<NormalWorldGenerator>(seed, properties);
+}
 
 ServerWorld::ServerWorld(const std::filesystem::path path) : path{path}
 {
@@ -16,16 +43,7 @@ ServerWorld::ServerWorld(const std::filesystem::path path) : path{path}
 
 ServerWorld::ServerWorld(const std::string name, const std::filesystem::path path, unsigned int seed, GenerationProperties generation_properties) : name(name), path(path), seed(seed), perlin(seed), generation_properties{generation_properties}
 {
-    NormalWorldGeneratorProperties properties
-    {
-        .base_height = generation_properties.base_height,
-        .height_scale = generation_properties.height_scale,
-        .frequency = generation_properties.frequency,
-        .amplitude = generation_properties.amplitude,
-        .persistence = generation_properties.persistence
-    };
-
-    world_generator = std::make_unique<NormalWorldGenerator>(seed, properties);
+    world_generator = makeWorldGenerator(seed, this->generation_properties);
 
     if(!world_generator) throw("World generator is nullptr");
 
@@ -112,6 +130,17 @@ void ServerWorld::saveData()
     data["generation_properties"]["amplitude"] = Tag(generation_properties.amplitude);
     data["generation_properties"]["persistence"] = Tag(generation_properties.persistence);
 
+    TagList flat_layers_list;
+    for (const FlatWorldLayer& layer : generation_properties.flat_layers)
+    {
+        TagCompound layer_compound;
+        layer_compound["block"] = Tag(static_cast<uint32_t>(layer.block));
+        layer_compound["count"] = Tag(static_cast<int32_t>(layer.count));
+
+        flat_layers_list.push_back(Tag(layer_compound));
+    }
+    data["generation_properties"]["flat_layers"] = Tag(flat_layers_list);
+
     data["seed"] = Tag(seed);
 
     data["day_time"] = Tag(getDayTime());
@@ -157,16 +186,31 @@ void ServerWorld::loadData()
         .persistence = data["generation_properties"]["persistence"].get<float>()
     };
 
-    NormalWorldGeneratorProperties properties
-    {
-        .base_height = generation_properties.base_height,
-        .height_scale = generation_properties.height_scale,
-        .frequency = generation_properties.frequency,
-        .amplitude = generation_properties.amplitude,
-        .persistence = generation_properties.persistence
-    };
+    generation_properties.flat_layers.clear();
 
-    world_generator = std::make_unique<NormalWorldGenerator>(seed, properties);
+    const TagCompound& gen_props = data["generation_properties"].get<TagCompound>();
+    auto layers_iter = gen_props.find("flat_layers");
+    if (layers_iter != gen_props.end())
+    {
+        const TagList& layers_list = layers_iter->second.get<TagList>();
+        generation_properties.flat_layers.reserve(layers_list.size());
+
+        for (const Tag& layer_tag : layers_list)
+        {
+            const TagCompound& layer_compound = layer_tag.get<TagCompound>();
+            FlatWorldLayer layer;
+            layer.block = static_cast<BlockID>(layer_compound.at("block").get<uint32_t>());
+            layer.count = static_cast<int>(layer_compound.at("count").get<int32_t>());
+            generation_properties.flat_layers.push_back(layer);
+        }
+    }
+
+    if (generation_properties.flat_layers.empty())
+    {
+        generation_properties.flat_layers = FlatWorldProperties::defaults().layers;
+    }
+
+    world_generator = makeWorldGenerator(seed, generation_properties);
 }
 
 

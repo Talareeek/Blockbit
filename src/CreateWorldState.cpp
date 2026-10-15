@@ -1,154 +1,258 @@
 #include "../include/CreateWorldState.hpp"
 #include "../include/InputManager.hpp"
 #include "../include/Game.hpp"
-#include "../include/AssetManager.hpp"
 #include "../include/ClientGameState.hpp"
+#include "../include/World.hpp"
+#include "../include/Block.hpp"
+#include "../include/Item.hpp"
+#include "../include/Account.hpp"
+#include "../include/Render.hpp"
+
+#include <imgui.h>
+
+#include <array>
+#include <cstdlib>
+#include <cstring>
+#include <filesystem>
+#include <sstream>
+#include <string>
 
 namespace
 {
-    constexpr float HEADER_H     = 0.07f;
+    constexpr std::array<BlockID, 10> BLOCK_OPTIONS
+    {
+        BlockID::Bedrock,
+        BlockID::Stone,
+        BlockID::Dirt,
+        BlockID::Grass,
+        BlockID::Sand,
+        BlockID::Coarse_Dirt,
+        BlockID::Snow,
+        BlockID::Cobblestone,
+        BlockID::Obsidian,
+        BlockID::Oak_Planks
+    };
 
-    constexpr float PANEL_X      = 0.03f;
-    constexpr float PANEL_Y      = 0.10f;
-    constexpr float PANEL_W      = 0.34f;
-    constexpr float PANEL_H      = 0.85f;
+    int blockOptionIndex(BlockID id)
+    {
+        for (size_t i = 0; i < BLOCK_OPTIONS.size(); ++i)
+        {
+            if (BLOCK_OPTIONS[i] == id) return static_cast<int>(i);
+        }
+        return 0;
+    }
 
-    constexpr float FIELD_X      = PANEL_X + 0.02f;
-    constexpr float FIELD_W      = PANEL_W - 0.04f;
-
-    constexpr float NAME_Y       = 0.20f;
-    constexpr float SEED_Y       = 0.34f;
-    constexpr float FLAT_Y       = 0.48f;
-
-    constexpr float FIELD_H      = 0.06f;
-    constexpr float FLAT_H       = 0.05f;
-
-    constexpr float CREATE_Y     = 0.85f;
-    constexpr float CREATE_H     = 0.08f;
-
-    constexpr float PREVIEW_X    = 0.40f;
-    constexpr float PREVIEW_Y    = 0.12f;
-    constexpr float PREVIEW_W    = 0.57f;
-    constexpr float PREVIEW_H    = 0.83f;
+    const char* blockName(BlockID id)
+    {
+        auto item = blockToItem(id);
+        auto iter = itemDatabase.find(item);
+        if (iter == itemDatabase.end()) return "?";
+        return iter->second.name.c_str();
+    }
 }
 
 CreateWorldState::CreateWorldState(Game* game) : GameState(game)
 {
-    UIElement::ScreenRelative quitRelative{
-        {1.0f - 0.055f, 0.012f},
-        {0.04f, 0.05f},
-        UIElement::ScreenRelative::ScaleMode::Stretch};
+    flat_layers = FlatWorldProperties::defaults().layers;
+    background_texture = generateBackground();
+}
 
-    quit = Button(quitRelative, sf::Color(200, 70, 70), "X");
+void CreateWorldState::createWorld()
+{
+    if (name_buffer[0] == '\0') return;
 
-    UIElement::ScreenRelative nameRelative{
-        {FIELD_X, NAME_Y}, {FIELD_W, FIELD_H},
-        UIElement::ScreenRelative::ScaleMode::Stretch};
+    std::string world_name(name_buffer);
+    std::string seed_text(seed_buffer);
 
-    UIElement::ScreenRelative seedRelative{
-        {FIELD_X, SEED_Y}, {FIELD_W, FIELD_H},
-        UIElement::ScreenRelative::ScaleMode::Stretch};
+    std::filesystem::path savesPath = getWorldsPath();
+    std::filesystem::path path = savesPath / world_name;
 
-    UIElement::ScreenRelative flatRelative{
-        {FIELD_X, FLAT_Y}, {FIELD_W, FLAT_H},
-        UIElement::ScreenRelative::ScaleMode::Stretch};
+    std::filesystem::create_directories(path);
 
-    UIElement::ScreenRelative createRelative{
-        {FIELD_X, CREATE_Y}, {FIELD_W, CREATE_H},
-        UIElement::ScreenRelative::ScaleMode::Stretch};
+    unsigned int seed_value = static_cast<unsigned int>(std::rand());
+    if (!seed_text.empty())
+    {
+        std::istringstream stream(seed_text);
+        unsigned int parsed = 0;
+        if (stream >> parsed) seed_value = parsed;
+    }
 
-    name = InputField(InputField(nameRelative), "", "World name");
-    seed = InputField(InputField(seedRelative), "", "Seed (empty = random)");
-    flat = Checkbox(flatRelative, false, "Flat terrain");
+    GenerationProperties properties;
+    properties.flat = (mode == Mode::Flat);
+    properties.base_height = base_height;
+    properties.height_scale = height_scale;
+    properties.frequency = frequency;
+    properties.amplitude = amplitude;
+    properties.persistence = persistence;
+    properties.flat_layers = flat_layers;
 
-    UIElement::ScreenRelative previewRelative{
-        {PREVIEW_X, PREVIEW_Y}, {PREVIEW_W, PREVIEW_H},
-        UIElement::ScreenRelative::ScaleMode::Stretch};
-
-    preview = GenerationPreview(previewRelative, static_cast<unsigned int>(std::rand()));
-    preview.updateScreenRelative(game->getWindow().getSize());
-
-    create = Button(createRelative, sf::Color(70, 160, 90), "Create world",
-        [this]()
-        {
-            if (name.getText().empty()) return;
-
-            std::string home;
-
-            #ifdef _WIN32
-                const char* appdata = std::getenv("APPDATA");
-                home = appdata ? appdata : "";
-            #elif __linux__
-                const char* homeenv = std::getenv("HOME");
-                home = homeenv ? homeenv : "";
-            #endif
-
-            std::filesystem::path savesPath = home.empty() ? std::filesystem::temp_directory_path() : std::filesystem::path(home);
-            savesPath /= "Blockbit";
-            savesPath /= "saves";
-
-            std::filesystem::path path = savesPath / name.getText();
-
-            std::filesystem::create_directory(path);
-
-            std::string seed_text = seed.getText();
-            unsigned int potential_seed;
-
-            if(!seed_text.empty())
-            {
-                std::istringstream stream(seed_text);
-                stream >> potential_seed;
-            }
-
-            GenerationProperties properties;
-
-            properties.flat = flat.getValue();
-
-            properties.base_height = preview.getBaseHeight();
-            properties.height_scale = preview.getHeightScale();
-            properties.frequency = preview.getFrequency();
-            properties.amplitude = preview.getAmplitude();
-            properties.persistence = preview.getPersistence();
-
-            this->game->popState(this);
-            this->game->pushState(this, std::make_unique<ClientGameState>(this->game, name.getText(), (!seed_text.empty()) ? potential_seed : std::rand(), properties, 0, "Player"));
-        }
-    );
+    this->game->popState(this);
+    this->game->pushState(this, std::make_unique<ClientGameState>(this->game, world_name, seed_value, properties, 0, Account::username));
 }
 
 void CreateWorldState::handleEvent(const sf::Event& event)
 {
-    quit.handleEvent(event);
-    name.handleEvent(event);
-    seed.handleEvent(event);
-    flat.handleEvent(event);
-    create.handleEvent(event);
-    preview.handleEvent(event);
+    (void)event;
 }
 
 void CreateWorldState::update(float dt)
 {
-    if(InputManager::isLazyKeyPressed(sf::Keyboard::Key::Escape) || quit.clicked())
+    (void)dt;
+
+    if (should_close)
     {
         game->popState(this);
         return;
     }
 
-    sf::Vector2u winSize = game->getWindow().getSize();
+    if (InputManager::isLazyKeyPressed(sf::Keyboard::Key::Escape))
+    {
+        game->popState(this);
+        return;
+    }
 
-    quit.updateScreenRelative(winSize);
-    name.updateScreenRelative(winSize);
-    seed.updateScreenRelative(winSize);
-    flat.updateScreenRelative(winSize);
-    create.updateScreenRelative(winSize);
-    preview.updateScreenRelative(winSize);
+    ImVec2 screen = ImGui::GetIO().DisplaySize;
 
-    quit.update(dt);
-    name.update(dt);
-    seed.update(dt);
-    flat.update(dt);
-    create.update(dt);
-    preview.update(dt);
+    ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(screen, ImGuiCond_Always);
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize
+                           | ImGuiWindowFlags_NoMove
+                           | ImGuiWindowFlags_NoCollapse
+                           | ImGuiWindowFlags_NoSavedSettings
+                           | ImGuiWindowFlags_NoBringToFrontOnFocus;
+
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.16f, 0.16f, 0.18f, 0.94f));
+
+    bool open = true;
+    if (ImGui::Begin("Create world", &open, flags))
+    {
+        ImGui::InputText("Name", name_buffer, sizeof(name_buffer));
+        ImGui::InputText("Seed", seed_buffer, sizeof(seed_buffer));
+        ImGui::TextDisabled("Leave seed empty for random");
+
+        ImGui::Separator();
+
+        int mode_int = static_cast<int>(mode);
+        ImGui::TextUnformatted("Generation mode");
+        ImGui::RadioButton("Normal", &mode_int, static_cast<int>(Mode::Normal));
+        ImGui::SameLine();
+        ImGui::RadioButton("Flat", &mode_int, static_cast<int>(Mode::Flat));
+        mode = static_cast<Mode>(mode_int);
+
+        ImGui::Separator();
+
+        if (mode == Mode::Normal)
+        {
+            ImGui::TextUnformatted("Terrain parameters");
+            ImGui::SliderFloat("Base height",  &base_height,  0.0f,  200.0f);
+            ImGui::SliderFloat("Height scale", &height_scale, 0.0f,  100.0f);
+            ImGui::SliderFloat("Frequency",    &frequency,    0.001f, 0.2f, "%.4f");
+            ImGui::SliderFloat("Amplitude",    &amplitude,    0.0f,  2.0f);
+            ImGui::SliderFloat("Persistence",  &persistence,  0.0f,  1.0f);
+        }
+        else
+        {
+            ImGui::TextUnformatted("Flat layers (top first)");
+
+            if (ImGui::Button("Reset to defaults"))
+            {
+                flat_layers = FlatWorldProperties::defaults().layers;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Add layer"))
+            {
+                flat_layers.push_back({BlockID::Stone, 1});
+            }
+
+            int remove_index = -1;
+            int move_up_index = -1;
+            int move_down_index = -1;
+
+            ImGui::BeginChild("##layers", ImVec2(0, -ImGui::GetFrameHeightWithSpacing() * 2.0f), true);
+            for (int i = static_cast<int>(flat_layers.size()) - 1; i >= 0; --i)
+            {
+                ImGui::PushID(i);
+
+                int selected = blockOptionIndex(flat_layers[i].block);
+
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.45f);
+                if (ImGui::BeginCombo("##block", blockName(BLOCK_OPTIONS[selected])))
+                {
+                    for (int option_i = 0; option_i < static_cast<int>(BLOCK_OPTIONS.size()); ++option_i)
+                    {
+                        bool is_selected = (option_i == selected);
+                        if (ImGui::Selectable(blockName(BLOCK_OPTIONS[option_i]), is_selected))
+                        {
+                            flat_layers[i].block = BLOCK_OPTIONS[option_i];
+                        }
+                        if (is_selected) ImGui::SetItemDefaultFocus();
+                    }
+                    ImGui::EndCombo();
+                }
+
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.35f);
+                int count = flat_layers[i].count;
+                if (ImGui::InputInt("##count", &count))
+                {
+                    if (count < 1) count = 1;
+                    if (count > CHUNK_HEIGHT) count = CHUNK_HEIGHT;
+                    flat_layers[i].count = count;
+                }
+
+                ImGui::SameLine();
+                if (ImGui::SmallButton("^")) move_up_index = i;
+                ImGui::SameLine();
+                if (ImGui::SmallButton("v")) move_down_index = i;
+                ImGui::SameLine();
+                if (ImGui::SmallButton("X")) remove_index = i;
+
+                ImGui::PopID();
+            }
+            ImGui::EndChild();
+
+            if (remove_index >= 0 && remove_index < static_cast<int>(flat_layers.size()))
+            {
+                flat_layers.erase(flat_layers.begin() + remove_index);
+            }
+            if (move_up_index >= 0 && move_up_index + 1 < static_cast<int>(flat_layers.size()))
+            {
+                std::swap(flat_layers[move_up_index], flat_layers[move_up_index + 1]);
+            }
+            if (move_down_index > 0 && move_down_index < static_cast<int>(flat_layers.size()))
+            {
+                std::swap(flat_layers[move_down_index], flat_layers[move_down_index - 1]);
+            }
+
+            int total = 0;
+            for (const FlatWorldLayer& layer : flat_layers) total += layer.count;
+            ImGui::Text("Total height: %d / %d", total, CHUNK_HEIGHT);
+        }
+
+        ImGui::Separator();
+
+        bool can_create = name_buffer[0] != '\0';
+        if (!can_create) ImGui::BeginDisabled();
+        bool clicked_create = ImGui::Button("Create world", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, 0.0f));
+        if (!can_create) ImGui::EndDisabled();
+
+        ImGui::SameLine();
+        bool clicked_cancel = ImGui::Button("Cancel", ImVec2(ImGui::GetContentRegionAvail().x, 0.0f));
+
+        if (clicked_create && can_create)
+        {
+            ImGui::End();
+            ImGui::PopStyleColor();
+            createWorld();
+            return;
+        }
+        if (clicked_cancel) should_close = true;
+    }
+    ImGui::End();
+    ImGui::PopStyleColor();
+
+    if (!open) should_close = true;
 }
 
 void CreateWorldState::render(sf::RenderWindow& window)
@@ -156,78 +260,13 @@ void CreateWorldState::render(sf::RenderWindow& window)
     window.setView(sf::View(sf::FloatRect({0.0f, 0.0f},
         {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
 
-    const float win_w = static_cast<float>(window.getSize().x);
-    const float win_h = static_cast<float>(window.getSize().y);
-
-    sf::RectangleShape overlay({win_w, win_h});
-    overlay.setFillColor(sf::Color(10, 15, 25, 140));
-    window.draw(overlay);
-
-    sf::RectangleShape header({win_w, win_h * HEADER_H});
-    header.setPosition({0.0f, 0.0f});
-    header.setFillColor(sf::Color(30, 40, 60, 220));
-    header.setOutlineColor(sf::Color(0, 0, 0, 180));
-    header.setOutlineThickness(2.0f);
-    window.draw(header);
-
-    sf::Text header_text(AssetManager::getFont(AssetManager::FontID::PressStart2P), "Create world",
-        static_cast<unsigned>(header.getSize().y * 0.55f));
-    header_text.setFillColor(sf::Color::White);
-    header_text.setOutlineColor(sf::Color::Black);
-    header_text.setOutlineThickness(2.0f);
-    {
-        auto b = header_text.getLocalBounds();
-        header_text.setOrigin({b.position.x, b.position.y + b.size.y * 0.5f});
-        header_text.setPosition({win_w * 0.5f - b.size.x * 0.5f, header.getSize().y * 0.5f});
-    }
-    window.draw(header_text);
-
-    sf::RectangleShape panel({win_w * PANEL_W, win_h * PANEL_H});
-    panel.setPosition({win_w * PANEL_X, win_h * PANEL_Y});
-    panel.setFillColor(sf::Color(20, 25, 40, 190));
-    panel.setOutlineColor(sf::Color(80, 100, 130, 220));
-    panel.setOutlineThickness(2.0f);
-    window.draw(panel);
-
-    sf::RectangleShape panel_header({win_w * PANEL_W, win_h * 0.045f});
-    panel_header.setPosition({win_w * PANEL_X, win_h * PANEL_Y});
-    panel_header.setFillColor(sf::Color(40, 55, 85, 230));
-    window.draw(panel_header);
-
-    sf::Text panel_title(AssetManager::getFont(AssetManager::FontID::PressStart2P), "World settings",
-        static_cast<unsigned>(panel_header.getSize().y * 0.55f));
-    panel_title.setFillColor(sf::Color(220, 230, 245));
-    panel_title.setOutlineColor(sf::Color::Black);
-    panel_title.setOutlineThickness(1.0f);
-    {
-        auto b = panel_title.getLocalBounds();
-        panel_title.setOrigin({b.position.x, b.position.y + b.size.y * 0.5f});
-        panel_title.setPosition({panel_header.getPosition().x + win_w * 0.012f,
-                                 panel_header.getPosition().y + panel_header.getSize().y * 0.5f});
-    }
-    window.draw(panel_title);
-
-    auto drawLabel = [&](const std::string& str, float rel_x, float rel_y)
-    {
-        sf::Text label(AssetManager::getFont(AssetManager::FontID::PressStart2P), str, static_cast<unsigned>(win_h * 0.022f));
-        label.setFillColor(sf::Color(220, 225, 235));
-        label.setOutlineColor(sf::Color::Black);
-        label.setOutlineThickness(1.0f);
-        auto b = label.getLocalBounds();
-        label.setOrigin({b.position.x, b.position.y + b.size.y});
-        label.setPosition({win_w * rel_x, win_h * rel_y});
-        window.draw(label);
-    };
-
-    drawLabel("Name",  FIELD_X, NAME_Y - 0.005f);
-    drawLabel("Seed",  FIELD_X, SEED_Y - 0.005f);
-    drawLabel("Terrain preview", PREVIEW_X, PREVIEW_Y - 0.025f);
-
-    name.render(window);
-    seed.render(window);
-    flat.render(window);
-    create.render(window);
-    preview.render(window);
-
-    quit.render(window);
+    sf::Sprite background(background_texture);
+    background.setPosition({0.0f, 0.0f});
+    background.setScale(
+        {
+            static_cast<float>(window.getSize().x) / background.getTexture().getSize().x,
+            static_cast<float>(window.getSize().y) / background.getTexture().getSize().y
+        }
+    );
+    window.draw(background);
 }
