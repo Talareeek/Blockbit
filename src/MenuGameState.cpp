@@ -48,6 +48,7 @@ MenuGameState::MenuGameState(Game* game) : GameState(game), serverPreview(&statu
 
 
     UIElement::ScreenRelative quitRelative{{0.01f, 0.92f}, {0.12f, 0.06f}, UIElement::ScreenRelative::ScaleMode::UniformByHeight};
+    UIElement::ScreenRelative settingsRelative{{0.01f, 0.84f}, {0.12f, 0.06f}, UIElement::ScreenRelative::ScaleMode::UniformByHeight};
 
     std::string home;
 
@@ -72,6 +73,13 @@ MenuGameState::MenuGameState(Game* game) : GameState(game), serverPreview(&statu
     });
 
     quit.updateScreenRelative(game->getWindow().getSize());
+
+    settings = Button(settingsRelative, sf::Color(80, 110, 160), "Settings", [this]()
+    {
+        this->game->getSettingsWindow().show();
+    });
+
+    settings.updateScreenRelative(game->getWindow().getSize());
 
     UIElement::ScreenRelative sliderRelative{{0.30f, 0.45f}, {0.30f, 0.08f}, UIElement::ScreenRelative::ScaleMode::UniformByHeight};
 
@@ -167,6 +175,7 @@ void MenuGameState::handleEvent(const sf::Event& event)
 {
     worldList.handleEvent(event);
     quit.handleEvent(event);
+    settings.handleEvent(event);
     player.handleEvent(event);
 }
 
@@ -175,6 +184,7 @@ void MenuGameState::update(float dt)
     auto size = game->getWindow().getSize();
 
     quit.updateScreenRelative(size);
+    settings.updateScreenRelative(size);
     worldList.updateScreenRelative(size);
 
     worldList.position = {size.x * 0.75f, 0.0f};
@@ -187,6 +197,7 @@ void MenuGameState::update(float dt)
 
     worldList.update(dt);
     quit.update(dt);
+    settings.update(dt);
 
     player.update(dt);
 
@@ -262,6 +273,7 @@ void MenuGameState::render(sf::RenderWindow& window)
 
     if (hasStatus && worldList.multiplayerActive()) serverPreview.render(window);
     quit.render(window);
+    settings.render(window);
     player.render(window);
 }
 

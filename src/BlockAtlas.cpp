@@ -10,13 +10,19 @@ bool BlockAtlas::build()
 {
     if (textureIDs.empty()) return false;
 
-    const sf::Texture& firstTexture = AssetManager::getGameTexture(textureIDs[0]);
+    uint32_t atlasWidth = 0;
+    uint32_t atlasHeight = 0;
 
-    const uint32_t tileSize = firstTexture.getSize().x;
+    for (AssetManager::GameTextureID id : textureIDs)
+    {
+        const sf::Vector2u size = AssetManager::getGameTexture(id).getSize();
 
-    const uint32_t atlasWidth = tileSize * textureIDs.size();
+        atlasWidth += size.x;
 
-    sf::Image atlasImage({atlasWidth, tileSize}, sf::Color::Transparent);
+        if (size.y > atlasHeight) atlasHeight = size.y;
+    }
+
+    sf::Image atlasImage({atlasWidth, atlasHeight}, sf::Color::Transparent);
 
     uint32_t x = 0;
 
@@ -24,14 +30,16 @@ bool BlockAtlas::build()
     {
         const sf::Texture& tex = AssetManager::getGameTexture(id);
 
+        const sf::Vector2u size = tex.getSize();
+
         sf::Image img = tex.copyToImage();
 
-        if (!atlasImage.copy(img, {x, 0}, sf::IntRect({0, 0}, {(int)tileSize, (int)tileSize})))
+        if (!atlasImage.copy(img, {x, 0}, sf::IntRect({0, 0}, {(int)size.x, (int)size.y})))
             return false;
 
-        uvMap[id] = {{(int)x, 0}, {(int)tileSize, (int)tileSize}};
+        uvMap[id] = {{(int)x, 0}, {(int)size.x, (int)size.y}};
 
-        x += tileSize;
+        x += size.x;
     }
 
     if (!atlasTexture.loadFromImage(atlasImage))

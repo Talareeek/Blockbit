@@ -3,10 +3,12 @@
 #include "../include/FlatWorldGenerator.hpp"
 #include "../include/PlayerControlledComponent.hpp"
 #include "../include/TransformComponent.hpp"
+#include "../include/AIComponent.hpp"
 
 #include <fstream>
 #include <zstd.h>
 #include <iostream>
+#include <random>
 
 static std::unique_ptr<WorldGenerator> makeWorldGenerator(unsigned int seed, const GenerationProperties& generation_properties)
 {
@@ -595,19 +597,43 @@ void ServerWorld::loadOrCreateChunk(int chunk_position)
 
 sf::Vector2<double> ServerWorld::getSpawnPoint()
 {
-    loadOrCreateChunk(0);
+    static thread_local std::mt19937 rng(std::random_device{}());
+    std::uniform_int_distribution<int> dist_x(-16, 16);
 
-    sf::Vector2<double> spawnPoint;
-
-    for(int i = 60; i < 255; i++)
+    auto findSurface = [&](int wx) -> std::optional<int>
     {
-        if(getBlock(0, i).id != BlockID::Air && getBlock(0, i + 1).id == BlockID::Air)
+        for (int y = CHUNK_HEIGHT - 2; y >= 0; --y)
         {
-            spawnPoint = {0.0f, static_cast<double>(i + 1)};
+            Block here  = getBlock(wx, y);
+            Block above = getBlock(wx, y + 1);
+            if (here.id != BlockID::Air && here.id != BlockID::Water && above.id == BlockID::Air)
+            {
+                return y + 1;
+            }
+        }
+        return std::nullopt;
+    };
+
+    for (int attempt = 0; attempt < 24; ++attempt)
+    {
+        int wx = dist_x(rng);
+
+        int chunk_position = (wx >= 0) ? wx / CHUNK_WIDTH : (wx - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
+        loadOrCreateChunk(chunk_position);
+
+        if (auto y = findSurface(wx))
+        {
+            return {static_cast<double>(wx) + 0.5, static_cast<double>(*y)};
         }
     }
 
-    return spawnPoint;
+    loadOrCreateChunk(0);
+    if (auto y = findSurface(0))
+    {
+        return {0.5, static_cast<double>(*y)};
+    }
+
+    return {0.5, static_cast<double>(CHUNK_HEIGHT - 10)};
 }
 
 void ServerWorld::generateWorldSpawn()
@@ -627,4 +653,73 @@ UUID ServerWorld::spawn(PrefabID prefab_id, sf::Vector2<double> position)
     addEntity(std::move(entity));
 
     return entity.getID();
+}
+
+void ServerWorld::trySpawnPassiveMobs(float dt)
+{
+    constexpr float SPAWN_INTERVAL   = 20.0f;
+    constexpr int   MAX_PIGS         = 15;
+    constexpr int   MIN_DIST         = 10;
+    constexpr int   MAX_DIST         = 40;
+    constexpr int   GROUP_MIN        = 2;
+    constexpr int   GROUP_MAX        = 4;
+
+    passive_mob_spawn_timer += dt;
+    if (passive_mob_spawn_timer < SPAWN_INTERVAL) return;
+    passive_mob_spawn_timer = 0.0f;
+
+    const bool is_day = dayTime < DAY_CYCLE_DURATION * 0.5f;
+    if (!is_day) return;
+
+    int pig_count = 0;
+    for (const auto& [id, entity] : entities)
+    {
+        if (entity.hasComponent<AIComponent>()) ++pig_count;
+    }
+    if (pig_count >= MAX_PIGS) return;
+
+    std::vector<UUID> players = getPlayerEntityIDs();
+    if (players.empty()) return;
+
+    static thread_local std::mt19937 rng(std::random_device{}());
+    std::uniform_int_distribution<int> dist_offset(MIN_DIST, MAX_DIST);
+    std::uniform_int_distribution<int> dist_sign(0, 1);
+    std::uniform_int_distribution<int> dist_group(GROUP_MIN, GROUP_MAX);
+
+    for (UUID player_id : players)
+    {
+        if (!doesEntityExist(player_id)) continue;
+        Entity& player = getEntity(player_id);
+        if (!player.hasComponent<TransformComponent>()) continue;
+
+        int cx = static_cast<int>(std::floor(player.getComponent<TransformComponent>().position.x));
+
+        int group = dist_group(rng);
+        int anchor_x = cx + (dist_sign(rng) ? 1 : -1) * dist_offset(rng);
+
+        for (int i = 0; i < group; ++i)
+        {
+            if (pig_count >= MAX_PIGS) return;
+
+            std::uniform_int_distribution<int> dist_jitter(-3, 3);
+            int wx = anchor_x + dist_jitter(rng);
+
+            int chunk_position = (wx >= 0) ? wx / CHUNK_WIDTH : (wx - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
+            auto it = chunks.find(chunk_position);
+            if (it == chunks.end() || !it->second.generated) continue;
+
+            for (int y = CHUNK_HEIGHT - 3; y >= 1; --y)
+            {
+                Block ground = getBlock(wx, y);
+                Block above1 = getBlock(wx, y + 1);
+                Block above2 = getBlock(wx, y + 2);
+                if (ground.id == BlockID::Grass && above1.id == BlockID::Air && above2.id == BlockID::Air)
+                {
+                    spawn(PrefabID::Pig, {static_cast<double>(wx) + 0.5, static_cast<double>(y + 1)});
+                    ++pig_count;
+                    break;
+                }
+            }
+        }
+    }
 }

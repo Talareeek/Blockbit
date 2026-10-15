@@ -33,6 +33,9 @@ public:
     void playSound(sf::Sound sound);
     void playSound(AssetManager::SoundID sound_id);
 
+    void setMusicVolume(float volume);
+    void setSoundsVolume(float volume);
+
     void reset();
 };
 

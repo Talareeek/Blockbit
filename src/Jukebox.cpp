@@ -74,6 +74,16 @@ void Jukebox::playSound(AssetManager::SoundID sound_id)
     sounds.back().play();    
 }
 
+void Jukebox::setMusicVolume(float volume)
+{
+    if(music) music->setVolume(volume);
+}
+
+void Jukebox::setSoundsVolume(float volume)
+{
+    for(auto& sound : sounds) sound.setVolume(volume);
+}
+
 void Jukebox::reset()
 {
     stopMusic();

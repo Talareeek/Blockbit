@@ -29,6 +29,7 @@ private:
 
     AccountWidget account;
     Button quit;
+    Button settings;
     WorldList worldList;
     LobbyPlayerElement player;
 

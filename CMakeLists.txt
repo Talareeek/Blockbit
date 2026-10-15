@@ -102,6 +102,7 @@ target_link_libraries(Blockbit PRIVATE
     Threads::Threads
     tinyxml2::tinyxml2
     ImGui-SFML::ImGui-SFML
+    nlohmann_json::nlohmann_json
     ${ZSTD_TARGET}
 )
 

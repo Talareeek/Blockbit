@@ -406,6 +406,7 @@ void GameServer::update(float dt)
         }
 
         world.tick(dt);
+        world.trySpawnPassiveMobs(dt);
 
         tick++;
 

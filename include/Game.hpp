@@ -11,6 +11,7 @@
 #include "Account.hpp"
 #include "Console.hpp"
 #include "Jukebox.hpp"
+#include "SettingsWindow.hpp"
 
 struct GameStateAction
 {
@@ -59,6 +60,10 @@ private:
 
     Console console;
 
+    SettingsWindow settings_window;
+
+    void applyGraphicsSettings();
+    void applyAudioSettings();
 
 public:
 
@@ -78,6 +83,7 @@ public:
     sf::RenderWindow& getWindow();
 
     Console& getConsole();
+    SettingsWindow& getSettingsWindow();
 
     Jukebox jukebox;
 };

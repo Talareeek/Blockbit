@@ -81,7 +81,7 @@ void PrefabRegistry::init()
         entity.addComponent(HealthComponent{100, 100});
 
         AIComponent ai;
-        ai.personality = AIComponent::Personality::Aggressive;
+        ai.personality = AIComponent::Personality::Passive;
         ai.state       = AIComponent::State::Idle;
         entity.addComponent(ai);
 

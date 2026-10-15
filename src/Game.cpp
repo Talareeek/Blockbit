@@ -14,13 +14,25 @@
 #include "../include/BlockAtlas.hpp"
 #include "../include/AuthorGameState.hpp"
 #include "../include/Prefab.hpp"
+#include "../include/Settings.hpp"
 
 #include <imgui.h>
 #include <imgui-SFML.h>
 
 Game::Game()
 {
-    window.create(sf::VideoMode::getDesktopMode(), "Blockbit");
+    Settings::load();
+
+    fullscreen = Settings::graphics.fullscreen;
+
+    window.create(
+        fullscreen ? sf::VideoMode::getDesktopMode()
+                   : sf::VideoMode({Settings::graphics.window_width, Settings::graphics.window_height}),
+        "Blockbit",
+        fullscreen ? sf::State::Fullscreen : sf::State::Windowed
+    );
+    window.setVerticalSyncEnabled(Settings::graphics.vsync);
+    if(Settings::graphics.fps_limit > 0) window.setFramerateLimit(Settings::graphics.fps_limit);
 	
 	if (!icon.loadFromFile("resources/textures/grass.png")) throw std::runtime_error("Failed loading an icon");
 	
@@ -122,6 +134,7 @@ Game::Game()
 
     console.assignGame(this);
 
+    settings_window.assignGame(this);
 }
 
 void Game::handleEvents()
@@ -148,24 +161,9 @@ void Game::handleEvents()
             {
                 if(event->getIf<sf::Event::KeyPressed>()->code == sf::Keyboard::Key::F11)
                 {
-                    fullscreen = !fullscreen;
-
-                    window.close();
-                    ImGui::SFML::Shutdown(window);
-
-                    window.create(
-                        fullscreen ? sf::VideoMode::getDesktopMode()
-                                : sf::VideoMode({1280, 720}),
-                        "Blockbit",
-                        fullscreen ? sf::State::Fullscreen
-                                : sf::State::Windowed
-                    );
-
-                    if (!ImGui::SFML::Init(window)) throw std::runtime_error("Failed re-initializing ImGui-SFML");
-
-                    sf::View view(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)}));
-                    window.setView(view);
-                    window.setIcon(icon);
+                    Settings::graphics.fullscreen = !Settings::graphics.fullscreen;
+                    applyGraphicsSettings();
+                    Settings::save();
                 }
                 else if(event->getIf<sf::Event::KeyPressed>()->code == sf::Keyboard::Key::Grave)
                 {
@@ -229,6 +227,7 @@ void Game::render()
     }
 
     console.render();
+    settings_window.render();
 
     ImGui::SFML::Render(window);
 
@@ -244,6 +243,9 @@ void Game::run()
         handleEvents();
         update();
         render();
+
+        if(settings_window.consumeAudioRequest())    applyAudioSettings();
+        if(settings_window.consumeGraphicsRequest()) applyGraphicsSettings();
     }
 
     ImGui::SFML::Shutdown();
@@ -321,4 +323,40 @@ sf::RenderWindow& Game::getWindow()
 Console& Game::getConsole()
 {
     return console;
+}
+
+SettingsWindow& Game::getSettingsWindow()
+{
+    return settings_window;
+}
+
+void Game::applyGraphicsSettings()
+{
+    fullscreen = Settings::graphics.fullscreen;
+
+    window.close();
+    ImGui::SFML::Shutdown(window);
+
+    window.create(
+        fullscreen ? sf::VideoMode::getDesktopMode()
+                   : sf::VideoMode({Settings::graphics.window_width, Settings::graphics.window_height}),
+        "Blockbit",
+        fullscreen ? sf::State::Fullscreen : sf::State::Windowed
+    );
+
+    window.setVerticalSyncEnabled(Settings::graphics.vsync);
+    window.setFramerateLimit(Settings::graphics.fps_limit);
+
+    if(!ImGui::SFML::Init(window)) throw std::runtime_error("Failed re-initializing ImGui-SFML");
+
+    sf::View view(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)}));
+    window.setView(view);
+    window.setIcon(icon);
+}
+
+void Game::applyAudioSettings()
+{
+    float master = Settings::audio.master_volume / 100.0f;
+    jukebox.setMusicVolume(Settings::audio.music_volume * master);
+    jukebox.setSoundsVolume(Settings::audio.sound_volume * master);
 }
