@@ -28,15 +28,11 @@
 
 GameServer::GameServer(std::filesystem::path world_path, std::unique_ptr<ServerTransport> transport) : mode(ServerMode::Listen), transport(std::move(transport)), world(world_path)
 {
-    this->world.trackBlockChanges = true;
-
     this->transport->start();
 }
 
 GameServer::GameServer(std::string name, unsigned int seed, GenerationProperties generation_properties, std::unique_ptr<ServerTransport> transport) : mode(ServerMode::Listen), transport(std::move(transport)), world(name, getWorldsPath() / name, seed, generation_properties)
 {
-    this->world.trackBlockChanges = true;
-
     this->transport->start();
 }
 
@@ -181,7 +177,7 @@ void GameServer::processIncoming()
                 case PacketType::BlockUpdate:
                 {
                     BlockUpdatePacket block_update = deserializeBlockUpdate(reader);
-                    world.setBlock(block_update.x, block_update.y, block_update.block);
+                    world.setBlock(block_update.position, block_update.block);
                     break;
                 }
                 case PacketType::StatusRequest:
@@ -271,14 +267,14 @@ void GameServer::processIncoming()
 
 void GameServer::broadcastBlockUpdates()
 {
-    if (world.pendingBlockUpdates.empty()) return;
+    if (world.pending_block_updates.empty()) return;
 
-    for (auto& [x, y, block] : world.pendingBlockUpdates)
+    for (const sf::Vector2i& position : world.pending_block_updates)
     {
-        BlockUpdatePacket block_update{x, y, block};
+        BlockUpdatePacket block_update{position, world.getBlock(position.x, position.y)};
         transport->broadcast(serializePacket(block_update));
     }
-    world.pendingBlockUpdates.clear();
+    world.pending_block_updates.clear();
 }
 
 void GameServer::broadcastSnapshot()

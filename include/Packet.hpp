@@ -53,8 +53,7 @@ struct ChunkPacket
 
 struct BlockUpdatePacket
 {
-    int x;
-    int y;
+    sf::Vector2i position;
     Block block;
 };
 

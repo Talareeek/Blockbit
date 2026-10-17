@@ -24,6 +24,11 @@ public:
     ServerWorld(const std::filesystem::path path);
     ServerWorld(const std::string name, const std::filesystem::path path, unsigned int seed, GenerationProperties generation_properties);
 
+    void setBlock(int wx, int wy, Block block) override;
+    using World::setBlock;
+
+    std::vector<sf::Vector2i> pending_block_updates;
+
     const std::string& getName() const { return name; }
     void setName(const std::string& name) { this->name = name; }
 

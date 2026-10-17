@@ -312,7 +312,7 @@ void ClientGameState::processIncoming()
                 case PacketType::BlockUpdate:
                 {
                     auto block_update = deserializeBlockUpdate(reader);
-                    local_world.setBlock(block_update.x, block_update.y, block_update.block);
+                    local_world.setBlock(block_update.position, block_update.block);
                     break;
                 }
                 case PacketType::Track:

@@ -43,6 +43,12 @@ ServerWorld::ServerWorld(const std::filesystem::path path) : path{path}
     if(!world_generator) throw("World generator is nullptr");
 }
 
+void ServerWorld::setBlock(int wx, int wy, Block block)
+{
+    World::setBlock(wx, wy, block);
+    pending_block_updates.emplace_back(wx, wy);
+}
+
 ServerWorld::ServerWorld(const std::string name, const std::filesystem::path path, unsigned int seed, GenerationProperties generation_properties) : name(name), path(path), seed(seed), perlin(seed), generation_properties{generation_properties}
 {
     world_generator = makeWorldGenerator(seed, this->generation_properties);

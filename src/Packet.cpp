@@ -227,8 +227,8 @@ std::vector<char> serializePacket(const ChunkPacket& p)
 std::vector<char> serializePacket(const BlockUpdatePacket& p)
 {
     PacketWriter w(PacketType::BlockUpdate);
-    w.write<int32_t>(static_cast<int32_t>(p.x));
-    w.write<int32_t>(static_cast<int32_t>(p.y));
+    w.write<int32_t>(static_cast<int32_t>(p.position.x));
+    w.write<int32_t>(static_cast<int32_t>(p.position.y));
     w.write(p.block);
     return w.release();
 }
@@ -505,8 +505,8 @@ ChunkPacket deserializeChunk(PacketReader& r)
 BlockUpdatePacket deserializeBlockUpdate(PacketReader& r)
 {
     BlockUpdatePacket p;
-    p.x = r.read<int32_t>();
-    p.y = r.read<int32_t>();
+    p.position.x = r.read<int32_t>();
+    p.position.y = r.read<int32_t>();
     p.block = r.read<Block>();
     return p;
 }

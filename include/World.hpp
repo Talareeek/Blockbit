@@ -37,11 +37,14 @@ protected:
 
 public:
 
+    virtual ~World() = default;
+
     Chunk& getChunk(int chunk_position);
     Block getBlock(int world_x, int world_y);
     Climate climateAt(int wx);
     Biome biomeAt(int wx);
-    void setBlock(int wx, int wy, Block block);
+    virtual void setBlock(int wx, int wy, Block block);
+    void setBlock(sf::Vector2i position, Block block);
 
     std::unordered_map<int, Chunk>& getChunks();
 
@@ -61,9 +64,6 @@ public:
     float getDayTime() const { return dayTime; }
 
     std::pair<double, double> getSimulationRangeForEntity(const UUID entity);
-
-    bool trackBlockChanges = false;
-    std::vector<std::tuple<int, int, Block>> pendingBlockUpdates;
 
     std::deque<PostPlaceBlockUpdate> pending_post_place_block_updates;
 
