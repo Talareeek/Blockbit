@@ -178,82 +178,46 @@ void ClientGameState::applySnapshot(const SnapshotPacket& snapshot)
 {
     latest_tick = snapshot.tick;
 
-    std::unordered_set<UUID> present_ids;
-    present_ids.reserve(snapshot.entities.size());
+    local_world.dayTime = snapshot.dayTime;
+    local_world.days = snapshot.days;
 
-    for (const NetEntity& net_entity : snapshot.entities)
+    for (const auto& [id, tag] : snapshot.new_entities)
     {
-        present_ids.insert(net_entity.id);
+        if (local_world.doesEntityExist(id)) local_world.removeEntity(id);
 
-        bool is_new = !local_world.doesEntityExist(net_entity.id);
+        Entity entity(id);
+        Tag payload = tag;
+        entity.deserialize(payload);
 
-        if (is_new)
+        local_world.addEntity(std::move(entity));
+
+        if (local_player_entity_id == id)
         {
-            Entity entity(net_entity.id);
-
-            entity.addComponent(TransformComponent{{net_entity.x, net_entity.y}, {net_entity.size_x, net_entity.size_y}, sf::degrees(0.0f)});
-            entity.addComponent(RenderComponent{static_cast<AssetManager::GameTextureID>(net_entity.textureID), sf::IntRect{{net_entity.uv_x, net_entity.uv_y}, {net_entity.uv_size_x, net_entity.uv_size_y}}, {net_entity.size_x, net_entity.size_y}});
-            entity.addComponent(HealthComponent{net_entity.health, net_entity.maxHealth});
-
-            if (!net_entity.inventory.empty())
-            {
-                InventoryComponent inventory_component(net_entity.inventory.size());
-
-                for (size_t i = 0; i < net_entity.inventory.size(); i++)
-                {
-                    inventory_component.inventory.slots[i].itemID = static_cast<ItemID>(net_entity.inventory[i].itemID);
-                    inventory_component.inventory.slots[i].quantity = net_entity.inventory[i].quantity;
-                }
-                inventory_component.selectedSlot = net_entity.selectedSlot;
-
-                entity.addComponent(std::move(inventory_component));
-            }
-
-            local_world.addEntity(std::move(entity));
-
-            if (local_player_entity_id == net_entity.id)
-            {
-                player_ui_initialized = false;
-            }
-
-            continue;
-        }
-
-        auto& entity = local_world.getEntity(net_entity.id);
-
-        entity.getComponent<TransformComponent>().teleport({net_entity.x, net_entity.y});
-
-        auto& health = entity.getComponent<HealthComponent>();
-        health.health = net_entity.health;
-        health.maxHealth = net_entity.maxHealth;
-
-        if (entity.hasComponent<InventoryComponent>() && !net_entity.inventory.empty())
-        {
-            auto& inventory = entity.getComponent<InventoryComponent>();
-
-            for (size_t i = 0; i < net_entity.inventory.size() && i < inventory.inventory.slots.size(); i++)
-            {
-                inventory.inventory.slots[i].itemID = static_cast<ItemID>(net_entity.inventory[i].itemID);
-                inventory.inventory.slots[i].quantity = net_entity.inventory[i].quantity;
-            }
-            inventory.selectedSlot = net_entity.selectedSlot;
-        }
-
-        if (local_player_entity_id != net_entity.id)
-        {
-            if (!entity.hasComponent<NetworkInterpolationComponent>()) entity.addComponent<NetworkInterpolationComponent>(NetworkInterpolationComponent{});
-
-            entity.getComponent<NetworkInterpolationComponent>().pushSample(snapshot.tick, {net_entity.x, net_entity.y}, sf::Angle{});
+            player_ui_initialized = false;
         }
     }
 
-    std::vector<UUID> to_remove;
-    for (auto& [id, entity] : local_world.getEntities())
+    for (const auto& [id, tag] : snapshot.updated_entities)
     {
-        if (!present_ids.contains(id)) to_remove.push_back(id);
+        if (!local_world.doesEntityExist(id)) continue;
+
+        auto& entity = local_world.getEntity(id);
+        entity.applyUpdate(tag);
+
+        if (local_player_entity_id != id && entity.hasComponent<TransformComponent>())
+        {
+            if (!entity.hasComponent<NetworkInterpolationComponent>())
+                entity.addComponent<NetworkInterpolationComponent>(NetworkInterpolationComponent{});
+
+            const auto& transform = entity.getComponent<TransformComponent>();
+            entity.getComponent<NetworkInterpolationComponent>().pushSample(snapshot.tick, transform.position, transform.rotation);
+        }
     }
-    for (UUID id : to_remove)
+
+    for (UUID id : snapshot.removed_entities)
     {
+        if (!local_world.doesEntityExist(id)) continue;
+
         if (local_player_entity_id == id)
         {
             player_ui_initialized = false;
@@ -261,8 +225,6 @@ void ClientGameState::applySnapshot(const SnapshotPacket& snapshot)
         }
         local_world.removeEntity(id);
     }
-
-    local_world.dayTime = snapshot.dayTime;
 }
 
 void ClientGameState::processIncoming()

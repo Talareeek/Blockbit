@@ -29,12 +29,15 @@ void InventorySystem(World& world)
             if(itemRect.findIntersection(inventoryRect))
             {
                 item.item = inventory.inventory.addItemWithLeftover(item.item.itemID, item.item.quantity);
+                item.dirty = true;
+                inventory.dirty = true;
             }
         }
 
         if(item.item.empty())
         {
             entity.getComponent<ItemComponent>() = ItemComponent{{ItemID::None, 0}};
+            item.dirty = true;
         }
     }
 

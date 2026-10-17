@@ -24,6 +24,12 @@ struct NetworkInterpolationComponent : public Component
     }
 
     std::string name() const override { return "NetworkInterpolationComponent"; }
+
+    ComponentSide side() const override
+    {
+        return ComponentSide::Client;
+    }
+
     Tag serialize() const override { return Tag(TagCompound{}); }
     void deserialize(const Tag&) override {}
 

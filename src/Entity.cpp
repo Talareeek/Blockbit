@@ -44,6 +44,54 @@ Tag Entity::serialize() const
     return Tag(compound);
 }
 
+Tag Entity::serializeForClient() const
+{
+    TagCompound compound;
+
+    for (const auto& [type_index, component] : components)
+    {
+        if (component->side() == ComponentSide::Server) continue;
+        compound[component->name()] = component->serialize();
+    }
+
+    return Tag(compound);
+}
+
+Tag Entity::serializeDirtyForClient() const
+{
+    TagCompound compound;
+
+    for (const auto& [type_index, component] : components)
+    {
+        if (component->side() == ComponentSide::Server) continue;
+        if (!component->dirty) continue;
+        compound[component->name()] = component->serialize();
+    }
+
+    return Tag(compound);
+}
+
+void Entity::applyUpdate(const Tag& tag)
+{
+    const TagCompound& compound = tag.get<TagCompound>();
+
+    for (auto& [type_index, component] : components)
+    {
+        auto it = compound.find(component->name());
+        if (it == compound.end()) continue;
+
+        component->deserialize(it->second);
+    }
+}
+
+void Entity::clearDirty()
+{
+    for (auto& [type_index, component] : components)
+    {
+        component->dirty = false;
+    }
+}
+
 void Entity::deserialize(Tag& tag)
 {
     for(auto& [name, payload] : tag.get<TagCompound>())

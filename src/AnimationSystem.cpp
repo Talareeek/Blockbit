@@ -11,7 +11,11 @@ void AnimationSystem(World& world, float dt)
 
         auto& animation = entity.getComponent<AnimationComponent>();
         auto& render = entity.getComponent<RenderComponent>();
-        auto& clip = animation.animations[animation.currentState];
+
+        auto clip_it = animation.animations.find(animation.currentState);
+        if (clip_it == animation.animations.end()) continue;
+
+        auto& clip = clip_it->second;
 
         animation.timer += dt;
 
@@ -36,5 +40,8 @@ void AnimationSystem(World& world, float dt)
             {int(frame * animation.frameSize.x), 0},
             animation.frameSize
         };
+
+        animation.dirty = true;
+        render.dirty = true;
     }
 }

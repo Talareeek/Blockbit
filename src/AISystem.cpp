@@ -62,6 +62,7 @@ void AISystem(World& world, float dt)
 
         ai.stateTimer    += dt;
         ai.attackCooldown = std::max(0.0f, ai.attackCooldown - dt);
+        ai.dirty = true;
 
         float distToPlayer = std::numeric_limits<float>::infinity();
         sf::Vector2f toPlayer{0.0f, 0.0f};
@@ -128,6 +129,7 @@ void AISystem(World& world, float dt)
                 physics.force.x += ai.moveSpeed * static_cast<float>(ai.wanderDir);
                 if (physics.onGround && obstacleAhead(world, transform, ai.wanderDir))
                     physics.velocity.y += AI_JUMP_VELOCITY;
+                physics.dirty = true;
                 break;
 
             case AIComponent::State::Chasing:
@@ -150,6 +152,7 @@ void AISystem(World& world, float dt)
                             hp.health = (hp.health > AIComponent::ATTACK_DAMAGE)
                                         ? hp.health - AIComponent::ATTACK_DAMAGE
                                         : 0;
+                            hp.dirty = true;
                         }
                         ai.attackCooldown = AIComponent::ATTACK_INTERVAL;
                     }
@@ -162,6 +165,7 @@ void AISystem(World& world, float dt)
                     if (physics.onGround && obstacleAhead(world, transform, dir))
                         physics.velocity.y += AI_JUMP_VELOCITY;
                 }
+                physics.dirty = true;
                 break;
             }
         }
@@ -194,6 +198,8 @@ void AISystem(World& world, float dt)
             {
                 animation.currentState = AnimationState::Idle;
             }
+
+            animation.dirty = true;
         }
     }
 }

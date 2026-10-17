@@ -23,6 +23,13 @@ enum class ServerMode
     Dedicated
 };
 
+struct ClientData
+{
+    std::unordered_set<int> known_chunks;
+    std::unordered_set<UUID> known_entities;
+    std::string nickname;
+};
+
 class GameServer
 {
 private:
@@ -32,17 +39,16 @@ private:
     std::filesystem::path server_path;
 
     ServerWorld world;
-    
+
     std::unique_ptr<ServerTransport> transport;
     bool save_on_destruct = true;
 
-    std::unordered_map<uint32_t, std::string> client_to_nickname;
+    std::unordered_map<uint32_t, ClientData> clients;
     std::unordered_map<uint32_t, std::unique_ptr<ServerView>> client_views;
     std::unordered_map<std::string, UUID> nickname_to_entity;
 
     std::unordered_set<uint32_t> known_clients;
     std::unordered_map<uint32_t, std::deque<std::vector<Input>>> remote_input_queues;
-    std::unordered_map<uint32_t, std::unordered_set<int>> sent_chunks;
 
     uint16_t tick_rate = 120;
     uint64_t tick = 0;

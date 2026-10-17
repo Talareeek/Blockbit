@@ -135,12 +135,13 @@ void PhysicsSystem(World& world, float deltaTime)
 
                     if(entity.hasComponent<HealthComponent>())
                     {
-                        auto& health = entity.getComponent<HealthComponent>();                        
+                        auto& health = entity.getComponent<HealthComponent>();
 
                         if(fallVelocity > PhysicsComponent::SAFE_FALL_VELOCITY)
                         {
                             uint32_t damage = (uint32_t)((fallVelocity - PhysicsComponent::SAFE_FALL_VELOCITY) * PhysicsComponent::FALL_DAMAGE_MULTIPLIER);
                             health.health = health.health > damage ? health.health - damage : 0;
+                            health.dirty = true;
                         }
                     }
                     break;
@@ -149,5 +150,10 @@ void PhysicsSystem(World& world, float deltaTime)
         }
 
         c.force = {0.f, 0.f};
+
+        transform.render_position = transform.position;
+
+        c.dirty = true;
+        transform.dirty = true;
     }
 }

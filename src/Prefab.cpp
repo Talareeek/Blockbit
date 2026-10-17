@@ -40,7 +40,7 @@ void PrefabRegistry::init()
         inv.inventory.slots[7] = {ItemID::Chest, 64};
         entity.addComponent(std::move(inv));
 
-        entity.addComponent(RenderComponent{AssetManager::GameTextureID::Player, {{0, 0}, {12, 16}}, {1.0f, 1.0f}});
+        entity.addComponent(RenderComponent{AssetManager::GameTextureID::Player, {{0, 0}, {12, 16}}, {0.75f, 1.0f}});
 
         AnimationComponent animation;
 

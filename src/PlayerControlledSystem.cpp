@@ -6,6 +6,7 @@
 #include "../include/PhysicsComponent.hpp"
 #include "../include/ItemComponent.hpp"
 #include "../include/InventoryComponent.hpp"
+#include "../include/AnimationComponent.hpp"
 
 void PlayerControlledSystem(World& world, float dt)
 {
@@ -20,6 +21,22 @@ void PlayerControlledSystem(World& world, float dt)
         auto& player = entity.getComponent<PlayerControlledComponent>();
         auto& transform = entity.getComponent<TransformComponent>();
         auto& inventory = entity.getComponent<InventoryComponent>();
+
+        if (entity.hasComponent<AnimationComponent>() && entity.hasComponent<PhysicsComponent>())
+        {
+            auto& animation = entity.getComponent<AnimationComponent>();
+            const auto& physics = entity.getComponent<PhysicsComponent>();
+
+            AnimationState desired = std::abs(physics.velocity.x) > 0.5f ? AnimationState::Walking : AnimationState::Idle;
+
+            if (animation.currentState != desired)
+            {
+                animation.currentState = desired;
+                animation.currentFrame = 0;
+                animation.timer = 0.0f;
+                animation.dirty = true;
+            }
+        }
 
 
         auto block_from_position = [](sf::Vector2<double> position) -> sf::Vector2i
@@ -38,6 +55,8 @@ void PlayerControlledSystem(World& world, float dt)
                 player.mining_block = block_from_position(player.cursor_position);
                 player.mining_time = 0.0f;
             }
+
+            player.dirty = true;
 
             sf::Vector2i block_position = player.mining_block;
 
@@ -60,6 +79,7 @@ void PlayerControlledSystem(World& world, float dt)
 
                 if(player.mining_time >= block_mining_time && world.getBlock(block_position.x, block_position.y).id != BlockID::Air && blockDatabase[world.getBlock(block_position.x, block_position.y).id].breakable && isBlockInRange(transform, block_position, 4.0f) && will_drop)
                 {
+                    player.dirty = true;
                     std::uniform_int_distribution drop_range(block_data.drop->min_amount, block_data.drop->max_amount);
 
                     ItemStack drop = {block_data.drop->drop, drop_range(rng)};
@@ -79,6 +99,7 @@ void PlayerControlledSystem(World& world, float dt)
         }
 
         player.since_last_use += dt;
+        player.dirty = true;
 
         if(player.mid_usage && player.since_last_use >= 0.05f)
         {
@@ -113,6 +134,7 @@ void PlayerControlledSystem(World& world, float dt)
                 if(!collides)
                 {
                     selected.quantity--;
+                    inventory.dirty = true;
 
                     world.setBlock(block_position.x, block_position.y, {itemToBlock(selected.itemID), 0});
                 }
@@ -122,6 +144,7 @@ void PlayerControlledSystem(World& world, float dt)
                 if(itemDatabase[selected.itemID].onUse(world, {static_cast<float>(player.cursor_position.x), static_cast<float>(player.cursor_position.y)}, id))
                 {
                     selected.quantity--;
+                    inventory.dirty = true;
                 }
             }
 
@@ -131,10 +154,13 @@ void PlayerControlledSystem(World& world, float dt)
         if(player.drops)
         {
             player.drops = false;
+            player.dirty = true;
 
             auto& stack = inventory.inventory.slots[inventory.selectedSlot];
 
             if(stack.empty()) break;
+
+            inventory.dirty = true;
 
             Entity item(generateUUID());
             item.addComponent(TransformComponent{transform.position + sf::Vector2<double>(0.0, 1.5), {0.5, 0.5}, sf::degrees(0.0f)});
@@ -174,8 +200,10 @@ void PlayerControlledSystem(World& world, float dt)
             }
 
             inventory.selectedSlot %= 9;
+            inventory.dirty = true;
 
             player.change_slot = std::nullopt;
+            player.dirty = true;
         }
     }
 }

@@ -62,6 +62,12 @@ public:
     Tag serialize() const;
     void deserialize(Tag& tag);
 
+    Tag serializeForClient() const;
+    Tag serializeDirtyForClient() const;
+
+    void applyUpdate(const Tag& tag);
+    void clearDirty();
+
     Entity cloneAs(UUID newId) const
     {
         Entity e(newId);

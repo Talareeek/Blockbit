@@ -52,8 +52,8 @@ public:
 
     std::unordered_map<UUID, Entity>& getEntities();
     const std::unordered_map<UUID, Entity>& getEntities() const;
-    void addEntity(Entity entity);
-    void removeEntity(UUID id);
+    virtual void addEntity(Entity entity);
+    virtual void removeEntity(UUID id);
     Entity& getEntity(UUID id);
     bool doesEntityExist(UUID id) const;
 

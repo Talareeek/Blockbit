@@ -233,42 +233,54 @@ std::vector<char> serializePacket(const BlockUpdatePacket& p)
     return w.release();
 }
 
+static void writeTagBlob(PacketWriter& w, const Tag& tag)
+{
+    std::vector<uint8_t> blob;
+    tag.save(blob, "");
+
+    w.write<uint32_t>(static_cast<uint32_t>(blob.size()));
+    w.writeBytes(blob.data(), blob.size());
+}
+
+static Tag readTagBlob(PacketReader& r)
+{
+    uint32_t size = r.read<uint32_t>();
+    if (size > 16 * 1024 * 1024) throw std::runtime_error("Snapshot: tag blob too large");
+
+    std::vector<uint8_t> blob(size);
+    if (size > 0) r.readBytes(blob.data(), size);
+
+    size_t position = 0;
+    return Tag::load(blob, position);
+}
+
 std::vector<char> serializePacket(const SnapshotPacket& p)
 {
     PacketWriter w(PacketType::Snapshot);
 
-    uint32_t count = static_cast<uint32_t>(p.entities.size());
-    w.write(count);
-
-    for (const auto& e : p.entities)
-    {
-        w.write(e.id);
-        w.write(e.x);
-        w.write(e.y);
-        w.write(e.size_x);
-        w.write(e.size_y);
-        w.write(e.textureID);
-        w.write<int32_t>(static_cast<int32_t>(e.uv_x));
-        w.write<int32_t>(static_cast<int32_t>(e.uv_y));
-        w.write<int32_t>(static_cast<int32_t>(e.uv_size_x));
-        w.write<int32_t>(static_cast<int32_t>(e.uv_size_y));
-        w.write(e.health);
-        w.write(e.maxHealth);
-
-        uint32_t invCount = static_cast<uint32_t>(e.inventory.size());
-        w.write(invCount);
-        for (const auto& slot : e.inventory)
-        {
-            w.write(slot.itemID);
-            w.write(slot.quantity);
-        }
-        w.write(e.selectedSlot);
-    }
-
     w.write(p.tick);
-
     w.write(p.dayTime);
     w.write(p.days);
+
+    w.write<uint32_t>(static_cast<uint32_t>(p.new_entities.size()));
+    for (const auto& [id, tag] : p.new_entities)
+    {
+        w.write(id);
+        writeTagBlob(w, tag);
+    }
+
+    w.write<uint32_t>(static_cast<uint32_t>(p.updated_entities.size()));
+    for (const auto& [id, tag] : p.updated_entities)
+    {
+        w.write(id);
+        writeTagBlob(w, tag);
+    }
+
+    w.write<uint32_t>(static_cast<uint32_t>(p.removed_entities.size()));
+    for (const UUID& id : p.removed_entities)
+    {
+        w.write(id);
+    }
 
     return w.release();
 }
@@ -514,44 +526,33 @@ BlockUpdatePacket deserializeBlockUpdate(PacketReader& r)
 SnapshotPacket deserializeSnapshot(PacketReader& r)
 {
     SnapshotPacket p;
-    uint32_t count = r.read<uint32_t>();
-    if (count > 100000) throw std::runtime_error("Snapshot: entity count too large");
-
-    p.entities.reserve(count);
-    for (uint32_t i = 0; i < count; i++)
-    {
-        NetEntity e;
-        e.id        = r.read<UUID>();
-        e.x         = r.read<double>();
-        e.y         = r.read<double>();
-        e.size_x    = r.read<float>();
-        e.size_y    = r.read<float>();
-        e.textureID = r.read<uint32_t>();
-        e.uv_x      = r.read<int32_t>();
-        e.uv_y      = r.read<int32_t>();
-        e.uv_size_x = r.read<int32_t>();
-        e.uv_size_y = r.read<int32_t>();
-        e.health    = r.read<uint32_t>();
-        e.maxHealth = r.read<uint32_t>();
-
-        uint32_t invCount = r.read<uint32_t>();
-        if (invCount > 1024) throw std::runtime_error("Snapshot: inventory size too large");
-
-        e.inventory.resize(invCount);
-        for (uint32_t j = 0; j < invCount; j++)
-        {
-            e.inventory[j].itemID   = r.read<uint32_t>();
-            e.inventory[j].quantity = r.read<uint32_t>();
-        }
-        e.selectedSlot = r.read<uint8_t>();
-
-        p.entities.push_back(std::move(e));
-    }
 
     p.tick = r.read<uint64_t>();
-
     p.dayTime = r.read<float>();
-    p.days    = r.read<uint64_t>();
+    p.days = r.read<uint64_t>();
+
+    uint32_t new_count = r.read<uint32_t>();
+    if (new_count > 100000) throw std::runtime_error("Snapshot: new entity count too large");
+    for (uint32_t i = 0; i < new_count; i++)
+    {
+        UUID id = r.read<UUID>();
+        p.new_entities.emplace(id, readTagBlob(r));
+    }
+
+    uint32_t updated_count = r.read<uint32_t>();
+    if (updated_count > 100000) throw std::runtime_error("Snapshot: update entity count too large");
+    for (uint32_t i = 0; i < updated_count; i++)
+    {
+        UUID id = r.read<UUID>();
+        p.updated_entities.emplace(id, readTagBlob(r));
+    }
+
+    uint32_t removed_count = r.read<uint32_t>();
+    if (removed_count > 100000) throw std::runtime_error("Snapshot: removed entity count too large");
+    for (uint32_t i = 0; i < removed_count; i++)
+    {
+        p.removed_entities.insert(r.read<UUID>());
+    }
 
     return p;
 }

@@ -35,6 +35,7 @@ void TransformSystem(ServerWorld& world)
             auto& health = entity.getComponent<HealthComponent>();
 
             health.health -= 1;
+            health.dirty = true;
         }
 
         if(entity.hasComponent<PlayerControlledComponent>())

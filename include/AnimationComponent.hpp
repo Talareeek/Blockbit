@@ -33,13 +33,13 @@ struct AnimationComponent : public Component
 {
     std::unordered_map<AnimationState, AnimationClip> animations;
 
-    AnimationState currentState;
-    
+    AnimationState currentState = AnimationState::Idle;
+
     enum class Direction
     {
         Left,
         Right
-    } direction;
+    } direction = Direction::Right;
 
     float timer = 0;
     uint32_t currentFrame = 0;
@@ -144,7 +144,10 @@ struct AnimationComponent : public Component
         {
             const auto& animation = animationTag.get<TagCompound>();
 
-            AnimationState state = static_cast<AnimationState>(animation.at("state").get<uint8_t>());
+            uint32_t raw_state = animation.at("state").get<uint8_t>();
+            if (raw_state > static_cast<uint32_t>(AnimationState::Flying)) continue;
+
+            AnimationState state = static_cast<AnimationState>(raw_state);
 
             AnimationClip clip
             {
@@ -157,13 +160,23 @@ struct AnimationComponent : public Component
             animations[state] = clip;
         }
 
-        currentState = static_cast<AnimationState>(tag["current_state"].get<uint32_t>());
+        uint32_t raw_current = tag["current_state"].get<uint32_t>();
+        currentState = (raw_current <= static_cast<uint32_t>(AnimationState::Flying))
+            ? static_cast<AnimationState>(raw_current)
+            : AnimationState::Idle;
 
         direction = tag["direction"].get<bool>() ? Direction::Right : Direction::Left;
 
         timer = tag["timer"].get<float>();
-        
+
         currentFrame = tag["current_frame"].get<uint32_t>();
+
+        auto it = animations.find(currentState);
+        if (it == animations.end() || it->second.frameCount == 0 || currentFrame >= it->second.frameCount)
+        {
+            currentFrame = 0;
+            timer = 0.0f;
+        }
 
         const auto& frameSizeTag = tag["frame_size"].get<TagCompound>();
         frameSize.x = frameSizeTag.at("x").get<int32_t>();

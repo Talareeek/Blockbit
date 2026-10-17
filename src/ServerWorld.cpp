@@ -49,6 +49,25 @@ void ServerWorld::setBlock(int wx, int wy, Block block)
     pending_block_updates.emplace_back(wx, wy);
 }
 
+void ServerWorld::addEntity(Entity entity)
+{
+    UUID id = entity.getID();
+    new_entities.insert(id);
+    dead_entities.erase(id);
+
+    World::addEntity(std::move(entity));
+}
+
+void ServerWorld::removeEntity(UUID id)
+{
+    if (!doesEntityExist(id)) return;
+
+    dead_entities.insert(id);
+    new_entities.erase(id);
+
+    World::removeEntity(id);
+}
+
 ServerWorld::ServerWorld(const std::string name, const std::filesystem::path path, unsigned int seed, GenerationProperties generation_properties) : name(name), path(path), seed(seed), perlin(seed), generation_properties{generation_properties}
 {
     world_generator = makeWorldGenerator(seed, this->generation_properties);

@@ -21,6 +21,7 @@
 #include "../include/ChunkUnloadSystem.hpp"
 #include "../include/DaycycleSystem.hpp"
 #include "../include/AnimationComponent.hpp"
+#include "../include/AnimationSystem.hpp"
 #include "../include/Prefab.hpp"
 
 #include <algorithm>
@@ -46,7 +47,7 @@ void GameServer::sendChunkTo(uint32_t client_id, int around_chunk_position)
     constexpr int chunk_count = World::SIMULATION_DISTANCE + 1;
     int start = around_chunk_position - chunk_count / 2;
 
-    auto& sent = sent_chunks[client_id];
+    auto& known_chunks = clients[client_id].known_chunks;
 
     for (int i = 0; i < chunk_count; i++)
     {
@@ -56,7 +57,7 @@ void GameServer::sendChunkTo(uint32_t client_id, int around_chunk_position)
         ChunkPacket initialization;
         initialization.chunk = world.getChunk(chunk_position);
         transport->send(client_id, serializePacket(initialization));
-        sent.insert(chunk_position);
+        known_chunks.insert(chunk_position);
     }
 }
 
@@ -64,11 +65,11 @@ void GameServer::streamChunksToClients()
 {
     constexpr int half_distance = World::SIMULATION_DISTANCE / 2;
 
-    for(auto& [client_id, nickname] : client_to_nickname)
+    for(auto& [client_id, data] : clients)
     {
-        if(nickname_to_entity.contains(nickname))
+        if(nickname_to_entity.contains(data.nickname))
         {
-            Entity& entity = world.getEntity(nickname_to_entity[nickname]);
+            Entity& entity = world.getEntity(nickname_to_entity[data.nickname]);
 
             if(!entity.hasComponent<TransformComponent>()) continue;
 
@@ -76,19 +77,19 @@ void GameServer::streamChunksToClients()
 
             int player_chunk = (player_x >= 0.0f) ? static_cast<int>(player_x) / CHUNK_WIDTH : (static_cast<int>(player_x) - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
 
-            auto& sent = sent_chunks[client_id];
+            auto& known_chunks = data.known_chunks;
             auto& chunks = world.getChunks();
 
             for (int chunk_position = player_chunk - half_distance; chunk_position <= player_chunk + half_distance; ++chunk_position)
             {
-                if (sent.contains(chunk_position)) continue;
+                if (known_chunks.contains(chunk_position)) continue;
                 auto iterator = chunks.find(chunk_position);
                 if (iterator == chunks.end() || !iterator->second.generated) continue;
 
                 ChunkPacket initialization;
                 initialization.chunk = iterator->second;
                 transport->send(client_id, serializePacket(initialization));
-                sent.insert(chunk_position);
+                known_chunks.insert(chunk_position);
             }
         }
     }
@@ -116,8 +117,14 @@ void GameServer::syncConnections()
     }
     for (uint32_t client_id : gone)
     {
-        deactivatePlayerFor(client_to_nickname[client_id]);
+        auto it = clients.find(client_id);
+        if (it != clients.end())
+        {
+            deactivatePlayerFor(it->second.nickname);
+            clients.erase(it);
+        }
         known_clients.erase(client_id);
+        remote_input_queues.erase(client_id);
     }
 }
 
@@ -148,9 +155,9 @@ void GameServer::processIncoming()
                         break;
                     }
 
-                    if(!client_to_nickname.contains(packet.clientId))
+                    if(!clients.contains(packet.clientId))
                     {
-                        client_to_nickname[packet.clientId] = login.nickname;
+                        clients[packet.clientId].nickname = login.nickname;
                         remote_input_queues[packet.clientId] = {};
                         spawnPlayerFor(login.nickname);
 
@@ -187,7 +194,7 @@ void GameServer::processIncoming()
                     response.name = "Blockbit Server";
                     response.description = "A server for Blockbit game";
 
-                    response.players = static_cast<uint32_t>(client_to_nickname.size());
+                    response.players = static_cast<uint32_t>(clients.size());
                     response.max_players = 20;
 
                     response.date = daysToDate(world.days);
@@ -201,7 +208,10 @@ void GameServer::processIncoming()
                 {
                     ChatMessagePacket chat_message = deserializeChatMessage(reader);
 
-                    std::string nickname = client_to_nickname[packet.clientId];
+                    auto it = clients.find(packet.clientId);
+                    if (it == clients.end()) break;
+
+                    const std::string& nickname = it->second.nickname;
                     std::wstring wide_nickname(nickname.begin(), nickname.end());
 
                     sendChat(wide_nickname, chat_message.message);
@@ -216,15 +226,17 @@ void GameServer::processIncoming()
                 {
                     ClientSnapshotPacket client_snapshot = deserializeClientSnapshot(reader);
 
-                    auto nick_it = client_to_nickname.find(packet.clientId);
-                    if (nick_it == client_to_nickname.end()) break;
+                    auto client_it = clients.find(packet.clientId);
+                    if (client_it == clients.end()) break;
 
-                    auto entity_it = nickname_to_entity.find(nick_it->second);
+                    auto entity_it = nickname_to_entity.find(client_it->second.nickname);
                     if (entity_it == nickname_to_entity.end()) break;
 
                     if (!world.doesEntityExist(entity_it->second)) break;
 
-                    world.getEntity(entity_it->second).getComponent<PlayerControlledComponent>().cursor_position = {client_snapshot.cursor_x, client_snapshot.cursor_y};
+                    auto& player_component = world.getEntity(entity_it->second).getComponent<PlayerControlledComponent>();
+                    player_component.cursor_position = {client_snapshot.cursor_x, client_snapshot.cursor_y};
+                    player_component.dirty = true;
 
                     break;
                 }
@@ -234,19 +246,22 @@ void GameServer::processIncoming()
 
                     auto& recipe = recipes[craft.requested_craft];
 
-                    auto nick_it = client_to_nickname.find(packet.clientId);
-                    if (nick_it == client_to_nickname.end()) break;
+                    auto client_it = clients.find(packet.clientId);
+                    if (client_it == clients.end()) break;
 
-                    auto entity_it = nickname_to_entity.find(nick_it->second);
+                    auto entity_it = nickname_to_entity.find(client_it->second.nickname);
                     if (entity_it == nickname_to_entity.end()) break;
 
-                    
+
+                    auto& crafter_inventory = world.getEntity(entity_it->second).getComponent<InventoryComponent>();
+
                     for(auto& ingredient : recipe.ingredients)
                     {
-                        world.getEntity(entity_it->second).getComponent<InventoryComponent>().inventory.removeItemWithLeftover(ingredient.itemID, ingredient.quantity);
-                    }                    
+                        crafter_inventory.inventory.removeItemWithLeftover(ingredient.itemID, ingredient.quantity);
+                    }
 
-                    world.getEntity(entity_it->second).getComponent<InventoryComponent>().inventory.addItemWithLeftover(craft.requested_craft.itemID, craft.requested_craft.quantity);
+                    crafter_inventory.inventory.addItemWithLeftover(craft.requested_craft.itemID, craft.requested_craft.quantity);
+                    crafter_inventory.dirty = true;
 
                     break;
                 }
@@ -279,58 +294,55 @@ void GameServer::broadcastBlockUpdates()
 
 void GameServer::broadcastSnapshot()
 {
-    auto ids = transport->clientIds();
-    if (ids.empty()) return;
-
-    SnapshotPacket snapshot;
-
-    snapshot.tick = tick;
-
-    snapshot.dayTime = world.getDayTime();
-    snapshot.days = 0;
-
-    for (auto& [id, entity] : world.getEntities())
+    if (clients.empty())
     {
-        if (!entity.hasComponent<TransformComponent>() || !entity.hasComponent<RenderComponent>()) continue;
-
-        const auto& transform = entity.getComponent<TransformComponent>();
-        const auto& render = entity.getComponent<RenderComponent>();
-
-        NetEntity net_entity{};
-        net_entity.id        = id;
-        net_entity.x         = transform.position.x;
-        net_entity.y         = transform.position.y;
-        net_entity.size_x    = transform.size.x;
-        net_entity.size_y    = transform.size.y;
-        net_entity.textureID = static_cast<uint32_t>(render.textureID);
-        net_entity.uv_x      = render.uv.position.x;
-        net_entity.uv_y      = render.uv.position.y;
-        net_entity.uv_size_x = render.uv.size.x;
-        net_entity.uv_size_y = render.uv.size.y;
-
-        if (entity.hasComponent<HealthComponent>())
-        {
-            const auto& health = entity.getComponent<HealthComponent>();
-            net_entity.health    = health.health;
-            net_entity.maxHealth = health.maxHealth;
-        }
-
-        if (entity.hasComponent<InventoryComponent>())
-        {
-            const auto& inventory = entity.getComponent<InventoryComponent>();
-            net_entity.inventory.reserve(inventory.inventory.slots.size());
-            for (const auto& slot : inventory.inventory.slots)
-            {
-                net_entity.inventory.push_back({static_cast<uint32_t>(slot.itemID), slot.quantity});
-            }
-            net_entity.selectedSlot = inventory.selectedSlot;
-        }
-
-        snapshot.entities.push_back(std::move(net_entity));
+        world.new_entities.clear();
+        world.dead_entities.clear();
+        for (auto& [id, entity] : world.getEntities()) entity.clearDirty();
+        return;
     }
 
-    auto buffer = serializePacket(snapshot);
-    transport->broadcast(buffer);
+    const auto& entities = world.getEntities();
+
+    for (auto& [client_id, data] : clients)
+    {
+        SnapshotPacket snapshot;
+        snapshot.tick = tick;
+        snapshot.dayTime = world.getDayTime();
+        snapshot.days = world.days;
+
+        for (const auto& [id, entity] : entities)
+        {
+            if (data.known_entities.contains(id))
+            {
+                Tag update = entity.serializeDirtyForClient();
+                if (!update.get<TagCompound>().empty())
+                {
+                    snapshot.updated_entities.emplace(id, std::move(update));
+                }
+            }
+            else
+            {
+                snapshot.new_entities.emplace(id, entity.serializeForClient());
+                data.known_entities.insert(id);
+            }
+        }
+
+        for (UUID id : world.dead_entities)
+        {
+            if (data.known_entities.erase(id) > 0)
+            {
+                snapshot.removed_entities.insert(id);
+            }
+        }
+
+        transport->send(client_id, serializePacket(snapshot));
+    }
+
+    world.new_entities.clear();
+    world.dead_entities.clear();
+
+    for (auto& [id, entity] : world.getEntities()) entity.clearDirty();
 }
 
 void GameServer::sendChat(const std::wstring& nickname, const std::wstring& message)
@@ -361,13 +373,12 @@ void GameServer::update(float dt)
 
         for (auto& [client_id, queue] : remote_input_queues)
         {
-            if(!client_to_nickname.contains(client_id)) continue;
+            auto client_it = clients.find(client_id);
+            if (client_it == clients.end()) continue;
 
             while(!queue.empty())
             {
-                std::string nickname = client_to_nickname[client_id];
-
-                auto iterator = nickname_to_entity.find(nickname);
+                auto iterator = nickname_to_entity.find(client_it->second.nickname);
                 if (iterator == nickname_to_entity.end()) continue;
                 if (!world.doesEntityExist(iterator->second)) continue;
 
@@ -385,19 +396,18 @@ void GameServer::update(float dt)
         ChunkLoadSystem(world, dt);
         ChunkUnloadSystem(world);
         DaycycleSystem(world, dt);
+        AnimationSystem(world, dt);
 
         TransformSystem(world);
 
-        for(auto& [client_id, nickname] : client_to_nickname)
+        for(auto& [client_id, data] : clients)
         {
-            for(auto& [nickname_, uuid] : nickname_to_entity)
+            auto it = nickname_to_entity.find(data.nickname);
+            if (it != nickname_to_entity.end() && !world.doesEntityExist(it->second))
             {
-                if(!world.doesEntityExist(uuid))
-                {
-                    nickname_to_entity.erase(nickname);
+                nickname_to_entity.erase(it);
 
-                    transport->send(client_id, serializePacket(StopTrackingPacket{}));
-                }
+                transport->send(client_id, serializePacket(StopTrackingPacket{}));
             }
         }
 

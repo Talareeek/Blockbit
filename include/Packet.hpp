@@ -7,12 +7,15 @@
 #include <string>
 #include <stdexcept>
 #include <type_traits>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "Chunk.hpp"
 #include "World.hpp"
 #include "Input.hpp"
 #include "GameCommon.hpp"
 #include "View.hpp"
+#include "BBT.hpp"
 
 enum class PacketType : uint8_t
 {
@@ -57,44 +60,16 @@ struct BlockUpdatePacket
     Block block;
 };
 
-struct NetEntity
-{
-    UUID id;
-
-    double x;
-    double y;
-
-    float size_x;
-    float size_y;
-
-    uint32_t textureID;
-
-    int uv_x;
-    int uv_y;
-    int uv_size_x;
-    int uv_size_y;
-
-    uint32_t health;
-    uint32_t maxHealth;
-
-    struct InventorySlot
-    {
-        uint32_t itemID;
-        uint32_t quantity;
-    };
-
-    std::vector<InventorySlot> inventory;
-    uint8_t selectedSlot = 0;
-};
-
 struct SnapshotPacket
 {
     uint64_t tick;
 
-    std::vector<NetEntity> entities;
-
     float dayTime;
     uint64_t days;
+
+    std::unordered_map<UUID, Tag> new_entities;
+    std::unordered_map<UUID, Tag> updated_entities;
+    std::unordered_set<UUID> removed_entities;
 };
 
 struct TrackPacket

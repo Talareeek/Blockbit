@@ -86,6 +86,11 @@ struct AIComponent : public Component
         return "AIComponent";
     }
 
+    ComponentSide side() const override
+    {
+        return ComponentSide::Server;
+    }
+
     Tag serialize() const override
     {
         TagCompound compound;

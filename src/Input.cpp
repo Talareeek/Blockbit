@@ -127,14 +127,17 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
                 int block_x = (int)std::floor(transform.position.x + transform.size.x / 2.0f);
                 int block_y = (int)std::floor(transform.position.y);
                 physics.force.x += 45.0f * direction.x / blockDatabase[world.getBlock(block_x, block_y).id].drag;
+                physics.dirty = true;
 
                 if(direction.x < 0.0f)
                 {
                     animation.direction = AnimationComponent::Direction::Left;
+                    animation.dirty = true;
                 }
                 else if(direction.x > 0.0f)
                 {
                     animation.direction = AnimationComponent::Direction::Right;
+                    animation.dirty = true;
                 }
 
                 break;
@@ -150,30 +153,35 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
                 {
                     physics.force.y += 60.0f;
                 }
+                physics.dirty = true;
 
                 break;
             }
             case InputType::ATTACK_START:
             {
                 player.mid_attack = true;
+                player.dirty = true;
 
                 break;
             }
             case InputType::USE_START:
             {
                 player.mid_usage = true;
+                player.dirty = true;
 
                 break;
             }
             case InputType::ATTACK_STOP:
             {
                 player.mid_attack = false;
+                player.dirty = true;
 
                 break;
             }
             case InputType::USE_STOP:
             {
                 player.mid_usage = false;
+                player.dirty = true;
 
                 break;
             }
@@ -181,12 +189,14 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
             {
                 player.drops = true;
                 player.drops_full_stack = std::get<bool>(input.value);
+                player.dirty = true;
 
                 break;
             }
             case InputType::CHANGE_SLOT:
             {
                 player.change_slot = std::get<ChangeSlotData>(input.value);
+                player.dirty = true;
 
                 break;
             }

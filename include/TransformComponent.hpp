@@ -104,6 +104,8 @@ struct TransformComponent : public Component
         size = tag["size"].get<sf::Vector2<double>>();
 
         rotation = sf::degrees(tag["rotation"].get<float>());
+
+        render_position = position;
     }
 
     int chunkPosition() const

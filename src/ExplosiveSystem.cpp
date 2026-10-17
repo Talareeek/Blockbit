@@ -16,6 +16,7 @@ void ExplosiveSystem(World& world, float dt)
 
         auto& explosive = entity.getComponent<ExplosiveComponent>();
         explosive.timer += dt;
+        explosive.dirty = true;
 
         if(explosive.timer < explosive.fuseTime) continue;
 
@@ -37,11 +38,15 @@ void ExplosiveSystem(World& world, float dt)
             float damage = factor * factor;
             if(other.hasComponent<HealthComponent>())
             {
-                other.getComponent<HealthComponent>().health -= static_cast<uint8_t>(damage);
+                auto& other_health = other.getComponent<HealthComponent>();
+                other_health.health -= static_cast<uint8_t>(damage);
+                other_health.dirty = true;
             }
 
             float impulse = std::sqrt(factor) * (2.0f + explosive.force * 0.5f);
-            other.getComponent<PhysicsComponent>().velocity += sf::Vector2f(dir.x, dir.y - 0.6f) * impulse;
+            auto& other_physics = other.getComponent<PhysicsComponent>();
+            other_physics.velocity += sf::Vector2f(dir.x, dir.y - 0.6f) * impulse;
+            other_physics.dirty = true;
         }
 
         int minX = static_cast<int>(center.x - explosive.force);

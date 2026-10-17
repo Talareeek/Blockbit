@@ -4,6 +4,8 @@
 #include "World.hpp"
 #include "Prefab.hpp"
 
+#include <unordered_set>
+
 class ServerWorld : public World
 {
 private:
@@ -28,6 +30,12 @@ public:
     using World::setBlock;
 
     std::vector<sf::Vector2i> pending_block_updates;
+
+    std::unordered_set<UUID> new_entities;
+    std::unordered_set<UUID> dead_entities;
+
+    void addEntity(Entity entity) override;
+    void removeEntity(UUID id) override;
 
     const std::string& getName() const { return name; }
     void setName(const std::string& name) { this->name = name; }
