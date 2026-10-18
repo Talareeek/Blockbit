@@ -55,6 +55,30 @@ void RenderEntities(World& world, const sf::Vector2<double> camera, sf::RenderWi
         if(entity.hasComponent<PlayerControlledComponent>())
         {
             auto& player = entity.getComponent<PlayerControlledComponent>();
+
+            if(!player.nickname.empty())
+            {
+                unsigned int font_size = static_cast<unsigned int>(unit_size * 0.3f);
+                if(font_size < 1) font_size = 1;
+
+                sf::Text name_text(AssetManager::getFont(AssetManager::FontID::PressStart2P), player.nickname, font_size);
+
+                sf::FloatRect bounds = name_text.getLocalBounds();
+                name_text.setOrigin({bounds.position.x + bounds.size.x / 2.0f, bounds.position.y + bounds.size.y});
+
+                name_text.setScale({1.0f, -1.0f});
+
+                float center_x = (screen_position.x + component.size.x / 2.0f) * unit_size;
+                float above_y = (screen_position.y + component.size.y) * unit_size + unit_size * 0.2f;
+
+                name_text.setPosition({center_x, above_y});
+
+                name_text.setFillColor(sf::Color::White);
+                name_text.setOutlineColor(sf::Color::Black);
+                name_text.setOutlineThickness(1.0f);
+
+                window.draw(name_text);
+            }
         }
     }
 }
