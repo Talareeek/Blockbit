@@ -6,6 +6,7 @@
 #include "../include/InventoryComponent.hpp"
 #include "../include/RenderComponent.hpp"
 #include "../include/PhysicsComponent.hpp"
+#include "../include/Chunk.hpp"
 
 std::unordered_map<ItemID, ItemData> itemDatabase =
 {
@@ -130,6 +131,128 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
                 );
 
                 world.addEntity(std::move(explosiveEntity));
+
+                return true;
+            }
+        }
+    },
+    {
+        ItemID::StabShot,
+        {
+            .name = "Stab Shot",
+            .texture = AssetManager::GameTextureID::Bedrock,
+            .maxStackSize = 16,
+            .rarity = ItemRarity::Epic,
+            .category = ItemCategory::Misc,
+            .onUse = [](World& world, sf::Vector2f mouse, UUID user) -> bool
+            {
+                (void)user;
+
+                int column_x = static_cast<int>(std::floor(mouse.x));
+
+                for(int y = 1; y < CHUNK_HEIGHT; y++)
+                {
+                    Entity explosive(generateUUID());
+
+                    explosive.addComponent(
+                        TransformComponent{
+                            {static_cast<double>(column_x) + 0.5, static_cast<double>(y) + 0.5},
+                            {1.0, 1.0},
+                            sf::degrees(0.0f)
+                        }
+                    );
+
+                    explosive.addComponent(ExplosiveComponent{3.0f, true, true, 0.05f, 0.0f});
+
+                    explosive.addComponent(
+                        RenderComponent{
+                            AssetManager::GameTextureID::Dynamite,
+                            {{0, 0}, {16, 16}},
+                            {1.0f, 1.0f}
+                        }
+                    );
+
+                    explosive.addComponent(
+                        PhysicsComponent{
+                            {0.0f, 0.0f},
+                            {0.0f, 0.0f},
+                            {0.0f, 0.0f},
+                            1.0f,
+                            true,
+                            false,
+                            true,
+                            false
+                        }
+                    );
+
+                    world.addEntity(std::move(explosive));
+                }
+
+                return true;
+            }
+        }
+    },
+    {
+        ItemID::NukeShot,
+        {
+            .name = "Nuke Shot",
+            .texture = AssetManager::GameTextureID::Bedrock,
+            .maxStackSize = 16,
+            .rarity = ItemRarity::Mythic,
+            .category = ItemCategory::Misc,
+            .onUse = [](World& world, sf::Vector2f mouse, UUID user) -> bool
+            {
+                (void)user;
+
+                constexpr int NUKE_COUNT = 100;
+                constexpr float NUKE_SPREAD_SPEED = 100.0f;
+                constexpr int NUKE_HEIGHT_OFFSET = 25;
+
+                sf::Vector2<double> spawn_pos = {
+                    std::floor(mouse.x) + 0.5,
+                    std::floor(mouse.y) + 0.5 + static_cast<double>(NUKE_HEIGHT_OFFSET)
+                };
+
+                for(int i = 0; i < NUKE_COUNT; i++)
+                {
+                    float t = (static_cast<float>(i) / static_cast<float>(NUKE_COUNT - 1)) * 2.0f - 1.0f;
+                    float vx = t * NUKE_SPREAD_SPEED;
+
+                    Entity explosive(generateUUID());
+
+                    explosive.addComponent(
+                        TransformComponent{
+                            spawn_pos,
+                            {1.0, 1.0},
+                            sf::degrees(0.0f)
+                        }
+                    );
+
+                    explosive.addComponent(ExplosiveComponent{3.0f});
+
+                    explosive.addComponent(
+                        RenderComponent{
+                            AssetManager::GameTextureID::Dynamite,
+                            {{0, 0}, {16, 16}},
+                            {1.0f, 1.0f}
+                        }
+                    );
+
+                    explosive.addComponent(
+                        PhysicsComponent{
+                            {vx, 0.0f},
+                            {0.0f, 0.0f},
+                            {0.0f, 0.0f},
+                            1.0f,
+                            false,
+                            true,
+                            false,
+                            true
+                        }
+                    );
+
+                    world.addEntity(std::move(explosive));
+                }
 
                 return true;
             }

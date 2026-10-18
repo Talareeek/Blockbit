@@ -25,6 +25,8 @@ public:
     void broadcast(const std::vector<char>& buffer) override;
     void broadcastExcept(uint32_t client_id, const std::vector<char>& buffer) override;
 
+    void disconnect(uint32_t client_id) override;
+
     std::vector<uint32_t> clientIds() override;
 
     bool isRunning() const override;

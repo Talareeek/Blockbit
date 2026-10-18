@@ -49,6 +49,11 @@ void CompositeServerTransport::broadcastExcept(uint32_t client_id, const std::ve
     for (auto& transport : transports) transport->broadcastExcept(client_id, buffer);
 }
 
+void CompositeServerTransport::disconnect(uint32_t client_id)
+{
+    for (auto& transport : transports) transport->disconnect(client_id);
+}
+
 std::vector<uint32_t> CompositeServerTransport::clientIds()
 {
     std::vector<uint32_t> combined;

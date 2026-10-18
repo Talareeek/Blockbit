@@ -7,11 +7,10 @@
 #include "../include/BlockAtlas.hpp"
 #include "../include/NetworkInterpolationComponent.hpp"
 #include "../include/Slot.hpp"
+#include "../include/PerlinNoise.hpp"
 
 #include <random>
 #include <numbers>
-
-std::unordered_map<int, ChunkMesh> chunkMeshes;
 
 namespace
 {
@@ -62,10 +61,10 @@ namespace
     }
 }
 
-void BuildChunkMesh(World& world, int chunk_position)
+void BuildChunkMesh(ClientWorld& world, int chunk_position)
 {
     Chunk& chunk = world.getChunk(chunk_position);
-    ChunkMesh& mesh = chunkMeshes[chunk_position];
+    ChunkMesh& mesh = world.getChunkMeshes()[chunk_position];
 
     mesh.vertices.clear();
 
@@ -236,7 +235,7 @@ sf::Vector2f getSunWorldPosition(const World& world, sf::Vector2f cameraCenter)
     };
 }
 
-void RenderWorld(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window)
+void RenderWorld(ClientWorld& world, const sf::Vector2<double> camera, sf::RenderWindow& window)
 {
     float unit_size = window.getSize().y / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
 
@@ -248,7 +247,7 @@ void RenderWorld(World& world, const sf::Vector2<double> camera, sf::RenderWindo
 
         if (!chunk.generated) continue;
 
-        ChunkMesh& mesh = chunkMeshes[i];
+        ChunkMesh& mesh = world.getChunkMeshes()[i];
 
         if (chunk.meshDirty || !mesh.built)
         {
@@ -898,22 +897,61 @@ void renderBar(int max, int value, sf::Color primary_color, sf::Color secondary_
 
     target.draw(background);
 
+    const float factor = std::clamp(static_cast<float>(value) / static_cast<float>(max), 0.0f, 1.0f);
+    if (factor <= 0.0f) return;
 
-    float factor = static_cast<float>(value) / static_cast<float>(max);
+    static const PerlinNoise3D bar_perlin(1337u);
+    static sf::Clock bar_clock;
+    const float t = bar_clock.getElapsedTime().asSeconds();
 
-    sf::VertexArray vertex_array(sf::PrimitiveType::TriangleStrip, 4);
+    const float filled_width = bounds.size.x * factor;
 
-    vertex_array[0].position = bounds.position;
-    vertex_array[1].position = bounds.position + sf::Vector2f{0.0f, bounds.size.y};
-    vertex_array[2].position = bounds.position + sf::Vector2f{bounds.size.x * factor, 0.0f};
-    vertex_array[3].position = bounds.position + sf::Vector2f{bounds.size.x * factor, bounds.size.y};
+    const int cols = std::max(16, static_cast<int>(filled_width / 6.0f));
+    const int rows = std::max(3, static_cast<int>(bounds.size.y / 4.0f));
 
-    vertex_array[0].color = secondary_color;
-    vertex_array[1].color = secondary_color;
-    vertex_array[2].color = primary_color;
-    vertex_array[3].color = primary_color;
+    auto clip = [](float c) {
+        return static_cast<std::uint8_t>(std::clamp(c, 0.0f, 255.0f));
+    };
 
-    target.draw(vertex_array);
+    auto sample = [&](float u, float v) {
+        const sf::Color base = lerpColor(secondary_color, primary_color, u);
+
+        const double n1 = bar_perlin.noise(u * 4.0, v * 2.5, t * 0.6);
+        const double n2 = bar_perlin.noise(u * 9.0 + 11.3, v * 5.0, t * 1.4 + 7.7);
+        const float n = static_cast<float>(n1 * 0.65 + n2 * 0.35);
+
+        const float brightness = 0.65f + n * 0.75f;
+
+        return sf::Color(
+            clip(base.r * brightness),
+            clip(base.g * brightness),
+            clip(base.b * brightness),
+            base.a
+        );
+    };
+
+    for (int row = 0; row < rows; ++row)
+    {
+        const float v0 = static_cast<float>(row)     / static_cast<float>(rows);
+        const float v1 = static_cast<float>(row + 1) / static_cast<float>(rows);
+
+        sf::VertexArray strip(sf::PrimitiveType::TriangleStrip, (cols + 1) * 2);
+
+        for (int col = 0; col <= cols; ++col)
+        {
+            const float u = static_cast<float>(col) / static_cast<float>(cols);
+
+            const sf::Vector2f p0 = bounds.position + sf::Vector2f(filled_width * u, bounds.size.y * v0);
+            const sf::Vector2f p1 = bounds.position + sf::Vector2f(filled_width * u, bounds.size.y * v1);
+
+            strip[col * 2 + 0].position = p0;
+            strip[col * 2 + 0].color    = sample(u, v0);
+            strip[col * 2 + 1].position = p1;
+            strip[col * 2 + 1].color    = sample(u, v1);
+        }
+
+        target.draw(strip);
+    }
 }
 
 void renderHotbar(std::array<ItemStack, 9> items, uint8_t selected_slot, sf::RenderTarget& target)
@@ -945,7 +983,7 @@ void renderHotbar(std::array<ItemStack, 9> items, uint8_t selected_slot, sf::Ren
     }
 }
 
-void RenderMinimap(World& world, sf::Vector2<double> camera, sf::RenderTarget& target)
+void RenderMinimap(ClientWorld& world, sf::Vector2<double> camera, sf::RenderTarget& target)
 {
     constexpr unsigned int MAX_MINIMAP_TEXTURE_WIDTH = 512;
 
@@ -966,7 +1004,7 @@ void RenderMinimap(World& world, sf::Vector2<double> camera, sf::RenderTarget& t
     for(int i = positionToChunk(camera) - 5; i <= positionToChunk(camera) + 5; i++)
     {
         Chunk& chunk = world.getChunk(i);
-        ChunkMesh& mesh = chunkMeshes[i];
+        ChunkMesh& mesh = world.getChunkMeshes()[i];
 
         if(!chunk.generated || !mesh.built) continue;
 

@@ -3,10 +3,13 @@
 
 #include "Component.hpp"
 #include "Input.hpp"
+#include "View.hpp"
 
 #include <cstdint>
 #include <string>
 #include <sstream>
+#include <deque>
+#include <memory>
 
 struct PlayerControlledComponent : public Component
 {
@@ -27,10 +30,16 @@ struct PlayerControlledComponent : public Component
     float mining_time = 0.0f;
 
     std::optional<ChangeSlotData> change_slot;
-    
+
     bool jump = false;
 
     sf::Vector2<double> move_direction;
+
+    // Transient per-tick request queue: anything the player interacts with
+    // (an item's onUse, a block, etc.) can push a ready-to-run ServerView
+    // onto this queue and GameServer will hand it to the owning client as
+    // the active content view. Not serialized.
+    std::deque<std::unique_ptr<ServerView>> pending_view_opens;
 
     PlayerControlledComponent() = default;
     PlayerControlledComponent(std::string nickname) : nickname{nickname}
@@ -70,7 +79,23 @@ struct PlayerControlledComponent : public Component
 
     std::unique_ptr<Component> clone() const override
     {
-        return std::make_unique<PlayerControlledComponent>(*this);
+        // pending_view_opens is transient per-tick state and holds move-only
+        // unique_ptrs, so we build the clone field-by-field instead of copying
+        // the whole struct.
+        auto out = std::make_unique<PlayerControlledComponent>(nickname);
+        out->active            = active;
+        out->cursor_position   = cursor_position;
+        out->mid_attack        = mid_attack;
+        out->mid_usage         = mid_usage;
+        out->since_last_use    = since_last_use;
+        out->drops             = drops;
+        out->drops_full_stack  = drops_full_stack;
+        out->mining_block      = mining_block;
+        out->mining_time       = mining_time;
+        out->change_slot       = change_slot;
+        out->jump              = jump;
+        out->move_direction    = move_direction;
+        return out;
     }
 };
 

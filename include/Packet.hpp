@@ -34,7 +34,6 @@ enum class PacketType : uint8_t
     Input,
     ChatMessage,
     Respawn,
-    Craft,
 
     ClientSnapshot,
 
@@ -123,28 +122,26 @@ struct ClientSnapshotPacket
     double cursor_y;
 };
 
-struct CraftPacket
-{
-    ItemStack requested_craft;
-};
-
 struct OpenViewPacket
 {
     ViewType type;
 };
 
+struct CloseViewPacket
+{
+};
+
 struct SetContentPacket
 {
     uint16_t target;
-    std::variant<ItemStack, std::string> value;
+    std::vector<uint8_t> payload;
 };
 
 struct ViewEventPacket
 {
     uint16_t sender;
-
-    uint8_t action;
-    std::variant<ItemStack, std::string> value;
+    uint8_t  action;
+    std::vector<uint8_t> payload;
 };
 
 class PacketWriter
@@ -248,8 +245,8 @@ std::vector<char> serializePacket(const LoginPacket& p);
 std::vector<char> serializePacket(const ChatMessagePacket& p);
 std::vector<char> serializePacket(const RespawnPacket& p);
 std::vector<char> serializePacket(const ClientSnapshotPacket& p);
-std::vector<char> serializePacket(const CraftPacket& p);
 std::vector<char> serializePacket(const OpenViewPacket& p);
+std::vector<char> serializePacket(const CloseViewPacket& p);
 std::vector<char> serializePacket(const SetContentPacket& p);
 std::vector<char> serializePacket(const ViewEventPacket& p);
 
@@ -264,5 +261,9 @@ LoginPacket deserializeLogin(PacketReader& r);
 ChatMessagePacket deserializeChatMessage(PacketReader& r);
 RespawnPacket deserializeRespawn(PacketReader& r);
 ClientSnapshotPacket deserializeClientSnapshot(PacketReader& r);
-CraftPacket deserializeCraft(PacketReader& r);
+
+OpenViewPacket deserializeOpenView(PacketReader& r);
+CloseViewPacket deserializeCloseView(PacketReader& r);
+SetContentPacket deserializeSetContent(PacketReader& r);
+ViewEventPacket deserializeViewEvent(PacketReader& r);
 #endif // PACKET_HPP

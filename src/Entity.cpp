@@ -154,7 +154,7 @@ void Entity::deserialize(Tag& tag)
         {
             PlayerControlledComponent c;
             c.deserialize(payload);
-            addComponent<PlayerControlledComponent>(c);
+            addComponent<PlayerControlledComponent>(std::move(c));
         }
     }
 }

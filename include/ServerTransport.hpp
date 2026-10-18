@@ -21,6 +21,8 @@ public:
     virtual void broadcast(const std::vector<char>& buf) = 0;
     virtual void broadcastExcept(uint32_t clientId, const std::vector<char>& buf) = 0;
 
+    virtual void disconnect(uint32_t clientId) = 0;
+
     virtual std::vector<uint32_t> clientIds() = 0;
 
     virtual bool isRunning() const = 0;

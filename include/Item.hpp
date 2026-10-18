@@ -28,6 +28,8 @@ enum class ItemID : uint32_t
     Obsidian,
     Bedrock,
     Dynamite,
+    StabShot,
+    NukeShot,
 
     Iron_Ore,
     Gold_Ore,

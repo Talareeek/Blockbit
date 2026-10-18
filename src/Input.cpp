@@ -13,6 +13,7 @@
 #include "../include/PhysicsSystem.hpp"
 #include "../include/PlayerControlledComponent.hpp"
 #include "../include/AnimationComponent.hpp"
+#include "../include/InventoryView.hpp"
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Window/Event.hpp>
@@ -97,6 +98,10 @@ std::vector<Input> getInputsFromEvent(const sf::Event& event, sf::Vector2<double
         {
             uint8_t slot = static_cast<uint8_t>(static_cast<int>(key->code) - static_cast<int>(sf::Keyboard::Key::Num1));
             inputs.push_back({InputType::CHANGE_SLOT, ChangeSlotData{false, static_cast<int8_t>(slot)}});
+        }
+        else if(key->code == sf::Keyboard::Key::E)
+        {
+            inputs.push_back({InputType::OPEN_INVENTORY});
         }
     }
 
@@ -196,6 +201,13 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
             case InputType::CHANGE_SLOT:
             {
                 player.change_slot = std::get<ChangeSlotData>(input.value);
+                player.dirty = true;
+
+                break;
+            }
+            case InputType::OPEN_INVENTORY:
+            {
+                player.pending_view_opens.push_back(std::make_unique<ServerInventoryView>(id));
                 player.dirty = true;
 
                 break;

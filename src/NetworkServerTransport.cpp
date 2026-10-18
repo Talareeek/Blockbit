@@ -37,6 +37,11 @@ void NetworkServerTransport::broadcastExcept(uint32_t clientId, const std::vecto
     server.broadcastExcept(clientId, buf);
 }
 
+void NetworkServerTransport::disconnect(uint32_t clientId)
+{
+    server.removeSession(clientId);
+}
+
 std::vector<uint32_t> NetworkServerTransport::clientIds()
 {
     return server.clientIds();

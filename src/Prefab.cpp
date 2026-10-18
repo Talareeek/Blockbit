@@ -38,6 +38,8 @@ void PrefabRegistry::init()
         inv.inventory.slots[5] = {ItemID::Diamond_Axe, 1};
         inv.inventory.slots[6] = {ItemID::Diamond_Shovel, 1};
         inv.inventory.slots[7] = {ItemID::Chest, 64};
+        inv.inventory.slots[8] = {ItemID::StabShot, 16};
+        inv.inventory.slots[9] = {ItemID::NukeShot, 16};
         entity.addComponent(std::move(inv));
 
         entity.addComponent(RenderComponent{AssetManager::GameTextureID::Player, {{0, 0}, {12, 16}}, {0.75f, 1.0f}});

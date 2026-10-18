@@ -24,6 +24,8 @@
 #include "../include/World.hpp"
 #include "../include/Climate.hpp"
 #include "../include/NetworkInterpolationComponent.hpp"
+#include "../include/ChestView.hpp"
+#include "../include/InventoryView.hpp"
 
 #include <iostream>
 #include <algorithm>
@@ -161,16 +163,6 @@ void ClientGameState::tryInitializePlayerUI()
 
     //health-bar
 
-    if (player_entity.hasComponent<InventoryComponent>())
-    {
-        inventory_widget.emplace(&player_entity.getComponent<InventoryComponent>());
-        inventory_widget->updateScreenRelative(game->getWindow().getSize());
-        inventory_widget->on_craft = [this](const ItemStack stack)
-        {
-            transport->send(serializePacket(CraftPacket{stack}));
-        };
-    }
-
     player_ui_initialized = true;
 }
 
@@ -194,6 +186,7 @@ void ClientGameState::applySnapshot(const SnapshotPacket& snapshot)
         if (local_player_entity_id == id)
         {
             player_ui_initialized = false;
+            content_view.reset();
         }
     }
 
@@ -221,7 +214,7 @@ void ClientGameState::applySnapshot(const SnapshotPacket& snapshot)
         if (local_player_entity_id == id)
         {
             player_ui_initialized = false;
-            inventory_widget.reset();
+            content_view.reset();
         }
         local_world.removeEntity(id);
     }
@@ -259,7 +252,7 @@ void ClientGameState::processIncoming()
                     chunk = initialization.chunk;
 
                     chunk.meshDirty = true;
-                    chunkMeshes[initialization.chunk.chunk_position].built = false;
+                    local_world.getChunkMeshes()[initialization.chunk.chunk_position].built = false;
                     initialized = true;
 
                     break;
@@ -289,13 +282,46 @@ void ClientGameState::processIncoming()
                     local_player_entity_id = std::nullopt;
                     my_entity_id = UUID();
                     player_ui_initialized = false;
-                    inventory_widget.reset();
+                    content_view.reset();
                     break;
                 }
                 case PacketType::ChatMessage:
                 {
                     auto message = deserializeChatMessage(reader);
                     chat.pushMessage(message.message);
+                    break;
+                }
+                case PacketType::OpenView:
+                {
+                    auto open = deserializeOpenView(reader);
+
+                    content_view.reset();
+
+                    switch (open.type)
+                    {
+                        case ViewType::Chest:
+                            content_view = std::make_unique<ClientChestView>();
+                            break;
+                        case ViewType::Inventory:
+                            content_view = std::make_unique<ClientInventoryView>();
+                            break;
+                    }
+
+                    break;
+                }
+                case PacketType::CloseView:
+                {
+                    (void)deserializeCloseView(reader);
+                    content_view.reset();
+                    break;
+                }
+                case PacketType::SetContent:
+                {
+                    auto set_content = deserializeSetContent(reader);
+                    if (content_view)
+                    {
+                        content_view->handleContentUpdate(SetContentData{set_content.target, std::move(set_content.payload)});
+                    }
                     break;
                 }
                 case PacketType::Input:
@@ -336,6 +362,22 @@ void ClientGameState::sendTickInputs()
     transport->send(serializePacket(packet));
 }
 
+static void drainViewEventsAndSend(ClientView* view, ClientTransport* transport)
+{
+    if (!view || !transport || !transport->isConnected()) return;
+
+    auto events = view->drainPendingEvents();
+    for (auto& event_data : events)
+    {
+        ViewEventPacket packet;
+        packet.sender  = event_data.sender;
+        packet.action  = event_data.action;
+        packet.payload = std::move(event_data.payload);
+
+        transport->send(serializePacket(packet));
+    }
+}
+
 void ClientGameState::onTick(float tick_step)
 {
     if (acceptsPlayerInput())
@@ -349,6 +391,8 @@ void ClientGameState::onTick(float tick_step)
     {
         inputs.clear();
     }
+
+    drainViewEventsAndSend(content_view.get(), transport.get());
 
     if (local_server)
     {
@@ -372,6 +416,26 @@ void ClientGameState::handleEvent(const sf::Event& event)
 
     if (chat_ui.isActive()) return;
 
+    if (content_view)
+    {
+        if (auto key = event.getIf<sf::Event::KeyPressed>())
+        {
+            if (key->code == sf::Keyboard::Key::Escape || key->code == sf::Keyboard::Key::E)
+            {
+                if (transport && transport->isConnected())
+                {
+                    transport->send(serializePacket(CloseViewPacket{}));
+                }
+                content_view.reset();
+                view_close_cooldown = 0.3f;
+                return;
+            }
+        }
+
+        content_view->handleEvent(event);
+        return;
+    }
+
     if (auto key = event.getIf<sf::Event::KeyPressed>())
     {
         if (!chat_was_active && key->code == sf::Keyboard::Key::T)
@@ -392,44 +456,9 @@ void ClientGameState::handleEvent(const sf::Event& event)
 
     if(event.is<sf::Event::Resized>())
     {
-        chunkMeshes.clear();
+        local_world.getChunkMeshes().clear();
     }
 
-    if (player_ui_initialized)
-    {
-        if(event.is<sf::Event::MouseButtonPressed>())
-        {
-            float unit_size = game->getWindow().getView().getSize().y / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
-
-            /*
-            sf::View view{
-                sf::Vector2f{
-                    static_cast<float>(
-                        local_world.getEntity(local_player_entity_id.value())
-                            .getComponent<TransformComponent>()
-                            .position.x + 0.5f
-                    ) * unit_size,
-
-                    static_cast<float>(
-                        local_world.getEntity(local_player_entity_id.value())
-                            .getComponent<TransformComponent>()
-                            .position.y - 0.5f
-                    ) * unit_size
-                },
-                sf::Vector2f{
-                    static_cast<float>(game->getWindow().getSize().x),
-                    static_cast<float>(game->getWindow().getSize().y)
-                }
-            };
-
-            view.setSize({view.getSize().x, -view.getSize().y});
-
-            game->getWindow().setView(view);
-            */
-        }
-
-        if (inventory_widget) inventory_widget->handleEvent(event);
-    }
 
     sf::View game_view({0.0f, 0.0f}, {static_cast<float>(game->getWindow().getSize().x), static_cast<float>(game->getWindow().getSize().y)});
     game_view.setSize({game_view.getSize().x, -game_view.getSize().y});
@@ -461,6 +490,7 @@ void ClientGameState::update(float dt)
 
     chat_ui.update(dt);
     if (chat_close_cooldown > 0.0f) chat_close_cooldown -= dt;
+    if (view_close_cooldown > 0.0f) view_close_cooldown -= dt;
 
     if (!isLocalSession())
     {
@@ -576,28 +606,12 @@ void ClientGameState::update(float dt)
 
     game->getConsole().assignWorld(local_server.has_value() ? &local_server->getWorld() : &local_world);
 
-    if(acceptsPlayerInput() && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
+    if(acceptsPlayerInput() && !content_view && view_close_cooldown <= 0.0f && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
     {
         game->pushState(this, std::make_unique<PauseScreenState>(game));
     }
 
-    if (player_ui_initialized)
-    {
-        if (inventory_widget) inventory_widget->updateScreenRelative(game->getWindow().getSize());
-
-        if(acceptsPlayerInput() && InputManager::isLazyKeyPressed(sf::Keyboard::Key::E) && inventory_widget)
-        {
-            inventory_widget->setActive(!inventory_widget->isActive());
-        }
-
-        if(inventory_widget && inventory_widget->isActive())
-        {
-            inventory_widget->update(dt);
-        }
-    }
-    else
-    {
-    }
+    if (content_view) content_view->update(dt);
 
     if(acceptsPlayerInput() && InputManager::isLazyKeyPressed(sf::Keyboard::Key::F3))
     {
@@ -687,10 +701,7 @@ void ClientGameState::render(sf::RenderWindow& window)
             std::copy_n(inventory.inventory.slots.begin(), array.size(), array.begin());
             renderHotbar(array, inventory.selectedSlot, window);
 
-            if(inventory_widget && inventory_widget->isActive())
-            {
-                inventory_widget->render(window);
-            }
+            if (content_view) content_view->render(window);
 
             RenderMinimap(local_world, camera, window);
         }

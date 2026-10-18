@@ -76,6 +76,15 @@ void LoopbackServerTransport::broadcastExcept(uint32_t clientId, const std::vect
     broadcast(buf);
 }
 
+void LoopbackServerTransport::disconnect(uint32_t clientId)
+{
+    if (clientId != LoopbackChannel::LOOPBACK_CLIENT_ID) return;
+
+    std::lock_guard<std::mutex> lock(channel->mutex);
+    channel->clientConnected = false;
+    channel->toClient.clear();
+}
+
 std::vector<uint32_t> LoopbackServerTransport::clientIds()
 {
     std::lock_guard<std::mutex> lock(channel->mutex);

@@ -2,16 +2,13 @@
 #define RENDER_HPP
 
 #include "World.hpp"
-#include "ChunkMesh.hpp"
+#include "ClientWorld.hpp"
 
 #include <SFML/Graphics.hpp>
-#include <unordered_map>
 
-extern std::unordered_map<int, ChunkMesh> chunkMeshes;
+extern void BuildChunkMesh(ClientWorld& world, int chunk_position);
 
-extern void BuildChunkMesh(World& world, int chunk_position);
-
-extern void RenderWorld(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window);
+extern void RenderWorld(ClientWorld& world, const sf::Vector2<double> camera, sf::RenderWindow& window);
 
 [[deprecated]] extern void RenderBlockOverlay(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window, UUID viewerEntityId);
 
@@ -49,6 +46,6 @@ extern void renderBar(int max, int value, sf::Color primary_color, sf::Color sec
 
 extern void renderHotbar(std::array<ItemStack, 9> items, uint8_t selected_slot, sf::RenderTarget& target);
 
-extern void RenderMinimap(World& world, sf::Vector2<double> camera, sf::RenderTarget& target);
+extern void RenderMinimap(ClientWorld& world, sf::Vector2<double> camera, sf::RenderTarget& target);
 
 #endif // RENDER_HPP

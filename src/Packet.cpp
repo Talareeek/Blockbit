@@ -304,11 +304,12 @@ static void writeInput(PacketWriter& w, const Input& in)
 
     switch (in.type)
     {
-        case InputType::USE_START:        
+        case InputType::USE_START:
         case InputType::ATTACK_START:
         case InputType::USE_STOP:
         case InputType::ATTACK_STOP:
         case InputType::JUMP:
+        case InputType::OPEN_INVENTORY:
             break;
         case InputType::CHANGE_SLOT:
         {
@@ -361,6 +362,7 @@ static Input readInput(PacketReader& r)
         case InputType::USE_START:
         case InputType::ATTACK_START:
         case InputType::JUMP:
+        case InputType::OPEN_INVENTORY:
         {
             break;
         }
@@ -446,26 +448,18 @@ std::vector<char> serializePacket(const OpenViewPacket& p)
     return writer.release();
 }
 
+std::vector<char> serializePacket(const CloseViewPacket& p)
+{
+    return PacketWriter(PacketType::CloseView).release();
+}
+
 std::vector<char> serializePacket(const SetContentPacket& p)
 {
     PacketWriter writer(PacketType::SetContent);
 
     writer.write(p.target);
-
-    auto index = p.value.index();
-
-    switch(index)
-    {
-    case 0:
-
-        writer.write(std::get<ItemStack>(p.value));
-        break;
-
-    case 1:
-
-        writer.writeString(std::get<std::string>(p.value));
-        break;
-    }
+    writer.write<uint32_t>(static_cast<uint32_t>(p.payload.size()));
+    if (!p.payload.empty()) writer.writeBytes(p.payload.data(), p.payload.size());
 
     return writer.release();
 }
@@ -476,21 +470,8 @@ std::vector<char> serializePacket(const ViewEventPacket& p)
 
     writer.write(p.sender);
     writer.write(p.action);
-    
-    auto index = p.value.index();
-
-    switch(index)
-    {
-    case 0:
-
-        writer.write(std::get<ItemStack>(p.value));
-        break;
-
-    case 1:
-
-        writer.writeString(std::get<std::string>(p.value));
-        break;
-    }
+    writer.write<uint32_t>(static_cast<uint32_t>(p.payload.size()));
+    if (!p.payload.empty()) writer.writeBytes(p.payload.data(), p.payload.size());
 
     return writer.release();
 }
@@ -631,21 +612,45 @@ ClientSnapshotPacket deserializeClientSnapshot(PacketReader& r)
     return packet;
 }
 
-std::vector<char> serializePacket(const CraftPacket& p)
+OpenViewPacket deserializeOpenView(PacketReader& r)
 {
-    PacketWriter writer(PacketType::Craft);
-
-    writer.write(static_cast<uint32_t>(p.requested_craft.itemID));
-    writer.write(p.requested_craft.quantity);
-
-    return writer.release();
+    OpenViewPacket p;
+    p.type = r.read<ViewType>();
+    return p;
 }
 
-CraftPacket deserializeCraft(PacketReader& r)
+CloseViewPacket deserializeCloseView(PacketReader& r)
 {
-    CraftPacket packet;
+    return CloseViewPacket();
+}
 
-    packet.requested_craft = {.itemID = static_cast<ItemID>(r.read<uint32_t>()), .quantity = r.read<uint32_t>()};
+SetContentPacket deserializeSetContent(PacketReader& r)
+{
+    SetContentPacket p;
 
-    return packet;
+    p.target = r.read<uint16_t>();
+
+    uint32_t size = r.read<uint32_t>();
+    if (size > 16 * 1024 * 1024) throw std::runtime_error("SetContent: payload too large");
+
+    p.payload.resize(size);
+    if (size > 0) r.readBytes(p.payload.data(), size);
+
+    return p;
+}
+
+ViewEventPacket deserializeViewEvent(PacketReader& r)
+{
+    ViewEventPacket p;
+
+    p.sender = r.read<uint16_t>();
+    p.action = r.read<uint8_t>();
+
+    uint32_t size = r.read<uint32_t>();
+    if (size > 16 * 1024 * 1024) throw std::runtime_error("ViewEvent: payload too large");
+
+    p.payload.resize(size);
+    if (size > 0) r.readBytes(p.payload.data(), size);
+
+    return p;
 }

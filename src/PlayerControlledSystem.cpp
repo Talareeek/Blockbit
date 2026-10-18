@@ -7,6 +7,7 @@
 #include "../include/ItemComponent.hpp"
 #include "../include/InventoryComponent.hpp"
 #include "../include/AnimationComponent.hpp"
+#include "../include/ChestView.hpp"
 
 void PlayerControlledSystem(World& world, float dt)
 {
@@ -104,6 +105,15 @@ void PlayerControlledSystem(World& world, float dt)
         if(player.mid_usage && player.since_last_use >= 0.05f)
         {
             sf::Vector2i block_position = block_from_position(player.cursor_position);
+
+            if(world.getBlock(block_position.x, block_position.y).id == BlockID::Chest && isBlockInRange(transform, block_position, 4.0f))
+            {
+                player.pending_view_opens.push_back(std::make_unique<ServerChestView>(block_position, id));
+                player.mid_usage = false;
+                player.since_last_use = 0.0f;
+                player.dirty = true;
+                continue;
+            }
 
             auto& selected = inventory.inventory.slots[inventory.selectedSlot];
 

@@ -23,6 +23,8 @@
 #include "../include/AnimationComponent.hpp"
 #include "../include/AnimationSystem.hpp"
 #include "../include/Prefab.hpp"
+#include "../include/ChestView.hpp"
+#include "../include/InventoryView.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -240,28 +242,32 @@ void GameServer::processIncoming()
 
                     break;
                 }
-                case PacketType::Craft:
+                case PacketType::ViewEvent:
                 {
-                    CraftPacket craft = deserializeCraft(reader);
-
-                    auto& recipe = recipes[craft.requested_craft];
+                    ViewEventPacket view_event = deserializeViewEvent(reader);
 
                     auto client_it = clients.find(packet.clientId);
                     if (client_it == clients.end()) break;
 
-                    auto entity_it = nickname_to_entity.find(client_it->second.nickname);
-                    if (entity_it == nickname_to_entity.end()) break;
+                    auto& view = client_it->second.content_view;
+                    if (!view) break;
 
+                    view->handleViewEvent(world, ViewEventData{view_event.sender, view_event.action, std::move(view_event.payload)});
 
-                    auto& crafter_inventory = world.getEntity(entity_it->second).getComponent<InventoryComponent>();
+                    break;
+                }
+                case PacketType::CloseView:
+                {
+                    (void)deserializeCloseView(reader);
 
-                    for(auto& ingredient : recipe.ingredients)
+                    auto client_it = clients.find(packet.clientId);
+                    if (client_it == clients.end()) break;
+
+                    if (client_it->second.content_view)
                     {
-                        crafter_inventory.inventory.removeItemWithLeftover(ingredient.itemID, ingredient.quantity);
+                        client_it->second.content_view->onClose(world);
+                        client_it->second.content_view.reset();
                     }
-
-                    crafter_inventory.inventory.addItemWithLeftover(craft.requested_craft.itemID, craft.requested_craft.quantity);
-                    crafter_inventory.dirty = true;
 
                     break;
                 }
@@ -345,6 +351,59 @@ void GameServer::broadcastSnapshot()
     for (auto& [id, entity] : world.getEntities()) entity.clearDirty();
 }
 
+void GameServer::dispatchPendingViewOpens()
+{
+    for (auto& [client_id, data] : clients)
+    {
+        auto entity_it = nickname_to_entity.find(data.nickname);
+        if (entity_it == nickname_to_entity.end()) continue;
+        if (!world.doesEntityExist(entity_it->second)) continue;
+
+        auto& entity = world.getEntity(entity_it->second);
+        if (!entity.hasComponent<PlayerControlledComponent>()) continue;
+
+        auto& queue = entity.getComponent<PlayerControlledComponent>().pending_view_opens;
+
+        while (!queue.empty())
+        {
+            std::unique_ptr<ServerView> requested = std::move(queue.front());
+            queue.pop_front();
+            if (!requested) continue;
+
+            ViewType type = requested->type();
+
+            if (data.content_view) data.content_view->onClose(world);
+            data.content_view = std::move(requested);
+
+            transport->send(client_id, serializePacket(OpenViewPacket{type}));
+
+            // Any content updates the view queued in its constructor are
+            // flushed in updateContentViews() right after this.
+        }
+    }
+}
+
+void GameServer::updateContentViews()
+{
+    for (auto& [client_id, data] : clients)
+    {
+        if (!data.content_view) continue;
+
+        data.content_view->update(world);
+
+        auto updates = data.content_view->drainPendingContentUpdates();
+
+        for (auto& update : updates)
+        {
+            SetContentPacket packet;
+            packet.target  = update.target;
+            packet.payload = std::move(update.payload);
+
+            transport->send(client_id, serializePacket(packet));
+        }
+    }
+}
+
 void GameServer::sendChat(const std::wstring& nickname, const std::wstring& message)
 {
     std::wstring final_message = nickname + L"> " + message + L'\n';
@@ -407,7 +466,14 @@ void GameServer::update(float dt)
             {
                 nickname_to_entity.erase(it);
 
+                if (data.content_view)
+                {
+                    data.content_view->onClose(world);
+                    data.content_view.reset();
+                }
+
                 transport->send(client_id, serializePacket(StopTrackingPacket{}));
+                transport->send(client_id, serializePacket(CloseViewPacket{}));
             }
         }
 
@@ -417,6 +483,9 @@ void GameServer::update(float dt)
         tick++;
 
         updatePlayerEntityConnections();
+
+        dispatchPendingViewOpens();
+        updateContentViews();
 
         streamChunksToClients();
         broadcastBlockUpdates();

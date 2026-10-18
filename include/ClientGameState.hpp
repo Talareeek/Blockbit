@@ -7,12 +7,12 @@
 #include "GameServer.hpp"
 #include "Packet.hpp"
 #include "HealthBar.hpp"
-#include "InventoryWidget.hpp"
 #include "Hotbar.hpp"
 #include "Input.hpp"
 #include "Chat.hpp"
 #include "ChatUI.hpp"
 #include "RCon.hpp"
+#include "View.hpp"
 
 #include <memory>
 #include "ClientWorld.hpp"
@@ -52,7 +52,7 @@ private:
     std::string nickname;
     bool login_sent = false;
     
-    std::optional<InventoryWidget> inventory_widget{nullptr};
+    std::unique_ptr<ClientView> content_view;
 
     bool player_ui_initialized = false;
 
@@ -72,6 +72,7 @@ private:
     ChatUI chat_ui;
 
     float chat_close_cooldown = 0.0f;
+    float view_close_cooldown = 0.0f;
 
     sf::Vector2<double> camera;
 

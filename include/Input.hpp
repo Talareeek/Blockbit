@@ -24,7 +24,9 @@ enum class InputType
     USE_STOP,
 
     DROP,
-    CHANGE_SLOT
+    CHANGE_SLOT,
+
+    OPEN_INVENTORY
 };
 
 struct ChangeSlotData

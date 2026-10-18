@@ -6,6 +6,7 @@
 #include "ServerWorld.hpp"
 #include "ServerTransport.hpp"
 #include "Input.hpp"
+#include "View.hpp"
 
 #include <memory>
 #include <string>
@@ -28,6 +29,8 @@ struct ClientData
     std::unordered_set<int> known_chunks;
     std::unordered_set<UUID> known_entities;
     std::string nickname;
+
+    std::unique_ptr<ServerView> content_view;
 };
 
 class GameServer
@@ -44,7 +47,6 @@ private:
     bool save_on_destruct = true;
 
     std::unordered_map<uint32_t, ClientData> clients;
-    std::unordered_map<uint32_t, std::unique_ptr<ServerView>> client_views;
     std::unordered_map<std::string, UUID> nickname_to_entity;
 
     std::unordered_set<uint32_t> known_clients;
@@ -66,6 +68,9 @@ private:
     void broadcastSnapshot();
 
     void updatePlayerEntityConnections();
+
+    void dispatchPendingViewOpens();
+    void updateContentViews();
 
     void handleBlockUpdates();
 
