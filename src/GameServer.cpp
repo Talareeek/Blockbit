@@ -446,13 +446,13 @@ void GameServer::update(float dt)
             }
         }
 
+        ChunkLoadSystem(world, dt);
         AISystem(world, dt);
         ExplosiveSystem(world, dt);
         HealthSystem(world, dt);
         PhysicsSystem(world, dt);
         PlayerControlledSystem(world, dt);
         InventorySystem(world);
-        ChunkLoadSystem(world, dt);
         ChunkUnloadSystem(world);
         DaycycleSystem(world, dt);
         AnimationSystem(world, dt);

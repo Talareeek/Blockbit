@@ -130,8 +130,8 @@ struct TransformComponent : public Component
 
     bool intersects(sf::Vector2<double> position, sf::Vector2<double> size) const
     {
-        sf::Rect<double> this_rect;
-        sf::Rect<double> other_rect;
+        sf::Rect<double> this_rect(this->position, this->size);
+        sf::Rect<double> other_rect(position, size);
 
         return this_rect.findIntersection(other_rect).has_value();
     }

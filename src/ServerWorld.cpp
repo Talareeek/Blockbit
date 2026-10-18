@@ -581,11 +581,12 @@ UUID ServerWorld::loadPlayer(std::string nickname)
 
     entity.deserialize(tag);
 
+    UUID id = entity.getID();
     addEntity(std::move(entity));
 
     std::cout << "Loaded entity for player " << nickname << '\n';
 
-    return entity.getID();
+    return id;
 }
 
 bool ServerWorld::playerFileExist(std::string nickname) const
