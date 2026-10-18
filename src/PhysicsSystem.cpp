@@ -141,6 +141,7 @@ void PhysicsSystem(World& world, float deltaTime)
                         {
                             uint32_t damage = (uint32_t)((fallVelocity - PhysicsComponent::SAFE_FALL_VELOCITY) * PhysicsComponent::FALL_DAMAGE_MULTIPLIER);
                             health.health = health.health > damage ? health.health - damage : 0;
+                            health.since_last_damaged = 0.0f;
                             health.dirty = true;
                         }
                     }

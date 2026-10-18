@@ -35,6 +35,7 @@ void TransformSystem(ServerWorld& world)
             auto& health = entity.getComponent<HealthComponent>();
 
             health.health -= 1;
+            health.since_last_damaged = 0.0f;
             health.dirty = true;
         }
 

@@ -12,6 +12,7 @@
 #include "../include/Item.hpp"
 #include "../include/PhysicsSystem.hpp"
 #include "../include/PlayerControlledComponent.hpp"
+#include "../include/HealthComponent.hpp"
 #include "../include/AnimationComponent.hpp"
 #include "../include/InventoryView.hpp"
 
@@ -20,6 +21,7 @@
 
 #include <iostream>
 #include <cmath>
+#include <limits>
 
 
 std::vector<Input> getInputs(const World& world, sf::Vector2<double> camera, const sf::RenderWindow& window)
@@ -166,6 +168,83 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
             {
                 player.mid_attack = true;
                 player.dirty = true;
+
+                const sf::Vector2<double> cursor = player.cursor_position;
+
+                UUID best_id{};
+                bool has_best = false;
+                float best_distance = std::numeric_limits<float>::infinity();
+
+                for(auto& [target_id, target_entity] : world.getEntities())
+                {
+                    if(target_id == id) continue;
+                    if(!target_entity.hasComponent<HealthComponent>()) continue;
+                    if(!target_entity.hasComponent<TransformComponent>()) continue;
+
+                    auto& target_health = target_entity.getComponent<HealthComponent>();
+                    if(!target_health.damageable) continue;
+                    if(target_health.health == 0) continue;
+
+                    auto& target_transform = target_entity.getComponent<TransformComponent>();
+
+                    const bool cursor_inside =
+                        cursor.x >= target_transform.position.x &&
+                        cursor.x <= target_transform.position.x + target_transform.size.x &&
+                        cursor.y >= target_transform.position.y &&
+                        cursor.y <= target_transform.position.y + target_transform.size.y;
+
+                    if(!cursor_inside) continue;
+
+                    const float distance = shortestDistance(transform, target_transform);
+                    if(distance > MAX_HIT_DISTANCE) continue;
+
+                    if(distance < best_distance)
+                    {
+                        best_distance = distance;
+                        best_id = target_id;
+                        has_best = true;
+                    }
+                }
+
+                if(has_best)
+                {
+                    auto& target_entity = world.getEntity(best_id);
+                    auto& target_health = target_entity.getComponent<HealthComponent>();
+                    auto& target_transform = target_entity.getComponent<TransformComponent>();
+
+                    target_health.health = (target_health.health > PLAYER_HIT_DAMAGE)
+                                           ? target_health.health - PLAYER_HIT_DAMAGE
+                                           : 0;
+                    target_health.since_last_damaged = 0.0f;
+                    target_health.dirty = true;
+
+                    if(target_entity.hasComponent<PhysicsComponent>())
+                    {
+                        auto& target_physics = target_entity.getComponent<PhysicsComponent>();
+
+                        const sf::Vector2<double> player_center = transform.center();
+                        const sf::Vector2<double> target_center = target_transform.center();
+
+                        sf::Vector2<double> direction = target_center - player_center;
+                        const double length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+
+                        if(length > 1e-6)
+                        {
+                            direction.x /= length;
+                            direction.y /= length;
+                        }
+                        else
+                        {
+                            direction = {1.0, 0.0};
+                        }
+
+                        const float strength = (MAX_HIT_DISTANCE - best_distance) * HIT_KNOCKBACK_SCALE;
+
+                        target_physics.velocity.x += static_cast<float>(direction.x) * strength;
+                        target_physics.velocity.y += HIT_KNOCKBACK_VERTICAL;
+                        target_physics.dirty = true;
+                    }
+                }
 
                 break;
             }

@@ -27,7 +27,7 @@ void PrefabRegistry::init()
 
         entity.addComponent(TransformComponent{{0.0f, 0.0f}, {0.75f, 1.0f}, sf::degrees(0.0f)});
         entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
-        entity.addComponent(HealthComponent{100, 100});
+        entity.addComponent(HealthComponent{100, 100, true});
 
         InventoryComponent inv(36);
         inv.inventory.slots[0] = {ItemID::Dynamite, 16};
@@ -80,7 +80,7 @@ void PrefabRegistry::init()
         entity.addComponent(TransformComponent{{0.0, 0.0}, {1.0f, 0.75f}, sf::degrees(0.0f)});
         entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
         entity.addComponent(RenderComponent{AssetManager::GameTextureID::Pig, {{0, 0}, {16, 12}}, {1.0f, 0.75f}});
-        entity.addComponent(HealthComponent{100, 100});
+        entity.addComponent(HealthComponent{100, 100, true});
 
         AIComponent ai;
         ai.personality = AIComponent::Personality::Passive;

@@ -9,15 +9,20 @@
 
 struct HealthComponent : public Component
 {
+    static constexpr float DAMAGE_FLASH_DURATION = 0.5f;
+
     uint32_t health = 0;
     uint32_t maxHealth = 0;
+    bool damageable = false;
+
+    float since_last_damaged = DAMAGE_FLASH_DURATION;
 
     HealthComponent()
     {
-        
+
     }
 
-    HealthComponent(uint32_t health, uint32_t maxHealth) : health(health), maxHealth(maxHealth)
+    HealthComponent(uint32_t health, uint32_t maxHealth, bool damageable = false) : health(health), maxHealth(maxHealth), damageable(damageable)
     {
 
     }
@@ -33,6 +38,8 @@ struct HealthComponent : public Component
 
         compound["health"] = Tag(health);
         compound["max_health"] = Tag(maxHealth);
+        compound["damageable"] = Tag(damageable);
+        compound["since_last_damaged"] = Tag(since_last_damaged);
 
         return Tag(compound);
     }
@@ -41,6 +48,11 @@ struct HealthComponent : public Component
     {
         health = tag["health"].get<uint32_t>();
         maxHealth = tag["max_health"].get<uint32_t>();
+
+        const auto& compound = tag.get<TagCompound>();
+
+        if(compound.count("damageable")) damageable = tag["damageable"].get<bool>();
+        if(compound.count("since_last_damaged")) since_last_damaged = tag["since_last_damaged"].get<float>();
     }
 
     std::unique_ptr<Component> clone() const override

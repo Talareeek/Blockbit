@@ -18,7 +18,7 @@ float randomDouble(double min, double max)
     return dist(gen);
 }
 
-void HealthSystem(World& world)
+void HealthSystem(World& world, float dt)
 {
     std::vector<UUID> toDelete;
 
@@ -28,6 +28,16 @@ void HealthSystem(World& world)
         if(!entity.hasComponent<HealthComponent>()) continue;
 
         auto& health = entity.getComponent<HealthComponent>();
+
+        if(health.since_last_damaged < HealthComponent::DAMAGE_FLASH_DURATION)
+        {
+            health.since_last_damaged += dt;
+            if(health.since_last_damaged > HealthComponent::DAMAGE_FLASH_DURATION)
+            {
+                health.since_last_damaged = HealthComponent::DAMAGE_FLASH_DURATION;
+            }
+            health.dirty = true;
+        }
 
         if(health.health <= 0)
         {

@@ -40,6 +40,7 @@ void ExplosiveSystem(World& world, float dt)
             {
                 auto& other_health = other.getComponent<HealthComponent>();
                 other_health.health -= static_cast<uint8_t>(damage);
+                other_health.since_last_damaged = 0.0f;
                 other_health.dirty = true;
             }
 

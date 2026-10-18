@@ -21,7 +21,14 @@ int positionToChunk(sf::Vector2<double> position);
 bool isInRange(TransformComponent& player, TransformComponent& target, float range);
 bool isBlockInRange(TransformComponent& player, sf::Vector2i& block, float range);
 
+float shortestDistance(const TransformComponent& a, const TransformComponent& b);
+
 float getTickStep(uint16_t tick_rate);
+
+constexpr float MAX_HIT_DISTANCE = 5.0f;
+constexpr float HIT_KNOCKBACK_SCALE = 4.0f;
+constexpr float HIT_KNOCKBACK_VERTICAL = 4.0f;
+constexpr uint32_t PLAYER_HIT_DAMAGE = 5;
 
 constexpr unsigned int WORLD_UNIT_SIZE_FACTOR = 12;
 std::filesystem::path getHomePath();

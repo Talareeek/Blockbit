@@ -44,6 +44,29 @@ bool isBlockInRange(TransformComponent& player, sf::Vector2i& block, float range
     return distance <= range;
 }
 
+float shortestDistance(const TransformComponent& a, const TransformComponent& b)
+{
+    const double a_min_x = a.position.x;
+    const double a_max_x = a.position.x + a.size.x;
+    const double a_min_y = a.position.y;
+    const double a_max_y = a.position.y + a.size.y;
+
+    const double b_min_x = b.position.x;
+    const double b_max_x = b.position.x + b.size.x;
+    const double b_min_y = b.position.y;
+    const double b_max_y = b.position.y + b.size.y;
+
+    double dx = 0.0;
+    if(b_min_x > a_max_x) dx = b_min_x - a_max_x;
+    else if(a_min_x > b_max_x) dx = a_min_x - b_max_x;
+
+    double dy = 0.0;
+    if(b_min_y > a_max_y) dy = b_min_y - a_max_y;
+    else if(a_min_y > b_max_y) dy = a_min_y - b_max_y;
+
+    return static_cast<float>(std::sqrt(dx * dx + dy * dy));
+}
+
 float getTickStep(uint16_t tick_rate)
 {
     return 1.0f / static_cast<float>(tick_rate);

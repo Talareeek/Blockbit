@@ -50,6 +50,22 @@ void RenderEntities(World& world, const sf::Vector2<double> camera, sf::RenderWi
         sf::Vector2f screen_position = {static_cast<float>(transform.render_position.x - camera.x), static_cast<float>(transform.render_position.y - camera.y)};
 
         sprite.setPosition({static_cast<float>(screen_position.x * unit_size), static_cast<float>(screen_position.y * unit_size)});
+
+        if(entity.hasComponent<HealthComponent>())
+        {
+            auto& health = entity.getComponent<HealthComponent>();
+
+            if(health.since_last_damaged < HealthComponent::DAMAGE_FLASH_DURATION)
+            {
+                const float progress = health.since_last_damaged / HealthComponent::DAMAGE_FLASH_DURATION;
+                const float intensity = 1.0f - std::clamp(progress, 0.0f, 1.0f);
+
+                const uint8_t fade = static_cast<uint8_t>(std::round(255.0f * (1.0f - intensity)));
+
+                sprite.setColor(sf::Color(255, fade, fade, 255));
+            }
+        }
+
         window.draw(sprite);
 
         if(entity.hasComponent<PlayerControlledComponent>())

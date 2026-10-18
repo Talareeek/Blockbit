@@ -448,7 +448,7 @@ void GameServer::update(float dt)
 
         AISystem(world, dt);
         ExplosiveSystem(world, dt);
-        HealthSystem(world);
+        HealthSystem(world, dt);
         PhysicsSystem(world, dt);
         PlayerControlledSystem(world, dt);
         InventorySystem(world);

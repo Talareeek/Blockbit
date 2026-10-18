@@ -4,6 +4,6 @@
 #include "World.hpp"
 #include <vector>
 
-extern void HealthSystem(World& world);
+extern void HealthSystem(World& world, float dt);
 
 #endif // HEALTH_SYSTEM_HPP

@@ -152,6 +152,7 @@ void AISystem(World& world, float dt)
                             hp.health = (hp.health > AIComponent::ATTACK_DAMAGE)
                                         ? hp.health - AIComponent::ATTACK_DAMAGE
                                         : 0;
+                            hp.since_last_damaged = 0.0f;
                             hp.dirty = true;
                         }
                         ai.attackCooldown = AIComponent::ATTACK_INTERVAL;
