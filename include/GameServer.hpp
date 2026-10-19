@@ -56,6 +56,9 @@ private:
     uint64_t tick = 0;
     sf::Clock update_clock;
 
+    uint32_t consecutive_tick_exceptions = 0;
+    bool unrecoverable = false;
+
     void spawnPlayerFor(std::string nickname);
     void deactivatePlayerFor(std::string nickname);
 
@@ -90,6 +93,7 @@ public:
     std::function<void(std::wstring)> onChatBroadcast;
 
     static constexpr uint16_t DEFAULT_PORT = 34500;
+    static constexpr uint32_t MAX_CONSECUTIVE_TICK_EXCEPTIONS = 100;
 
     ~GameServer();
 
@@ -97,6 +101,8 @@ public:
     uint16_t getTickRate() const;
 
     float getTickStep() const;
+
+    bool isUnrecoverable() const { return unrecoverable; }
 };
 
 extern bool isNicknameAllowed(std::string nickname);

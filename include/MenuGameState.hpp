@@ -68,6 +68,7 @@ public:
     void render(sf::RenderWindow& window) override;
 
     void onObscured() override;
+    void onRevealed() override;
 
     bool renderWhenObscured() override
     {

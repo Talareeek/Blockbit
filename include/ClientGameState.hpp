@@ -44,6 +44,7 @@ private:
     bool connection_failed = false;
     bool was_connected = false;
     bool connect_attempted = false;
+    bool server_unrecoverable = false;
 
     std::string error_message;
     std::string remote_address;

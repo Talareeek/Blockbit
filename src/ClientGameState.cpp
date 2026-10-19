@@ -397,6 +397,12 @@ void ClientGameState::onTick(float tick_step)
     if (local_server)
     {
         local_server->update(tick_step);
+
+        if (local_server->isUnrecoverable())
+        {
+            server_unrecoverable = true;
+            return;
+        }
     }
 
     if (transport)
@@ -472,6 +478,21 @@ void ClientGameState::handleEvent(const sf::Event& event)
 
 void ClientGameState::update(float dt)
 {
+    if (server_unrecoverable)
+    {
+        std::string title = "Server crashed";
+        std::string reason = "Reason: too many consecutive tick exceptions";
+        std::string hint = "Press ESC to go back";
+
+        Game* temp_game = game;
+        local_server.reset();
+        game->popState(this);
+
+        game->pushState(this, std::make_unique<AnnouncementState>(temp_game, title + '\n' + reason + '\n' + hint));
+
+        return;
+    }
+
     if (connection_failed)
     {
 

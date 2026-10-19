@@ -4,11 +4,14 @@
 #include "../include/AssetManager.hpp"
 #include "../include/ClientGameState.hpp"
 #include "../include/CreateWorldState.hpp"
+#include "../include/BBT.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <vector>
 
 namespace
 {
@@ -46,12 +49,35 @@ void WorldList::loadEntries()
         std::filesystem::path manifest = entry.path() / "manifest";
         if(!std::filesystem::exists(manifest)) continue;
 
-        std::ifstream file(manifest);
-        std::string name;
-        std::getline(file, name);
+        std::string name = entry.path().filename().string();
+
+        try
+        {
+            std::ifstream file(manifest, std::ios::ate | std::ios::binary);
+            if(!file) throw std::runtime_error("cannot open manifest");
+
+            std::streamsize size = file.tellg();
+            file.seekg(0, std::ios::beg);
+
+            std::vector<uint8_t> buffer(static_cast<size_t>(size));
+            file.read(reinterpret_cast<char*>(buffer.data()), size);
+
+            BBT root = BBT::load(buffer);
+            name = root["name"].get<std::string>();
+        }
+        catch(const std::exception& e)
+        {
+            std::cerr << "WorldList: failed to read manifest for " << entry.path() << ": " << e.what() << '\n';
+        }
 
         entries.emplace_back(name, entry.path());
     }
+}
+
+void WorldList::refresh()
+{
+    loadEntries();
+    scroll_offset = 0.0f;
 }
 
 sf::FloatRect WorldList::getTabBarArea() const

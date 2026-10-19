@@ -438,6 +438,8 @@ void GameServer::sendChat(const std::wstring& nickname, const std::wstring& mess
 
 void GameServer::update(float dt)
 {
+    if (unrecoverable) return;
+
     try
     {
         update_clock.restart();
@@ -512,20 +514,35 @@ void GameServer::update(float dt)
 
         if(std::max(time - 0.1f, getTickStep()) == time - 0.1f)
         {
-            std::cerr << "[Server] Server late in tick: " << tick << " by: " << time - getTickStep() << "s (is server overloaded?)" << '\n'; 
+            std::cerr << "[Server] Server late in tick: " << tick << " by: " << time - getTickStep() << "s (is server overloaded?)" << '\n';
         }
         else if(std::min(time + 0.1f, getTickStep()) == time + 0.1f)
         {
-            std::cerr << "[Server] Server ahead in tick: " << tick << " by: " << getTickStep() - time << "s" << '\n'; 
+            std::cerr << "[Server] Server ahead in tick: " << tick << " by: " << getTickStep() - time << "s" << '\n';
         }
+
+        consecutive_tick_exceptions = 0;
+
+        return;
     }
     catch(const std::bad_alloc&)
     {
-        std::cerr << "[Server] bad_alloc in tick\n";
+        ++consecutive_tick_exceptions;
+        std::cerr << "[Server] [" << consecutive_tick_exceptions << '/' << MAX_CONSECUTIVE_TICK_EXCEPTIONS
+                  << "] bad_alloc in tick\n";
     }
     catch (const std::exception& exception)
     {
-        std::cerr << "[Server] exception in tick: " << exception.what() << '\n';
+        ++consecutive_tick_exceptions;
+        std::cerr << "[Server] [" << consecutive_tick_exceptions << '/' << MAX_CONSECUTIVE_TICK_EXCEPTIONS
+                  << "] exception in tick: " << exception.what() << '\n';
+    }
+
+    if (consecutive_tick_exceptions >= MAX_CONSECUTIVE_TICK_EXCEPTIONS)
+    {
+        unrecoverable = true;
+        std::cerr << "[Server] " << consecutive_tick_exceptions
+                  << " consecutive tick exceptions; marking server as unrecoverable\n";
     }
 }
 

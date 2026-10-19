@@ -283,3 +283,10 @@ void MenuGameState::onObscured()
 
     game->jukebox.reset();
 }
+
+void MenuGameState::onRevealed()
+{
+    GameState::onRevealed();
+
+    worldList.refresh();
+}

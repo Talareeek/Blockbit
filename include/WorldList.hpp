@@ -71,6 +71,8 @@ public:
     WorldList() = default;
     WorldList(std::filesystem::path path, Game* game);
 
+    void refresh();
+
     std::string getIpText() const { return ipField.getText(); }
     bool multiplayerActive() const { return mode == Mode::VISIBLE && selection == Selection::MULTIPLAYER; }
     sf::FloatRect serverPreviewArea() const { return getServerPreviewArea(); }
