@@ -4,6 +4,11 @@
 #include "../include/PlayerControlledComponent.hpp"
 #include "../include/TransformComponent.hpp"
 #include "../include/AIComponent.hpp"
+#include "../include/BlockEntity.hpp"
+#include "../include/ChestBlockEntity.hpp"
+#include "../include/PhysicsComponent.hpp"
+#include "../include/ItemComponent.hpp"
+#include "../include/RenderComponent.hpp"
 
 #include <fstream>
 #include <zstd.h>
@@ -45,8 +50,37 @@ ServerWorld::ServerWorld(const std::filesystem::path path) : path{path}
 
 void ServerWorld::setBlock(int wx, int wy, Block block)
 {
+    Block previous = getBlock(wx, wy);
+
     World::setBlock(wx, wy, block);
     pending_block_updates.emplace_back(wx, wy);
+
+    if (previous.id != block.id)
+    {
+        if (previous.id == BlockID::Chest)
+        {
+            if (auto* chest = dynamic_cast<ChestBlockEntity*>(getBlockEntity(wx, wy)))
+            {
+                for (const auto& stack : chest->stacks)
+                {
+                    if (stack.empty()) continue;
+
+                    Entity drop(generateUUID());
+                    drop.addComponent(TransformComponent{{wx + 0.25, wy + 0.25}, {0.5f, 0.5f}, sf::degrees(0.0f)});
+                    drop.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
+                    drop.addComponent(ItemComponent(stack));
+                    drop.addComponent(RenderComponent{itemDatabase[stack.itemID].texture, {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
+                    addEntity(std::move(drop));
+                }
+            }
+            removeBlockEntity(wx, wy);
+        }
+
+        if (block.id == BlockID::Chest)
+        {
+            setBlockEntity(wx, wy, std::make_unique<ChestBlockEntity>(sf::Vector2i{wx, wy}));
+        }
+    }
 }
 
 void ServerWorld::addEntity(Entity entity)
@@ -245,6 +279,7 @@ void ServerWorld::saveChunk(int chunk_position)
 {
     saveChunkEnvironment(chunk_position);
     saveChunkEntities(chunk_position);
+    saveChunkBlockEntities(chunk_position);
 }
 
 static constexpr uint32_t CHUNK_FILE_MAGIC = 0x4B434242u;
@@ -369,10 +404,78 @@ void ServerWorld::saveChunkEntities(int chunk_position)
     stream.close();
 }
 
+void ServerWorld::saveChunkBlockEntities(int chunk_position)
+{
+    auto it = chunks.find(chunk_position);
+    if (it == chunks.end()) return;
+
+    BBT root("block_entities_" + std::to_string(chunk_position));
+
+    for (const auto& [key, entity] : it->second.block_entities)
+    {
+        if (!entity) continue;
+
+        TagCompound entry;
+        entry["type"] = Tag(static_cast<uint32_t>(entity->typeId()));
+        entry["x"] = Tag(static_cast<int32_t>(entity->position.x));
+        entry["y"] = Tag(static_cast<int32_t>(entity->position.y));
+        entry["data"] = entity->serialize();
+
+        root[std::to_string(key)] = Tag(entry);
+    }
+
+    std::ofstream stream(path / ("chunk_" + std::to_string(chunk_position)) / "block_entities", std::ios::binary);
+    if (!stream) return;
+
+    std::vector<uint8_t> buffer = root.save();
+    stream.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+}
+
+void ServerWorld::loadChunkBlockEntities(int chunk_position)
+{
+    std::filesystem::path file_path = path / ("chunk_" + std::to_string(chunk_position)) / "block_entities";
+
+    if (!std::filesystem::exists(file_path)) return;
+
+    std::ifstream stream(file_path, std::ios::ate | std::ios::binary);
+    if (!stream) return;
+
+    std::streamsize size = stream.tellg();
+    if (size <= 0) return;
+    stream.seekg(0, std::ios::beg);
+
+    std::vector<uint8_t> buffer(static_cast<size_t>(size));
+    stream.read(reinterpret_cast<char*>(buffer.data()), size);
+
+    BBT root = BBT::load(buffer);
+
+    Chunk& chunk = chunks[chunk_position];
+
+    for (const auto& [key_str, entry_tag] : root.root())
+    {
+        const auto& entry = entry_tag.get<TagCompound>();
+        auto type_it = entry.find("type");
+        auto x_it = entry.find("x");
+        auto y_it = entry.find("y");
+        auto data_it = entry.find("data");
+        if (type_it == entry.end() || x_it == entry.end() || y_it == entry.end() || data_it == entry.end()) continue;
+
+        sf::Vector2i wpos{x_it->second.get<int32_t>(), y_it->second.get<int32_t>()};
+        auto entity = BlockEntity::create(static_cast<BlockEntityID>(type_it->second.get<uint32_t>()), wpos);
+        if (!entity) continue;
+
+        entity->deserialize(data_it->second);
+
+        int local_x = wpos.x - chunk_position * CHUNK_WIDTH;
+        chunk.setBlockEntity(local_x, wpos.y, std::move(entity));
+    }
+}
+
 void ServerWorld::loadChunk(int chunk_position)
 {
     loadChunkEnvironment(chunk_position);
     loadChunkEntities(chunk_position);
+    loadChunkBlockEntities(chunk_position);
 }
 
 void ServerWorld::loadChunkEnvironment(int chunk_position)

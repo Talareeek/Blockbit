@@ -38,6 +38,7 @@ public:
     sf::Color outline_color{sf::Color::Black};
 
     bool clicked = false;
+    bool right_clicked = false;
 };
 
 #endif // SLOT_HPP

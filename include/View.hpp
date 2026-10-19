@@ -45,9 +45,18 @@ public:
     virtual void handleViewEvent(World& world, const ViewEventData& event_data) = 0;
     virtual void update(World& world) = 0;
 
+    // Called by the server immediately after the view becomes the active view
+    // for a client. Lets the view do world-touching setup it couldn't do in its
+    // constructor (eg. notifying a block entity that it has a new viewer).
+    virtual void onOpen(World& world) {}
+
     // Called by the server right before the view is destroyed, so views can
     // mutate the world (eg. drop a cursor-held stack as an item entity).
     virtual void onClose(World& world) = 0;
+
+    // Called every server tick. If it returns true the server will close the
+    // view (eg. the player has walked out of reach of the backing block).
+    virtual bool shouldClose(World& world) const { (void)world; return false; }
 
     virtual std::deque<SetContentData> drainPendingContentUpdates() = 0;
 

@@ -122,6 +122,11 @@ void GameServer::syncConnections()
         auto it = clients.find(client_id);
         if (it != clients.end())
         {
+            if (it->second.content_view)
+            {
+                it->second.content_view->onClose(world);
+                it->second.content_view.reset();
+            }
             deactivatePlayerFor(it->second.nickname);
             clients.erase(it);
         }
@@ -377,6 +382,8 @@ void GameServer::dispatchPendingViewOpens()
 
             transport->send(client_id, serializePacket(OpenViewPacket{type}));
 
+            data.content_view->onOpen(world);
+
             // Any content updates the view queued in its constructor are
             // flushed in updateContentViews() right after this.
         }
@@ -388,6 +395,14 @@ void GameServer::updateContentViews()
     for (auto& [client_id, data] : clients)
     {
         if (!data.content_view) continue;
+
+        if (data.content_view->shouldClose(world))
+        {
+            data.content_view->onClose(world);
+            data.content_view.reset();
+            transport->send(client_id, serializePacket(CloseViewPacket{}));
+            continue;
+        }
 
         data.content_view->update(world);
 

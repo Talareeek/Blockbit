@@ -46,6 +46,10 @@ public:
     virtual void setBlock(int wx, int wy, Block block);
     void setBlock(sf::Vector2i position, Block block);
 
+    BlockEntity* getBlockEntity(int world_x, int world_y);
+    void setBlockEntity(int world_x, int world_y, std::unique_ptr<BlockEntity> entity);
+    void removeBlockEntity(int world_x, int world_y);
+
     std::unordered_map<int, Chunk>& getChunks();
 
     std::vector<UUID> getPlayerEntityIDs() const;

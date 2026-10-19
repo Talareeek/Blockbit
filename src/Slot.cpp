@@ -33,7 +33,9 @@ void Slot::handleEvent(const sf::Event& event)
     {
         if(hovered)
         {
-            clicked = event.getIf<sf::Event::MouseButtonPressed>()->button == sf::Mouse::Button::Left;
+            auto button = event.getIf<sf::Event::MouseButtonPressed>()->button;
+            if(button == sf::Mouse::Button::Left)       clicked = true;
+            else if(button == sf::Mouse::Button::Right) right_clicked = true;
         }
     }
 }

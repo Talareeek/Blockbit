@@ -113,11 +113,22 @@ inline auto water_render_rect = [](Block block_instance) -> sf::IntRect
 
 inline auto chest_render_bounds = [](Block block_instance) -> sf::FloatRect
 {
+    // Open chest (metadata = 1) is drawn shorter so the lid area appears
+    // "lifted" — the client has no second texture, so the state change is
+    // conveyed by shrinking the top-of-the-sprite.
+    if (block_instance.metadata == 1)
+    {
+        return {{1.0f / 16.0f, 0.0f}, {14.0f / 16.0f, 9.0f / 16.0f}};
+    }
     return {{1.0f / 16.0f, 0.0f}, {14.0f / 16.0f, 14.0f / 16.0f}};
 };
 
 inline auto chest_render_rect = [](Block block_instance) -> sf::IntRect
 {
+    if (block_instance.metadata == 1)
+    {
+        return {{1, 2}, {14, 9}};
+    }
     return {{1, 2}, {14, 14}};
 };
 

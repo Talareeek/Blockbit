@@ -6,11 +6,14 @@
 #include "UUID.hpp"
 #include "Slot.hpp"
 
-// A chest view presents two 36-slot grids on top of each other: the chest's
-// own stacks (targets 0..35) and the player's inventory (targets 36..71).
-// Each SetContent/ViewEvent payload for this view type is simply the raw
-// bytes of an ItemStack. The sender of a ViewEvent is the slot index that
-// was clicked and the action is one of ChestViewAction below.
+#include <array>
+#include <cstdint>
+#include <deque>
+
+// A chest view presents two grids on top of each other: the chest's own 36
+// stacks (targets 0..35) and the player's inventory (targets 36..71). Target
+// 72 is the cursor stack that follows the mouse, Minecraft-style. The
+// payload for every SetContent / ViewEvent is the raw bytes of an ItemStack.
 
 enum class ChestViewAction : uint8_t
 {
@@ -18,29 +21,38 @@ enum class ChestViewAction : uint8_t
     RightClick = 1
 };
 
-inline constexpr uint16_t CHEST_VIEW_SLOT_COUNT    = 72;
 inline constexpr uint16_t CHEST_VIEW_CHEST_OFFSET  = 0;
 inline constexpr uint16_t CHEST_VIEW_PLAYER_OFFSET = 36;
+inline constexpr uint16_t CHEST_VIEW_CURSOR_SLOT   = 72;
+inline constexpr uint16_t CHEST_VIEW_SLOT_COUNT    = 73;
 
 class BaseChestView
 {
 public:
 
-    ItemStack chest_stacks[36]     = {};
-    ItemStack inventory_stacks[36] = {};
+    std::array<ItemStack, 36> chest_stacks{};
+    std::array<ItemStack, 36> inventory_stacks{};
 };
 
 class ServerChestView : public BaseChestView, public ServerView
 {
 private:
 
+    sf::Vector2i chest_position;
     UUID inventory_owner;
+
+    ItemStack cursor_stack{ItemID::None, 0};
+
+    std::array<ItemStack, 36> last_chest{};
+    std::array<ItemStack, 36> last_inventory{};
+    ItemStack last_cursor{ItemID::None, 0};
 
     std::deque<SetContentData> pending;
 
-    sf::Vector2i chest_position;
-
     void pushSlotUpdate(uint16_t slot, const ItemStack& stack);
+
+    void handleLeftClick(World& world, uint16_t slot);
+    void handleRightClick(World& world, uint16_t slot);
 
 public:
 
@@ -50,7 +62,9 @@ public:
 
     void handleViewEvent(World& world, const ViewEventData& event_data) override;
     void update(World& world) override;
+    void onOpen(World& world) override;
     void onClose(World& world) override;
+    bool shouldClose(World& world) const override;
 
     std::deque<SetContentData> drainPendingContentUpdates() override;
 };
@@ -59,9 +73,14 @@ class ClientChestView : public BaseChestView, public ClientView
 {
 private:
 
+    ItemStack cursor_stack{ItemID::None, 0};
+
     std::deque<ViewEventData> pending;
 
-    Slot slots[CHEST_VIEW_SLOT_COUNT];
+    Slot slots[CHEST_VIEW_CHEST_OFFSET + 36 + 36];
+
+    void pushClick(uint16_t slot, ChestViewAction action, const ItemStack& stack);
+    void renderCursor(sf::RenderWindow& window);
 
 public:
 

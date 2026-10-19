@@ -26,22 +26,16 @@
 
 Chunk& World::getChunk(int chunk_position)
 {
-    if(chunks.contains(chunk_position))
-    {
-        return chunks.at(chunk_position);
-    }
-    else
-    {
-        Chunk chunk{};
-        chunk.chunk_position = chunk_position;
-        chunk.dirty = true;
-        chunk.meshDirty = true;
-        chunk.generated = false;
+    auto it = chunks.find(chunk_position);
+    if (it != chunks.end()) return it->second;
 
-        chunks[chunk_position] = chunk;
+    Chunk& chunk = chunks[chunk_position];
+    chunk.chunk_position = chunk_position;
+    chunk.dirty = true;
+    chunk.meshDirty = true;
+    chunk.generated = false;
 
-        return chunk;
-    }
+    return chunk;
 }
 
 
@@ -99,6 +93,47 @@ void World::setBlock(int wx, int wy, Block block)
 void World::setBlock(sf::Vector2i position, Block block)
 {
     setBlock(position.x, position.y, block);
+}
+
+BlockEntity* World::getBlockEntity(int world_x, int world_y)
+{
+    if(world_y < 0 || world_y >= CHUNK_HEIGHT) return nullptr;
+
+    int chunk_position = (world_x >= 0) ? world_x / CHUNK_WIDTH : (world_x - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
+
+    auto it = chunks.find(chunk_position);
+    if(it == chunks.end()) return nullptr;
+
+    int local_x = world_x - chunk_position * CHUNK_WIDTH;
+    return it->second.getBlockEntity(local_x, world_y);
+}
+
+void World::setBlockEntity(int world_x, int world_y, std::unique_ptr<BlockEntity> entity)
+{
+    if(world_y < 0 || world_y >= CHUNK_HEIGHT) return;
+
+    int chunk_position = (world_x >= 0) ? world_x / CHUNK_WIDTH : (world_x - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
+
+    auto it = chunks.find(chunk_position);
+    if(it == chunks.end()) return;
+
+    int local_x = world_x - chunk_position * CHUNK_WIDTH;
+    it->second.setBlockEntity(local_x, world_y, std::move(entity));
+    it->second.dirty = true;
+}
+
+void World::removeBlockEntity(int world_x, int world_y)
+{
+    if(world_y < 0 || world_y >= CHUNK_HEIGHT) return;
+
+    int chunk_position = (world_x >= 0) ? world_x / CHUNK_WIDTH : (world_x - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
+
+    auto it = chunks.find(chunk_position);
+    if(it == chunks.end()) return;
+
+    int local_x = world_x - chunk_position * CHUNK_WIDTH;
+    it->second.removeBlockEntity(local_x, world_y);
+    it->second.dirty = true;
 }
 
 std::unordered_map<int, Chunk>& World::getChunks()

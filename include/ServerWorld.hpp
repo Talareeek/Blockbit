@@ -62,11 +62,13 @@ public:
     void saveChunk(int chunk_position);
     void saveChunkEnvironment(int chunk_position);
     void saveChunkEntities(int chunk_position);
+    void saveChunkBlockEntities(int chunk_position);
     void savePlayer(UUID entity_id);
 
-    void loadChunk(int chunk_position);   
-    void loadChunkEnvironment(int chunk_position); 
+    void loadChunk(int chunk_position);
+    void loadChunkEnvironment(int chunk_position);
     void loadChunkEntities(int chunk_position);
+    void loadChunkBlockEntities(int chunk_position);
     UUID loadPlayer(std::string nickname);
     
 

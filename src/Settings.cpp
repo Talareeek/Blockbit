@@ -12,7 +12,7 @@ namespace
 {
     std::filesystem::path settingsFilePath()
     {
-        return getHomePath() / "settings.json";
+        return getHomePath() / "Blockbit" / "settings.json";
     }
 }
 

@@ -52,6 +52,7 @@ Game::Game()
     AssetManager::loadUITexture(AssetManager::UITextureID::Hotbar, "resources/textures/hotbar.png");
     AssetManager::loadUITexture(AssetManager::UITextureID::UIBackground, "resources/textures/ui_background.png");
     AssetManager::loadUITexture(AssetManager::UITextureID::Logo, "resources/textures/logo.png");
+    AssetManager::loadUITexture(AssetManager::UITextureID::Chest, "resources/textures/chest_view.png");
 
 
     //GAME TEXTURES

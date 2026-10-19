@@ -75,7 +75,8 @@ public:
         Inventory,
         Hotbar,
         UIBackground,
-        Logo
+        Logo,
+        Chest
     };
 
     enum class FontID : uint32_t
