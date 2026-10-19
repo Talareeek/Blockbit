@@ -135,7 +135,9 @@ struct ItemData
 
     std::optional<ToolProperties> tool;
 
-    std::function<bool(World& world, sf::Vector2f mouse, UUID user)> onUse = [](World&, sf::Vector2f, UUID) -> bool {return false;};    
+    std::optional<uint32_t> maxDurability;
+
+    std::function<bool(World& world, sf::Vector2f mouse, UUID user)> onUse = [](World&, sf::Vector2f, UUID) -> bool {return false;};
 };
 
 extern std::unordered_map<ItemID, ItemData> itemDatabase;
@@ -145,7 +147,11 @@ struct ItemStack
     ItemID itemID;
     uint32_t quantity;
 
+    std::optional<UUID> instanceID;
+
     bool empty() const;
+
+    bool isUnique() const { return instanceID.has_value(); }
 };
 
 struct Inventory
@@ -155,6 +161,8 @@ struct Inventory
     Inventory(size_t size);
 
     ItemStack addItemWithLeftover(ItemID itemID, uint32_t quantity);
+
+    ItemStack addStackWithLeftover(ItemStack stack);
 
     ItemStack removeItemWithLeftover(ItemID itemID, uint32_t quantity);
 };
@@ -170,7 +178,7 @@ struct Recipe
 
 inline bool operator==(const ItemStack& a, const ItemStack& b)
 {
-    return a.itemID == b.itemID && a.quantity == b.quantity;
+    return a.itemID == b.itemID && a.quantity == b.quantity && a.instanceID == b.instanceID;
 }
 
 namespace std
@@ -182,12 +190,21 @@ namespace std
         {
             size_t h1 = std::hash<uint32_t>{}(static_cast<uint32_t>(stack.itemID));
             size_t h2 = std::hash<uint32_t>{}(stack.quantity);
+            size_t h = h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
 
-            return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
+            if (stack.instanceID.has_value())
+            {
+                size_t h3 = std::hash<UUID>{}(*stack.instanceID);
+                h ^= h3 + 0x9e3779b9 + (h << 6) + (h >> 2);
+            }
+
+            return h;
         }
     };
 }
 
 extern std::unordered_map<ItemStack, Recipe> recipes;
+
+extern bool canStack(const ItemStack& a, const ItemStack& b);
 
 #endif // ITEM_HPP

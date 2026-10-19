@@ -695,6 +695,12 @@ bool ItemStack::empty() const
     return itemID == ItemID::None || quantity == 0;
 }
 
+bool canStack(const ItemStack& a, const ItemStack& b)
+{
+    if (a.instanceID.has_value() || b.instanceID.has_value()) return false;
+    return a.itemID == b.itemID;
+}
+
 Inventory::Inventory(size_t size)
 {
     slots.resize(size, {ItemID::None, 0});
@@ -706,7 +712,7 @@ bool addItem(Inventory& inventory, ItemID itemID, uint32_t quantity)
 
     for(auto& slot : inventory.slots)
     {
-        if(slot.itemID == itemID && slot.quantity < data.maxStackSize)
+        if(slot.itemID == itemID && !slot.instanceID.has_value() && slot.quantity < data.maxStackSize)
         {
             uint32_t space = data.maxStackSize - slot.quantity;
             uint32_t add = std::min(space, quantity);
@@ -742,7 +748,7 @@ ItemStack Inventory::addItemWithLeftover(ItemID itemID, uint32_t quantity)
 
     for(auto& slot : slots)
     {
-        if(slot.itemID == itemID && slot.quantity < data.maxStackSize)
+        if(slot.itemID == itemID && !slot.instanceID.has_value() && slot.quantity < data.maxStackSize)
         {
             uint32_t space = data.maxStackSize - slot.quantity;
             uint32_t add = std::min(space, quantity);
@@ -772,13 +778,34 @@ ItemStack Inventory::addItemWithLeftover(ItemID itemID, uint32_t quantity)
     return {itemID, quantity};
 }
 
+ItemStack Inventory::addStackWithLeftover(ItemStack stack)
+{
+    if (stack.empty()) return {ItemID::None, 0};
+
+    if (stack.instanceID.has_value())
+    {
+        for (auto& slot : slots)
+        {
+            if (slot.empty())
+            {
+                slot = stack;
+                return {ItemID::None, 0};
+            }
+        }
+        return stack;
+    }
+
+    ItemStack leftover = addItemWithLeftover(stack.itemID, stack.quantity);
+    return leftover;
+}
+
 ItemStack Inventory::removeItemWithLeftover(ItemID itemID, uint32_t quantity)
 {
     for(auto& slot : slots)
     {
         if(quantity == 0) return {ItemID::None, 0};
 
-        if(slot.itemID == itemID)
+        if(slot.itemID == itemID && !slot.instanceID.has_value())
         {
             uint32_t remove = std::min(slot.quantity, quantity);
 

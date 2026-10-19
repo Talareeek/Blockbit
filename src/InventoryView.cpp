@@ -62,7 +62,7 @@ void ServerInventoryView::handleLeftClick(World& world, uint16_t slot)
         stack = cursor_stack;
         cursor_stack = {ItemID::None, 0};
     }
-    else if (stack.itemID == cursor_stack.itemID)
+    else if (canStack(stack, cursor_stack))
     {
         uint32_t max_stack = itemDatabase[stack.itemID].maxStackSize;
         uint32_t can_add = std::min(cursor_stack.quantity, (max_stack > stack.quantity) ? (max_stack - stack.quantity) : 0u);
@@ -91,17 +91,33 @@ void ServerInventoryView::handleRightClick(World& world, uint16_t slot)
     if (cursor_stack.empty())
     {
         if (stack.empty()) return;
-        uint32_t half = (stack.quantity + 1) / 2;
-        cursor_stack = {stack.itemID, half};
-        stack.quantity -= half;
-        if (stack.quantity == 0) stack.itemID = ItemID::None;
+        if (stack.isUnique())
+        {
+            cursor_stack = stack;
+            stack = {ItemID::None, 0};
+        }
+        else
+        {
+            uint32_t half = (stack.quantity + 1) / 2;
+            cursor_stack = {stack.itemID, half};
+            stack.quantity -= half;
+            if (stack.quantity == 0) stack.itemID = ItemID::None;
+        }
     }
     else if (stack.empty())
     {
-        stack = {cursor_stack.itemID, 1};
-        if (--cursor_stack.quantity == 0) cursor_stack = {ItemID::None, 0};
+        if (cursor_stack.isUnique())
+        {
+            stack = cursor_stack;
+            cursor_stack = {ItemID::None, 0};
+        }
+        else
+        {
+            stack = {cursor_stack.itemID, 1};
+            if (--cursor_stack.quantity == 0) cursor_stack = {ItemID::None, 0};
+        }
     }
-    else if (stack.itemID == cursor_stack.itemID)
+    else if (canStack(stack, cursor_stack))
     {
         uint32_t max_stack = itemDatabase[stack.itemID].maxStackSize;
         if (stack.quantity < max_stack)
@@ -183,14 +199,18 @@ void ServerInventoryView::update(World& world)
 
     for (uint16_t i = 0; i < count; ++i)
     {
-        if (inventory.slots[i].itemID != last_slots[i].itemID || inventory.slots[i].quantity != last_slots[i].quantity)
+        if (inventory.slots[i].itemID != last_slots[i].itemID
+            || inventory.slots[i].quantity != last_slots[i].quantity
+            || !(inventory.slots[i].instanceID == last_slots[i].instanceID))
         {
             last_slots[i] = inventory.slots[i];
             pushSlotUpdate(i, inventory.slots[i]);
         }
     }
 
-    if (cursor_stack.itemID != last_cursor.itemID || cursor_stack.quantity != last_cursor.quantity)
+    if (cursor_stack.itemID != last_cursor.itemID
+        || cursor_stack.quantity != last_cursor.quantity
+        || !(cursor_stack.instanceID == last_cursor.instanceID))
     {
         last_cursor = cursor_stack;
         pushSlotUpdate(INVENTORY_VIEW_CURSOR_SLOT, cursor_stack);
@@ -206,7 +226,7 @@ void ServerInventoryView::onClose(World& world)
     if (!player.hasComponent<InventoryComponent>()) return;
 
     auto& inventory = player.getComponent<InventoryComponent>().inventory;
-    ItemStack leftover = inventory.addItemWithLeftover(cursor_stack.itemID, cursor_stack.quantity);
+    ItemStack leftover = inventory.addStackWithLeftover(cursor_stack);
     player.getComponent<InventoryComponent>().dirty = true;
 
     cursor_stack = {ItemID::None, 0};

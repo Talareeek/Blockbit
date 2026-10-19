@@ -48,6 +48,11 @@ struct ItemComponent : public Component
         compound["item_id"] = Tag(static_cast<uint32_t>(item.itemID));
         compound["quantity"] = Tag(item.quantity);
 
+        if (item.instanceID.has_value())
+        {
+            compound["instance_id"] = Tag(item.instanceID->toString());
+        }
+
         return Tag(compound);
     }
 
@@ -55,6 +60,13 @@ struct ItemComponent : public Component
     {
         item.itemID = static_cast<ItemID>(tag["item_id"].get<uint32_t>());
         item.quantity = tag["quantity"].get<uint32_t>();
+
+        item.instanceID.reset();
+        const auto& compound = tag.get<TagCompound>();
+        if (auto iid = compound.find("instance_id"); iid != compound.end())
+        {
+            item.instanceID = uuidFromString(iid->second.get<std::string>());
+        }
     }
 
     std::unique_ptr<Component> clone() const override

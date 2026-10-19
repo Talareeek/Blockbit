@@ -8,6 +8,7 @@
 #include "../include/ChestBlockEntity.hpp"
 #include "../include/PhysicsComponent.hpp"
 #include "../include/ItemComponent.hpp"
+#include "../include/ItemInstance.hpp"
 #include "../include/RenderComponent.hpp"
 
 #include <fstream>
@@ -116,6 +117,7 @@ void ServerWorld::save()
 {
     saveManifest();
     saveData();
+    saveItemInstances();
 
     for(auto& [chunk_position, chunk] : chunks)
     {
@@ -132,6 +134,7 @@ void ServerWorld::load()
 
     loadManifest();
     loadData();
+    loadItemInstances();
 
     perlin = PerlinNoise(seed);
 }
@@ -274,6 +277,40 @@ void ServerWorld::loadData()
     world_generator = makeWorldGenerator(seed, generation_properties);
 }
 
+
+void ServerWorld::saveItemInstances()
+{
+    BBT root("item_instances");
+    root.root() = serializeItemInstances().get<TagCompound>();
+
+    std::ofstream file(path / "item_instances", std::ios::out | std::ios::binary);
+    if (!file) return;
+
+    std::vector<uint8_t> buffer = root.save();
+    file.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+}
+
+void ServerWorld::loadItemInstances()
+{
+    itemInstances.clear();
+
+    std::filesystem::path file_path = path / "item_instances";
+    if (!std::filesystem::exists(file_path)) return;
+
+    std::ifstream file(file_path, std::ios::ate | std::ios::binary);
+    if (!file) return;
+
+    std::streamsize size = file.tellg();
+    if (size <= 0) return;
+    file.seekg(0, std::ios::beg);
+
+    std::vector<uint8_t> buffer(static_cast<size_t>(size));
+    file.read(reinterpret_cast<char*>(buffer.data()), size);
+
+    BBT root = BBT::load(buffer);
+
+    deserializeItemInstances(Tag(root.root()));
+}
 
 void ServerWorld::saveChunk(int chunk_position)
 {

@@ -98,7 +98,7 @@ void ServerChestView::handleLeftClick(World& world, uint16_t slot)
         stack = cursor_stack;
         cursor_stack = {ItemID::None, 0};
     }
-    else if (stack.itemID == cursor_stack.itemID)
+    else if (canStack(stack, cursor_stack))
     {
         uint32_t max_stack = itemDatabase[stack.itemID].maxStackSize;
         uint32_t can_add = std::min(cursor_stack.quantity, (max_stack > stack.quantity) ? (max_stack - stack.quantity) : 0u);
@@ -138,17 +138,33 @@ void ServerChestView::handleRightClick(World& world, uint16_t slot)
     if (cursor_stack.empty())
     {
         if (stack.empty()) return;
-        uint32_t half = (stack.quantity + 1) / 2;
-        cursor_stack = {stack.itemID, half};
-        stack.quantity -= half;
-        if (stack.quantity == 0) stack.itemID = ItemID::None;
+        if (stack.isUnique())
+        {
+            cursor_stack = stack;
+            stack = {ItemID::None, 0};
+        }
+        else
+        {
+            uint32_t half = (stack.quantity + 1) / 2;
+            cursor_stack = {stack.itemID, half};
+            stack.quantity -= half;
+            if (stack.quantity == 0) stack.itemID = ItemID::None;
+        }
     }
     else if (stack.empty())
     {
-        stack = {cursor_stack.itemID, 1};
-        if (--cursor_stack.quantity == 0) cursor_stack = {ItemID::None, 0};
+        if (cursor_stack.isUnique())
+        {
+            stack = cursor_stack;
+            cursor_stack = {ItemID::None, 0};
+        }
+        else
+        {
+            stack = {cursor_stack.itemID, 1};
+            if (--cursor_stack.quantity == 0) cursor_stack = {ItemID::None, 0};
+        }
     }
-    else if (stack.itemID == cursor_stack.itemID)
+    else if (canStack(stack, cursor_stack))
     {
         uint32_t max_stack = itemDatabase[stack.itemID].maxStackSize;
         if (stack.quantity < max_stack)
@@ -281,7 +297,7 @@ void ServerChestView::onClose(World& world)
     if (!player.hasComponent<InventoryComponent>()) return;
 
     auto& inventory = player.getComponent<InventoryComponent>().inventory;
-    ItemStack leftover = inventory.addItemWithLeftover(cursor_stack.itemID, cursor_stack.quantity);
+    ItemStack leftover = inventory.addStackWithLeftover(cursor_stack);
     player.getComponent<InventoryComponent>().dirty = true;
 
     cursor_stack = {ItemID::None, 0};

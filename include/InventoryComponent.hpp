@@ -81,6 +81,11 @@ struct InventoryComponent : public Component
             slot_compound["item_id"] = Tag(static_cast<uint32_t>(slot.itemID));
             slot_compound["quantity"] = Tag(slot.quantity);
 
+            if (slot.instanceID.has_value())
+            {
+                slot_compound["instance_id"] = Tag(slot.instanceID->toString());
+            }
+
             compound["slots"].get<TagList>().push_back(Tag(slot_compound));
         }
 
@@ -104,6 +109,12 @@ struct InventoryComponent : public Component
 
             inventory.slots[i].itemID = static_cast<ItemID>(slot.at("item_id").get<uint32_t>());
             inventory.slots[i].quantity = slot.at("quantity").get<uint32_t>();
+
+            inventory.slots[i].instanceID.reset();
+            if (auto iid = slot.find("instance_id"); iid != slot.end())
+            {
+                inventory.slots[i].instanceID = uuidFromString(iid->second.get<std::string>());
+            }
         }
     }
 

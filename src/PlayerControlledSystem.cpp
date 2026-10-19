@@ -177,7 +177,7 @@ void PlayerControlledSystem(World& world, float dt)
             item.addComponent(PhysicsComponent{sf::Vector2f(player.cursor_position - transform.position), {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
             item.addComponent(RenderComponent{itemDatabase[stack.itemID].texture, {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
 
-            if(player.drops_full_stack)
+            if(player.drops_full_stack || stack.isUnique())
             {
                 item.addComponent(ItemComponent{stack});
 

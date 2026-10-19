@@ -58,6 +58,10 @@ public:
     void saveData();
     void loadData();
 
+    // ITEM INSTANCES
+    void saveItemInstances();
+    void loadItemInstances();
+
     // CHUNK
     void saveChunk(int chunk_position);
     void saveChunkEnvironment(int chunk_position);

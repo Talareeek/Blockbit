@@ -21,6 +21,10 @@ Tag ChestBlockEntity::serialize() const
         TagCompound slot;
         slot["item_id"] = Tag(static_cast<uint32_t>(stack.itemID));
         slot["quantity"] = Tag(stack.quantity);
+        if (stack.instanceID.has_value())
+        {
+            slot["instance_id"] = Tag(stack.instanceID->toString());
+        }
         slot_list.push_back(Tag(slot));
     }
 
@@ -51,6 +55,12 @@ void ChestBlockEntity::deserialize(const Tag& tag)
 
         stacks[i].itemID = static_cast<ItemID>(id_it->second.get<uint32_t>());
         stacks[i].quantity = qty_it->second.get<uint32_t>();
+
+        stacks[i].instanceID.reset();
+        if (auto iid = slot.find("instance_id"); iid != slot.end())
+        {
+            stacks[i].instanceID = uuidFromString(iid->second.get<std::string>());
+        }
     }
 }
 
