@@ -38,6 +38,8 @@ public:
         Coarse_Dirt,
         Snow,
         Chest,
+        Bricks,
+        Furnace,
 
 
         // ITEMS
@@ -99,7 +101,8 @@ public:
     enum class ShaderID : uint32_t
     {
         Sun,
-        Brightness
+        Brightness,
+        BlockAnimation
     };
 
     enum class SoundID : uint32_t

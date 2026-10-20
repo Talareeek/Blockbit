@@ -623,6 +623,29 @@ void ClientGameState::update(float dt)
 
     AnimationSystem(local_world, dt);
 
+    furnace_animation_timer += dt;
+    if (furnace_animation_timer >= 1.0f)
+    {
+        furnace_animation_timer -= 1.0f;
+
+        for (auto& [chunk_position, chunk] : local_world.getChunks())
+        {
+            for (int y = 0; y < CHUNK_HEIGHT; ++y)
+            {
+                for (int x = 0; x < CHUNK_WIDTH; ++x)
+                {
+                    if (chunk.blocks[y][x].id == BlockID::Furnace &&
+                        chunk.blocks[y][x].metadata == 0)
+                    {
+                        chunk.meshDirty = true;
+                        goto next_chunk;
+                    }
+                }
+            }
+            next_chunk:;
+        }
+    }
+
     NetworkInterpolationSystem(local_world, latest_tick, getTickStep(tick_rate));
 
     game->getConsole().assignWorld(local_server.has_value() ? &local_server->getWorld() : &local_world);

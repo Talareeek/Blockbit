@@ -29,7 +29,11 @@ namespace
         return t * t * (3.0f - 2.0f * t);
     }
 
-    void appendQuad(sf::VertexArray& vertex_array, const sf::FloatRect& bounds, const sf::IntRect& uv)
+    // Pack animation into vertex color so a frame change doesn't trigger a
+    // mesh rebuild. See resources/shaders/block_animation.frag for the layout:
+    //   R = frame_count       G = frame_width_texels
+    //   B = frame_duration_cs A = 255
+    void appendQuad(sf::VertexArray& vertex_array, const sf::FloatRect& bounds, const sf::IntRect& uv, sf::Color anim)
     {
         sf::Vertex vertex0, vertex1, vertex2, vertex3;
 
@@ -51,6 +55,11 @@ namespace
         vertex2.texCoords = {u1, v0y};
         vertex3.texCoords = {u0, v0y};
 
+        vertex0.color = anim;
+        vertex1.color = anim;
+        vertex2.color = anim;
+        vertex3.color = anim;
+
         vertex_array.append(vertex0);
         vertex_array.append(vertex1);
         vertex_array.append(vertex2);
@@ -58,6 +67,26 @@ namespace
         vertex_array.append(vertex0);
         vertex_array.append(vertex2);
         vertex_array.append(vertex3);
+    }
+
+    // Shared across RenderWorld and RenderMinimap so animations stay in sync
+    // between the main view and the minimap mesh.
+    sf::Clock& blockAnimationClock()
+    {
+        static sf::Clock clock;
+        return clock;
+    }
+
+    void applyBlockAnimationShader(sf::RenderStates& states)
+    {
+        sf::Shader& shader = AssetManager::getShader(AssetManager::ShaderID::BlockAnimation);
+        const sf::Vector2u atlas_size = BlockAtlas::getTexture().getSize();
+
+        shader.setUniform("texture", sf::Shader::CurrentTexture);
+        shader.setUniform("u_time", blockAnimationClock().getElapsedTime().asSeconds());
+        shader.setUniform("u_atlas_size", sf::Glsl::Vec2(static_cast<float>(atlas_size.x), static_cast<float>(atlas_size.y)));
+
+        states.shader = &shader;
     }
 }
 
@@ -85,12 +114,23 @@ void BuildChunkMesh(ClientWorld& world, int chunk_position)
             sf::IntRect final_uv = {texture_uv.position + block_data.render->rect(block).position, block_data.render->rect(block).size};
 
             sf::Vector2f position(x, y);
-            
+
             auto bounds = block_data.render->render_bounds(block);
 
             sf::FloatRect final_rect = {position + bounds.position, bounds.size};
 
-            appendQuad(mesh.vertices, final_rect, final_uv);
+            // Static blocks encode frame_count=1 so the shader short-circuits
+            // and samples the texCoord unchanged.
+            const BlockAnimation anim = block_data.render->animation(block);
+            const uint16_t duration_cs = anim.frame_duration_ms / 10u;
+            sf::Color anim_color{
+                anim.frame_count,
+                static_cast<uint8_t>(std::min<int>(final_uv.size.x, 255)),
+                static_cast<uint8_t>(std::min<uint16_t>(duration_cs, 255)),
+                255
+            };
+
+            appendQuad(mesh.vertices, final_rect, final_uv, anim_color);
         }
     }
 
@@ -261,6 +301,7 @@ void RenderWorld(ClientWorld& world, const sf::Vector2<double> camera, sf::Rende
         states.texture = &BlockAtlas::getTexture();
         states.transform.translate({translate_x, translate_y});
         states.transform.scale({unit_size, unit_size});
+        applyBlockAnimationShader(states);
 
         window.draw(mesh.vertices, states);
     }
@@ -1016,6 +1057,7 @@ void RenderMinimap(ClientWorld& world, sf::Vector2<double> camera, sf::RenderTar
         states.texture = &BlockAtlas::getTexture();
         states.transform.translate({translate_x, translate_y});
         states.transform.scale({unit_size, unit_size});
+        applyBlockAnimationShader(states);
 
         render_texture.draw(mesh.vertices, states);
     }

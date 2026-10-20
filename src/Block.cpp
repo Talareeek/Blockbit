@@ -24,6 +24,8 @@ ItemID blockToItem(BlockID block)
         case BlockID::Woodcutter: return ItemID::Woodcutter;
         case BlockID::Sand: return ItemID::Sand;
         case BlockID::Coarse_Dirt: return ItemID::Coarse_Dirt;
+        case BlockID::Bricks: return ItemID::Bricks;
+        case BlockID::Furnace: return ItemID::Furnace;
         default: return ItemID::None;
     }
 }
@@ -53,6 +55,8 @@ BlockID itemToBlock(ItemID item)
         case ItemID::Sand: return BlockID::Sand;
         case ItemID::Snow: return BlockID::Snow;
         case ItemID::Chest: return BlockID::Chest;
+        case ItemID::Bricks: return BlockID::Bricks;
+        case ItemID::Furnace: return BlockID::Furnace;
         default: return BlockID::Air;
     }
 }
@@ -308,7 +312,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 2.0f,
-            .render = RenderProperties{.texture = AssetManager::GameTextureID::Woodcutter, .render_bounds = default_render_bounds, .rect = default_render_rect},
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Woodcutter, .render_bounds = default_render_bounds, .rect = woodcutter_render_rect, .animation = woodcutter_animation},
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
             .drop = DropProperties{.drop = ItemID::Woodcutter}
         }
@@ -375,6 +379,32 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Chest, .render_bounds = chest_render_bounds, .rect = chest_render_rect},
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
             .drop = DropProperties{.drop = ItemID::Chest}
+        }
+    },
+    { BlockID::Bricks,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 2.0f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Bricks, .render_bounds = default_render_bounds, .rect = default_render_rect},
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 1}},
+            .drop = DropProperties{.drop = ItemID::Bricks}
+        }
+    },
+    { BlockID::Furnace,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 3.5f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Furnace, .render_bounds = furnace_render_bounds, .rect = furnace_render_rect, .animation = furnace_animation},
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 1}},
+            .drop = DropProperties{.drop = ItemID::Furnace}
         }
     },
 };

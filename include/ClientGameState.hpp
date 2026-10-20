@@ -75,6 +75,8 @@ private:
     float chat_close_cooldown = 0.0f;
     float view_close_cooldown = 0.0f;
 
+    float furnace_animation_timer = 0.0f;
+
     sf::Vector2<double> camera;
 
     void tryInitializePlayerUI();

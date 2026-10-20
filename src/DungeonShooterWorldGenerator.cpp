@@ -45,7 +45,7 @@ Chunk DungeonShooterWorldGenerator::generateChunk(int chunk_position)
     {
         for (int x = 0; x < CHUNK_WIDTH; ++x)
         {
-            chunk.blocks[y][x] = {BlockID::Cobblestone, 0};
+            chunk.blocks[y][x] = {BlockID::Bricks, 0};
         }
     }
 

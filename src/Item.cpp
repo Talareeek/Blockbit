@@ -801,6 +801,26 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .category = ItemCategory::Block
         }
     },
+    {
+        ItemID::Bricks,
+        {
+            .name = "Bricks",
+            .texture = AssetManager::GameTextureID::Bricks,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Furnace,
+        {
+            .name = "Furnace",
+            .texture = AssetManager::GameTextureID::Furnace,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
 };
 
 bool ItemStack::empty() const

@@ -82,7 +82,9 @@ enum class ItemID : uint32_t
     Ruby,
     Stick,
 
-    Chest
+    Chest,
+    Bricks,
+    Furnace
 };
 
 enum class ItemRarity

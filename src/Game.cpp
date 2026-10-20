@@ -111,6 +111,8 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Snow, "resources/textures/snow.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Ruby_Ore, "resources/textures/ruby_ore.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Chest, "resources/textures/chest.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Bricks, "resources/textures/bricks.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Furnace, "resources/textures/furnace.png");
 
     BlockAtlas::add(AssetManager::GameTextureID::Stone);
     BlockAtlas::add(AssetManager::GameTextureID::Grass);
@@ -136,10 +138,13 @@ Game::Game()
     BlockAtlas::add(AssetManager::GameTextureID::Snow);
     BlockAtlas::add(AssetManager::GameTextureID::Ruby_Ore);
     BlockAtlas::add(AssetManager::GameTextureID::Chest);
+    BlockAtlas::add(AssetManager::GameTextureID::Bricks);
+    BlockAtlas::add(AssetManager::GameTextureID::Furnace);
     BlockAtlas::build();
 
     AssetManager::loadShader(AssetManager::ShaderID::Sun, "resources/shaders/sun.frag");
     AssetManager::loadShader(AssetManager::ShaderID::Brightness, "resources/shaders/brightness.frag");
+    AssetManager::loadShader(AssetManager::ShaderID::BlockAnimation, "resources/shaders/block_animation.frag");
 
     AssetManager::loadSound(AssetManager::SoundID::Click, "resources/sounds/click.wav");
 
