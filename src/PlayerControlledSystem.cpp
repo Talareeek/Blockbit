@@ -86,7 +86,7 @@ void PlayerControlledSystem(World& world, float dt)
                     ItemStack drop = {block_data.drop->drop, drop_range(rng)};
 
                     Entity new_entity(generateUUID());
-                    new_entity.addComponent(TransformComponent{{block_position.x + 0.25f, block_position.y - 0.25f}, {0.5f, 0.5f}, sf::degrees(0.0f)});
+                    new_entity.addComponent(TransformComponent{{block_position.x + 0.25f, block_position.y + 0.25f}, {0.5f, 0.5f}, sf::degrees(0.0f)});
                     new_entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
                     new_entity.addComponent(ItemComponent(drop));
                     new_entity.addComponent(RenderComponent{itemDatabase[new_entity.getComponent<ItemComponent>().item.itemID].texture, {{0, 0}, {16, 16}}, {0.5f, 0.5f}});

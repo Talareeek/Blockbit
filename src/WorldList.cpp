@@ -255,6 +255,7 @@ void WorldList::update(float dt)
 
         entry.position = {list_area.position.x, y};
         entry.size = {list_area.size.x, entry_h};
+        entry.clip_rect = list_area;
 
         entry.update(dt);
     }

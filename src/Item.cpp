@@ -259,6 +259,16 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         }
     },
     {
+        ItemID::Coal_Ore,
+        {
+            .name = "Coal Ore",
+            .texture = AssetManager::GameTextureID::Coal_Ore,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
         ItemID::Iron_Ore,
         {
             .name = "Iron Ore",
@@ -286,6 +296,76 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 64,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Iron_Block,
+        {
+            .name = "Iron Block",
+            .texture = AssetManager::GameTextureID::Iron_Block,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Gold_Block,
+        {
+            .name = "Gold Block",
+            .texture = AssetManager::GameTextureID::Gold_Block,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Rare,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Ruby_Block,
+        {
+            .name = "Ruby Block",
+            .texture = AssetManager::GameTextureID::Ruby_Block,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Epic,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Coal,
+        {
+            .name = "Coal",
+            .texture = AssetManager::GameTextureID::Coal,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Misc
+        }
+    },
+    {
+        ItemID::Raw_Iron,
+        {
+            .name = "Raw Iron",
+            .texture = AssetManager::GameTextureID::Raw_Iron,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Misc
+        }
+    },
+    {
+        ItemID::Raw_Gold,
+        {
+            .name = "Raw Gold",
+            .texture = AssetManager::GameTextureID::Raw_Gold,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Rare,
+            .category = ItemCategory::Misc
+        }
+    },
+    {
+        ItemID::Diamond,
+        {
+            .name = "Diamond",
+            .texture = AssetManager::GameTextureID::Diamond,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Rare,
+            .category = ItemCategory::Misc
         }
     },
     {
@@ -539,6 +619,17 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .tool = ToolProperties{ToolType::Pickaxe, 5}
         }
     },
+    {
+        ItemID::Ruby_Pickaxe,
+        {
+            .name = "Ruby Pickaxe",
+            .texture = AssetManager::GameTextureID::Ruby_Pickaxe,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Epic,
+            .category = ItemCategory::Tool,
+            .tool = ToolProperties{ToolType::Pickaxe, 6}
+        }
+    },
 
     {
         ItemID::Wooden_Axe,
@@ -595,6 +686,17 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .tool = ToolProperties{ToolType::Axe, 5}
         }
     },
+    {
+        ItemID::Ruby_Axe,
+        {
+            .name = "Ruby Axe",
+            .texture = AssetManager::GameTextureID::Ruby_Axe,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Epic,
+            .category = ItemCategory::Tool,
+            .tool = ToolProperties{ToolType::Axe, 6}
+        }
+    },
 
     {
         ItemID::Wooden_Shovel,
@@ -649,6 +751,17 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
             .tool = ToolProperties{ToolType::Shovel, 5}
+        }
+    },
+    {
+        ItemID::Ruby_Shovel,
+        {
+            .name = "Ruby Shovel",
+            .texture = AssetManager::GameTextureID::Ruby_Shovel,
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Epic,
+            .category = ItemCategory::Tool,
+            .tool = ToolProperties{ToolType::Shovel, 6}
         }
     },
     {

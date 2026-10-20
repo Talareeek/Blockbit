@@ -78,7 +78,13 @@ void CreateWorldState::createWorld()
     }
 
     GenerationProperties properties;
-    properties.flat = (mode == Mode::Flat);
+    switch (mode)
+    {
+        case Mode::Flat:           properties.type = GenerationType::Flat;           break;
+        case Mode::DungeonShooter: properties.type = GenerationType::DungeonShooter; break;
+        case Mode::Normal:
+        default:                   properties.type = GenerationType::Normal;         break;
+    }
     properties.base_height = base_height;
     properties.height_scale = height_scale;
     properties.frequency = frequency;
@@ -138,6 +144,8 @@ void CreateWorldState::update(float dt)
         ImGui::RadioButton("Normal", &mode_int, static_cast<int>(Mode::Normal));
         ImGui::SameLine();
         ImGui::RadioButton("Flat", &mode_int, static_cast<int>(Mode::Flat));
+        ImGui::SameLine();
+        ImGui::RadioButton("Dungeon Shooter", &mode_int, static_cast<int>(Mode::DungeonShooter));
         mode = static_cast<Mode>(mode_int);
 
         ImGui::Separator();
@@ -150,6 +158,10 @@ void CreateWorldState::update(float dt)
             ImGui::SliderFloat("Frequency",    &frequency,    0.001f, 0.2f, "%.4f");
             ImGui::SliderFloat("Amplitude",    &amplitude,    0.0f,  2.0f);
             ImGui::SliderFloat("Persistence",  &persistence,  0.0f,  1.0f);
+        }
+        else if (mode == Mode::DungeonShooter)
+        {
+            ImGui::TextUnformatted("Infinite cobblestone dungeon generated from the world seed.");
         }
         else
         {

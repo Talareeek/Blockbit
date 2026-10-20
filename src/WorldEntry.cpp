@@ -1,12 +1,11 @@
 #include "../include/WorldEntry.hpp"
 #include "../include/AssetManager.hpp"
 
-#include <algorithm>
+#include <imgui.h>
 
-namespace
-{
-    constexpr float DELETE_AREA_FACTOR = 1.0f;
-}
+#include <algorithm>
+#include <cstdio>
+#include <string>
 
 void drawFitText(sf::RenderWindow& window, const std::string& str, const sf::FloatRect& box, bool center, sf::Color fill, float outline_thickness, sf::Color outline)
 {
@@ -63,107 +62,129 @@ void WorldEntry::clearRequests()
     delete_requested = false;
 }
 
-void WorldEntry::handleEvent(const sf::Event& event)
-{
-    float delete_w = size.y * DELETE_AREA_FACTOR;
-    float host_w   = size.y * DELETE_AREA_FACTOR;
-
-    sf::FloatRect play_area{position, {size.x - delete_w - host_w, size.y}};
-    sf::FloatRect host_area{{position.x + size.x - delete_w - host_w, position.y}, {host_w, size.y}};
-    sf::FloatRect delete_area{{position.x + size.x - delete_w, position.y}, {delete_w, size.y}};
-
-    if(event.is<sf::Event::MouseMoved>())
-    {
-        auto mouse = event.getIf<sf::Event::MouseMoved>();
-        sf::Vector2f m{static_cast<float>(mouse->position.x), static_cast<float>(mouse->position.y)};
-        hovering_play   = play_area.contains(m);
-        hovering_host   = host_area.contains(m);
-        hovering_delete = delete_area.contains(m);
-    }
-    else if(event.is<sf::Event::MouseButtonPressed>())
-    {
-        auto mouse = event.getIf<sf::Event::MouseButtonPressed>();
-        if(mouse->button != sf::Mouse::Button::Left) return;
-
-        sf::Vector2f m{static_cast<float>(mouse->position.x), static_cast<float>(mouse->position.y)};
-
-        if(delete_area.contains(m))
-        {
-            click_sound.setVolume(100);
-            click_sound.play();
-            delete_requested = true;
-        }
-        else if(host_area.contains(m))
-        {
-            click_sound.setVolume(100);
-            click_sound.play();
-            host_requested = true;
-        }
-        else if(play_area.contains(m))
-        {
-            click_sound.setVolume(100);
-            click_sound.play();
-            play_requested = true;
-        }
-    }
-}
-
-void WorldEntry::update(float dt)
-{
-}
+void WorldEntry::handleEvent(const sf::Event&) {}
+void WorldEntry::update(float) {}
 
 void WorldEntry::render(sf::RenderWindow& window)
 {
-    float delete_w = size.y * DELETE_AREA_FACTOR;
-    float host_w   = size.y * DELETE_AREA_FACTOR;
+    (void)window;
 
-    sf::Color base_play    (55, 80, 55);
-    sf::Color hover_play   (75, 110, 75);
-    sf::Color base_host    (55, 90, 130);
-    sf::Color hover_host   (75, 120, 170);
-    sf::Color base_delete  (140, 45, 45);
-    sf::Color hover_delete (185, 60, 60);
-    sf::Color outline_col  (255, 255, 255, 90);
+    if(size.x <= 0.0f || size.y <= 0.0f) return;
 
-    sf::RectangleShape frame(size);
-    frame.setPosition(position);
-    frame.setFillColor(hovering_play ? hover_play : base_play);
-    frame.setOutlineThickness(2.0f);
-    frame.setOutlineColor(outline_col);
-    window.draw(frame);
+    sf::FloatRect entry_rect{position, size};
+    sf::FloatRect vis = entry_rect;
+    if(clip_rect.size.x > 0.0f && clip_rect.size.y > 0.0f)
+    {
+        auto inter = entry_rect.findIntersection(clip_rect);
+        if(!inter) return;
+        vis = *inter;
+    }
+    if(vis.size.x <= 0.0f || vis.size.y <= 0.0f) return;
 
-    sf::Vector2f host_size{host_w, size.y};
-    sf::Vector2f host_pos{position.x + size.x - delete_w - host_w, position.y};
+    char win_id[64];
+    std::snprintf(win_id, sizeof(win_id), "##world_entry_%p", static_cast<void*>(this));
 
-    sf::RectangleShape host(host_size);
-    host.setPosition(host_pos);
-    host.setFillColor(hovering_host ? hover_host : base_host);
-    window.draw(host);
+    constexpr float PAD = 12.0f;
+    constexpr float GAP = 10.0f;
 
-    sf::Vector2f del_size{delete_w, size.y};
-    sf::Vector2f del_pos{position.x + size.x - delete_w, position.y};
+    ImGui::SetNextWindowPos(ImVec2(vis.position.x, vis.position.y));
+    ImGui::SetNextWindowSize(ImVec2(vis.size.x, vis.size.y));
 
-    sf::RectangleShape del(del_size);
-    del.setPosition(del_pos);
-    del.setFillColor(hovering_delete ? hover_delete : base_delete);
-    window.draw(del);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg,     IM_COL32( 42,  70,  42, 240));
+    ImGui::PushStyleColor(ImGuiCol_Border,       IM_COL32(130, 200, 130, 200));
+    ImGui::PushStyleColor(ImGuiCol_Text,         IM_COL32(240, 255, 240, 255));
+    ImGui::PushStyleVar  (ImGuiStyleVar_WindowBorderSize, 2.0f);
+    ImGui::PushStyleVar  (ImGuiStyleVar_WindowRounding,   0.0f);
+    ImGui::PushStyleVar  (ImGuiStyleVar_WindowPadding,    ImVec2(0.0f, 0.0f));
+    ImGui::PushStyleVar  (ImGuiStyleVar_FrameRounding,    0.0f);
+    ImGui::PushStyleVar  (ImGuiStyleVar_FrameBorderSize,  0.0f);
 
-    sf::RectangleShape divider1({2.0f, size.y});
-    divider1.setPosition({host_pos.x, position.y});
-    divider1.setFillColor(outline_col);
-    window.draw(divider1);
+    ImGuiWindowFlags flags =
+        ImGuiWindowFlags_NoTitleBar       | ImGuiWindowFlags_NoResize        |
+        ImGuiWindowFlags_NoMove           | ImGuiWindowFlags_NoScrollbar     |
+        ImGuiWindowFlags_NoCollapse       | ImGuiWindowFlags_NoSavedSettings |
+        ImGuiWindowFlags_NoBringToFrontOnFocus;
 
-    sf::RectangleShape divider2({2.0f, size.y});
-    divider2.setPosition({del_pos.x, position.y});
-    divider2.setFillColor(outline_col);
-    window.draw(divider2);
+    ImGui::Begin(win_id, nullptr, flags);
 
-    sf::FloatRect name_box{
-        {position.x + size.x * 0.04f, position.y},
-        {size.x - delete_w - host_w - size.x * 0.04f - 4.0f, size.y}
+    float ox = position.x - vis.position.x;
+    float oy = position.y - vis.position.y;
+
+    ImGui::SetWindowFontScale(1.6f);
+    ImFont* font     = ImGui::GetFont();
+    float   font_sz  = ImGui::GetFontSize();
+    float   title_h  = ImGui::GetTextLineHeight();
+
+    float x_size      = title_h + 6.0f;
+    float title_max_w = size.x - PAD * 2.0f - x_size - GAP;
+
+    std::string title = name;
+    auto widthOf = [&](const std::string& s)
+    {
+        return font->CalcTextSizeA(font_sz, FLT_MAX, 0.0f, s.c_str()).x;
     };
+    if(widthOf(title) > title_max_w)
+    {
+        while(!title.empty() && widthOf(title + "...") > title_max_w) title.pop_back();
+        if(!title.empty()) title += "...";
+    }
 
-    drawFitText(window, name, name_box, false, sf::Color::White, 1.0f, sf::Color::Black);
-    drawFitText(window, "H", {host_pos, host_size}, true, sf::Color::White, 1.0f, sf::Color::Black);
-    drawFitText(window, "X", {del_pos, del_size}, true, sf::Color::White, 1.0f, sf::Color::Black);
+    ImGui::SetCursorPos(ImVec2(ox + PAD, oy + PAD));
+    ImGui::TextUnformatted(title.c_str());
+    ImGui::SetWindowFontScale(1.0f);
+
+    ImGui::SetCursorPos(ImVec2(ox + size.x - PAD - x_size, oy + PAD + (title_h - x_size) * 0.5f));
+    ImGui::PushStyleColor(ImGuiCol_Button,        IM_COL32(140,  45,  45, 255));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(185,  60,  60, 255));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  IM_COL32(215,  80,  80, 255));
+    char del_lbl[48];
+    std::snprintf(del_lbl, sizeof(del_lbl), "x##d%p", static_cast<void*>(this));
+    if(ImGui::Button(del_lbl, ImVec2(x_size, x_size)))
+    {
+        delete_requested = true;
+        click_sound.setVolume(100);
+        click_sound.play();
+    }
+    ImGui::PopStyleColor(3);
+
+    float row_top  = PAD + title_h + GAP;
+    float row_h    = size.y - row_top - PAD;
+    if(row_h < 10.0f) row_h = 10.0f;
+    float row_w    = (size.x - PAD * 2.0f - GAP) * 0.5f;
+
+    ImGui::SetWindowFontScale(1.15f);
+
+    ImGui::SetCursorPos(ImVec2(ox + PAD, oy + row_top));
+    ImGui::PushStyleColor(ImGuiCol_Button,        IM_COL32( 55, 115,  55, 255));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32( 80, 160,  80, 255));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  IM_COL32(100, 190, 100, 255));
+    char play_lbl[48];
+    std::snprintf(play_lbl, sizeof(play_lbl), "Play##p%p", static_cast<void*>(this));
+    if(ImGui::Button(play_lbl, ImVec2(row_w, row_h)))
+    {
+        play_requested = true;
+        click_sound.setVolume(100);
+        click_sound.play();
+    }
+    ImGui::PopStyleColor(3);
+
+    ImGui::SetCursorPos(ImVec2(ox + PAD + row_w + GAP, oy + row_top));
+    ImGui::PushStyleColor(ImGuiCol_Button,        IM_COL32( 55,  95, 135, 255));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32( 80, 125, 180, 255));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  IM_COL32(100, 155, 210, 255));
+    char host_lbl[48];
+    std::snprintf(host_lbl, sizeof(host_lbl), "Host##h%p", static_cast<void*>(this));
+    if(ImGui::Button(host_lbl, ImVec2(row_w, row_h)))
+    {
+        host_requested = true;
+        click_sound.setVolume(100);
+        click_sound.play();
+    }
+    ImGui::PopStyleColor(3);
+
+    ImGui::SetWindowFontScale(1.0f);
+
+    ImGui::End();
+    ImGui::PopStyleVar(5);
+    ImGui::PopStyleColor(3);
 }

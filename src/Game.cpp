@@ -77,8 +77,15 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Gold_Shovel, "resources/textures/gold_shovel.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Iron_Shovel, "resources/textures/iron_shovel.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Diamond_Shovel, "resources/textures/diamond_shovel.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Ruby_Pickaxe, "resources/textures/ruby_pickaxe.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Ruby_Axe, "resources/textures/ruby_axe.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Ruby_Shovel, "resources/textures/ruby_shovel.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Ruby, "resources/textures/ruby.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Stick, "resources/textures/stick.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Coal, "resources/textures/coal.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Raw_Iron, "resources/textures/raw_iron.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Raw_Gold, "resources/textures/raw_gold.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Diamond, "resources/textures/diamond.png");
 
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Stone, "resources/textures/stone.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Grass, "resources/textures/grass.png");
@@ -86,10 +93,14 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Cobblestone, "resources/textures/cobblestone.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Obsidian, "resources/textures/obsidian.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Bedrock, "resources/textures/bedrock.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Water, "resources/textures/water.png");    
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Water, "resources/textures/water.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Coal_Ore, "resources/textures/coal_ore.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Iron_Ore, "resources/textures/iron_ore.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Gold_Ore, "resources/textures/gold_ore.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Diamond_Ore, "resources/textures/diamond_ore.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Iron_Block, "resources/textures/iron_block.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Gold_Block, "resources/textures/gold_block.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Ruby_Block, "resources/textures/ruby_block.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Oak_Log, "resources/textures/oak_log.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Oak_Leaves, "resources/textures/oak_leaves.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Oak_Planks, "resources/textures/oak_planks.png");
@@ -108,9 +119,13 @@ Game::Game()
     BlockAtlas::add(AssetManager::GameTextureID::Obsidian);
     BlockAtlas::add(AssetManager::GameTextureID::Bedrock);
     BlockAtlas::add(AssetManager::GameTextureID::Water);
+    BlockAtlas::add(AssetManager::GameTextureID::Coal_Ore);
     BlockAtlas::add(AssetManager::GameTextureID::Iron_Ore);
     BlockAtlas::add(AssetManager::GameTextureID::Gold_Ore);
     BlockAtlas::add(AssetManager::GameTextureID::Diamond_Ore);
+    BlockAtlas::add(AssetManager::GameTextureID::Iron_Block);
+    BlockAtlas::add(AssetManager::GameTextureID::Gold_Block);
+    BlockAtlas::add(AssetManager::GameTextureID::Ruby_Block);
     BlockAtlas::add(AssetManager::GameTextureID::Oak_Log);
     BlockAtlas::add(AssetManager::GameTextureID::Oak_Leaves);
     BlockAtlas::add(AssetManager::GameTextureID::Oak_Planks);

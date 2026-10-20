@@ -21,10 +21,14 @@ public:
         Obsidian,
         Bedrock,
         Water,
+        Coal_Ore,
         Iron_Ore,
         Gold_Ore,
         Diamond_Ore,
         Ruby_Ore,
+        Iron_Block,
+        Gold_Block,
+        Ruby_Block,
         Oak_Log,
         Oak_Leaves,
         Oak_Planks,
@@ -41,6 +45,10 @@ public:
         Bucket,
         Water_Bucket,
         Lighter,
+        Coal,
+        Raw_Iron,
+        Raw_Gold,
+        Diamond,
         Ruby,
         Stick,
 
@@ -54,18 +62,21 @@ public:
         Iron_Pickaxe,
         Gold_Pickaxe,
         Diamond_Pickaxe,
+        Ruby_Pickaxe,
 
         Wooden_Axe,
         Stone_Axe,
         Iron_Axe,
         Gold_Axe,
         Diamond_Axe,
+        Ruby_Axe,
 
         Wooden_Shovel,
         Stone_Shovel,
         Iron_Shovel,
         Gold_Shovel,
-        Diamond_Shovel
+        Diamond_Shovel,
+        Ruby_Shovel
     };
 
     enum class UITextureID : uint32_t

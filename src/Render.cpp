@@ -542,7 +542,7 @@ sf::Texture generateBackground()
     std::uniform_real_distribution<float> persDist (0.0f,    1.0f);
 
     GenerationProperties props{};
-    props.flat = false;
+    props.type = GenerationType::Normal;
     props.base_height = baseDist(rng);
     props.height_scale = scaleDist(rng);
     props.frequency = freqDist(rng);

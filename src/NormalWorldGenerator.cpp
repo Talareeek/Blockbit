@@ -78,6 +78,7 @@ namespace
 
     constexpr OreDef ORES[] =
     {
+        {FeatureType::CoalOre,    BlockID::Coal_Ore,    5, 110, 10, 10},
         {FeatureType::IronOre,    BlockID::Iron_Ore,    5, 90, 8, 8},
         {FeatureType::GoldOre,    BlockID::Gold_Ore,    5, 60, 4, 6},
         {FeatureType::DiamondOre, BlockID::Diamond_Ore, 5, 25, 2, 5},

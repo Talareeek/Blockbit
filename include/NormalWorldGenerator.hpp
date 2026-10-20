@@ -36,6 +36,7 @@ enum class FeatureType
 {
     OakTree,
 
+    CoalOre,
     IronOre,
     GoldOre,
     DiamondOre,

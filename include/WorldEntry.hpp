@@ -16,10 +16,6 @@ private:
     std::string name;
     std::filesystem::path path;
 
-    bool hovering_play   = false;
-    bool hovering_host   = false;
-    bool hovering_delete = false;
-
     bool play_requested   = false;
     bool host_requested   = false;
     bool delete_requested = false;
@@ -27,6 +23,8 @@ private:
     sf::Sound click_sound{AssetManager::getSound(AssetManager::SoundID::Click)};
 
 public:
+
+    sf::FloatRect clip_rect{{0.0f, 0.0f}, {0.0f, 0.0f}};
 
     WorldEntry() = default;
     WorldEntry(const std::string& name, const std::filesystem::path& path);

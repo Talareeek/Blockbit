@@ -1,6 +1,7 @@
 #include "../include/ServerWorld.hpp"
 #include "../include/NormalWorldGenerator.hpp"
 #include "../include/FlatWorldGenerator.hpp"
+#include "../include/DungeonShooterWorldGenerator.hpp"
 #include "../include/PlayerControlledComponent.hpp"
 #include "../include/TransformComponent.hpp"
 #include "../include/AIComponent.hpp"
@@ -18,28 +19,40 @@
 
 static std::unique_ptr<WorldGenerator> makeWorldGenerator(unsigned int seed, const GenerationProperties& generation_properties)
 {
-    if (generation_properties.flat)
+    switch (generation_properties.type)
     {
-        FlatWorldProperties flat_properties;
-        flat_properties.layers = generation_properties.flat_layers;
-        if (flat_properties.layers.empty())
+        case GenerationType::Flat:
         {
-            flat_properties = FlatWorldProperties::defaults();
+            FlatWorldProperties flat_properties;
+            flat_properties.layers = generation_properties.flat_layers;
+            if (flat_properties.layers.empty())
+            {
+                flat_properties = FlatWorldProperties::defaults();
+            }
+
+            return std::make_unique<FlatWorldGenerator>(std::move(flat_properties));
         }
 
-        return std::make_unique<FlatWorldGenerator>(std::move(flat_properties));
+        case GenerationType::DungeonShooter:
+        {
+            return std::make_unique<DungeonShooterWorldGenerator>(seed);
+        }
+
+        case GenerationType::Normal:
+        default:
+        {
+            NormalWorldGeneratorProperties properties
+            {
+                .base_height = generation_properties.base_height,
+                .height_scale = generation_properties.height_scale,
+                .frequency = generation_properties.frequency,
+                .amplitude = generation_properties.amplitude,
+                .persistence = generation_properties.persistence
+            };
+
+            return std::make_unique<NormalWorldGenerator>(seed, properties);
+        }
     }
-
-    NormalWorldGeneratorProperties properties
-    {
-        .base_height = generation_properties.base_height,
-        .height_scale = generation_properties.height_scale,
-        .frequency = generation_properties.frequency,
-        .amplitude = generation_properties.amplitude,
-        .persistence = generation_properties.persistence
-    };
-
-    return std::make_unique<NormalWorldGenerator>(seed, properties);
 }
 
 ServerWorld::ServerWorld(const std::filesystem::path path) : path{path}
@@ -187,7 +200,8 @@ void ServerWorld::saveData()
     BBT data("data");
 
     data["generation_properties"] = TagCompound();
-    data["generation_properties"]["flat"] = Tag(generation_properties.flat);
+    data["generation_properties"]["flat"] = Tag(generation_properties.type == GenerationType::Flat);
+    data["generation_properties"]["type"] = Tag(static_cast<uint32_t>(generation_properties.type));
     data["generation_properties"]["base_height"] = Tag(generation_properties.base_height);
     data["generation_properties"]["height_scale"] = Tag(generation_properties.height_scale);
     data["generation_properties"]["frequency"] = Tag(generation_properties.frequency);
@@ -242,7 +256,7 @@ void ServerWorld::loadData()
     
     generation_properties =
     {
-        .flat = data["generation_properties"]["flat"].get<bool>(),
+        .type = GenerationType::Normal,
         .base_height = data["generation_properties"]["base_height"].get<float>(),
         .height_scale = data["generation_properties"]["height_scale"].get<float>(),
         .frequency = data["generation_properties"]["frequency"].get<float>(),
@@ -250,9 +264,20 @@ void ServerWorld::loadData()
         .persistence = data["generation_properties"]["persistence"].get<float>()
     };
 
+    const TagCompound& gen_props = data["generation_properties"].get<TagCompound>();
+
+    auto type_iter = gen_props.find("type");
+    if (type_iter != gen_props.end())
+    {
+        generation_properties.type = static_cast<GenerationType>(type_iter->second.get<uint32_t>());
+    }
+    else
+    {
+        generation_properties.type = data["generation_properties"]["flat"].get<bool>() ? GenerationType::Flat : GenerationType::Normal;
+    }
+
     generation_properties.flat_layers.clear();
 
-    const TagCompound& gen_props = data["generation_properties"].get<TagCompound>();
     auto layers_iter = gen_props.find("flat_layers");
     if (layers_iter != gen_props.end())
     {

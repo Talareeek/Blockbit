@@ -10,10 +10,14 @@ ItemID blockToItem(BlockID block)
         case BlockID::Cobblestone: return ItemID::Cobblestone;
         case BlockID::Obsidian: return ItemID::Obsidian;
         case BlockID::Bedrock: return ItemID::Bedrock;
+        case BlockID::Coal_Ore: return ItemID::Coal_Ore;
         case BlockID::Iron_Ore: return ItemID::Iron_Ore;
         case BlockID::Gold_Ore: return ItemID::Gold_Ore;
         case BlockID::Diamond_Ore: return ItemID::Diamond_Ore;
         case BlockID::Ruby_Ore: return ItemID::Ruby_Ore;
+        case BlockID::Iron_Block: return ItemID::Iron_Block;
+        case BlockID::Gold_Block: return ItemID::Gold_Block;
+        case BlockID::Ruby_Block: return ItemID::Ruby_Block;
         case BlockID::Oak_Log: return ItemID::Oak_Log;
         case BlockID::Oak_Leaves: return ItemID::Oak_Leaves;
         case BlockID::Oak_Planks: return ItemID::Oak_Planks;
@@ -34,10 +38,14 @@ BlockID itemToBlock(ItemID item)
         case ItemID::Cobblestone: return BlockID::Cobblestone;
         case ItemID::Obsidian: return BlockID::Obsidian;
         case ItemID::Bedrock: return BlockID::Bedrock;
+        case ItemID::Coal_Ore: return BlockID::Coal_Ore;
         case ItemID::Iron_Ore: return BlockID::Iron_Ore;
         case ItemID::Gold_Ore: return BlockID::Gold_Ore;
         case ItemID::Diamond_Ore: return BlockID::Diamond_Ore;
         case ItemID::Ruby_Ore: return BlockID::Ruby_Ore;
+        case ItemID::Iron_Block: return BlockID::Iron_Block;
+        case ItemID::Gold_Block: return BlockID::Gold_Block;
+        case ItemID::Ruby_Block: return BlockID::Ruby_Block;
         case ItemID::Oak_Log: return BlockID::Oak_Log;
         case ItemID::Oak_Leaves: return BlockID::Oak_Leaves;
         case ItemID::Oak_Planks: return BlockID::Oak_Planks;
@@ -149,6 +157,19 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Water, .render_bounds = water_render_bounds, .rect = water_render_rect},
         }
     },
+    { BlockID::Coal_Ore,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 2.0f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Coal_Ore, .render_bounds = default_render_bounds, .rect = default_render_rect},
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 1}},
+            .drop = DropProperties{.drop = ItemID::Coal}
+        }
+    },
     { BlockID::Iron_Ore,
         {
             .solid = true,
@@ -159,7 +180,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .hardness = 3.0f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Iron_Ore, .render_bounds = default_render_bounds, .rect = default_render_rect},
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 2}},
-            .drop = DropProperties{.drop = ItemID::Iron_Ore}
+            .drop = DropProperties{.drop = ItemID::Raw_Iron}
         }
     },
     { BlockID::Gold_Ore,
@@ -172,7 +193,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .hardness = 3.0f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Gold_Ore, .render_bounds = default_render_bounds, .rect = default_render_rect},
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 4}},
-            .drop = DropProperties{.drop = ItemID::Gold_Ore}
+            .drop = DropProperties{.drop = ItemID::Raw_Gold}
         }
     },
     { BlockID::Diamond_Ore,
@@ -185,7 +206,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .hardness = 5.0f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Diamond_Ore, .render_bounds = default_render_bounds, .rect = default_render_rect},
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 4}},
-            .drop = DropProperties{.drop = ItemID::Diamond_Ore}
+            .drop = DropProperties{.drop = ItemID::Diamond}
         }
     },
     { BlockID::Ruby_Ore,
@@ -199,6 +220,45 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Ruby_Ore, .render_bounds = default_render_bounds, .rect = default_render_rect},
             .mining = MiningProperties{.mining_resistance = 6, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 5}},
             .drop = DropProperties{.drop = ItemID::Ruby}
+        }
+    },
+    { BlockID::Iron_Block,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 5.0f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Iron_Block, .render_bounds = default_render_bounds, .rect = default_render_rect},
+            .mining = MiningProperties{.mining_resistance = 6, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 2}},
+            .drop = DropProperties{.drop = ItemID::Iron_Block}
+        }
+    },
+    { BlockID::Gold_Block,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 4.0f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Gold_Block, .render_bounds = default_render_bounds, .rect = default_render_rect},
+            .mining = MiningProperties{.mining_resistance = 6, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 4}},
+            .drop = DropProperties{.drop = ItemID::Gold_Block}
+        }
+    },
+    { BlockID::Ruby_Block,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 6.0f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Ruby_Block, .render_bounds = default_render_bounds, .rect = default_render_rect},
+            .mining = MiningProperties{.mining_resistance = 7, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 5}},
+            .drop = DropProperties{.drop = ItemID::Ruby_Block}
         }
     },
     { BlockID::Oak_Log,

@@ -8,6 +8,7 @@
 #include "WorldGenerator.hpp"
 #include "FlatWorldGenerator.hpp"
 
+#include <cstdint>
 #include <unordered_map>
 #include <filesystem>
 #include <optional>
@@ -16,9 +17,16 @@
 
 #include <SFML/System/Vector2.hpp>
 
+enum class GenerationType : uint32_t
+{
+    Normal         = 0,
+    Flat           = 1,
+    DungeonShooter = 2
+};
+
 struct GenerationProperties
 {
-    bool flat;
+    GenerationType type = GenerationType::Normal;
     float base_height;
     float height_scale;
     float frequency;

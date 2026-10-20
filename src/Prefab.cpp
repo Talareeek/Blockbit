@@ -40,6 +40,17 @@ void PrefabRegistry::init()
         inv.inventory.slots[7] = {ItemID::Chest, 64};
         inv.inventory.slots[8] = {ItemID::StabShot, 16};
         inv.inventory.slots[9] = {ItemID::NukeShot, 16};
+        inv.inventory.slots[10] = {ItemID::Ruby_Pickaxe, 1};
+        inv.inventory.slots[11] = {ItemID::Ruby_Axe, 1};
+        inv.inventory.slots[12] = {ItemID::Ruby_Shovel, 1};
+        inv.inventory.slots[13] = {ItemID::Coal, 64};
+        inv.inventory.slots[14] = {ItemID::Raw_Iron, 64};
+        inv.inventory.slots[15] = {ItemID::Raw_Gold, 64};
+        inv.inventory.slots[16] = {ItemID::Diamond, 64};
+        inv.inventory.slots[17] = {ItemID::Coal_Ore, 64};
+        inv.inventory.slots[18] = {ItemID::Iron_Block, 64};
+        inv.inventory.slots[19] = {ItemID::Gold_Block, 64};
+        inv.inventory.slots[20] = {ItemID::Ruby_Block, 64};
         entity.addComponent(std::move(inv));
 
         entity.addComponent(RenderComponent{AssetManager::GameTextureID::Player, {{0, 0}, {12, 16}}, {0.75f, 1.0f}});

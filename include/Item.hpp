@@ -31,10 +31,20 @@ enum class ItemID : uint32_t
     StabShot,
     NukeShot,
 
+    Coal_Ore,
     Iron_Ore,
     Gold_Ore,
     Diamond_Ore,
     Ruby_Ore,
+
+    Iron_Block,
+    Gold_Block,
+    Ruby_Block,
+
+    Coal,
+    Raw_Iron,
+    Raw_Gold,
+    Diamond,
 
     Oak_Log,
     Oak_Leaves,
@@ -53,18 +63,21 @@ enum class ItemID : uint32_t
     Iron_Pickaxe,
     Gold_Pickaxe,
     Diamond_Pickaxe,
+    Ruby_Pickaxe,
 
     Wooden_Axe,
     Stone_Axe,
     Iron_Axe,
     Gold_Axe,
     Diamond_Axe,
+    Ruby_Axe,
 
     Wooden_Shovel,
     Stone_Shovel,
     Iron_Shovel,
     Gold_Shovel,
     Diamond_Shovel,
+    Ruby_Shovel,
 
     Ruby,
     Stick,
@@ -104,6 +117,7 @@ inline constexpr float STONE_SPEED = 4.0f;
 inline constexpr float GOLD_SPEED = 12.0f;
 inline constexpr float IRON_SPEED = 6.0f;
 inline constexpr float DIAMOND_SPEED = 8.0f;
+inline constexpr float RUBY_SPEED = 10.0f;
 
 
 inline std::unordered_map<int, float> level_based_speed =
@@ -113,7 +127,8 @@ inline std::unordered_map<int, float> level_based_speed =
     {2, STONE_SPEED},
     {3, GOLD_SPEED},
     {4, IRON_SPEED},
-    {5, DIAMOND_SPEED}
+    {5, DIAMOND_SPEED},
+    {6, RUBY_SPEED}
 };
 
 struct ToolProperties

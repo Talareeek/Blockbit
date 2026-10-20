@@ -14,8 +14,9 @@ private:
 
     enum class Mode : int
     {
-        Normal = 0,
-        Flat   = 1
+        Normal         = 0,
+        Flat           = 1,
+        DungeonShooter = 2
     };
 
     Mode mode = Mode::Normal;
