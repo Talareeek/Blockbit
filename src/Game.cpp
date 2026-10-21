@@ -53,6 +53,8 @@ Game::Game()
     AssetManager::loadUITexture(AssetManager::UITextureID::UIBackground, "resources/textures/ui_background.png");
     AssetManager::loadUITexture(AssetManager::UITextureID::Logo, "resources/textures/logo.png");
     AssetManager::loadUITexture(AssetManager::UITextureID::Chest, "resources/textures/chest_view.png");
+    AssetManager::loadUITexture(AssetManager::UITextureID::Furnace, "resources/textures/furnace_view.png");
+    AssetManager::loadUITexture(AssetManager::UITextureID::Crafting, "resources/textures/crafting_view.png");
 
 
     //GAME TEXTURES
@@ -85,6 +87,8 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Coal, "resources/textures/coal.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Raw_Iron, "resources/textures/raw_iron.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Raw_Gold, "resources/textures/raw_gold.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Iron_Ingot, "resources/textures/iron_ingot.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Gold_Ingot, "resources/textures/gold_ingot.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Diamond, "resources/textures/diamond.png");
 
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Stone, "resources/textures/stone.png");

@@ -10,9 +10,11 @@
 #include "../include/AssetManager.hpp"
 #include "../include/InputManager.hpp"
 #include "../include/Render.hpp"
+#include "../include/Prefab.hpp"
 
 #include <algorithm>
 #include <cstring>
+#include <limits>
 
 namespace
 {
@@ -134,6 +136,59 @@ void ServerInventoryView::handleRightClick(World& world, uint16_t slot)
     component.dirty = true;
 }
 
+namespace
+{
+    uint32_t availableOf(const Inventory& inventory, ItemID id)
+    {
+        uint32_t available = 0;
+        for (const auto& slot : inventory.slots)
+        {
+            if (slot.itemID == id && !slot.instanceID.has_value()) available += slot.quantity;
+        }
+        return available;
+    }
+
+    uint32_t freeSpaceFor(const Inventory& inventory, ItemID id)
+    {
+        const uint32_t max_stack = itemDatabase[id].maxStackSize;
+        uint32_t space = 0;
+        for (const auto& slot : inventory.slots)
+        {
+            if (slot.empty())
+            {
+                space += max_stack;
+            }
+            else if (slot.itemID == id && !slot.instanceID.has_value() && slot.quantity < max_stack)
+            {
+                space += max_stack - slot.quantity;
+            }
+        }
+        return space;
+    }
+
+    uint32_t maxCraftableByIngredients(const Inventory& inventory, const Recipe& recipe)
+    {
+        uint32_t cap = std::numeric_limits<uint32_t>::max();
+        for (const auto& ingredient : recipe.ingredients)
+        {
+            if (ingredient.quantity == 0) continue;
+            uint32_t available = availableOf(inventory, ingredient.itemID);
+            cap = std::min(cap, available / ingredient.quantity);
+            if (cap == 0) return 0;
+        }
+        return (cap == std::numeric_limits<uint32_t>::max()) ? 0 : cap;
+    }
+
+    void performCraftOnce(Inventory& inventory, const ItemStack& requested, const Recipe& recipe)
+    {
+        for (const auto& ingredient : recipe.ingredients)
+        {
+            inventory.removeItemWithLeftover(ingredient.itemID, ingredient.quantity);
+        }
+        inventory.addItemWithLeftover(requested.itemID, requested.quantity);
+    }
+}
+
 void ServerInventoryView::handleCraft(World& world, const ItemStack& requested)
 {
     if (!recipes.contains(requested)) return;
@@ -146,24 +201,35 @@ void ServerInventoryView::handleCraft(World& world, const ItemStack& requested)
 
     const auto& recipe = recipes[requested];
 
-    for (const auto& ingredient : recipe.ingredients)
-    {
-        uint32_t available = 0;
-        for (const auto& slot : inventory.slots)
-        {
-            if (slot.itemID == ingredient.itemID) available += slot.quantity;
-            if (available >= ingredient.quantity) break;
-        }
-        if (available < ingredient.quantity) return;
-    }
+    if (maxCraftableByIngredients(inventory, recipe) == 0) return;
 
-    for (const auto& ingredient : recipe.ingredients)
-    {
-        inventory.removeItemWithLeftover(ingredient.itemID, ingredient.quantity);
-    }
-
-    inventory.addItemWithLeftover(requested.itemID, requested.quantity);
+    performCraftOnce(inventory, requested, recipe);
     component.dirty = true;
+}
+
+void ServerInventoryView::handleCraftAll(World& world, const ItemStack& requested)
+{
+    if (!recipes.contains(requested)) return;
+    if (!world.doesEntityExist(owner)) return;
+
+    auto& entity = world.getEntity(owner);
+    if (!entity.hasComponent<InventoryComponent>()) return;
+    auto& component = entity.getComponent<InventoryComponent>();
+    auto& inventory = component.inventory;
+
+    const auto& recipe = recipes[requested];
+
+    uint32_t times = 0;
+    while (true)
+    {
+        if (maxCraftableByIngredients(inventory, recipe) == 0) break;
+        if (freeSpaceFor(inventory, requested.itemID) < requested.quantity) break;
+
+        performCraftOnce(inventory, requested, recipe);
+        ++times;
+    }
+
+    if (times > 0) component.dirty = true;
 }
 
 void ServerInventoryView::handleViewEvent(World& world, const ViewEventData& event_data)
@@ -182,6 +248,15 @@ void ServerInventoryView::handleViewEvent(World& world, const ViewEventData& eve
             if (decodeStack(event_data.payload, requested))
             {
                 handleCraft(world, requested);
+            }
+            break;
+        }
+        case InventoryViewAction::CraftAll:
+        {
+            ItemStack requested{ItemID::None, 0};
+            if (decodeStack(event_data.payload, requested))
+            {
+                handleCraftAll(world, requested);
             }
             break;
         }
@@ -235,13 +310,7 @@ void ServerInventoryView::onClose(World& world)
 
     const auto& transform = player.getComponent<TransformComponent>();
 
-    Entity drop(generateUUID());
-    drop.addComponent(TransformComponent{transform.position + sf::Vector2<double>(0.0, 1.5), {0.5, 0.5}, sf::degrees(0.0f)});
-    drop.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
-    drop.addComponent(RenderComponent{itemDatabase[leftover.itemID].texture, {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
-    drop.addComponent(ItemComponent{leftover});
-
-    world.addEntity(std::move(drop));
+    spawnDroppedItem(world, transform.position + sf::Vector2<double>(0.0, 1.5), leftover, randomDropSpread(45.0f));
 }
 
 std::deque<SetContentData> ServerInventoryView::drainPendingContentUpdates()
@@ -285,11 +354,19 @@ ClientInventoryView::ClientInventoryView()
     {
         Slot slot({0.0f, 0.0f}, {0.0f, 0.0f});
         slot.setItemStack(recipe_stack);
-        slot.show_item_info = false;
+        slot.show_item_info = true;
         crafting_slots.push_back(slot);
     }
+}
 
-    crafting_button = Button({0.0f, 0.0f}, {0.0f, 0.0f}, sf::Color::Black, "Craft", [this](){ craft_clicked = true; });
+void ClientInventoryView::sendCraftRequest(InventoryViewAction action)
+{
+    if (!recipes.contains(selected_recipe)) return;
+    if (!hasIngredients(slot_stacks, INVENTORY_VIEW_SLOT_COUNT, recipes[selected_recipe])) return;
+
+    std::vector<uint8_t> payload(sizeof(ItemStack));
+    std::memcpy(payload.data(), &selected_recipe, sizeof(ItemStack));
+    pending.push_back(ViewEventData{0, static_cast<uint8_t>(action), std::move(payload)});
 }
 
 void ClientInventoryView::pushClick(uint16_t slot, InventoryViewAction action, const ItemStack& stack)
@@ -338,18 +415,39 @@ void ClientInventoryView::handleEvent(const sf::Event& event)
             }
         }
 
-        crafting_button.handleEvent(event);
-
-        if (craft_clicked && recipes.contains(selected_recipe))
+        if (auto moved = event.getIf<sf::Event::MouseMoved>())
         {
-            if (hasIngredients(slot_stacks, INVENTORY_VIEW_SLOT_COUNT, recipes[selected_recipe]))
-            {
-                std::vector<uint8_t> payload(sizeof(ItemStack));
-                std::memcpy(payload.data(), &selected_recipe, sizeof(ItemStack));
-                pending.push_back(ViewEventData{0, static_cast<uint8_t>(InventoryViewAction::Craft), std::move(payload)});
-            }
+            sf::Vector2f mouse_pos(static_cast<float>(moved->position.x), static_cast<float>(moved->position.y));
+            craft_hovered     = craft_button_bounds.contains(mouse_pos);
+            craft_all_hovered = craft_all_button_bounds.contains(mouse_pos);
+        }
 
-            craft_clicked = false;
+        if (auto pressed = event.getIf<sf::Event::MouseButtonPressed>())
+        {
+            if (pressed->button == sf::Mouse::Button::Left)
+            {
+                sf::Vector2f mouse_pos(static_cast<float>(pressed->position.x), static_cast<float>(pressed->position.y));
+                if (craft_button_bounds.contains(mouse_pos))     craft_pressed = true;
+                if (craft_all_button_bounds.contains(mouse_pos)) craft_all_pressed = true;
+            }
+        }
+
+        if (auto released = event.getIf<sf::Event::MouseButtonReleased>())
+        {
+            if (released->button == sf::Mouse::Button::Left)
+            {
+                sf::Vector2f mouse_pos(static_cast<float>(released->position.x), static_cast<float>(released->position.y));
+                if (craft_pressed && craft_button_bounds.contains(mouse_pos))
+                {
+                    sendCraftRequest(InventoryViewAction::Craft);
+                }
+                if (craft_all_pressed && craft_all_button_bounds.contains(mouse_pos))
+                {
+                    sendCraftRequest(InventoryViewAction::CraftAll);
+                }
+                craft_pressed = false;
+                craft_all_pressed = false;
+            }
         }
     }
 }
@@ -367,10 +465,11 @@ void ClientInventoryView::update(float dt)
     for (auto& slot : crafting_slots)
     {
         bool craftable = recipes.contains(slot.item_stack) && hasIngredients(slot_stacks, INVENTORY_VIEW_SLOT_COUNT, recipes[slot.item_stack]);
-        slot.background_color = craftable ? sf::Color::Green : sf::Color::Red;
-    }
+        bool selected  = (slot.item_stack == selected_recipe);
 
-    crafting_button.update(dt);
+        sf::Color base = craftable ? sf::Color(40, 160, 40, 170) : sf::Color(160, 40, 40, 170);
+        slot.background_color = selected ? sf::Color(10, 10, 10, 220) : base;
+    }
 }
 
 void ClientInventoryView::render(sf::RenderWindow& window)
@@ -418,6 +517,7 @@ void ClientInventoryView::render(sf::RenderWindow& window)
     }
     else
     {
+        int hovered_recipe = -1;
         for (int i = static_cast<int>(crafting_slots.size()) - 1; i >= 0; --i)
         {
             int col = i % 4;
@@ -430,23 +530,40 @@ void ClientInventoryView::render(sf::RenderWindow& window)
 
             crafting_slots[i].position = slot_position;
             crafting_slots[i].size     = {slot_size, slot_size};
+
+            const bool prev_show = crafting_slots[i].show_item_info;
+            crafting_slots[i].show_item_info = false;
             crafting_slots[i].render(window);
+            crafting_slots[i].show_item_info = prev_show;
+
+            if (prev_show && crafting_slots[i].getHovered() && !crafting_slots[i].item_stack.empty())
+            {
+                hovered_recipe = i;
+            }
         }
 
-        sf::Vector2f button_position =
-        {
-            position.x + size.x / 2.0f + border,
-            position.y + height_offset + border
-        };
-        sf::Vector2f button_size =
-        {
-            size.x / 2.0f - border * 2.0f,
-            size.x / 5.0f - border * 2.0f
-        };
+        renderIngredientList(window, scale);
 
-        crafting_button.position = button_position;
-        crafting_button.size     = button_size;
-        crafting_button.render(window);
+        // Craft button bounds live in texture pixel space on page 2.
+        // Page 2 starts at texture x=202, so subtract that to get local offsets.
+        const float page2_origin_x = position.x;
+        const float page2_origin_y = position.y;
+
+        craft_button_bounds = sf::FloatRect(
+            {page2_origin_x + (299.0f - 202.0f) * scale, page2_origin_y + 101.0f * scale},
+            {(345.0f - 299.0f) * scale, (111.0f - 101.0f) * scale}
+        );
+        craft_all_button_bounds = sf::FloatRect(
+            {page2_origin_x + (352.0f - 202.0f) * scale, page2_origin_y + 101.0f * scale},
+            {(398.0f - 352.0f) * scale, (111.0f - 101.0f) * scale}
+        );
+
+        renderCraftButtonOverlays(window);
+
+        if (hovered_recipe >= 0)
+        {
+            renderItemInfo(window.mapPixelToCoords(sf::Mouse::getPosition(window)), crafting_slots[hovered_recipe].item_stack, window);
+        }
     }
 
     renderCursor(window);
@@ -455,6 +572,83 @@ void ClientInventoryView::render(sf::RenderWindow& window)
     {
         renderItemInfo(window.mapPixelToCoords(sf::Mouse::getPosition(window)), slots[hovered_slot].item_stack, window);
     }
+}
+
+void ClientInventoryView::renderIngredientList(sf::RenderWindow& window, float scale)
+{
+    if (!recipes.contains(selected_recipe)) return;
+
+    const Recipe& recipe = recipes[selected_recipe];
+    if (recipe.ingredients.empty()) return;
+
+    // Two columns of ingredient slots. Column rects (texture pixel coords):
+    //   col 0: x 331-343, y 36-88
+    //   col 1: x 353-365, y 36-88
+    constexpr float COLUMN_X[2]    = {331.0f, 353.0f};
+    constexpr float COLUMN_WIDTH   = 12.0f;
+    constexpr float COLUMN_TOP_Y   = 36.0f;
+    constexpr float COLUMN_HEIGHT  = 52.0f;
+    constexpr int   SLOTS_PER_COL  = 4;
+
+    const float slot_px     = COLUMN_WIDTH;
+    const float slot_gap_px = (COLUMN_HEIGHT - SLOTS_PER_COL * slot_px) / std::max(1, SLOTS_PER_COL - 1);
+
+    const float page2_origin_x = position.x;
+    const float page2_origin_y = position.y;
+
+    const sf::Vector2f mouse_pos = static_cast<sf::Vector2f>(sf::Mouse::getPosition(window));
+    int hovered = -1;
+
+    for (size_t idx = 0; idx < recipe.ingredients.size() && idx < 2 * SLOTS_PER_COL; ++idx)
+    {
+        int col = static_cast<int>(idx) / SLOTS_PER_COL;
+        int row = static_cast<int>(idx) % SLOTS_PER_COL;
+
+        sf::Vector2f pos{
+            page2_origin_x + (COLUMN_X[col] - 202.0f) * scale,
+            page2_origin_y + (COLUMN_TOP_Y + row * (slot_px + slot_gap_px)) * scale
+        };
+        sf::Vector2f size{slot_px * scale, slot_px * scale};
+
+        Slot ingredient;
+        ingredient.position = pos;
+        ingredient.size     = size;
+        ingredient.setItemStack(recipe.ingredients[idx]);
+        ingredient.background_color = sf::Color(0, 0, 0, 0);
+        ingredient.outline_color    = sf::Color(0, 0, 0, 0);
+        ingredient.show_item_info   = false;
+        ingredient.render(window);
+
+        if (sf::FloatRect(pos, size).contains(mouse_pos)) hovered = static_cast<int>(idx);
+    }
+
+    if (hovered >= 0)
+    {
+        renderItemInfo(window.mapPixelToCoords(sf::Mouse::getPosition(window)), recipe.ingredients[hovered], window);
+    }
+}
+
+void ClientInventoryView::renderCraftButtonOverlays(sf::RenderWindow& window)
+{
+    const bool craftable = recipes.contains(selected_recipe)
+                        && hasIngredients(slot_stacks, INVENTORY_VIEW_SLOT_COUNT, recipes[selected_recipe]);
+
+    auto drawOverlay = [&](const sf::FloatRect& bounds, bool pressed, bool hovered, bool disabled)
+    {
+        sf::Color fill;
+        if (disabled)     fill = sf::Color(0, 0, 0, 160);
+        else if (pressed) fill = sf::Color(0, 0, 0, 110);
+        else if (hovered) fill = sf::Color(255, 255, 255, 40);
+        else              return;
+
+        sf::RectangleShape overlay(bounds.size);
+        overlay.setPosition(bounds.position);
+        overlay.setFillColor(fill);
+        window.draw(overlay);
+    };
+
+    drawOverlay(craft_button_bounds,     craft_pressed,     craft_hovered,     !craftable);
+    drawOverlay(craft_all_button_bounds, craft_all_pressed, craft_all_hovered, !craftable);
 }
 
 void ClientInventoryView::renderPagesBackground(sf::RenderWindow& window)

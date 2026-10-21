@@ -50,6 +50,8 @@ public:
         Coal,
         Raw_Iron,
         Raw_Gold,
+        Iron_Ingot,
+        Gold_Ingot,
         Diamond,
         Ruby,
         Stick,
@@ -89,7 +91,9 @@ public:
         Hotbar,
         UIBackground,
         Logo,
-        Chest
+        Chest,
+        Furnace,
+        Crafting
     };
 
     enum class FontID : uint32_t

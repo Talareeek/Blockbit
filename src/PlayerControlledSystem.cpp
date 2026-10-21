@@ -8,6 +8,9 @@
 #include "../include/InventoryComponent.hpp"
 #include "../include/AnimationComponent.hpp"
 #include "../include/ChestView.hpp"
+#include "../include/FurnaceView.hpp"
+#include "../include/CraftingView.hpp"
+#include "../include/Prefab.hpp"
 
 void PlayerControlledSystem(World& world, float dt)
 {
@@ -85,14 +88,9 @@ void PlayerControlledSystem(World& world, float dt)
 
                     ItemStack drop = {block_data.drop->drop, drop_range(rng)};
 
-                    Entity new_entity(generateUUID());
-                    new_entity.addComponent(TransformComponent{{block_position.x + 0.25f, block_position.y + 0.25f}, {0.5f, 0.5f}, sf::degrees(0.0f)});
-                    new_entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
-                    new_entity.addComponent(ItemComponent(drop));
-                    new_entity.addComponent(RenderComponent{itemDatabase[new_entity.getComponent<ItemComponent>().item.itemID].texture, {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
                     world.setBlock(block_position.x, block_position.y, {BlockID::Air, 0});
 
-                    world.addEntity(std::move(new_entity));
+                    spawnDroppedItem(world, {block_position.x + 0.25, block_position.y + 0.25}, drop, randomDropSpread(60.0f));
 
                     player.mining_time = 0.0f;
                 }
@@ -113,6 +111,31 @@ void PlayerControlledSystem(World& world, float dt)
                 player.since_last_use = 0.0f;
                 player.dirty = true;
                 continue;
+            }
+
+            if(world.getBlock(block_position.x, block_position.y).id == BlockID::Woodcutter && isBlockInRange(transform, block_position, 4.0f))
+            {
+                player.pending_view_opens.push_back(std::make_unique<ServerCraftingView>(block_position, id));
+                player.mid_usage = false;
+                player.since_last_use = 0.0f;
+                player.dirty = true;
+                continue;
+            }
+
+            if(world.getBlock(block_position.x, block_position.y).id == BlockID::Furnace && isBlockInRange(transform, block_position, 4.0f))
+            {
+                auto& selected = inventory.inventory.slots[inventory.selectedSlot];
+
+                // Clicking a furnace with a Lighter in hand should still light
+                // it, not pop open the UI. Fall through to the item-use path.
+                if(!(!selected.empty() && selected.itemID == ItemID::Lighter))
+                {
+                    player.pending_view_opens.push_back(std::make_unique<ServerFurnaceView>(block_position, id));
+                    player.mid_usage = false;
+                    player.since_last_use = 0.0f;
+                    player.dirty = true;
+                    continue;
+                }
             }
 
             auto& selected = inventory.inventory.slots[inventory.selectedSlot];
@@ -172,28 +195,25 @@ void PlayerControlledSystem(World& world, float dt)
 
             inventory.dirty = true;
 
-            Entity item(generateUUID());
-            item.addComponent(TransformComponent{transform.position + sf::Vector2<double>(0.0, 1.5), {0.5, 0.5}, sf::degrees(0.0f)});
-            item.addComponent(PhysicsComponent{sf::Vector2f(player.cursor_position - transform.position), {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
-            item.addComponent(RenderComponent{itemDatabase[stack.itemID].texture, {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
-
+            ItemStack to_drop;
             if(player.drops_full_stack || stack.isUnique())
             {
-                item.addComponent(ItemComponent{stack});
-
+                to_drop = stack;
                 stack = {ItemID::None, 0};
             }
             else
             {
-                item.addComponent(ItemComponent{{stack.itemID, 1}});
-
+                to_drop = {stack.itemID, 1};
                 if(--stack.quantity == 0)
                 {
                     stack.itemID = ItemID::None;
                 }
             }
 
-            world.addEntity(std::move(item));            
+            sf::Vector2<double> drop_position = transform.position + sf::Vector2<double>(0.0, 1.5);
+            sf::Vector2f throw_force = sf::Vector2f(player.cursor_position - transform.position) * 60.0f;
+
+            spawnDroppedItem(world, drop_position, to_drop, throw_force);
         }
 
         if(player.change_slot.has_value())

@@ -60,6 +60,7 @@ private:
     bool unrecoverable = false;
 
     void spawnPlayerFor(std::string nickname);
+    void respawnPlayerFor(std::string nickname);
     void deactivatePlayerFor(std::string nickname);
 
     void sendChunkTo(uint32_t client_id, int around_chunk_position);

@@ -7,6 +7,7 @@
 #include "../include/AIComponent.hpp"
 #include "../include/BlockEntity.hpp"
 #include "../include/ChestBlockEntity.hpp"
+#include "../include/FurnaceBlockEntity.hpp"
 #include "../include/PhysicsComponent.hpp"
 #include "../include/ItemComponent.hpp"
 #include "../include/ItemInstance.hpp"
@@ -78,13 +79,19 @@ void ServerWorld::setBlock(int wx, int wy, Block block)
                 for (const auto& stack : chest->stacks)
                 {
                     if (stack.empty()) continue;
-
-                    Entity drop(generateUUID());
-                    drop.addComponent(TransformComponent{{wx + 0.25, wy + 0.25}, {0.5f, 0.5f}, sf::degrees(0.0f)});
-                    drop.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
-                    drop.addComponent(ItemComponent(stack));
-                    drop.addComponent(RenderComponent{itemDatabase[stack.itemID].texture, {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
-                    addEntity(std::move(drop));
+                    spawnDroppedItem(*this, {wx + 0.25, wy + 0.25}, stack, randomDropSpread(60.0f));
+                }
+            }
+            removeBlockEntity(wx, wy);
+        }
+        else if (previous.id == BlockID::Furnace)
+        {
+            if (auto* furnace = dynamic_cast<FurnaceBlockEntity*>(getBlockEntity(wx, wy)))
+            {
+                for (const ItemStack* stack : {&furnace->fuel, &furnace->input, &furnace->output})
+                {
+                    if (stack->empty()) continue;
+                    spawnDroppedItem(*this, {wx + 0.25, wy + 0.25}, *stack, randomDropSpread(60.0f));
                 }
             }
             removeBlockEntity(wx, wy);
@@ -93,6 +100,10 @@ void ServerWorld::setBlock(int wx, int wy, Block block)
         if (block.id == BlockID::Chest)
         {
             setBlockEntity(wx, wy, std::make_unique<ChestBlockEntity>(sf::Vector2i{wx, wy}));
+        }
+        else if (block.id == BlockID::Furnace)
+        {
+            setBlockEntity(wx, wy, std::make_unique<FurnaceBlockEntity>(sf::Vector2i{wx, wy}));
         }
     }
 }

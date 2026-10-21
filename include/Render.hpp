@@ -12,7 +12,7 @@ extern void RenderWorld(ClientWorld& world, const sf::Vector2<double> camera, sf
 
 [[deprecated]] extern void RenderBlockOverlay(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window, UUID viewerEntityId);
 
-extern void RenderBlockOutline(const sf::Vector2<double> camera, const sf::Vector2i block, sf::RenderWindow& window);
+extern void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf::Vector2i block, sf::RenderWindow& window);
 
 extern void RenderLightRays(World& world, sf::RenderWindow& window);
 

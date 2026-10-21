@@ -422,13 +422,6 @@ std::vector<char> serializePacket(const ChatMessagePacket& p)
     return writer.release();
 }
 
-std::vector<char> serializePacket(const RespawnPacket& p)
-{
-    PacketWriter writer(PacketType::Respawn);
-
-    return writer.release();
-}
-
 std::vector<char> serializePacket(const ClientSnapshotPacket& p)
 {
     PacketWriter writer(PacketType::ClientSnapshot);
@@ -595,11 +588,6 @@ ChatMessagePacket deserializeChatMessage(PacketReader& r)
     ChatMessagePacket p;
     p.message = r.readWideString();
     return p;
-}
-
-RespawnPacket deserializeRespawn(PacketReader& r)
-{
-    return RespawnPacket();
 }
 
 ClientSnapshotPacket deserializeClientSnapshot(PacketReader& r)

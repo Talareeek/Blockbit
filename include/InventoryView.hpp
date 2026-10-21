@@ -5,7 +5,6 @@
 #include "Item.hpp"
 #include "UUID.hpp"
 #include "Slot.hpp"
-#include "Button.hpp"
 
 #include <array>
 #include <cstdint>
@@ -21,7 +20,8 @@ enum class InventoryViewAction : uint8_t
 {
     LeftClick  = 0,
     RightClick = 1,
-    Craft      = 2
+    Craft      = 2,
+    CraftAll   = 3
 };
 
 inline constexpr uint16_t INVENTORY_VIEW_SLOT_COUNT  = 36;
@@ -45,6 +45,7 @@ private:
     void handleLeftClick(World& world, uint16_t slot);
     void handleRightClick(World& world, uint16_t slot);
     void handleCraft(World& world, const ItemStack& requested);
+    void handleCraftAll(World& world, const ItemStack& requested);
 
     static bool decodeStack(const std::vector<uint8_t>& payload, ItemStack& out);
 
@@ -73,8 +74,13 @@ private:
     std::vector<Slot> crafting_slots;
     ItemStack selected_recipe{ItemID::None, 0};
 
-    Button crafting_button;
-    bool craft_clicked = false;
+    sf::FloatRect craft_button_bounds{};
+    sf::FloatRect craft_all_button_bounds{};
+
+    bool craft_hovered = false;
+    bool craft_all_hovered = false;
+    bool craft_pressed = false;
+    bool craft_all_pressed = false;
 
     uint8_t page = 0;
 
@@ -82,8 +88,11 @@ private:
 
     void renderPagesBackground(sf::RenderWindow& window);
     void renderCursor(sf::RenderWindow& window);
+    void renderIngredientList(sf::RenderWindow& window, float scale);
+    void renderCraftButtonOverlays(sf::RenderWindow& window);
 
     void pushClick(uint16_t slot, InventoryViewAction action, const ItemStack& stack);
+    void sendCraftRequest(InventoryViewAction action);
 
 public:
 

@@ -30,27 +30,22 @@ void RenderEntities(World& world, const sf::Vector2<double> camera, sf::RenderWi
 
         auto& component = entity.getComponent<RenderComponent>();
 
-        sf::Sprite sprite(AssetManager::getGameTexture(component.textureID), component.uv);
-
-        const float scaleX = (component.size.x * unit_size) / sprite.getTextureRect().size.x;
-        const float scaleY = -((component.size.y * unit_size) / sprite.getTextureRect().size.y);
-
         bool flipX = false;
         if(entity.hasComponent<AnimationComponent>())
         {
             flipX = entity.getComponent<AnimationComponent>().direction == AnimationComponent::Direction::Right;
         }
 
-        sprite.setScale({flipX ? -scaleX : scaleX, scaleY});
-
-        sprite.setOrigin({flipX ? static_cast<float>(sprite.getTextureRect().size.x) : 0.f, static_cast<float>(sprite.getTextureRect().size.y)});
-
         auto& transform = entity.getComponent<TransformComponent>();
 
         sf::Vector2f screen_position = {static_cast<float>(transform.render_position.x - camera.x), static_cast<float>(transform.render_position.y - camera.y)};
 
-        sprite.setPosition({static_cast<float>(screen_position.x * unit_size), static_cast<float>(screen_position.y * unit_size)});
+        const float px = screen_position.x * unit_size;
+        const float py = screen_position.y * unit_size;
+        const float width  = component.size.x * unit_size;
+        const float height = component.size.y * unit_size;
 
+        sf::Color color = sf::Color::White;
         if(entity.hasComponent<HealthComponent>())
         {
             auto& health = entity.getComponent<HealthComponent>();
@@ -62,11 +57,53 @@ void RenderEntities(World& world, const sf::Vector2<double> camera, sf::RenderWi
 
                 const uint8_t fade = static_cast<uint8_t>(std::round(255.0f * (1.0f - intensity)));
 
-                sprite.setColor(sf::Color(255, fade, fade, 255));
+                color = sf::Color(255, fade, fade, 255);
             }
         }
 
-        window.draw(sprite);
+        // Sub-pixel inset in X only: animation frames in an entity sheet are
+        // packed back-to-back horizontally, so a UV sitting exactly on a
+        // frame boundary can bleed into the neighbour once FP interpolation
+        // nudges it past the integer edge. The inset is well below one texel
+        // so it doesn't visibly truncate the sprite under upscaled rendering.
+        // Y has no neighbouring content (frames span the full texture height)
+        // so no Y inset is needed.
+        constexpr float INSET = 1.0f / 128.0f;
+        float u0 = static_cast<float>(component.uv.position.x) + INSET;
+        float u1 = static_cast<float>(component.uv.position.x + component.uv.size.x) - INSET;
+        const float v_top = static_cast<float>(component.uv.position.y);
+        const float v_bot = static_cast<float>(component.uv.position.y + component.uv.size.y);
+
+        if(flipX) std::swap(u0, u1);
+
+        sf::VertexArray quad(sf::PrimitiveType::Triangles, 6);
+
+        // Matches the old sf::Sprite with origin=(0,h) and scaleY=-|sy|:
+        // the texture's bottom row maps to view-y = py (sprite base), the
+        // top row to py + height. The view is Y-flipped so this reads
+        // right-side-up on screen.
+        sf::Vertex bl, br, tr, tl;
+        bl.position = {px,         py};
+        br.position = {px + width, py};
+        tr.position = {px + width, py + height};
+        tl.position = {px,         py + height};
+
+        bl.texCoords = {u0, v_bot};
+        br.texCoords = {u1, v_bot};
+        tr.texCoords = {u1, v_top};
+        tl.texCoords = {u0, v_top};
+
+        bl.color = color;
+        br.color = color;
+        tr.color = color;
+        tl.color = color;
+
+        quad[0] = bl; quad[1] = br; quad[2] = tr;
+        quad[3] = bl; quad[4] = tr; quad[5] = tl;
+
+        sf::RenderStates states;
+        states.texture = &AssetManager::getGameTexture(component.textureID);
+        window.draw(quad, states);
 
         if(entity.hasComponent<PlayerControlledComponent>())
         {

@@ -7,6 +7,10 @@
 #include "../include/HealthComponent.hpp"
 #include "../include/ExplosiveComponent.hpp"
 #include "../include/AIComponent.hpp"
+#include "../include/ItemComponent.hpp"
+#include "../include/World.hpp"
+
+#include <random>
 
 std::unordered_map<PrefabID, Entity> PrefabRegistry::prefabs;
 
@@ -51,6 +55,7 @@ void PrefabRegistry::init()
         inv.inventory.slots[18] = {ItemID::Iron_Block, 64};
         inv.inventory.slots[19] = {ItemID::Gold_Block, 64};
         inv.inventory.slots[20] = {ItemID::Ruby_Block, 64};
+        inv.inventory.slots[21] = {ItemID::Furnace, 64};
         entity.addComponent(std::move(inv));
 
         entity.addComponent(RenderComponent{AssetManager::GameTextureID::Player, {{0, 0}, {12, 16}}, {0.75f, 1.0f}});
@@ -112,4 +117,42 @@ void PrefabRegistry::init()
 
         add(PrefabID::Pig, entity);
     }
+
+    { // DROPPED_ITEM
+        Entity entity(UUID{});
+
+        entity.addComponent(TransformComponent{{0.0, 0.0}, {0.5, 0.5}, sf::degrees(0.0f)});
+        entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
+        entity.addComponent(RenderComponent{static_cast<AssetManager::GameTextureID>(0), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
+        entity.addComponent(ItemComponent{});
+
+        add(PrefabID::DroppedItem, entity);
+    }
 };
+
+sf::Vector2f randomDropSpread(float spread_factor)
+{
+    static thread_local std::mt19937 rng(std::random_device{}());
+    std::uniform_real_distribution<float> x_dist(-1.0f, 1.0f);
+    std::uniform_real_distribution<float> y_dist(0.0f, 1.0f);
+
+    return {x_dist(rng) * spread_factor, y_dist(rng) * spread_factor};
+}
+
+UUID spawnDroppedItem(World& world, sf::Vector2<double> position, const ItemStack& stack, sf::Vector2f force)
+{
+    Entity entity = PrefabRegistry::get(PrefabID::DroppedItem).cloneAs(generateUUID());
+
+    auto& transform = entity.getComponent<TransformComponent>();
+    transform.position = position;
+    transform.previous_position = position;
+    transform.render_position = position;
+
+    entity.getComponent<PhysicsComponent>().force = force;
+    entity.getComponent<ItemComponent>().item = stack;
+    entity.getComponent<RenderComponent>().textureID = itemDatabase[stack.itemID].texture;
+
+    UUID id = entity.getID();
+    world.addEntity(std::move(entity));
+    return id;
+}

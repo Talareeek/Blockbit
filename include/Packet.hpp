@@ -33,7 +33,6 @@ enum class PacketType : uint8_t
 
     Input,
     ChatMessage,
-    Respawn,
 
     ClientSnapshot,
 
@@ -104,11 +103,6 @@ struct StatusResponsePacket
 struct ChatMessagePacket
 {
     std::wstring message;
-};
-
-struct RespawnPacket
-{
-
 };
 
 struct StopTrackingPacket
@@ -243,7 +237,6 @@ std::vector<char> serializePacket(const InputPacket& p);
 std::vector<char> serializePacket(const StatusResponsePacket& p);
 std::vector<char> serializePacket(const LoginPacket& p);
 std::vector<char> serializePacket(const ChatMessagePacket& p);
-std::vector<char> serializePacket(const RespawnPacket& p);
 std::vector<char> serializePacket(const ClientSnapshotPacket& p);
 std::vector<char> serializePacket(const OpenViewPacket& p);
 std::vector<char> serializePacket(const CloseViewPacket& p);
@@ -259,7 +252,6 @@ InputPacket          deserializeInput(PacketReader& r);
 StatusResponsePacket deserializeStatusResponse(PacketReader& r);
 LoginPacket deserializeLogin(PacketReader& r);
 ChatMessagePacket deserializeChatMessage(PacketReader& r);
-RespawnPacket deserializeRespawn(PacketReader& r);
 ClientSnapshotPacket deserializeClientSnapshot(PacketReader& r);
 
 OpenViewPacket deserializeOpenView(PacketReader& r);

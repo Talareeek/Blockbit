@@ -7,6 +7,7 @@
 #include "../include/RenderComponent.hpp"
 #include "../include/PhysicsComponent.hpp"
 #include "../include/Chunk.hpp"
+#include "../include/FurnaceBlockEntity.hpp"
 
 std::unordered_map<ItemID, ItemData> itemDatabase =
 {
@@ -510,13 +511,45 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .category = ItemCategory::Misc,
             .onUse = [](World& world, sf::Vector2f mouse, UUID user) -> bool
             {
+                (void)user;
                 sf::Vector2i position = {
                     static_cast<int>(std::floor(mouse.x)),
                     static_cast<int>(std::floor(mouse.y))
                 };
 
+                Block target = world.getBlock(position.x, position.y);
+
+                if(target.id == BlockID::Furnace)
+                {
+                    auto* furnace = dynamic_cast<FurnaceBlockEntity*>(world.getBlockEntity(position.x, position.y));
+                    if(!furnace) return false;
+                    if(furnace->isLit()) return false;
+                    if(furnace->fuel.empty() || furnace->input.empty()) return false;
+
+                    auto fuel_it = fuelBurnTimes.find(furnace->fuel.itemID);
+                    if(fuel_it == fuelBurnTimes.end()) return false;
+
+                    auto smelt_it = smeltingRecipes.find(furnace->input.itemID);
+                    if(smelt_it == smeltingRecipes.end()) return false;
+
+                    furnace->lit = true;
+                    furnace->burn_time_total     = fuel_it->second;
+                    furnace->burn_time_remaining = fuel_it->second;
+                    furnace->cook_time_total     = smelt_it->second.cook_time;
+                    furnace->cook_time_remaining = smelt_it->second.cook_time;
+
+                    if(--furnace->fuel.quantity == 0) furnace->fuel = {ItemID::None, 0};
+
+                    if(target.metadata != 1)
+                    {
+                        world.setBlock(position.x, position.y, {BlockID::Furnace, 1});
+                    }
+
+                    return false;
+                }
+
                 if(
-                    world.getBlock(position.x, position.y).id == BlockID::Air &&
+                    target.id == BlockID::Air &&
                     blockDatabase[
                         world.getBlock(position.x, position.y - 1).id
                     ].solid
@@ -821,6 +854,26 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .category = ItemCategory::Block
         }
     },
+    {
+        ItemID::Iron_Ingot,
+        {
+            .name = "Iron Ingot",
+            .texture = AssetManager::GameTextureID::Iron_Ingot,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Misc
+        }
+    },
+    {
+        ItemID::Gold_Ingot,
+        {
+            .name = "Gold Ingot",
+            .texture = AssetManager::GameTextureID::Gold_Ingot,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Rare,
+            .category = ItemCategory::Misc
+        }
+    },
 };
 
 bool ItemStack::empty() const
@@ -959,4 +1012,35 @@ std::unordered_map<ItemStack, Recipe> recipes
     {{.itemID = ItemID::Oak_Planks, .quantity = 4}, {{{ItemID::Oak_Log, 1}}, false}},
     {{.itemID = ItemID::Stick, .quantity = 4}, {{{ItemID::Oak_Planks, 2}}, false}},
 
+    {{.itemID = ItemID::Wooden_Pickaxe,  .quantity = 1}, {{{ItemID::Oak_Planks, 3}, {ItemID::Stick, 2}}, true}},
+    {{.itemID = ItemID::Stone_Pickaxe,   .quantity = 1}, {{{ItemID::Cobblestone, 3}, {ItemID::Stick, 2}}, true}},
+    {{.itemID = ItemID::Iron_Pickaxe,    .quantity = 1}, {{{ItemID::Iron_Ingot, 3}, {ItemID::Stick, 2}}, true}},
+    {{.itemID = ItemID::Gold_Pickaxe,    .quantity = 1}, {{{ItemID::Gold_Ingot, 3}, {ItemID::Stick, 2}}, true}},
+    {{.itemID = ItemID::Diamond_Pickaxe, .quantity = 1}, {{{ItemID::Diamond, 3}, {ItemID::Stick, 2}}, true}},
+    {{.itemID = ItemID::Ruby_Pickaxe,    .quantity = 1}, {{{ItemID::Ruby, 3}, {ItemID::Stick, 2}}, true}},
+
+    {{.itemID = ItemID::Iron_Block, .quantity = 1}, {{{ItemID::Iron_Ingot, 9}}, true}},
+    {{.itemID = ItemID::Gold_Block, .quantity = 1}, {{{ItemID::Gold_Ingot, 9}}, true}},
+    {{.itemID = ItemID::Ruby_Block, .quantity = 1}, {{{ItemID::Ruby, 9}}, true}},
+
+    {{.itemID = ItemID::Iron_Ingot, .quantity = 9}, {{{ItemID::Iron_Block, 1}}, true}},
+    {{.itemID = ItemID::Gold_Ingot, .quantity = 9}, {{{ItemID::Gold_Block, 1}}, true}},
+    {{.itemID = ItemID::Ruby,       .quantity = 9}, {{{ItemID::Ruby_Block, 1}}, true}},
+};
+
+std::unordered_map<ItemID, SmeltRecipe> smeltingRecipes
+{
+    {ItemID::Cobblestone, {ItemID::Stone,      10.0f}},
+    {ItemID::Raw_Iron,    {ItemID::Iron_Ingot, 10.0f}},
+    {ItemID::Raw_Gold,    {ItemID::Gold_Ingot, 10.0f}},
+};
+
+std::unordered_map<ItemID, float> fuelBurnTimes
+{
+    {ItemID::Coal,       80.0f},
+    {ItemID::Oak_Log,    15.0f},
+    {ItemID::Oak_Planks, 15.0f},
+    {ItemID::Oak_Leaves,  1.0f},
+    {ItemID::Woodcutter, 15.0f},
+    {ItemID::Stick,       5.0f},
 };

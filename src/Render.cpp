@@ -40,10 +40,15 @@ namespace
         const sf::Vector2f uvPos  = sf::Vector2f(static_cast<float>(uv.position.x), static_cast<float>(uv.position.y));
         const sf::Vector2f uvSize = sf::Vector2f(static_cast<float>(uv.size.x), static_cast<float>(uv.size.y));
 
-        const float u0 = uvPos.x;
-        const float v0y = uvPos.y;
-        const float u1 = uvPos.x + uvSize.x;
-        const float v1y = uvPos.y + uvSize.y;
+        // Half-pixel inset: atlas tiles are packed with no gutter, so a UV
+        // landing exactly on a tile boundary can bleed into the neighbour
+        // when the camera is at a sub-pixel position. Pulling the UVs in by
+        // 0.5 texels keeps nearest-neighbour sampling pinned to this tile.
+        constexpr float INSET = 0.5f;
+        const float u0 = uvPos.x + INSET;
+        const float v0y = uvPos.y + INSET;
+        const float u1 = uvPos.x + uvSize.x - INSET;
+        const float v1y = uvPos.y + uvSize.y - INSET;
 
         vertex0.position = {bounds.position.x, bounds.position.y};
         vertex1.position = {bounds.position.x + bounds.size.x, bounds.position.y};
@@ -348,21 +353,95 @@ void RenderBlockOverlay(World& world, const sf::Vector2<double> camera, sf::Rend
 
 #include <iostream>
 
-void RenderBlockOutline(const sf::Vector2<double> camera, const sf::Vector2i block, sf::RenderWindow& window)
+void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf::Vector2i block, sf::RenderWindow& window)
 {
+    constexpr float TRANSITION_DURATION = 0.1f;
+    constexpr float INSET = 1.0f / 16.0f;
+
+    auto resolveBounds = [&]() -> sf::FloatRect
+    {
+        Block b = world.getBlock(block.x, block.y);
+        auto it = blockDatabase.find(b.id);
+        if (it != blockDatabase.end() && it->second.render.has_value())
+        {
+            sf::FloatRect r = it->second.render->render_bounds(b);
+            if (r.size.x > 0.0f && r.size.y > 0.0f) return r;
+        }
+        return {{0.0f, 0.0f}, {1.0f, 1.0f}};
+    };
+
+    sf::FloatRect local = resolveBounds();
+    sf::FloatRect target
+    {
+        {static_cast<float>(block.x) + local.position.x, static_cast<float>(block.y) + local.position.y},
+        local.size
+    };
+
+    static sf::FloatRect source_rect{};
+    static sf::FloatRect target_rect{};
+    static sf::FloatRect current_rect{};
+    static float transition_elapsed = TRANSITION_DURATION;
+    static bool initialized = false;
+    static sf::Clock clock;
+
+    const float dt = clock.restart().asSeconds();
+
+    const bool target_changed =
+        target.position.x != target_rect.position.x ||
+        target.position.y != target_rect.position.y ||
+        target.size.x     != target_rect.size.x     ||
+        target.size.y     != target_rect.size.y;
+
+    if (!initialized)
+    {
+        source_rect = target;
+        target_rect = target;
+        current_rect = target;
+        transition_elapsed = TRANSITION_DURATION;
+        initialized = true;
+    }
+    else if (target_changed)
+    {
+        source_rect = current_rect;
+        target_rect = target;
+        transition_elapsed = 0.0f;
+    }
+
+    if (transition_elapsed < TRANSITION_DURATION)
+    {
+        transition_elapsed = std::min(transition_elapsed + dt, TRANSITION_DURATION);
+        float t = transition_elapsed / TRANSITION_DURATION;
+        t = t * t * (3.0f - 2.0f * t);
+
+        current_rect.position.x = source_rect.position.x + (target_rect.position.x - source_rect.position.x) * t;
+        current_rect.position.y = source_rect.position.y + (target_rect.position.y - source_rect.position.y) * t;
+        current_rect.size.x     = source_rect.size.x     + (target_rect.size.x     - source_rect.size.x)     * t;
+        current_rect.size.y     = source_rect.size.y     + (target_rect.size.y     - source_rect.size.y)     * t;
+    }
+    else
+    {
+        current_rect = target_rect;
+    }
+
     float unit_size = static_cast<float>(window.getSize().y) / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
 
-    sf::RectangleShape shape({unit_size * (14.0f / 16.0f), unit_size * (14.0f / 16.0f)});
-    
-    shape.setFillColor(sf::Color::Transparent);
+    float inset = std::min(INSET, 0.5f * std::min(current_rect.size.x, current_rect.size.y));
 
+    sf::RectangleShape shape(
+        {
+            (current_rect.size.x - 2.0f * inset) * unit_size,
+            (current_rect.size.y - 2.0f * inset) * unit_size
+        }
+    );
+
+    shape.setFillColor(sf::Color::Transparent);
     shape.setOutlineColor(sf::Color::Black);
-    shape.setOutlineThickness(unit_size * (1.0f / 16.0f));
+    shape.setOutlineThickness(inset * unit_size);
 
     shape.setPosition(
         {
-            (static_cast<float>(static_cast<double>(block.x) - camera.x) + (1.0f / 16.0f)) * unit_size,
-            (static_cast<float>(static_cast<double>(block.y) - camera.y) + (1.0f / 16.0f)) * unit_size
+            (static_cast<float>(static_cast<double>(current_rect.position.x) - camera.x) + inset) * unit_size,
+            (static_cast<float>(static_cast<double>(current_rect.position.y) - camera.y) + inset) * unit_size
         }
     );
 

@@ -13,7 +13,8 @@ class World;
 enum class BlockEntityID : uint32_t
 {
     None = 0,
-    Chest = 1
+    Chest = 1,
+    Furnace = 2
 };
 
 class BlockEntity

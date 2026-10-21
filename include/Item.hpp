@@ -84,7 +84,10 @@ enum class ItemID : uint32_t
 
     Chest,
     Bricks,
-    Furnace
+    Furnace,
+
+    Iron_Ingot,
+    Gold_Ingot
 };
 
 enum class ItemRarity
@@ -223,5 +226,17 @@ namespace std
 extern std::unordered_map<ItemStack, Recipe> recipes;
 
 extern bool canStack(const ItemStack& a, const ItemStack& b);
+
+// Smelting: input ItemID -> (output ItemID, seconds required).
+struct SmeltRecipe
+{
+    ItemID output;
+    float  cook_time;
+};
+
+extern std::unordered_map<ItemID, SmeltRecipe> smeltingRecipes;
+
+// Fuel: ItemID -> seconds of burn each unit provides.
+extern std::unordered_map<ItemID, float> fuelBurnTimes;
 
 #endif // ITEM_HPP

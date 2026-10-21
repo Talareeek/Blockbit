@@ -12,7 +12,9 @@ class World;
 enum class ViewType : uint8_t
 {
     Chest,
-    Inventory
+    Inventory,
+    Furnace,
+    Crafting
 };
 
 // SetContentData flows server -> client. It describes a single content slot

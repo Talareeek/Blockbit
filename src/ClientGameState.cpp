@@ -10,7 +10,6 @@
 #include "../include/AssetManager.hpp"
 #include "../include/Chunk.hpp"
 #include "../include/PauseScreenState.hpp"
-#include "../include/DeathScreenState.hpp"
 #include "../include/InputManager.hpp"
 #include "../include/AnimationSystem.hpp"
 #include "../include/Render.hpp"
@@ -26,6 +25,8 @@
 #include "../include/NetworkInterpolationComponent.hpp"
 #include "../include/ChestView.hpp"
 #include "../include/InventoryView.hpp"
+#include "../include/FurnaceView.hpp"
+#include "../include/CraftingView.hpp"
 
 #include <iostream>
 #include <algorithm>
@@ -304,6 +305,12 @@ void ClientGameState::processIncoming()
                             break;
                         case ViewType::Inventory:
                             content_view = std::make_unique<ClientInventoryView>();
+                            break;
+                        case ViewType::Furnace:
+                            content_view = std::make_unique<ClientFurnaceView>();
+                            break;
+                        case ViewType::Crafting:
+                            content_view = std::make_unique<ClientCraftingView>();
                             break;
                     }
 
@@ -662,12 +669,6 @@ void ClientGameState::update(float dt)
         debug = !debug;
     }
 
-    if (player_ui_initialized && local_world.getEntity(local_player_entity_id.value()).getComponent<HealthComponent>().health <= 0 && this->onTop())
-    {
-        World& death_world = local_server.has_value() ? local_server->getWorld() : local_world;
-        game->pushState(this, std::make_unique<DeathScreenState>(game, death_world, local_player_entity_id.value()));
-    }
-
     last_fps_update += dt;
 
     if(last_fps_update >= 1.0f)
@@ -722,7 +723,7 @@ void ClientGameState::render(sf::RenderWindow& window)
     RenderWorld(local_world, camera, window);
 
     // BLOCK OUTLINE
-    RenderBlockOutline(camera, getMouseBlockPosition(camera, window), window);
+    RenderBlockOutline(local_world, camera, getMouseBlockPosition(camera, window), window);
 
 
     window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));

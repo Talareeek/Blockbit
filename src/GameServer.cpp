@@ -25,6 +25,7 @@
 #include "../include/Prefab.hpp"
 #include "../include/ChestView.hpp"
 #include "../include/InventoryView.hpp"
+#include "../include/FurnaceBlockEntity.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -223,10 +224,6 @@ void GameServer::processIncoming()
 
                     sendChat(wide_nickname, chat_message.message);
 
-                    break;
-                }
-                case PacketType::Respawn:
-                {
                     break;
                 }
                 case PacketType::ClientSnapshot:
@@ -487,14 +484,28 @@ void GameServer::update(float dt)
                 {
                     data.content_view->onClose(world);
                     data.content_view.reset();
+                    transport->send(client_id, serializePacket(CloseViewPacket{}));
                 }
 
-                transport->send(client_id, serializePacket(StopTrackingPacket{}));
-                transport->send(client_id, serializePacket(CloseViewPacket{}));
+                respawnPlayerFor(data.nickname);
+
+                transport->send(client_id, serializePacket(TrackPacket{nickname_to_entity[data.nickname]}));
             }
         }
 
         world.tick(dt);
+
+        for (auto& [chunk_position, chunk] : world.getChunks())
+        {
+            if (!chunk.generated) continue;
+            for (auto& [key, block_entity] : chunk.block_entities)
+            {
+                if (!block_entity) continue;
+                if (block_entity->typeId() != BlockEntityID::Furnace) continue;
+                block_entity->tick(world, dt);
+            }
+        }
+
         world.trySpawnPassiveMobs(dt);
 
         tick++;
@@ -566,6 +577,21 @@ void GameServer::spawnPlayerFor(std::string nickname)
     }
 
     std::cout << "[Server] Spawned player for " << nickname << '\n';
+}
+
+void GameServer::respawnPlayerFor(std::string nickname)
+{
+    Entity entity = PrefabRegistry::get(PrefabID::Player).cloneAs(generateUUID());
+
+    if(entity.hasComponent<TransformComponent>()) entity.getComponent<TransformComponent>().position = world.getSpawnPoint();
+
+    entity.addComponent(PlayerControlledComponent{nickname});
+
+    nickname_to_entity[nickname] = entity.getID();
+
+    world.addEntity(std::move(entity));
+
+    std::cout << "[Server] Respawned player for " << nickname << '\n';
 }
 
 void GameServer::deactivatePlayerFor(std::string nickname)

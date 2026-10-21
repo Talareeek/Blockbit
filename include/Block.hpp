@@ -148,8 +148,8 @@ inline auto chest_render_rect = [](Block block_instance) -> sf::IntRect
     return {{1, 2}, {14, 14}};
 };
 
-// Furnace texture is 48x16: frame 0 (x=0) = lit, frames 1-2 (x=16, x=32) = idle
-// cycle. The idle animation is driven on the GPU via the vertex-color channel
+// Furnace texture is 48x16: frame 0 (x=0) = idle, frames 1-2 (x=16, x=32) = lit
+// cycle. The lit animation is driven on the GPU via the vertex-color channel
 // (see BlockAnimation above and Render.cpp::appendQuad).
 inline auto furnace_render_bounds = [](Block) -> sf::FloatRect
 {
@@ -158,14 +158,14 @@ inline auto furnace_render_bounds = [](Block) -> sf::FloatRect
 
 inline auto furnace_render_rect = [](Block block_instance) -> sf::IntRect
 {
-    if (block_instance.metadata == 1) return {{0, 0}, {16, 16}};
-    return {{16, 0}, {16, 16}};
+    if (block_instance.metadata == 1) return {{16, 0}, {16, 16}};
+    return {{0, 0}, {16, 16}};
 };
 
 inline auto furnace_animation = [](Block block_instance) -> BlockAnimation
 {
-    if (block_instance.metadata == 1) return {1, 0};
-    return {2, 400};
+    if (block_instance.metadata == 1) return {2, 400};
+    return {1, 0};
 };
 
 // Woodcutter texture is 32x16: two 16x16 frames side by side. The mesh anchors

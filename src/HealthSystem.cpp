@@ -5,23 +5,20 @@
 #include "../include/TransformComponent.hpp"
 #include "../include/PhysicsComponent.hpp"
 #include "../include/RenderComponent.hpp"
+#include "../include/Prefab.hpp"
 
 #include <algorithm>
-
-std::random_device rd;
-
-float randomDouble(double min, double max)
-{
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<> dist(min, max);
-
-    return dist(gen);
-}
 
 void HealthSystem(World& world, float dt)
 {
     std::vector<UUID> toDelete;
 
+    struct PendingDrop
+    {
+        sf::Vector2<double> position;
+        ItemStack stack;
+    };
+    std::vector<PendingDrop> pending_drops;
 
     for(auto& [id, entity] : world.getEntities())
     {
@@ -43,24 +40,22 @@ void HealthSystem(World& world, float dt)
         {
             toDelete.push_back(entity.getID());
 
-            if(!entity.hasComponent<InventoryComponent>()) continue;
+            if(!entity.hasComponent<InventoryComponent>() || !entity.hasComponent<TransformComponent>()) continue;
 
             auto& inventory = entity.getComponent<InventoryComponent>();
-
             auto& transform = entity.getComponent<TransformComponent>();
 
             for(auto& item : inventory.inventory.slots)
             {
-                Entity drop(generateUUID());
-
-                drop.addComponent(TransformComponent(transform.center(), {0.5, 0.5}));
-                PhysicsComponent{{randomDouble(-2.0, 2.0), randomDouble(0.0, 2.0)}};
-                RenderComponent{itemDatabase[item.itemID].texture, {}, {0.5f,0.5f}};
-                drop.addComponent(ItemComponent{item});
-
-                world.addEntity(std::move(drop));
+                if(item.empty()) continue;
+                pending_drops.push_back({transform.center(), item});
             }
         }
+    }
+
+    for(const auto& drop : pending_drops)
+    {
+        spawnDroppedItem(world, drop.position, drop.stack, randomDropSpread(60.0f));
     }
 
     for(auto& id : toDelete)
