@@ -88,7 +88,9 @@ enum class ItemID : uint32_t
     Furnace,
 
     Iron_Ingot,
-    Gold_Ingot
+    Gold_Ingot,
+
+    Workbench
 };
 
 enum class ItemRarity

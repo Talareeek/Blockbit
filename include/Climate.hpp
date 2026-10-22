@@ -18,7 +18,11 @@ enum class Biome
     Desert,
     Savanna,
     Mountains,
-    Snow
+    Snow,
+    Jungle,
+    Taiga,
+    SnowyTaiga,
+    GiantTaiga
 };
 
 #endif // CLIMATE_HPP

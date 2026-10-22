@@ -68,6 +68,9 @@ struct PlayerControlledComponent : public Component
         TagCompound compound;
 
         compound["nickname"] = Tag(nickname);
+        compound["mid_attack"] = Tag(mid_attack);
+        compound["mining_block"] = Tag(mining_block);
+        compound["mining_time"] = Tag(mining_time);
 
         return Tag(compound);
     }
@@ -75,6 +78,11 @@ struct PlayerControlledComponent : public Component
     void deserialize(const Tag& tag) override
     {
         nickname = tag["nickname"].get<std::string>();
+
+        const TagCompound& compound = tag.get<TagCompound>();
+        if (compound.count("mid_attack"))   mid_attack   = tag["mid_attack"].get<bool>();
+        if (compound.count("mining_block")) mining_block = tag["mining_block"].get<sf::Vector2i>();
+        if (compound.count("mining_time"))  mining_time  = tag["mining_time"].get<float>();
     }
 
     std::unique_ptr<Component> clone() const override

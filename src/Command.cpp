@@ -342,7 +342,7 @@ std::unordered_map<std::wstring, Command> commandDatabase =
             InventoryComponent inv(36);
             inv.inventory.slots[0] = {ItemID::Dynamite, 16};
             inv.inventory.slots[1] = {ItemID::Bucket, 1};
-            inv.inventory.slots[2] = {ItemID::Woodcutter, 64};
+            inv.inventory.slots[2] = {ItemID::Workbench, 64};
             inv.inventory.slots[3] = {ItemID::Lighter, 1};
             inv.inventory.slots[4] = {ItemID::Diamond_Pickaxe, 1};
             inv.inventory.slots[5] = {ItemID::Diamond_Axe, 1};

@@ -3,6 +3,8 @@
 #include "../include/Entity.hpp"
 #include "../include/World.hpp"
 #include "../include/TransformComponent.hpp"
+#include "../include/PlayerControlledComponent.hpp"
+#include "../include/Block.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/BlockAtlas.hpp"
 #include "../include/NetworkInterpolationComponent.hpp"
@@ -452,6 +454,92 @@ void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf
     );
 
     window.draw(shape);
+}
+
+// Mining-progress destruction overlay.
+//
+// Each cell is a block-local sub-pixel; the 3D-Perlin field is sampled in
+// *world* coordinates so block (bx,by) always maps to the same slice of
+// noise. Progress drives the threshold: as it rises past ENTRY_THRESHOLD,
+// more and more pixels fall under it and get painted black. The sampling
+// grid gives the characteristic "cracked pixel" look.
+void RenderBlockDestruction(World& world, sf::Vector2<double> camera, sf::RenderWindow& window)
+{
+    static const PerlinNoise3D destruction_noise(0xB10CB17u);
+
+    constexpr float  ENTRY_THRESHOLD = 0.15f;
+    constexpr int    RES             = 8;
+    constexpr double NOISE_FREQ      = 4.0;
+    constexpr double NOISE_Z         = 0.5;
+
+    const float unit_size = static_cast<float>(window.getSize().y) / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
+    const double pixel_world = 1.0 / static_cast<double>(RES);
+
+    sf::VertexArray triangles(sf::PrimitiveType::Triangles);
+
+    for (auto& [id, entity] : world.getEntities())
+    {
+        if (!entity.hasComponent<PlayerControlledComponent>()) continue;
+
+        const auto& player = entity.getComponent<PlayerControlledComponent>();
+        if (!player.mid_attack || player.mining_time <= 0.0f) continue;
+
+        const sf::Vector2i bp = player.mining_block;
+        const Block block = world.getBlock(bp.x, bp.y);
+        if (block.id == BlockID::Air) continue;
+
+        auto bd_it = blockDatabase.find(block.id);
+        if (bd_it == blockDatabase.end()) continue;
+        const BlockData& bd = bd_it->second;
+        if (bd.hardness <= 0.0f) continue;
+
+        const float progress = std::clamp(player.mining_time / bd.hardness, 0.0f, 1.0f);
+        if (progress < ENTRY_THRESHOLD) continue;
+
+        const float effective = (progress - ENTRY_THRESHOLD) / (1.0f - ENTRY_THRESHOLD);
+
+        // Clip to the block's visible footprint (water, doors, …).
+        const sf::FloatRect bounds = bd.render.has_value()
+            ? bd.render->render_bounds(block)
+            : sf::FloatRect{{0.0f, 0.0f}, {1.0f, 1.0f}};
+        if (bounds.size.x <= 0.0f || bounds.size.y <= 0.0f) continue;
+
+        for (int py = 0; py < RES; ++py)
+        {
+            for (int px = 0; px < RES; ++px)
+            {
+                const double lx = px * pixel_world;
+                const double ly = py * pixel_world;
+
+                if (lx + pixel_world <= bounds.position.x || lx >= bounds.position.x + bounds.size.x) continue;
+                if (ly + pixel_world <= bounds.position.y || ly >= bounds.position.y + bounds.size.y) continue;
+
+                const double nx = (static_cast<double>(bp.x) + lx + pixel_world * 0.5) * NOISE_FREQ;
+                const double ny = (static_cast<double>(bp.y) + ly + pixel_world * 0.5) * NOISE_FREQ;
+                const double n  = destruction_noise.noise(nx, ny, NOISE_Z);
+
+                if (n >= effective) continue;
+
+                const float wx0 = static_cast<float>(static_cast<double>(bp.x) + lx                 - camera.x) * unit_size;
+                const float wx1 = static_cast<float>(static_cast<double>(bp.x) + lx + pixel_world   - camera.x) * unit_size;
+                const float wy0 = static_cast<float>(static_cast<double>(bp.y) + ly                 - camera.y) * unit_size;
+                const float wy1 = static_cast<float>(static_cast<double>(bp.y) + ly + pixel_world   - camera.y) * unit_size;
+
+                const sf::Color c(0, 0, 0, 170);
+                const sf::Vertex v0{{wx0, wy0}, c};
+                const sf::Vertex v1{{wx1, wy0}, c};
+                const sf::Vertex v2{{wx1, wy1}, c};
+                const sf::Vertex v3{{wx0, wy1}, c};
+                triangles.append(v0); triangles.append(v1); triangles.append(v2);
+                triangles.append(v0); triangles.append(v2); triangles.append(v3);
+            }
+        }
+    }
+
+    if (triangles.getVertexCount() > 0)
+    {
+        window.draw(triangles);
+    }
 }
 
 static float wrapToPi(float a)

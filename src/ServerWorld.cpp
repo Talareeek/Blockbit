@@ -802,16 +802,27 @@ sf::Vector2<double> ServerWorld::getSpawnPoint()
     static thread_local std::mt19937 rng(std::random_device{}());
     std::uniform_int_distribution<int> dist_x(-16, 16);
 
-    auto findSurface = [&](int wx) -> std::optional<int>
+    // Player AABB from Prefab::Player: position is bottom-left, size {0.75, 1.0}.
+    // At spawn x = wx + 0.5, the body straddles tiles wx and wx + 1 horizontally
+    // and occupies one tile vertically. We need both columns clear with a solid
+    // floor underneath, otherwise physics shoves the player into the terrain.
+    auto chunkOf = [](int x) { return (x >= 0) ? x / CHUNK_WIDTH : (x - CHUNK_WIDTH + 1) / CHUNK_WIDTH; };
+
+    auto isPassable = [](Block b) { return b.id == BlockID::Air; };
+    auto isFloor    = [](Block b) { return b.id != BlockID::Air && b.id != BlockID::Water; };
+
+    auto findSpawnY = [&](int wx) -> std::optional<int>
     {
-        for (int y = CHUNK_HEIGHT - 2; y >= 0; --y)
+        const int cl = wx;
+        const int cr = wx + 1;
+        loadOrCreateChunk(chunkOf(cl));
+        if (chunkOf(cr) != chunkOf(cl)) loadOrCreateChunk(chunkOf(cr));
+
+        for (int y = CHUNK_HEIGHT - 2; y >= 1; --y)
         {
-            Block here  = getBlock(wx, y);
-            Block above = getBlock(wx, y + 1);
-            if (here.id != BlockID::Air && here.id != BlockID::Water && above.id == BlockID::Air)
-            {
-                return y + 1;
-            }
+            if (!isPassable(getBlock(cl, y))     || !isPassable(getBlock(cr, y)))     continue;
+            if (!isFloor(getBlock(cl, y - 1))    || !isFloor(getBlock(cr, y - 1)))    continue;
+            return y;
         }
         return std::nullopt;
     };
@@ -819,21 +830,12 @@ sf::Vector2<double> ServerWorld::getSpawnPoint()
     for (int attempt = 0; attempt < 24; ++attempt)
     {
         int wx = dist_x(rng);
-
-        int chunk_position = (wx >= 0) ? wx / CHUNK_WIDTH : (wx - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
-        loadOrCreateChunk(chunk_position);
-
-        if (auto y = findSurface(wx))
-        {
+        if (auto y = findSpawnY(wx))
             return {static_cast<double>(wx) + 0.5, static_cast<double>(*y)};
-        }
     }
 
-    loadOrCreateChunk(0);
-    if (auto y = findSurface(0))
-    {
+    if (auto y = findSpawnY(0))
         return {0.5, static_cast<double>(*y)};
-    }
 
     return {0.5, static_cast<double>(CHUNK_HEIGHT - 10)};
 }

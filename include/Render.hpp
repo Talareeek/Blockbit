@@ -14,6 +14,8 @@ extern void RenderWorld(ClientWorld& world, const sf::Vector2<double> camera, sf
 
 extern void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf::Vector2i block, sf::RenderWindow& window);
 
+extern void RenderBlockDestruction(World& world, sf::Vector2<double> camera, sf::RenderWindow& window);
+
 extern void RenderLightRays(World& world, sf::RenderWindow& window);
 
 extern sf::Color lerpColor(sf::Color a, sf::Color b, float t);

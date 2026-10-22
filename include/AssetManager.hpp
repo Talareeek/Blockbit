@@ -41,6 +41,7 @@ public:
         Chest,
         Bricks,
         Furnace,
+        Workbench,
 
 
         // ITEMS

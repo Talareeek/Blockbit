@@ -615,7 +615,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
-            .tool = ToolProperties{ToolType::Pickaxe, 1}
+            .tool = ToolProperties{ToolType::Pickaxe, 1},
+            .maxDurability = 59
         }
     },
     {
@@ -626,7 +627,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
-            .tool = ToolProperties{ToolType::Pickaxe, 2}
+            .tool = ToolProperties{ToolType::Pickaxe, 2},
+            .maxDurability = 131
         }
     },
     {
@@ -637,7 +639,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
-            .tool = ToolProperties{ToolType::Pickaxe, 3}
+            .tool = ToolProperties{ToolType::Pickaxe, 3},
+            .maxDurability = 32
         }
     },
     {
@@ -648,7 +651,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
-            .tool = ToolProperties{ToolType::Pickaxe, 4}
+            .tool = ToolProperties{ToolType::Pickaxe, 4},
+            .maxDurability = 250
         }
     },
     {
@@ -659,7 +663,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
-            .tool = ToolProperties{ToolType::Pickaxe, 5}
+            .tool = ToolProperties{ToolType::Pickaxe, 5},
+            .maxDurability = 1561
         }
     },
     {
@@ -670,7 +675,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Epic,
             .category = ItemCategory::Tool,
-            .tool = ToolProperties{ToolType::Pickaxe, 6}
+            .tool = ToolProperties{ToolType::Pickaxe, 6},
+            .maxDurability = 2048
         }
     },
 
@@ -682,7 +688,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
-            .tool = ToolProperties{ToolType::Axe, 1}
+            .tool = ToolProperties{ToolType::Axe, 1},
+            .maxDurability = 59
         }
     },
     {
@@ -693,7 +700,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
-            .tool = ToolProperties{ToolType::Axe, 2}
+            .tool = ToolProperties{ToolType::Axe, 2},
+            .maxDurability = 131
         }
     },
     {
@@ -704,7 +712,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
-            .tool = ToolProperties{ToolType::Axe, 3}
+            .tool = ToolProperties{ToolType::Axe, 3},
+            .maxDurability = 32
         }
     },
     {
@@ -715,7 +724,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
-            .tool = ToolProperties{ToolType::Axe, 4}
+            .tool = ToolProperties{ToolType::Axe, 4},
+            .maxDurability = 250
         }
     },
     {
@@ -726,7 +736,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
-            .tool = ToolProperties{ToolType::Axe, 5}
+            .tool = ToolProperties{ToolType::Axe, 5},
+            .maxDurability = 1561
         }
     },
     {
@@ -737,7 +748,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Epic,
             .category = ItemCategory::Tool,
-            .tool = ToolProperties{ToolType::Axe, 6}
+            .tool = ToolProperties{ToolType::Axe, 6},
+            .maxDurability = 2048
         }
     },
 
@@ -749,7 +761,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
-            .tool = ToolProperties{ToolType::Shovel, 1}
+            .tool = ToolProperties{ToolType::Shovel, 1},
+            .maxDurability = 59
         }
     },
     {
@@ -760,7 +773,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
-            .tool = ToolProperties{ToolType::Shovel, 2}
+            .tool = ToolProperties{ToolType::Shovel, 2},
+            .maxDurability = 131
         }
     },
     {
@@ -771,7 +785,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
-            .tool = ToolProperties{ToolType::Shovel, 3}
+            .tool = ToolProperties{ToolType::Shovel, 3},
+            .maxDurability = 32
         }
     },
     {
@@ -782,7 +797,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
-            .tool = ToolProperties{ToolType::Shovel, 4}
+            .tool = ToolProperties{ToolType::Shovel, 4},
+            .maxDurability = 250
         }
     },
     {
@@ -793,7 +809,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
-            .tool = ToolProperties{ToolType::Shovel, 5}
+            .tool = ToolProperties{ToolType::Shovel, 5},
+            .maxDurability = 1561
         }
     },
     {
@@ -804,7 +821,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Epic,
             .category = ItemCategory::Tool,
-            .tool = ToolProperties{ToolType::Shovel, 6}
+            .tool = ToolProperties{ToolType::Shovel, 6},
+            .maxDurability = 2048
         }
     },
     {
@@ -882,6 +900,16 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 64,
             .rarity = ItemRarity::Rare,
             .category = ItemCategory::Misc
+        }
+    },
+    {
+        ItemID::Workbench,
+        {
+            .name = "Workbench",
+            .texture = AssetManager::GameTextureID::Workbench,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
         }
     },
 };
@@ -1021,6 +1049,8 @@ std::unordered_map<ItemStack, Recipe> recipes
 {
     {{.itemID = ItemID::Oak_Planks, .quantity = 4}, {{{ItemID::Oak_Log, 1}}, false}},
     {{.itemID = ItemID::Stick, .quantity = 4}, {{{ItemID::Oak_Planks, 2}}, false}},
+    {{.itemID = ItemID::Workbench, .quantity = 1}, {{{ItemID::Oak_Planks, 4}}, false}},
+    {{.itemID = ItemID::Furnace,   .quantity = 1}, {{{ItemID::Cobblestone, 8}}, true}},
 
     {{.itemID = ItemID::Wooden_Pickaxe,  .quantity = 1}, {{{ItemID::Oak_Planks, 3}, {ItemID::Stick, 2}}, true}},
     {{.itemID = ItemID::Stone_Pickaxe,   .quantity = 1}, {{{ItemID::Cobblestone, 3}, {ItemID::Stick, 2}}, true}},

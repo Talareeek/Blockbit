@@ -14,13 +14,17 @@
 
 inline std::unordered_map<Biome, std::pair<Block, Block>> surface_blocks =
 {
-    {Biome::Plains,    {{BlockID::Grass, 0},       {BlockID::Dirt, 0}}},
-    {Biome::Forest,    {{BlockID::Grass, 0},       {BlockID::Dirt, 0}}},
-    {Biome::Ocean,     {{BlockID::Sand, 0},        {BlockID::Sand, 0}}},
-    {Biome::Desert,    {{BlockID::Sand, 0},        {BlockID::Sand, 0}}},
-    {Biome::Savanna,   {{BlockID::Coarse_Dirt, 0}, {BlockID::Coarse_Dirt, 0}}},
-    {Biome::Mountains, {{BlockID::Stone, 0},       {BlockID::Stone, 0}}},
-    {Biome::Snow,      {{BlockID::Snow, 0},        {BlockID::Snow, 0}}},
+    {Biome::Plains,     {{BlockID::Grass, 0},       {BlockID::Dirt, 0}}},
+    {Biome::Forest,     {{BlockID::Grass, 0},       {BlockID::Dirt, 0}}},
+    {Biome::Ocean,      {{BlockID::Sand, 0},        {BlockID::Sand, 0}}},
+    {Biome::Desert,     {{BlockID::Sand, 0},        {BlockID::Sand, 0}}},
+    {Biome::Savanna,    {{BlockID::Coarse_Dirt, 0}, {BlockID::Coarse_Dirt, 0}}},
+    {Biome::Mountains,  {{BlockID::Stone, 0},       {BlockID::Stone, 0}}},
+    {Biome::Snow,       {{BlockID::Snow, 0},        {BlockID::Snow, 0}}},
+    {Biome::Jungle,     {{BlockID::Grass, 0},       {BlockID::Dirt, 0}}},
+    {Biome::Taiga,      {{BlockID::Grass, 0},       {BlockID::Dirt, 0}}},
+    {Biome::SnowyTaiga, {{BlockID::Snow, 0},        {BlockID::Dirt, 0}}},
+    {Biome::GiantTaiga, {{BlockID::Coarse_Dirt, 0}, {BlockID::Dirt, 0}}},
 };
 
 struct NormalWorldGeneratorProperties
@@ -115,7 +119,7 @@ public:
     static constexpr int TREE_GRID = 7;
     static constexpr int TREE_RADIUS = 3;
 
-    static constexpr int BIOME_BLEND = 24;
+    static constexpr int BIOME_BLEND = 40;
 
     static constexpr int MAX_VEIN_REACH = 10;
 };

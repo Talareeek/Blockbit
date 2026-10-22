@@ -11,6 +11,7 @@
 #include "../include/CraftingView.hpp"
 #include "../include/FurnaceView.hpp"
 #include "../include/Prefab.hpp"
+#include "../include/ItemUtils.hpp"
 
 void PlayerControlledSystem(World& world, float dt)
 {
@@ -75,26 +76,36 @@ void PlayerControlledSystem(World& world, float dt)
 
                 bool correct_type = item_data.tool.has_value() && item_data.tool->tool_type == block_data.mining->desired_tool.tool_type;
                 int tool_level  = correct_type ? item_data.tool->level : 0;
+                bool proper_tool = correct_type && item_data.tool->level >= block_data.mining->desired_tool.level;
 
                 float speed = level_based_speed[tool_level];
-                float block_mining_time = (block_data.hardness < 0.0f) ? std::numeric_limits<float>::infinity() : block_data.hardness / speed;
+                // Using the wrong tool type adds a time penalty on top of the hand-speed baseline,
+                // so a correct-but-low-level tool is always better than a wrong tool.
+                float wrong_tool_penalty = correct_type ? 1.0f : 1.5f;
+                float block_mining_time = (block_data.hardness < 0.0f) ? std::numeric_limits<float>::infinity() : (block_data.hardness * wrong_tool_penalty) / speed;
 
-                bool will_drop = (correct_type && item_data.tool->level >= block_data.mining->desired_tool.level) || (block_data.drop.has_value() && block_data.drop->always_drop);
-
-                if(player.mining_time >= block_mining_time && world.getBlock(block_position.x, block_position.y).id != BlockID::Air && blockDatabase[world.getBlock(block_position.x, block_position.y).id].breakable && isBlockInRange(transform, block_position, 4.0f) && will_drop)
+                if(player.mining_time >= block_mining_time && world.getBlock(block_position.x, block_position.y).id != BlockID::Air && blockDatabase[world.getBlock(block_position.x, block_position.y).id].breakable && isBlockInRange(transform, block_position, 4.0f))
                 {
                     player.dirty = true;
-                    std::uniform_int_distribution drop_range(block_data.drop->min_amount, block_data.drop->max_amount);
-
-                    ItemStack drop = {block_data.drop->drop, drop_range(rng)};
 
                     world.setBlock(block_position.x, block_position.y, {BlockID::Air, 0});
 
-                    spawnDroppedItem(world, {block_position.x + 0.25, block_position.y + 0.25}, drop, randomDropSpread(60.0f));
+                    if(block_data.drop.has_value() && (proper_tool || block_data.drop->always_drop))
+                    {
+                        std::uniform_int_distribution drop_range(block_data.drop->min_amount, block_data.drop->max_amount);
+                        ItemStack drop = {block_data.drop->drop, drop_range(rng)};
+                        spawnDroppedItem(world, {block_position.x + 0.25, block_position.y + 0.25}, drop, randomDropSpread(60.0f));
+                    }
+
+                    if(item_data.tool.has_value() && item_data.maxDurability.has_value())
+                    {
+                        damageItem(inventory.inventory.slots[inventory.selectedSlot], 1);
+                        inventory.dirty = true;
+                    }
 
                     player.mining_time = 0.0f;
                 }
-            }            
+            }
         }
 
         player.since_last_use += dt;
@@ -113,7 +124,7 @@ void PlayerControlledSystem(World& world, float dt)
                 continue;
             }
 
-            if(world.getBlock(block_position.x, block_position.y).id == BlockID::Woodcutter && isBlockInRange(transform, block_position, 4.0f))
+            if(world.getBlock(block_position.x, block_position.y).id == BlockID::Workbench && isBlockInRange(transform, block_position, 4.0f))
             {
                 player.pending_view_opens.push_back(std::make_unique<ServerCraftingView>(block_position, id));
                 player.mid_usage = false;

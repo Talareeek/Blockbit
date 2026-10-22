@@ -27,6 +27,7 @@ ItemID blockToItem(BlockID block)
         case BlockID::Coarse_Dirt: return ItemID::Coarse_Dirt;
         case BlockID::Bricks: return ItemID::Bricks;
         case BlockID::Furnace: return ItemID::Furnace;
+        case BlockID::Workbench: return ItemID::Workbench;
         default: return ItemID::None;
     }
 }
@@ -59,6 +60,7 @@ BlockID itemToBlock(ItemID item)
         case ItemID::Chest: return BlockID::Chest;
         case ItemID::Bricks: return BlockID::Bricks;
         case ItemID::Furnace: return BlockID::Furnace;
+        case ItemID::Workbench: return BlockID::Workbench;
         default: return BlockID::Air;
     }
 }
@@ -98,7 +100,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .hardness = 0.6f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Grass, .render_bounds = default_render_bounds, .rect = default_render_rect},
             .mining = MiningProperties{.mining_resistance = 2, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Dirt}
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Dirt}
         }
     },
     { BlockID::Dirt,
@@ -111,7 +113,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .hardness = 0.5f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Dirt, .render_bounds = default_render_bounds, .rect = default_render_rect},
             .mining = MiningProperties{.mining_resistance = 2, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Dirt}
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Dirt}
         }
     },
     { BlockID::Cobblestone,
@@ -290,7 +292,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .hardness = 2.0f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Oak_Log, .render_bounds = default_render_bounds, .rect = default_render_rect},
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Oak_Log}
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Oak_Log}
         }
     },
     { BlockID::Oak_Leaves,
@@ -303,7 +305,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .hardness = 0.2f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Oak_Leaves, .render_bounds = default_render_bounds, .rect = default_render_rect},
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Oak_Leaves}
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Oak_Leaves}
         }
     },
     { BlockID::Oak_Planks,
@@ -316,7 +318,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .hardness = 0.2f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Oak_Planks, .render_bounds = default_render_bounds, .rect = default_render_rect},
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Oak_Planks}
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Oak_Planks}
         }
     },
     { BlockID::Woodcutter,
@@ -329,7 +331,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .hardness = 2.0f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Woodcutter, .render_bounds = default_render_bounds, .rect = woodcutter_render_rect, .animation = woodcutter_animation},
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Woodcutter}
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Woodcutter}
         }
     },
     { BlockID::Fire,
@@ -354,7 +356,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .hardness = 0.0f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Sand, .render_bounds = default_render_bounds, .rect = default_render_rect},
             .mining = MiningProperties{.mining_resistance = 2, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Sand}
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Sand}
         }
     },
     { BlockID::Coarse_Dirt,
@@ -367,7 +369,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .hardness = 0.0f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Coarse_Dirt, .render_bounds = default_render_bounds, .rect = default_render_rect},
             .mining = MiningProperties{.mining_resistance = 2, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Coarse_Dirt}
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Coarse_Dirt}
         }
     },
     { BlockID::Snow,
@@ -380,7 +382,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .hardness = 0.0f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Snow, .render_bounds = default_render_bounds, .rect = default_render_rect},
             .mining = MiningProperties{.mining_resistance = 1, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Snow}
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Snow}
         }
     },
     { BlockID::Chest,
@@ -393,7 +395,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .hardness = 2.0f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Chest, .render_bounds = chest_render_bounds, .rect = chest_render_rect},
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
-            .drop = DropProperties{.drop = ItemID::Chest}
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Chest}
         }
     },
     { BlockID::Bricks,
@@ -420,6 +422,19 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Furnace, .render_bounds = furnace_render_bounds, .rect = furnace_render_rect, .animation = furnace_animation},
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 1}},
             .drop = DropProperties{.drop = ItemID::Furnace}
+        }
+    },
+    { BlockID::Workbench,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 2.0f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Workbench, .render_bounds = default_render_bounds, .rect = default_render_rect},
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Workbench}
         }
     },
 };

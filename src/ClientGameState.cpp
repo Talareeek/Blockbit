@@ -722,6 +722,9 @@ void ClientGameState::render(sf::RenderWindow& window)
     // WORLD
     RenderWorld(local_world, camera, window);
 
+    // DESTRUCTION OVERLAY (Perlin-noise cracks over blocks being mined)
+    RenderBlockDestruction(local_world, camera, window);
+
     // BLOCK OUTLINE
     RenderBlockOutline(local_world, camera, getMouseBlockPosition(camera, window), window);
 

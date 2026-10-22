@@ -43,7 +43,8 @@ enum class BlockID : uint32_t
     Snow,
     Chest,
     Bricks,
-    Furnace
+    Furnace,
+    Workbench
 };
 
 struct Block

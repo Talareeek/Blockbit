@@ -118,6 +118,7 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Chest, "resources/textures/chest.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Bricks, "resources/textures/bricks.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Furnace, "resources/textures/furnace.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Workbench, "resources/textures/workbench.png");
 
     BlockAtlas::add(AssetManager::GameTextureID::Stone);
     BlockAtlas::add(AssetManager::GameTextureID::Grass);
@@ -146,6 +147,7 @@ Game::Game()
     BlockAtlas::add(AssetManager::GameTextureID::Chest);
     BlockAtlas::add(AssetManager::GameTextureID::Bricks);
     BlockAtlas::add(AssetManager::GameTextureID::Furnace);
+    BlockAtlas::add(AssetManager::GameTextureID::Workbench);
     BlockAtlas::build();
 
     AssetManager::loadShader(AssetManager::ShaderID::Sun, "resources/shaders/sun.frag");

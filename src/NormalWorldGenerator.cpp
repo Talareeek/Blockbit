@@ -51,11 +51,11 @@ namespace
         return t * t * (3.0 - 2.0 * t);
     }
 
-    constexpr double TEMPERATURE_FREQ     = 0.0035;
-    constexpr double HUMIDITY_FREQ        = 0.0045;
-    constexpr double CONTINENTALNESS_FREQ = 0.0018;
-    constexpr double EROSION_FREQ         = 0.012;
-    constexpr double WEIRDNESS_FREQ       = 0.007;
+    constexpr double TEMPERATURE_FREQ     = 0.0015;
+    constexpr double HUMIDITY_FREQ        = 0.0020;
+    constexpr double CONTINENTALNESS_FREQ = 0.0009;
+    constexpr double EROSION_FREQ         = 0.006;
+    constexpr double WEIRDNESS_FREQ       = 0.0035;
 
     constexpr int    CLIMATE_OCTAVES  = 2;
 
@@ -100,10 +100,34 @@ namespace
     {
         switch (biome)
         {
-            case Biome::Forest:  return 0.90;
-            case Biome::Plains:  return 0.10;
-            case Biome::Savanna: return 0.06;
-            default:             return 0.0;
+            case Biome::Jungle:     return 0.98;
+            case Biome::GiantTaiga: return 0.90;
+            case Biome::Forest:     return 0.90;
+            case Biome::Taiga:      return 0.85;
+            case Biome::SnowyTaiga: return 0.70;
+            case Biome::Plains:     return 0.10;
+            case Biome::Savanna:    return 0.06;
+            default:                return 0.0;
+        }
+    }
+
+    struct TreeShape
+    {
+        int min_height;
+        int height_variation;
+        int crown_radius;
+        int top_radius;
+    };
+
+    TreeShape treeShape(Biome biome)
+    {
+        switch (biome)
+        {
+            case Biome::Jungle:     return {7, 4, 2, 1};
+            case Biome::GiantTaiga: return {9, 4, 2, 1};
+            case Biome::Taiga:      return {5, 2, 2, 1};
+            case Biome::SnowyTaiga: return {4, 2, 2, 1};
+            default:                return {4, 3, 2, 1};
         }
     }
 }
@@ -151,18 +175,37 @@ Biome NormalWorldGenerator::classifyBiome(const Climate& c) const
     if (c.continentalness < -0.45)
         return Biome::Ocean;
 
-    if (c.temperature < -0.35)
-        return Biome::Snow;
-
     if (c.weirdness > 0.65)
         return Biome::Mountains;
 
     if (c.temperature > 0.35)
     {
+        if (c.humidity > 0.4)
+            return Biome::Jungle;
+
         if (c.humidity > -0.1)
             return Biome::Savanna;
 
         return Biome::Desert;
+    }
+
+    if (c.temperature < -0.35)
+    {
+        if (c.humidity > 0.1)
+            return Biome::SnowyTaiga;
+
+        return Biome::Snow;
+    }
+
+    if (c.temperature < -0.1)
+    {
+        if (c.humidity > 0.4)
+            return Biome::GiantTaiga;
+
+        if (c.humidity > 0.0)
+            return Biome::Taiga;
+
+        return Biome::Plains;
     }
 
     if (c.humidity > 0.2)
@@ -252,7 +295,10 @@ ColumnData NormalWorldGenerator::getColumn(int world_x) const
     const bool underwater = col.height <= SEA_LEVEL;
     const bool beach = col.height <= SEA_LEVEL + 2;
 
-    const bool keeps_biome_surface = col.top_biome == Biome::Snow || col.top_biome == Biome::Mountains;
+    const bool keeps_biome_surface =
+        col.top_biome == Biome::Snow ||
+        col.top_biome == Biome::SnowyTaiga ||
+        col.top_biome == Biome::Mountains;
 
     if (underwater || (beach && !keeps_biome_surface))
     {
@@ -448,7 +494,9 @@ std::vector<FeaturePlacement> NormalWorldGenerator::getTreePlacements(int chunk_
 
         const BlockID top = col.top_block.id;
 
-        if (top != BlockID::Grass && top != BlockID::Coarse_Dirt)
+        const bool snowy_tree_biome = col.top_biome == Biome::SnowyTaiga;
+
+        if (top != BlockID::Grass && top != BlockID::Coarse_Dirt && !(snowy_tree_biome && top == BlockID::Snow))
             continue;
 
         if (col.height <= SEA_LEVEL + 2)
@@ -473,17 +521,20 @@ void NormalWorldGenerator::generateOakTree(Chunk& chunk, const FeaturePlacement&
 {
     SmallRng rng(feature.seed);
 
-    const int height = 4 + rng.range(3);
+    const Biome biome = getBlendedBiome(feature.x, 1);
+    const TreeShape shape = treeShape(biome);
+
+    const int height = shape.min_height + rng.range(shape.height_variation);
 
     const int crown_y = feature.y + height - 2;
 
     for (int dy = -1; dy <= 2; dy++)
     {
-        const int radius = (dy <= 0) ? 2 : (dy == 1 ? 1 : 0);
+        const int radius = (dy <= 0) ? shape.crown_radius : (dy == 1 ? shape.top_radius : 0);
 
         for (int dx = -radius; dx <= radius; dx++)
         {
-            if (std::abs(dx) == 2 && rng.range(4) == 0)
+            if (std::abs(dx) == shape.crown_radius && shape.crown_radius >= 2 && rng.range(4) == 0)
                 continue;
 
             setFeatureBlock(chunk, feature.x + dx, crown_y + dy, {BlockID::Oak_Leaves, 0}, true);
