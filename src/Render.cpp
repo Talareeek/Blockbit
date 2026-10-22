@@ -8,9 +8,13 @@
 #include "../include/NetworkInterpolationComponent.hpp"
 #include "../include/Slot.hpp"
 #include "../include/PerlinNoise.hpp"
+#include "../include/NormalWorldGenerator.hpp"
+#include "../include/DungeonShooterWorldGenerator.hpp"
 
+#include <memory>
 #include <random>
 #include <numbers>
+#include <unordered_map>
 
 namespace
 {
@@ -40,11 +44,13 @@ namespace
         const sf::Vector2f uvPos  = sf::Vector2f(static_cast<float>(uv.position.x), static_cast<float>(uv.position.y));
         const sf::Vector2f uvSize = sf::Vector2f(static_cast<float>(uv.size.x), static_cast<float>(uv.size.y));
 
-        // Half-pixel inset: atlas tiles are packed with no gutter, so a UV
+        // Sub-texel inset: atlas tiles are packed with no gutter, so a UV
         // landing exactly on a tile boundary can bleed into the neighbour
-        // when the camera is at a sub-pixel position. Pulling the UVs in by
-        // 0.5 texels keeps nearest-neighbour sampling pinned to this tile.
-        constexpr float INSET = 0.5f;
+        // under rasterizer rounding. A small epsilon (<< 1 texel) is enough
+        // to pin nearest-neighbour sampling to this tile without compressing
+        // the edge texels — half-texel inset shrinks them to ~1/2 of an
+        // interior texel on screen, which is visible as "thin borders".
+        constexpr float INSET = 1.0f / 256.0f;
         const float u0 = uvPos.x + INSET;
         const float v0y = uvPos.y + INSET;
         const float u1 = uvPos.x + uvSize.x - INSET;
@@ -655,37 +661,43 @@ sf::Texture generateBackground()
     unsigned int seed = rd();
     std::mt19937 rng(seed);
 
-    std::uniform_real_distribution<float> baseDist(0.0f,    200.0f);
-    std::uniform_real_distribution<float> scaleDist(0.0f,    100.0f);
-    std::uniform_real_distribution<float> freqDist (0.001f,  0.200f);
-    std::uniform_real_distribution<float> ampDist  (0.0f,    2.0f);
-    std::uniform_real_distribution<float> persDist (0.0f,    1.0f);
-
     GenerationProperties props{};
-    props.type = GenerationType::Normal;
-    props.base_height = baseDist(rng);
-    props.height_scale = scaleDist(rng);
-    props.frequency = freqDist(rng);
-    props.amplitude = ampDist(rng);
-    props.persistence = persDist(rng);
-
-    PerlinNoise perlin(seed);
-
-    auto heightAt = [&](float x) -> float
+    std::uniform_int_distribution<int> typeDist(0, 2);
+    switch (typeDist(rng))
     {
-        float total = 0.0f;
-        float f = props.frequency;
-        float a = props.amplitude;
-        float p = props.persistence;
+        case 0:  props.type = GenerationType::Normal;         break;
+        case 1:  props.type = GenerationType::Flat;           break;
+        default: props.type = GenerationType::DungeonShooter; break;
+    }
 
-        for (int i = 0; i < 4; ++i)
-        {
-            total += perlin.noise(x * f, 0.0f) * a;
-            a *= p;
-            f *= 2.0f;
-        }
-        return props.base_height + total * props.height_scale;
-    };
+    std::uniform_real_distribution<float> baseDist (40.0f,    120.0f);
+    std::uniform_real_distribution<float> scaleDist(10.0f,    40.0f);
+    std::uniform_real_distribution<float> freqDist (0.02f,    0.08f);
+    std::uniform_real_distribution<float> ampDist  (0.6f,     1.4f);
+    std::uniform_real_distribution<float> persDist (0.3f,     0.7f);
+
+    props.base_height  = baseDist(rng);
+    props.height_scale = scaleDist(rng);
+    props.frequency    = freqDist(rng);
+    props.amplitude    = ampDist(rng);
+    props.persistence  = persDist(rng);
+
+    std::unique_ptr<WorldGenerator> generator;
+    switch (props.type)
+    {
+        case GenerationType::Flat:
+            generator = std::make_unique<FlatWorldGenerator>(FlatWorldProperties::defaults());
+            break;
+        case GenerationType::DungeonShooter:
+            generator = std::make_unique<DungeonShooterWorldGenerator>(seed);
+            break;
+        case GenerationType::Normal:
+        default:
+            generator = std::make_unique<NormalWorldGenerator>(seed, NormalWorldGeneratorProperties{
+                props.base_height, props.height_scale, props.frequency, props.amplitude, props.persistence
+            });
+            break;
+    }
 
     constexpr unsigned int OUT_W = 1920;
     constexpr unsigned int OUT_H = 1080;
@@ -699,14 +711,58 @@ sf::Texture generateBackground()
     const int firstCol = static_cast<int>(std::floor(cameraX - viewBlocksW * 0.5f)) - 2;
     const int lastCol  = static_cast<int>(std::ceil (cameraX + viewBlocksW * 0.5f)) + 2;
 
-    float minH =  std::numeric_limits<float>::infinity();
-    for (int x = firstCol; x <= lastCol; ++x)
+    auto chunkOf = [](int world_x) -> int
     {
-        minH = std::min(minH, heightAt(static_cast<float>(x)));
+        return static_cast<int>(std::floor(static_cast<float>(world_x) / static_cast<float>(CHUNK_WIDTH)));
+    };
+
+    std::unordered_map<int, Chunk> chunks;
+    for (int wx = firstCol; wx <= lastCol; ++wx)
+    {
+        const int cp = chunkOf(wx);
+        if (chunks.find(cp) == chunks.end())
+        {
+            chunks.emplace(cp, generator->generateChunk(cp));
+        }
     }
 
-    const float bottomView = std::floor(minH) - 3.0f;
-    const float cameraY = bottomView + viewBlocksH * 0.5f;
+    auto getBlock = [&](int wx, int wy) -> Block
+    {
+        if (wy < 0 || wy >= CHUNK_HEIGHT) return {BlockID::Air, 0};
+        const int cp = chunkOf(wx);
+        auto it = chunks.find(cp);
+        if (it == chunks.end()) return {BlockID::Air, 0};
+        return it->second.blocks[wy][wx - cp * CHUNK_WIDTH];
+    };
+
+    float cameraY;
+    if (props.type == GenerationType::DungeonShooter)
+    {
+        const float lo = 8.0f;
+        const float hi = std::max(lo + 1.0f, static_cast<float>(CHUNK_HEIGHT) - viewBlocksH - 8.0f);
+        std::uniform_real_distribution<float> bottomDist(lo, hi);
+        cameraY = bottomDist(rng) + viewBlocksH * 0.5f;
+    }
+    else
+    {
+        int minTop = CHUNK_HEIGHT;
+        bool found = false;
+        for (int wx = firstCol; wx <= lastCol; ++wx)
+        {
+            for (int wy = CHUNK_HEIGHT - 1; wy >= 0; --wy)
+            {
+                if (getBlock(wx, wy).id != BlockID::Air)
+                {
+                    minTop = std::min(minTop, wy);
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if (!found) minTop = 0;
+        const float bottomView = static_cast<float>(minTop) - 2.0f;
+        cameraY = bottomView + viewBlocksH * 0.5f;
+    }
 
     sf::RenderTexture rt(sf::Vector2u{OUT_W, OUT_H});
     rt.clear();
@@ -730,26 +786,27 @@ sf::Texture generateBackground()
 
     for (int wx = firstCol; wx <= lastCol; ++wx)
     {
-        const int h = static_cast<int>(std::floor(heightAt(static_cast<float>(wx))));
-
         const float px = (static_cast<float>(wx) - cameraX + viewBlocksW * 0.5f) * UNIT_SIZE;
 
         for (int wy = minY; wy <= maxY; ++wy)
         {
-            if (wy >= h) continue;
+            const Block block = getBlock(wx, wy);
+            if (block.id == BlockID::Air) continue;
 
-            const BlockID id = (wy == h - 1) ? BlockID::Grass : BlockID::Dirt;
+            const auto& data = blockDatabase[block.id];
+            if (!data.render.has_value()) continue;
 
-            const auto texID = blockDatabase[id].render->texture;
-            sf::Sprite sprite(AssetManager::getGameTexture(texID));
+            const sf::IntRect uv = data.render->rect(block);
+            if (uv.size.x <= 0 || uv.size.y <= 0) continue;
+
+            sf::Sprite sprite(AssetManager::getGameTexture(data.render->texture));
+            sprite.setTextureRect(uv);
 
             const float py = (cameraY + viewBlocksH * 0.5f - static_cast<float>(wy + 1)) * UNIT_SIZE;
             sprite.setPosition({px, py});
-
-            const auto texSize = sprite.getTexture().getSize();
             sprite.setScale({
-                static_cast<float>(UNIT_SIZE) / texSize.x,
-                static_cast<float>(UNIT_SIZE) / texSize.y
+                static_cast<float>(UNIT_SIZE) / static_cast<float>(uv.size.x),
+                static_cast<float>(UNIT_SIZE) / static_cast<float>(uv.size.y)
             });
 
             rt.draw(sprite);

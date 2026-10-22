@@ -192,6 +192,7 @@ namespace
 void ServerInventoryView::handleCraft(World& world, const ItemStack& requested)
 {
     if (!recipes.contains(requested)) return;
+    if (recipes[requested].requires_crafting_table) return;
     if (!world.doesEntityExist(owner)) return;
 
     auto& entity = world.getEntity(owner);
@@ -210,6 +211,7 @@ void ServerInventoryView::handleCraft(World& world, const ItemStack& requested)
 void ServerInventoryView::handleCraftAll(World& world, const ItemStack& requested)
 {
     if (!recipes.contains(requested)) return;
+    if (recipes[requested].requires_crafting_table) return;
     if (!world.doesEntityExist(owner)) return;
 
     auto& entity = world.getEntity(owner);
@@ -328,6 +330,9 @@ namespace
     constexpr unsigned int TEXTURE_RECT_WIDTH  = 202;
     constexpr unsigned int TEXTURE_RECT_HEIGHT = 117;
 
+    constexpr int RECIPE_GRID_COLS     = 4;
+    constexpr int RECIPE_VISIBLE_ROWS  = 4;
+
     bool hasIngredients(const ItemStack recipe_stacks[], size_t count, const Recipe& recipe)
     {
         for (const auto& ingredient : recipe.ingredients)
@@ -352,6 +357,8 @@ ClientInventoryView::ClientInventoryView()
 
     for (const auto& [recipe_stack, recipe] : recipes)
     {
+        if (recipe.requires_crafting_table) continue;
+
         Slot slot({0.0f, 0.0f}, {0.0f, 0.0f});
         slot.setItemStack(recipe_stack);
         slot.show_item_info = true;
@@ -404,8 +411,24 @@ void ClientInventoryView::handleEvent(const sf::Event& event)
     }
     else if (page == 1)
     {
-        for (auto& slot : crafting_slots)
+        const int total_rows    = (static_cast<int>(crafting_slots.size()) + RECIPE_GRID_COLS - 1) / RECIPE_GRID_COLS;
+        const int max_scroll    = std::max(0, total_rows - RECIPE_VISIBLE_ROWS);
+        const int first_visible = recipe_scroll_offset * RECIPE_GRID_COLS;
+        const int last_visible  = std::min(static_cast<int>(crafting_slots.size()), first_visible + RECIPE_VISIBLE_ROWS * RECIPE_GRID_COLS);
+
+        if (auto wheel = event.getIf<sf::Event::MouseWheelScrolled>())
         {
+            sf::Vector2f mouse_pos(static_cast<float>(wheel->position.x), static_cast<float>(wheel->position.y));
+            if (recipe_area_bounds.contains(mouse_pos))
+            {
+                if (wheel->delta > 0.0f) recipe_scroll_offset = std::max(0, recipe_scroll_offset - 1);
+                else if (wheel->delta < 0.0f) recipe_scroll_offset = std::min(max_scroll, recipe_scroll_offset + 1);
+            }
+        }
+
+        for (int i = first_visible; i < last_visible; ++i)
+        {
+            auto& slot = crafting_slots[i];
             slot.handleEvent(event);
 
             if (slot.clicked)
@@ -517,15 +540,27 @@ void ClientInventoryView::render(sf::RenderWindow& window)
     }
     else
     {
+        const int total_rows    = (static_cast<int>(crafting_slots.size()) + RECIPE_GRID_COLS - 1) / RECIPE_GRID_COLS;
+        const int max_scroll    = std::max(0, total_rows - RECIPE_VISIBLE_ROWS);
+        recipe_scroll_offset    = std::clamp(recipe_scroll_offset, 0, max_scroll);
+        const int first_visible = recipe_scroll_offset * RECIPE_GRID_COLS;
+        const int last_visible  = std::min(static_cast<int>(crafting_slots.size()), first_visible + RECIPE_VISIBLE_ROWS * RECIPE_GRID_COLS);
+
+        recipe_area_bounds = sf::FloatRect(
+            {position.x + border, position.y + border + height_offset},
+            {RECIPE_GRID_COLS * slot_size + (RECIPE_GRID_COLS - 1) * gap,
+             RECIPE_VISIBLE_ROWS * slot_size + (RECIPE_VISIBLE_ROWS - 1) * gap}
+        );
+
         int hovered_recipe = -1;
-        for (int i = static_cast<int>(crafting_slots.size()) - 1; i >= 0; --i)
+        for (int i = last_visible - 1; i >= first_visible; --i)
         {
-            int col = i % 4;
-            int row = i / 4;
+            int col         = i % RECIPE_GRID_COLS;
+            int visible_row = (i / RECIPE_GRID_COLS) - recipe_scroll_offset;
 
             sf::Vector2f slot_position = position + sf::Vector2f(
                 border + col * (slot_size + gap),
-                border + row * (slot_size + gap) + height_offset
+                border + visible_row * (slot_size + gap) + height_offset
             );
 
             crafting_slots[i].position = slot_position;

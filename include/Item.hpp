@@ -40,6 +40,7 @@ enum class ItemID : uint32_t
     Iron_Block,
     Gold_Block,
     Ruby_Block,
+    Coal_Block,
 
     Coal,
     Raw_Iron,

@@ -330,6 +330,16 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         }
     },
     {
+        ItemID::Coal_Block,
+        {
+            .name = "Coal Block",
+            .texture = AssetManager::GameTextureID::Coal_Block,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
         ItemID::Coal,
         {
             .name = "Coal",
@@ -1019,13 +1029,29 @@ std::unordered_map<ItemStack, Recipe> recipes
     {{.itemID = ItemID::Diamond_Pickaxe, .quantity = 1}, {{{ItemID::Diamond, 3}, {ItemID::Stick, 2}}, true}},
     {{.itemID = ItemID::Ruby_Pickaxe,    .quantity = 1}, {{{ItemID::Ruby, 3}, {ItemID::Stick, 2}}, true}},
 
+    {{.itemID = ItemID::Wooden_Axe,  .quantity = 1}, {{{ItemID::Oak_Planks, 3}, {ItemID::Stick, 2}}, true}},
+    {{.itemID = ItemID::Stone_Axe,   .quantity = 1}, {{{ItemID::Cobblestone, 3}, {ItemID::Stick, 2}}, true}},
+    {{.itemID = ItemID::Iron_Axe,    .quantity = 1}, {{{ItemID::Iron_Ingot, 3}, {ItemID::Stick, 2}}, true}},
+    {{.itemID = ItemID::Gold_Axe,    .quantity = 1}, {{{ItemID::Gold_Ingot, 3}, {ItemID::Stick, 2}}, true}},
+    {{.itemID = ItemID::Diamond_Axe, .quantity = 1}, {{{ItemID::Diamond, 3}, {ItemID::Stick, 2}}, true}},
+    {{.itemID = ItemID::Ruby_Axe,    .quantity = 1}, {{{ItemID::Ruby, 3}, {ItemID::Stick, 2}}, true}},
+
+    {{.itemID = ItemID::Wooden_Shovel,  .quantity = 1}, {{{ItemID::Oak_Planks, 1}, {ItemID::Stick, 2}}, true}},
+    {{.itemID = ItemID::Stone_Shovel,   .quantity = 1}, {{{ItemID::Cobblestone, 1}, {ItemID::Stick, 2}}, true}},
+    {{.itemID = ItemID::Iron_Shovel,    .quantity = 1}, {{{ItemID::Iron_Ingot, 1}, {ItemID::Stick, 2}}, true}},
+    {{.itemID = ItemID::Gold_Shovel,    .quantity = 1}, {{{ItemID::Gold_Ingot, 1}, {ItemID::Stick, 2}}, true}},
+    {{.itemID = ItemID::Diamond_Shovel, .quantity = 1}, {{{ItemID::Diamond, 1}, {ItemID::Stick, 2}}, true}},
+    {{.itemID = ItemID::Ruby_Shovel,    .quantity = 1}, {{{ItemID::Ruby, 1}, {ItemID::Stick, 2}}, true}},
+
     {{.itemID = ItemID::Iron_Block, .quantity = 1}, {{{ItemID::Iron_Ingot, 9}}, true}},
     {{.itemID = ItemID::Gold_Block, .quantity = 1}, {{{ItemID::Gold_Ingot, 9}}, true}},
     {{.itemID = ItemID::Ruby_Block, .quantity = 1}, {{{ItemID::Ruby, 9}}, true}},
+    {{.itemID = ItemID::Coal_Block, .quantity = 1}, {{{ItemID::Coal, 9}}, true}},
 
     {{.itemID = ItemID::Iron_Ingot, .quantity = 9}, {{{ItemID::Iron_Block, 1}}, true}},
     {{.itemID = ItemID::Gold_Ingot, .quantity = 9}, {{{ItemID::Gold_Block, 1}}, true}},
     {{.itemID = ItemID::Ruby,       .quantity = 9}, {{{ItemID::Ruby_Block, 1}}, true}},
+    {{.itemID = ItemID::Coal,       .quantity = 9}, {{{ItemID::Coal_Block, 1}}, true}},
 };
 
 std::unordered_map<ItemID, SmeltRecipe> smeltingRecipes

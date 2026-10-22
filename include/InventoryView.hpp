@@ -82,6 +82,9 @@ private:
     bool craft_pressed = false;
     bool craft_all_pressed = false;
 
+    int recipe_scroll_offset = 0;
+    sf::FloatRect recipe_area_bounds{};
+
     uint8_t page = 0;
 
     std::deque<ViewEventData> pending;

@@ -105,6 +105,7 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Iron_Block, "resources/textures/iron_block.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Gold_Block, "resources/textures/gold_block.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Ruby_Block, "resources/textures/ruby_block.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Coal_Block, "resources/textures/coal_block.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Oak_Log, "resources/textures/oak_log.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Oak_Leaves, "resources/textures/oak_leaves.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Oak_Planks, "resources/textures/oak_planks.png");
@@ -132,6 +133,7 @@ Game::Game()
     BlockAtlas::add(AssetManager::GameTextureID::Iron_Block);
     BlockAtlas::add(AssetManager::GameTextureID::Gold_Block);
     BlockAtlas::add(AssetManager::GameTextureID::Ruby_Block);
+    BlockAtlas::add(AssetManager::GameTextureID::Coal_Block);
     BlockAtlas::add(AssetManager::GameTextureID::Oak_Log);
     BlockAtlas::add(AssetManager::GameTextureID::Oak_Leaves);
     BlockAtlas::add(AssetManager::GameTextureID::Oak_Planks);

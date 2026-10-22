@@ -476,21 +476,18 @@ void GameServer::update(float dt)
         for(auto& [client_id, data] : clients)
         {
             auto it = nickname_to_entity.find(data.nickname);
-            if (it != nickname_to_entity.end() && !world.doesEntityExist(it->second))
+            if (it != nickname_to_entity.end() && world.doesEntityExist(it->second)) continue;
+
+            if (data.content_view)
             {
-                nickname_to_entity.erase(it);
-
-                if (data.content_view)
-                {
-                    data.content_view->onClose(world);
-                    data.content_view.reset();
-                    transport->send(client_id, serializePacket(CloseViewPacket{}));
-                }
-
-                respawnPlayerFor(data.nickname);
-
-                transport->send(client_id, serializePacket(TrackPacket{nickname_to_entity[data.nickname]}));
+                data.content_view->onClose(world);
+                data.content_view.reset();
+                transport->send(client_id, serializePacket(CloseViewPacket{}));
             }
+
+            respawnPlayerFor(data.nickname);
+
+            transport->send(client_id, serializePacket(TrackPacket{nickname_to_entity[data.nickname]}));
         }
 
         world.tick(dt);

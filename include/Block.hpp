@@ -32,6 +32,7 @@ enum class BlockID : uint32_t
     Iron_Block,
     Gold_Block,
     Ruby_Block,
+    Coal_Block,
     Oak_Log,
     Oak_Leaves,
     Oak_Planks,

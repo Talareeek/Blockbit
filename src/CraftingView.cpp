@@ -25,6 +25,7 @@ namespace
     constexpr float RECIPE_GRID_PX_X   = 3.0f;
     constexpr float RECIPE_GRID_PX_Y   = 3.0f;
     constexpr int   RECIPE_GRID_COLS   = 4;
+    constexpr int   RECIPE_VISIBLE_ROWS = 4;
 
     constexpr float PLAYER_GRID_PX_X   = 3.0f;
     constexpr float PLAYER_GRID_PX_Y   = 94.0f;
@@ -423,8 +424,24 @@ void ClientCraftingView::handleEvent(const sf::Event& event)
 {
     for (uint16_t i = 0; i < 36; ++i) slots[i].handleEvent(event);
 
-    for (auto& slot : crafting_slots)
+    const int total_rows      = (static_cast<int>(crafting_slots.size()) + RECIPE_GRID_COLS - 1) / RECIPE_GRID_COLS;
+    const int max_scroll      = std::max(0, total_rows - RECIPE_VISIBLE_ROWS);
+    const int first_visible   = recipe_scroll_offset * RECIPE_GRID_COLS;
+    const int last_visible    = std::min(static_cast<int>(crafting_slots.size()), first_visible + RECIPE_VISIBLE_ROWS * RECIPE_GRID_COLS);
+
+    if (auto wheel = event.getIf<sf::Event::MouseWheelScrolled>())
     {
+        sf::Vector2f mouse_pos(static_cast<float>(wheel->position.x), static_cast<float>(wheel->position.y));
+        if (recipe_area_bounds.contains(mouse_pos))
+        {
+            if (wheel->delta > 0.0f) recipe_scroll_offset = std::max(0, recipe_scroll_offset - 1);
+            else if (wheel->delta < 0.0f) recipe_scroll_offset = std::min(max_scroll, recipe_scroll_offset + 1);
+        }
+    }
+
+    for (int i = first_visible; i < last_visible; ++i)
+    {
+        auto& slot = crafting_slots[i];
         slot.handleEvent(event);
 
         if (slot.clicked)
@@ -522,15 +539,27 @@ void ClientCraftingView::render(sf::RenderWindow& window)
     const float slot_size = SLOT_PX_SIZE * scale;
     const float gap       = SLOT_PX_GAP  * scale;
 
+    const int total_rows    = (static_cast<int>(crafting_slots.size()) + RECIPE_GRID_COLS - 1) / RECIPE_GRID_COLS;
+    const int max_scroll    = std::max(0, total_rows - RECIPE_VISIBLE_ROWS);
+    recipe_scroll_offset    = std::clamp(recipe_scroll_offset, 0, max_scroll);
+    const int first_visible = recipe_scroll_offset * RECIPE_GRID_COLS;
+    const int last_visible  = std::min(static_cast<int>(crafting_slots.size()), first_visible + RECIPE_VISIBLE_ROWS * RECIPE_GRID_COLS);
+
+    recipe_area_bounds = sf::FloatRect(
+        {position.x + RECIPE_GRID_PX_X * scale, position.y + RECIPE_GRID_PX_Y * scale},
+        {RECIPE_GRID_COLS * slot_size + (RECIPE_GRID_COLS - 1) * gap,
+         RECIPE_VISIBLE_ROWS * slot_size + (RECIPE_VISIBLE_ROWS - 1) * gap}
+    );
+
     int hovered_recipe = -1;
-    for (int i = static_cast<int>(crafting_slots.size()) - 1; i >= 0; --i)
+    for (int i = last_visible - 1; i >= first_visible; --i)
     {
-        int col = i % RECIPE_GRID_COLS;
-        int row = i / RECIPE_GRID_COLS;
+        int col            = i % RECIPE_GRID_COLS;
+        int visible_row    = (i / RECIPE_GRID_COLS) - recipe_scroll_offset;
 
         sf::Vector2f slot_position = position + sf::Vector2f(
             RECIPE_GRID_PX_X * scale + col * (slot_size + gap),
-            RECIPE_GRID_PX_Y * scale + row * (slot_size + gap)
+            RECIPE_GRID_PX_Y * scale + visible_row * (slot_size + gap)
         );
 
         crafting_slots[i].position = slot_position;

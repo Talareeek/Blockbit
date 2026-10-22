@@ -8,8 +8,8 @@
 #include "../include/InventoryComponent.hpp"
 #include "../include/AnimationComponent.hpp"
 #include "../include/ChestView.hpp"
-#include "../include/FurnaceView.hpp"
 #include "../include/CraftingView.hpp"
+#include "../include/FurnaceView.hpp"
 #include "../include/Prefab.hpp"
 
 void PlayerControlledSystem(World& world, float dt)

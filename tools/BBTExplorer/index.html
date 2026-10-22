@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BBTExplorer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>BBTExplorer</h1>
+        <div class="controls">
+            <label class="file-input">
+                <input type="file" id="file-input" multiple>
+                <span>Open file(s)</span>
+            </label>
+            <button id="expand-all">Expand all</button>
+            <button id="collapse-all">Collapse all</button>
+            <input type="text" id="filter" placeholder="Filter by name...">
+        </div>
+    </header>
+
+    <main id="drop-zone">
+        <div id="placeholder" class="placeholder">
+            Drop a BBT file here, or use <b>Open file(s)</b>.
+            <div class="hint">Any file produced by <code>BBT::save()</code> works — manifest, data, entities_*, block_entities_*, item_instances, player saves, etc.</div>
+        </div>
+        <div id="tabs" class="tabs"></div>
+        <div id="content" class="content"></div>
+    </main>
+
+    <footer>
+        <span id="status">Idle</span>
+    </footer>
+
+    <script src="bbt.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

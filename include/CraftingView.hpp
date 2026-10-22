@@ -78,6 +78,9 @@ private:
     std::vector<Slot> crafting_slots;
     ItemStack selected_recipe{ItemID::None, 0};
 
+    int recipe_scroll_offset = 0;
+    sf::FloatRect recipe_area_bounds{};
+
     sf::FloatRect craft_button_bounds{};
     sf::FloatRect craft_all_button_bounds{};
 
