@@ -46,12 +46,14 @@ void ChunkUnloadSystem(ServerWorld& world)
         {
             world.saveChunk(min);
             world.getChunks().erase(min);
+            world.getBlockUpdatePipeline().dropChunk(min);
             erased = true;
         }
         if(world.getChunks().size() > World::PREFFERED_CHUNKS_LOADED && max != min && !isChunkSafe(max, playerIds, world))
         {
             world.saveChunk(max);
             world.getChunks().erase(max);
+            world.getBlockUpdatePipeline().dropChunk(max);
             erased = true;
         }
 

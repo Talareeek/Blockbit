@@ -5,14 +5,14 @@
 #include <unordered_map>
 #include <climits>
 #include <optional>
+#include <vector>
 #include "Item.hpp"
 #include "AssetManager.hpp"
 
-struct PostPlaceBlockUpdate
-{
-    sf::Vector2i target;
-    sf::Vector2i sender;
-};
+// Forward decls so client-only translation units can include Block.hpp without
+// pulling in the whole server-side update pipeline. Concrete type lives in
+// BlockUpdate.hpp (BlockUpdateContext) which only server code needs.
+struct BlockUpdateContext;
 
 enum class BlockID : uint32_t
 {
@@ -86,6 +86,26 @@ struct RenderProperties
     std::function<BlockAnimation(Block block_instance)> animation = [](Block) -> BlockAnimation { return {}; };
 };
 
+// Function-pointer callbacks — not std::function — to keep BlockData trivially
+// copyable and the hot propagation path allocation-free. If a future block needs
+// stateful logic, the state belongs on BlockEntity, not here.
+using OnPlaceFn            = void (*)(BlockUpdateContext&, sf::Vector2i position);
+using OnBreakFn            = void (*)(BlockUpdateContext&, sf::Vector2i position);
+using OnPostPlacementFn    = void (*)(BlockUpdateContext&, sf::Vector2i position, uint8_t from_direction);
+using OnNeighborChangedFn  = void (*)(BlockUpdateContext&, sf::Vector2i position, sf::Vector2i neighbor_position);
+using OnScheduledTickFn    = void (*)(BlockUpdateContext&, sf::Vector2i position);
+using OnRandomTickFn       = void (*)(BlockUpdateContext&, sf::Vector2i position);
+
+struct BlockUpdateCallbacks
+{
+    OnPlaceFn           onPlace            = nullptr;
+    OnBreakFn           onBreak            = nullptr;
+    OnPostPlacementFn   onPostPlacement    = nullptr;
+    OnNeighborChangedFn onNeighborChanged  = nullptr;
+    OnScheduledTickFn   onScheduledTick    = nullptr;
+    OnRandomTickFn      onRandomTick       = nullptr;
+};
+
 struct BlockData
 {
     bool solid;
@@ -100,7 +120,21 @@ struct BlockData
     std::optional<RenderProperties> render;
     std::optional<MiningProperties> mining;
     std::optional<DropProperties> drop;
-    std::optional<std::function<void(PostPlaceBlockUpdate, World)>> update;
+
+    BlockUpdateCallbacks callbacks{};
+
+    // Mask of directions this block accepts PP from. A seedling only grows if
+    // the ground below changes, so its mask would be DIRECTION_MASK_FROM_BELOW.
+    // Default: accept from all four.
+    uint8_t pp_accept_mask = 0x0F;
+
+    // Extra NC targets beyond immediate neighbors — offsets added to the block's
+    // own position. Empty for ordinary blocks; wires/signal-carriers populate it.
+    std::vector<sf::Vector2i> extra_nc_offsets;
+
+    // Participates in random ticks (grass spread, plant growth, ice melting).
+    // Density is global, controlled by BlockUpdatePipeline::random_ticks_per_chunk.
+    bool random_tickable = false;
 };
 
 extern std::unordered_map<BlockID, BlockData> blockDatabase;

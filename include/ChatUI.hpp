@@ -4,28 +4,37 @@
 #include "UIElement.hpp"
 #include "Chat.hpp"
 
+#include <imgui.h>
+
 #include <string>
 #include <functional>
+#include <vector>
 
 class ChatUI : public UIElement
 {
+public:
+
+    struct ColoredSegment
+    {
+        std::string text;
+        ImVec4 color;
+    };
+
+    static std::vector<ColoredSegment> parseBBCodeColors(const std::string& utf8, const ImVec4& defaultColor);
+
 private:
 
     const Chat* chat = nullptr;
     std::function<void(std::wstring)> onSend;
 
     bool active = false;
-    bool justOpened = false;
+    bool focusInputNextFrame = false;
 
-    std::wstring incoming;
-
-    float cursorTimer = 0.0f;
+    static constexpr std::size_t INPUT_BUFFER_SIZE = 512;
+    char inputBuffer[INPUT_BUFFER_SIZE] = {0};
 
     float fadeTimer = 0.0f;
-
     std::size_t lastMessageCount = 0;
-
-    void sendMessage();
 
 public:
 
@@ -45,9 +54,6 @@ public:
 
     static constexpr float FADE_DURATION = 10.0f;
     static constexpr std::size_t VISIBLE_MESSAGES = 10;
-
-    static constexpr float WIDTH = 0.33f;
-    static constexpr float HEIGHT = 0.5f;
 };
 
 #endif // CHAT_UI_HPP

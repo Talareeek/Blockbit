@@ -11,6 +11,7 @@
 #include "../include/RenderComponent.hpp"
 #include "../include/HealthComponent.hpp"
 #include "../include/TransformComponent.hpp"
+#include "../include/FallingBlockComponent.hpp"
 
 Entity::Entity(UUID id) : id{id}
 {
@@ -155,6 +156,12 @@ void Entity::deserialize(Tag& tag)
             PlayerControlledComponent c;
             c.deserialize(payload);
             addComponent<PlayerControlledComponent>(std::move(c));
+        }
+        else if (name == "FallingBlockComponent")
+        {
+            FallingBlockComponent c;
+            c.deserialize(payload);
+            addComponent<FallingBlockComponent>(c);
         }
     }
 }

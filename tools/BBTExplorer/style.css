@@ -312,6 +312,43 @@ main.drag-over::after {
 .value.bool { color: var(--bool); }
 .value.vec { color: var(--vec); }
 
+.value.editable {
+    cursor: text;
+    border-radius: 3px;
+    padding: 0 3px;
+}
+
+.value.editable:hover {
+    background: var(--bg-elev-2);
+    outline: 1px dashed var(--text-dim);
+    outline-offset: -1px;
+}
+
+.edit-input {
+    font-family: inherit;
+    font-size: inherit;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    padding: 1px 4px;
+    min-width: 120px;
+}
+
+.edit-input:focus {
+    outline: none;
+    border-color: var(--accent-hover);
+}
+
+.tab.dirty {
+    font-style: italic;
+}
+
+#save:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
 .children {
     border-left: 1px solid var(--border);
     margin-left: 5px;

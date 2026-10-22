@@ -1,4 +1,156 @@
 #include "../include/Block.hpp"
+#include "../include/BlockUpdatePipeline.hpp"
+#include "../include/ServerWorld.hpp"
+#include "../include/Prefab.hpp"
+
+namespace
+{
+    // Can a falling block pass through this cell on the way down? Air and water
+    // are both passable; water gets displaced by the final landing.
+    bool falling_block_can_leave_into(Block b)
+    {
+        return b.id == BlockID::Air || b.id == BlockID::Water;
+    }
+
+    void sand_try_schedule_fall(BlockUpdateContext& ctx, sf::Vector2i pos)
+    {
+        Block below = ctx.world.getBlock(pos.x, pos.y - 1);
+        if (!falling_block_can_leave_into(below)) return;
+        ctx.pipeline.scheduleTick(pos, 2);  // 2-tick delay matches vanilla sand
+    }
+
+    void sand_on_place(BlockUpdateContext& ctx, sf::Vector2i pos)
+    {
+        sand_try_schedule_fall(ctx, pos);
+    }
+
+    void sand_on_post_placement(BlockUpdateContext& ctx, sf::Vector2i pos, uint8_t /*from_direction*/)
+    {
+        // A neighbour change may have opened a hole below us. Only reschedule
+        // if we're still sand and we don't already have a pending tick.
+        if (ctx.world.getBlock(pos.x, pos.y).id != BlockID::Sand) return;
+        if (ctx.pipeline.hasScheduledTick(pos)) return;
+        sand_try_schedule_fall(ctx, pos);
+    }
+
+    void sand_on_scheduled_tick(BlockUpdateContext& ctx, sf::Vector2i pos)
+    {
+        Block self = ctx.world.getBlock(pos.x, pos.y);
+        if (self.id != BlockID::Sand) return;
+
+        Block below = ctx.world.getBlock(pos.x, pos.y - 1);
+        if (!falling_block_can_leave_into(below)) return;
+
+        // Hand the block off to physics: clear the cell, spawn a FallingBlock
+        // entity at the same world position. PhysicsSystem will drag it down,
+        // FallingBlockSystem will lay it back down as a block on landing.
+        // Position lines up with (pos.x, pos.y) because FallingBlock is 1x1
+        // bottom-left-anchored, same as a tile.
+        ctx.world.setBlock(pos.x, pos.y, {BlockID::Air, 0});
+        spawnFallingBlock(
+            ctx.world,
+            {static_cast<double>(pos.x), static_cast<double>(pos.y)},
+            self.id,
+            self.metadata
+        );
+    }
+
+    // Delay between a water cell being disturbed and its flow logic firing.
+    // 30 server ticks @ 120 TPS = 0.25 s, which lets a vertical fall tick down
+    // at a visible pace instead of teleporting to the floor in a single frame.
+    constexpr int WATER_TICK_DELAY = 30;
+
+    bool water_cell_passable(Block b)
+    {
+        return b.id == BlockID::Air || b.id == BlockID::Water;
+    }
+
+    // A non-source cell survives only if something is actively supplying it:
+    // water directly above (vertical column), or a stronger neighbour sideways.
+    // Without that, it evaporates — same decay rule the old sweep used.
+    bool water_is_fed(World& world, sf::Vector2i pos, uint8_t level)
+    {
+        if (level == static_cast<uint8_t>(WaterLevel::SOURCE)) return true;
+
+        if (world.getBlock(pos.x, pos.y + 1).id == BlockID::Water) return true;
+
+        Block left  = world.getBlock(pos.x - 1, pos.y);
+        Block right = world.getBlock(pos.x + 1, pos.y);
+        if (left.id  == BlockID::Water && left.metadata  > level) return true;
+        if (right.id == BlockID::Water && right.metadata > level) return true;
+        return false;
+    }
+
+    void water_schedule_self(BlockUpdateContext& ctx, sf::Vector2i pos)
+    {
+        if (ctx.world.getBlock(pos.x, pos.y).id != BlockID::Water) return;
+        if (ctx.pipeline.hasScheduledTick(pos)) return;
+        ctx.pipeline.scheduleTick(pos, WATER_TICK_DELAY);
+    }
+
+    void water_on_place(BlockUpdateContext& ctx, sf::Vector2i pos)
+    {
+        water_schedule_self(ctx, pos);
+    }
+
+    void water_on_neighbor_changed(BlockUpdateContext& ctx, sf::Vector2i pos, sf::Vector2i /*neighbor*/)
+    {
+        water_schedule_self(ctx, pos);
+    }
+
+    void water_on_scheduled_tick(BlockUpdateContext& ctx, sf::Vector2i pos)
+    {
+        Block self = ctx.world.getBlock(pos.x, pos.y);
+        if (self.id != BlockID::Water) return;
+
+        const uint8_t level  = self.metadata;
+        const uint8_t SOURCE = static_cast<uint8_t>(WaterLevel::SOURCE);
+        const uint8_t FULL   = static_cast<uint8_t>(WaterLevel::FULL);
+
+        // Air-ing the cell fires NC on neighbours, which reschedules the next
+        // weaker water in the chain — the decay cascade unwinds one tick-delay
+        // at a time instead of in a single global sweep.
+        if (!water_is_fed(ctx.world, pos, level))
+        {
+            ctx.world.setBlock(pos.x, pos.y, {BlockID::Air, 0});
+            return;
+        }
+
+        Block below = ctx.world.getBlock(pos.x, pos.y - 1);
+
+        // Free-fall into air always writes FULL regardless of our own level —
+        // falling water keeps its strength until it hits something to spread on.
+        if (below.id == BlockID::Air)
+        {
+            ctx.world.setBlock(pos.x, pos.y - 1, {BlockID::Water, FULL});
+            return;
+        }
+
+        // Water already underneath us: settled column, let that cell handle
+        // whatever sideways propagation happens from the bottom.
+        if (below.id == BlockID::Water) return;
+
+        // Level 1 is the floor — no lower level to project sideways.
+        if (level <= 1) return;
+
+        // SOURCE and FULL both project level 7 sideways; everything else
+        // decreases by one, matching the old sweep's reach.
+        const uint8_t new_level = (level < SOURCE)
+            ? static_cast<uint8_t>(level - 1)
+            : static_cast<uint8_t>(FULL - 1);
+
+        auto try_flow = [&](int tx, int ty)
+        {
+            Block target = ctx.world.getBlock(tx, ty);
+            if (!water_cell_passable(target)) return;
+            if (target.id == BlockID::Water && target.metadata >= new_level) return;
+            ctx.world.setBlock(tx, ty, {BlockID::Water, new_level});
+        };
+
+        try_flow(pos.x - 1, pos.y);
+        try_flow(pos.x + 1, pos.y);
+    }
+}
 
 ItemID blockToItem(BlockID block)
 {
@@ -163,6 +315,11 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .drag = 4.0f,
             .hardness = 0.0f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Water, .render_bounds = water_render_bounds, .rect = water_render_rect},
+            .callbacks = {
+                .onPlace            = water_on_place,
+                .onNeighborChanged  = water_on_neighbor_changed,
+                .onScheduledTick    = water_on_scheduled_tick
+            }
         }
     },
     { BlockID::Coal_Ore,
@@ -353,10 +510,15 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .breakable = true,
             .liquid = false,
             .drag = 1.0f,
-            .hardness = 0.0f,
+            .hardness = 0.5f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Sand, .render_bounds = default_render_bounds, .rect = default_render_rect},
             .mining = MiningProperties{.mining_resistance = 2, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}},
-            .drop = DropProperties{.always_drop = true, .drop = ItemID::Sand}
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Sand},
+            .callbacks = {
+                .onPlace            = sand_on_place,
+                .onPostPlacement    = sand_on_post_placement,
+                .onScheduledTick    = sand_on_scheduled_tick
+            }
         }
     },
     { BlockID::Coarse_Dirt,

@@ -205,116 +205,11 @@ bool World::doesEntityExist(UUID id) const
     return entities.contains(id);
 }
 
-void World::tick(float dt)
+void World::tick(float /*dt*/)
 {
-    fluidTimer += dt;
-    if(fluidTimer >= FLUID_TICK)
-    {
-        fluidTimer -= FLUID_TICK;
-        updateFluids(*this);
-    }
+    // Water flow used to run on a global sweep here; it's now driven per-cell
+    // by BlockUpdatePipeline (see water_* callbacks in Block.cpp).
 }
-
-void updateFluids(World& world)
-{
-    /*
-    int chunk = world.getEntities()[0].getComponent<TransformComponent>().position.x / (CHUNK_WIDTH);
-
-    struct Vec2iHash
-    {
-        std::size_t operator()(const sf::Vector2i& v) const noexcept
-        {
-            return std::hash<long long>()((static_cast<long long>(v.x) << 32) ^ static_cast<unsigned int>(v.y));
-        }
-    };
-    std::unordered_map<sf::Vector2i, Block, Vec2iHash> pending_changes;
-
-    auto pendingLevel = [&](int wx, int wy) -> int
-    {
-        auto it = pending_changes.find({wx, wy});
-        if (it == pending_changes.end() || it->second.id != BlockID::Water) return -1;
-        return static_cast<int>(it->second.metadata);
-    };
-
-    for (int i = chunk - World::SIMULATION_DISTANCE / 2; i <= chunk + World::SIMULATION_DISTANCE / 2; ++i)
-    {
-        if (world.getChunk(i).generated == false) continue;
-
-        for (int y = 0; y < CHUNK_HEIGHT; ++y)
-        {
-            for (int x = 0; x < CHUNK_WIDTH; ++x)
-            {
-                Block block = world.getChunk(i).blocks[y][x];
-                if (block.id != BlockID::Water) continue;
-
-                int worldX = i * CHUNK_WIDTH + x;
-                int worldY = y;
-
-                // DECAY — non-source water disappears if nothing feeds it
-                if (block.metadata != static_cast<uint8_t>(WaterLevel::SOURCE))
-                {
-                    bool fed = false;
-                    if (world.getBlock(worldX, worldY + 1).id == BlockID::Water) fed = true;
-                    else
-                    {
-                        Block left = world.getBlock(worldX - 1, worldY);
-                        Block right = world.getBlock(worldX + 1, worldY);
-                        if (left.id == BlockID::Water && left.metadata > block.metadata) fed = true;
-                        else if (right.id == BlockID::Water && right.metadata > block.metadata) fed = true;
-                    }
-                    if (!fed)
-                    {
-                        pending_changes[{worldX, worldY}] = {BlockID::Air, 0};
-                        continue;
-                    }
-                }
-
-                Block below = world.getBlock(worldX, worldY - 1);
-
-                // TRY TO FLOW DOWNWARDS — only into Air, never overwrite Water (preserves SOURCE/FULL)
-                if (below.id == BlockID::Air)
-                {
-                    if (pendingLevel(worldX, worldY - 1) < static_cast<int>(WaterLevel::FULL))
-                    {
-                        pending_changes[{worldX, worldY - 1}] = {BlockID::Water, static_cast<uint8_t>(WaterLevel::FULL)};
-                    }
-                    continue;
-                }
-
-                // If water is directly below, no sideways spread (water already has somewhere to go / is settled)
-                if (below.id == BlockID::Water) continue;
-
-                // TRY TO FLOW SIDEWAYS — never into solid blocks
-                if (block.metadata > 1)
-                {
-                    uint8_t newLevel = static_cast<uint8_t>((block.metadata < 9) ? block.metadata - 1 : 7);
-
-                    auto tryFlow = [&](int tx, int ty)
-                    {
-                        Block target = world.getBlock(tx, ty);
-                        if (target.id != BlockID::Air && target.id != BlockID::Water) return;
-                        if (target.id == BlockID::Water && target.metadata >= newLevel) return;
-                        if (pendingLevel(tx, ty) >= static_cast<int>(newLevel)) return;
-
-                        pending_changes[{tx, ty}] = {BlockID::Water, newLevel};
-                    };
-
-                    tryFlow(worldX - 1, worldY);
-                    tryFlow(worldX + 1, worldY);
-                }
-            }
-        }
-    }
-
-    for(auto& a : pending_changes)
-    {
-        world.setBlock(a.first.x, a.first.y, a.second);
-    }
-    */
-}
-
-
-
 
 
 

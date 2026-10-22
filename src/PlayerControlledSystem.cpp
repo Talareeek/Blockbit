@@ -49,6 +49,12 @@ void PlayerControlledSystem(World& world, float dt)
             return {static_cast<int>(std::floor(position.x)), static_cast<int>(std::floor(position.y))};
         };
 
+        if(!player.mid_attack && player.mining_time != 0.0f)
+        {
+            player.mining_time = 0.0f;
+            player.dirty = true;
+        }
+
         if(player.mid_attack)
         {
             if(player.mining_block == block_from_position(player.cursor_position))

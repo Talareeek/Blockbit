@@ -12,7 +12,6 @@
 #include <unordered_map>
 #include <filesystem>
 #include <optional>
-#include <deque>
 #include <vector>
 
 #include <SFML/System/Vector2.hpp>
@@ -71,15 +70,9 @@ public:
 
     void tick(float dt);
 
-    float fluidTimer{0.0f};
-
     float getDayTime() const { return dayTime; }
 
     std::pair<double, double> getSimulationRangeForEntity(const UUID entity);
-
-    std::deque<PostPlaceBlockUpdate> pending_post_place_block_updates;
-
-    //void handlePostPlaceBlockUpdates();
 
     float dayTime{0.0f};
 
@@ -87,13 +80,10 @@ public:
 
     static constexpr float DAY_CYCLE_DURATION = 1200.0f;
     static constexpr int SEA_LEVEL = 75;
-    static constexpr float FLUID_TICK = 0.5f;
     static constexpr int SIMULATION_DISTANCE = 10;
     static constexpr int MAX_CHUNKS_LOADED = 24;
     static constexpr int PREFFERED_CHUNKS_LOADED = 16;
 };
-
-extern void updateFluids(World& world);
 
 inline std::filesystem::path getWorldsPath()
 {

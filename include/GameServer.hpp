@@ -76,8 +76,6 @@ private:
     void dispatchPendingViewOpens();
     void updateContentViews();
 
-    void handleBlockUpdates();
-
 public:
 
     GameServer(std::filesystem::path world_path, std::unique_ptr<ServerTransport> transport);

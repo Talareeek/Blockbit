@@ -1,5 +1,7 @@
 "use strict";
 
+(function () {
+
 const { parseBBT, TagType, TagTypeName } = window.BBT;
 
 const dropZone = document.getElementById("drop-zone");
@@ -11,6 +13,7 @@ const fileInput = document.getElementById("file-input");
 const filterInput = document.getElementById("filter");
 const expandAllBtn = document.getElementById("expand-all");
 const collapseAllBtn = document.getElementById("collapse-all");
+const saveBtn = document.getElementById("save");
 
 const docs = [];
 let activeDocId = null;
@@ -101,7 +104,174 @@ function sortedCompoundEntries(entries) {
     return [...entries].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function renderNode({ name, type, value }, isRoot = false) {
+const EDITABLE_TYPES = new Set([
+    TagType.T_BOOL,
+    TagType.T_INT8, TagType.T_INT16, TagType.T_INT32, TagType.T_INT64,
+    TagType.T_UINT8, TagType.T_UINT16, TagType.T_UINT32, TagType.T_UINT64,
+    TagType.T_FLOAT, TagType.T_DOUBLE,
+    TagType.T_STRING,
+    TagType.T_VECTOR2_FLOAT, TagType.T_VECTOR2_INT, TagType.T_VECTOR2_DOUBLE,
+]);
+
+const INT_RANGES = {
+    [TagType.T_INT8]:   { min: -0x80n,                 max: 0x7fn },
+    [TagType.T_INT16]:  { min: -0x8000n,               max: 0x7fffn },
+    [TagType.T_INT32]:  { min: -0x80000000n,           max: 0x7fffffffn },
+    [TagType.T_INT64]:  { min: -0x8000000000000000n,   max: 0x7fffffffffffffffn },
+    [TagType.T_UINT8]:  { min: 0n,                     max: 0xffn },
+    [TagType.T_UINT16]: { min: 0n,                     max: 0xffffn },
+    [TagType.T_UINT32]: { min: 0n,                     max: 0xffffffffn },
+    [TagType.T_UINT64]: { min: 0n,                     max: 0xffffffffffffffffn },
+};
+
+function parseEditedValue(type, text) {
+    switch (type) {
+        case TagType.T_BOOL: {
+            const t = text.trim().toLowerCase();
+            if (t === "true" || t === "1")  return true;
+            if (t === "false" || t === "0") return false;
+            throw new Error("expected true/false");
+        }
+        case TagType.T_STRING:
+            return text;
+        case TagType.T_FLOAT:
+        case TagType.T_DOUBLE: {
+            const n = Number(text.trim());
+            if (!Number.isFinite(n)) throw new Error("not a finite number");
+            return n;
+        }
+        case TagType.T_INT8:
+        case TagType.T_INT16:
+        case TagType.T_INT32:
+        case TagType.T_UINT8:
+        case TagType.T_UINT16:
+        case TagType.T_UINT32: {
+            const n = Number(text.trim());
+            if (!Number.isInteger(n)) throw new Error("not an integer");
+            const r = INT_RANGES[type];
+            const bn = BigInt(n);
+            if (bn < r.min || bn > r.max) throw new Error(`out of range for ${TagTypeName[type]}`);
+            return n;
+        }
+        case TagType.T_INT64:
+        case TagType.T_UINT64: {
+            let bn;
+            try { bn = BigInt(text.trim()); }
+            catch { throw new Error("not an integer"); }
+            const r = INT_RANGES[type];
+            if (bn < r.min || bn > r.max) throw new Error(`out of range for ${TagTypeName[type]}`);
+            return bn;
+        }
+        case TagType.T_VECTOR2_FLOAT:
+        case TagType.T_VECTOR2_DOUBLE: {
+            const parts = text.split(",").map(s => s.trim());
+            if (parts.length !== 2) throw new Error("expected 'x, y'");
+            const x = Number(parts[0]);
+            const y = Number(parts[1]);
+            if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error("non-finite component");
+            return { x, y };
+        }
+        case TagType.T_VECTOR2_INT: {
+            const parts = text.split(",").map(s => s.trim());
+            if (parts.length !== 2) throw new Error("expected 'x, y'");
+            const x = Number(parts[0]);
+            const y = Number(parts[1]);
+            if (!Number.isInteger(x) || !Number.isInteger(y)) throw new Error("components must be integers");
+            if (x < -0x80000000 || x > 0x7fffffff || y < -0x80000000 || y > 0x7fffffff) throw new Error("out of int32 range");
+            return { x, y };
+        }
+        default:
+            throw new Error("not editable");
+    }
+}
+
+function initialEditText(type, value) {
+    switch (type) {
+        case TagType.T_BOOL: return value ? "true" : "false";
+        case TagType.T_STRING: return String(value);
+        case TagType.T_INT64:
+        case TagType.T_UINT64: return value.toString();
+        case TagType.T_VECTOR2_FLOAT:
+        case TagType.T_VECTOR2_INT:
+        case TagType.T_VECTOR2_DOUBLE: return `${value.x}, ${value.y}`;
+        default: return String(value);
+    }
+}
+
+function beginEdit(valInner, holder, onEdit) {
+    const originalHTML = valInner.innerHTML;
+    const type = holder.type;
+
+    let input;
+    if (type === TagType.T_BOOL) {
+        input = document.createElement("select");
+        for (const opt of ["true", "false"]) {
+            const o = document.createElement("option");
+            o.value = opt; o.textContent = opt;
+            input.appendChild(o);
+        }
+        input.value = holder.value ? "true" : "false";
+    } else {
+        input = document.createElement("input");
+        input.type = "text";
+        input.value = initialEditText(type, holder.value);
+        input.spellcheck = false;
+        input.autocomplete = "off";
+    }
+    input.className = "edit-input";
+
+    valInner.textContent = "";
+    valInner.appendChild(input);
+    input.focus();
+    if (input.select) input.select();
+
+    let settled = false;
+
+    const restore = (html) => {
+        valInner.innerHTML = html;
+    };
+
+    const commit = () => {
+        if (settled) return;
+        settled = true;
+        try {
+            const nv = parseEditedValue(type, input.value);
+            holder.value = nv;
+            if (onEdit) onEdit(nv);
+            const formatted = formatValue(type, nv);
+            restore(formatted.html);
+            setStatus("Edited", "ok");
+        } catch (err) {
+            settled = false;
+            setStatus(`Edit: ${err.message}`, "error");
+            input.focus();
+            if (input.select) input.select();
+        }
+    };
+
+    const cancel = () => {
+        if (settled) return;
+        settled = true;
+        restore(originalHTML);
+    };
+
+    input.addEventListener("blur", commit);
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            commit();
+        } else if (e.key === "Escape") {
+            e.preventDefault();
+            cancel();
+        }
+    });
+    input.addEventListener("click", (e) => e.stopPropagation());
+    input.addEventListener("mousedown", (e) => e.stopPropagation());
+}
+
+function renderNode(name, holder, isRoot = false, onEdit = null) {
+    const type = holder.type;
+    const value = holder.value;
     const typeName = TagTypeName[type] || `T_UNKNOWN(${type})`;
     const node = document.createElement("div");
     node.className = "node" + (isRoot ? " root" : "");
@@ -122,7 +292,7 @@ function renderNode({ name, type, value }, isRoot = false) {
             children = document.createElement("div");
             children.className = "children collapsed";
             for (const entry of entries) {
-                children.appendChild(renderNode(entry));
+                children.appendChild(renderNode(entry.name, entry));
             }
         }
     } else if (type === TagType.T_LIST) {
@@ -133,11 +303,7 @@ function renderNode({ name, type, value }, isRoot = false) {
             children = document.createElement("div");
             children.className = "children collapsed";
             list.items.forEach((item, i) => {
-                children.appendChild(renderNode({
-                    name: `[${i}]`,
-                    type: item.type,
-                    value: item.value,
-                }));
+                children.appendChild(renderNode(`[${i}]`, item));
             });
         }
     } else if (type === TagType.T_BYTEARRAY) {
@@ -185,6 +351,20 @@ function renderNode({ name, type, value }, isRoot = false) {
         const valEl = document.createElement("span");
         valEl.innerHTML = `= ${valueHTML}`;
         head.appendChild(valEl);
+        if (EDITABLE_TYPES.has(type)) {
+            const valInner = valEl.querySelector(".value");
+            if (valInner) {
+                valInner.classList.add("editable");
+                valInner.title = "Click to edit";
+                valInner.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    beginEdit(valInner, holder, (nv) => {
+                        markActiveDocDirty();
+                        if (onEdit) onEdit(nv);
+                    });
+                });
+            }
+        }
     }
 
     node.appendChild(head);
@@ -204,11 +384,13 @@ function renderDoc(doc) {
     contentEl.innerHTML = "";
     placeholder.style.display = "none";
 
-    const root = renderNode({
-        name: doc.parsed.rootName || doc.parsed.name || doc.name,
-        type: doc.parsed.rootType,
-        value: doc.parsed.root,
-    }, true);
+    const rootHolder = {
+        get type() { return doc.parsed.rootType; },
+        get value() { return doc.parsed.root; },
+        set value(v) { doc.parsed.root = v; },
+    };
+    const rootName = doc.parsed.rootName || doc.parsed.name || doc.name;
+    const root = renderNode(rootName, rootHolder, true);
     contentEl.appendChild(root);
 
     const rootChildren = root.querySelector(":scope > .children");
@@ -240,6 +422,23 @@ function expandNode(node, expand) {
     });
 }
 
+function updateSaveButton() {
+    const doc = docs.find((d) => d.id === activeDocId);
+    saveBtn.disabled = !doc;
+    saveBtn.textContent = doc && doc.dirty ? "Save (download)*" : "Save (download)";
+}
+
+function markActiveDocDirty() {
+    const doc = docs.find((d) => d.id === activeDocId);
+    if (doc && !doc.dirty) {
+        doc.dirty = true;
+        renderTabs();
+        updateSaveButton();
+    } else if (doc) {
+        updateSaveButton();
+    }
+}
+
 function setActiveDoc(id) {
     activeDocId = id;
     renderTabs();
@@ -251,17 +450,18 @@ function setActiveDoc(id) {
         placeholder.style.display = "flex";
         setStatus("Idle");
     }
+    updateSaveButton();
 }
 
 function renderTabs() {
     tabsEl.innerHTML = "";
     for (const doc of docs) {
         const tab = document.createElement("div");
-        tab.className = "tab" + (doc.id === activeDocId ? " active" : "");
+        tab.className = "tab" + (doc.id === activeDocId ? " active" : "") + (doc.dirty ? " dirty" : "");
 
         const label = document.createElement("span");
-        label.textContent = doc.name;
-        label.title = `${doc.name} (${formatBytes(doc.size)})`;
+        label.textContent = (doc.dirty ? "● " : "") + doc.name;
+        label.title = `${doc.name} (${formatBytes(doc.size)})${doc.dirty ? " — unsaved changes" : ""}`;
         label.addEventListener("click", () => setActiveDoc(doc.id));
         tab.appendChild(label);
 
@@ -302,6 +502,7 @@ async function openFile(file) {
             name: file.name,
             size: file.size,
             parsed,
+            dirty: false,
         };
         docs.push(doc);
         setActiveDoc(doc.id);
@@ -345,6 +546,31 @@ dropZone.addEventListener("drop", (e) => {
     const files = e.dataTransfer?.files;
     if (files && files.length > 0) {
         openFiles(files);
+    }
+});
+
+saveBtn.addEventListener("click", () => {
+    const doc = docs.find((d) => d.id === activeDocId);
+    if (!doc) return;
+    try {
+        const bytes = window.BBT.serializeBBT(doc.parsed);
+        const blob = new Blob([bytes], { type: "application/octet-stream" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = doc.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        doc.dirty = false;
+        doc.size = bytes.length;
+        renderTabs();
+        updateSaveButton();
+        setStatus(`Saved ${doc.name} (${formatBytes(bytes.length)})`, "ok");
+    } catch (err) {
+        console.error(err);
+        setStatus(`Save ${doc.name}: ${err.message}`, "error");
     }
 });
 
@@ -407,3 +633,5 @@ function applyFilter() {
 }
 
 filterInput.addEventListener("input", applyFilter);
+
+})();

@@ -8,6 +8,7 @@
 #include "../include/ExplosiveComponent.hpp"
 #include "../include/AIComponent.hpp"
 #include "../include/ItemComponent.hpp"
+#include "../include/FallingBlockComponent.hpp"
 #include "../include/World.hpp"
 
 #include <random>
@@ -106,6 +107,19 @@ void PrefabRegistry::init()
 
         add(PrefabID::DroppedItem, entity);
     }
+
+    { // FALLING_BLOCK
+        Entity entity(UUID{});
+
+        // 1x1 so the entity lines up with the block grid on landing. isSolid=false
+        // so the player can walk through a mid-fall sand pillar (vanilla behaviour).
+        entity.addComponent(TransformComponent{{0.0, 0.0}, {1.0, 1.0}, sf::degrees(0.0f)});
+        entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
+        entity.addComponent(RenderComponent{static_cast<AssetManager::GameTextureID>(0), {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
+        entity.addComponent(FallingBlockComponent{});
+
+        add(PrefabID::FallingBlock, entity);
+    }
 };
 
 sf::Vector2f randomDropSpread(float spread_factor)
@@ -129,6 +143,29 @@ UUID spawnDroppedItem(World& world, sf::Vector2<double> position, const ItemStac
     entity.getComponent<PhysicsComponent>().force = force;
     entity.getComponent<ItemComponent>().item = stack;
     entity.getComponent<RenderComponent>().textureID = itemDatabase[stack.itemID].texture;
+
+    UUID id = entity.getID();
+    world.addEntity(std::move(entity));
+    return id;
+}
+
+UUID spawnFallingBlock(World& world, sf::Vector2<double> position, BlockID block_id, uint8_t metadata)
+{
+    Entity entity = PrefabRegistry::get(PrefabID::FallingBlock).cloneAs(generateUUID());
+
+    auto& transform = entity.getComponent<TransformComponent>();
+    transform.position = position;
+    transform.previous_position = position;
+    transform.render_position = position;
+
+    auto& render = entity.getComponent<RenderComponent>();
+    const auto db_it = blockDatabase.find(block_id);
+    if (db_it != blockDatabase.end() && db_it->second.render.has_value())
+    {
+        render.textureID = db_it->second.render->texture;
+    }
+
+    entity.getComponent<FallingBlockComponent>() = FallingBlockComponent{block_id, metadata};
 
     UUID id = entity.getID();
     world.addEntity(std::move(entity));

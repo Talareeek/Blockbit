@@ -65,10 +65,30 @@ ServerWorld::ServerWorld(const std::filesystem::path path) : path{path}
 
 void ServerWorld::setBlock(int wx, int wy, Block block)
 {
+    setBlock(wx, wy, block, BlockUpdateFlags::Default);
+}
+
+void ServerWorld::setBlock(int wx, int wy, Block block, BlockUpdateFlags flags)
+{
     Block previous = getBlock(wx, wy);
+
+    // True no-op write: skip everything. Prevents redundant propagation when a
+    // callback or system writes the same block state back.
+    if (previous.id == block.id && previous.metadata == block.metadata) return;
 
     World::setBlock(wx, wy, block);
     pending_block_updates.emplace_back(wx, wy);
+
+    if (!hasFlag(flags, BlockUpdateFlags::SuppressAll))
+    {
+        pending_propagation_events.push_back(PendingPropagation{
+            .position = {wx, wy},
+            .previous = previous,
+            .current  = block,
+            .flags    = flags,
+            .depth    = 0
+        });
+    }
 
     if (previous.id != block.id)
     {
@@ -353,6 +373,43 @@ void ServerWorld::saveChunk(int chunk_position)
     saveChunkEnvironment(chunk_position);
     saveChunkEntities(chunk_position);
     saveChunkBlockEntities(chunk_position);
+    saveChunkScheduledTicks(chunk_position);
+}
+
+void ServerWorld::saveChunkScheduledTicks(int chunk_position)
+{
+    auto it = chunks.find(chunk_position);
+    if (it == chunks.end()) return;
+
+    Tag ticks_tag = block_update_pipeline.serializeChunk(chunk_position);
+
+    BBT root("scheduled_ticks_" + std::to_string(chunk_position));
+    root.root() = ticks_tag.get<TagCompound>();
+
+    std::ofstream stream(path / ("chunk_" + std::to_string(chunk_position)) / "scheduled_ticks", std::ios::binary);
+    if (!stream) return;
+
+    std::vector<uint8_t> buffer = root.save();
+    stream.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+}
+
+void ServerWorld::loadChunkScheduledTicks(int chunk_position)
+{
+    std::filesystem::path file_path = path / ("chunk_" + std::to_string(chunk_position)) / "scheduled_ticks";
+    if (!std::filesystem::exists(file_path)) return;
+
+    std::ifstream stream(file_path, std::ios::ate | std::ios::binary);
+    if (!stream) return;
+
+    std::streamsize size = stream.tellg();
+    if (size <= 0) return;
+    stream.seekg(0, std::ios::beg);
+
+    std::vector<uint8_t> buffer(static_cast<size_t>(size));
+    stream.read(reinterpret_cast<char*>(buffer.data()), size);
+
+    BBT root = BBT::load(buffer);
+    block_update_pipeline.deserializeChunk(chunk_position, Tag(root.root()));
 }
 
 static constexpr uint32_t CHUNK_FILE_MAGIC = 0x4B434242u;
@@ -549,6 +606,7 @@ void ServerWorld::loadChunk(int chunk_position)
     loadChunkEnvironment(chunk_position);
     loadChunkEntities(chunk_position);
     loadChunkBlockEntities(chunk_position);
+    loadChunkScheduledTicks(chunk_position);
 }
 
 void ServerWorld::loadChunkEnvironment(int chunk_position)

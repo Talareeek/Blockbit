@@ -628,6 +628,16 @@ void ClientGameState::update(float dt)
 
     PhysicsSystem(local_world, dt);
 
+    for (auto& [id, entity] : local_world.getEntities())
+    {
+        if (!entity.hasComponent<HealthComponent>()) continue;
+        auto& health = entity.getComponent<HealthComponent>();
+        if (health.since_last_damaged < HealthComponent::DAMAGE_FLASH_DURATION)
+        {
+            health.since_last_damaged = std::min(health.since_last_damaged + dt, HealthComponent::DAMAGE_FLASH_DURATION);
+        }
+    }
+
     AnimationSystem(local_world, dt);
 
     furnace_animation_timer += dt;

@@ -20,6 +20,7 @@
 #include "../include/ChunkLoadSystem.hpp"
 #include "../include/ChunkUnloadSystem.hpp"
 #include "../include/DaycycleSystem.hpp"
+#include "../include/FallingBlockSystem.hpp"
 #include "../include/AnimationComponent.hpp"
 #include "../include/AnimationSystem.hpp"
 #include "../include/Prefab.hpp"
@@ -465,6 +466,7 @@ void GameServer::update(float dt)
         ExplosiveSystem(world, dt);
         HealthSystem(world, dt);
         PhysicsSystem(world, dt);
+        FallingBlockSystem(world);
         PlayerControlledSystem(world, dt);
         InventorySystem(world);
         ChunkUnloadSystem(world);
@@ -511,6 +513,20 @@ void GameServer::update(float dt)
 
         dispatchPendingViewOpens();
         updateContentViews();
+
+        // Drain block updates after everything that could have modified blocks
+        // (systems, world.tick, block entities). Order matters: propagation first
+        // because systems may have called setBlock synchronously, then scheduled
+        // ticks (which can cascade propagation again via drainPropagation inside
+        // the loop), then random ticks. broadcastBlockUpdates right after picks
+        // up every resulting block state within this same tick.
+        {
+            auto& pipeline = world.getBlockUpdatePipeline();
+            pipeline.setCurrentTick(tick);
+            pipeline.drainPropagation();
+            pipeline.processScheduled();
+            pipeline.runRandomTicks();
+        }
 
         streamChunksToClients();
         broadcastBlockUpdates();

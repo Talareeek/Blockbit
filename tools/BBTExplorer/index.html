@@ -15,6 +15,7 @@
             </label>
             <button id="expand-all">Expand all</button>
             <button id="collapse-all">Collapse all</button>
+            <button id="save" disabled>Save (download)</button>
             <input type="text" id="filter" placeholder="Filter by name...">
         </div>
     </header>
@@ -22,7 +23,7 @@
     <main id="drop-zone">
         <div id="placeholder" class="placeholder">
             Drop a BBT file here, or use <b>Open file(s)</b>.
-            <div class="hint">Any file produced by <code>BBT::save()</code> works — manifest, data, entities_*, block_entities_*, item_instances, player saves, etc.</div>
+            <div class="hint">Any file produced by <code>BBT::save()</code> works — manifest, data, entities_*, block_entities_*, item_instances, player saves, etc. Click any leaf value to edit it, then press <b>Save (download)</b>.</div>
         </div>
         <div id="tabs" class="tabs"></div>
         <div id="content" class="content"></div>

@@ -1,5 +1,7 @@
 "use strict";
 
+(function () {
+
 const TagType = Object.freeze({
     T_END: 0,
     T_BOOL: 1,
@@ -142,4 +144,143 @@ function parseBBT(buffer) {
     };
 }
 
-window.BBT = { parseBBT, TagType, TagTypeName };
+class Writer {
+    constructor() {
+        this.chunks = [];
+        this.length = 0;
+    }
+
+    _push(bytes) {
+        this.chunks.push(bytes);
+        this.length += bytes.length;
+    }
+
+    writeUInt8(v) { this._push(new Uint8Array([v & 0xff])); }
+    writeInt8(v) {
+        const b = new Uint8Array(1);
+        new DataView(b.buffer).setInt8(0, v);
+        this._push(b);
+    }
+    writeUInt16(v) {
+        const b = new Uint8Array(2);
+        new DataView(b.buffer).setUint16(0, v, true);
+        this._push(b);
+    }
+    writeInt16(v) {
+        const b = new Uint8Array(2);
+        new DataView(b.buffer).setInt16(0, v, true);
+        this._push(b);
+    }
+    writeUInt32(v) {
+        const b = new Uint8Array(4);
+        new DataView(b.buffer).setUint32(0, v, true);
+        this._push(b);
+    }
+    writeInt32(v) {
+        const b = new Uint8Array(4);
+        new DataView(b.buffer).setInt32(0, v, true);
+        this._push(b);
+    }
+    writeUInt64(v) {
+        const b = new Uint8Array(8);
+        new DataView(b.buffer).setBigUint64(0, BigInt(v), true);
+        this._push(b);
+    }
+    writeInt64(v) {
+        const b = new Uint8Array(8);
+        new DataView(b.buffer).setBigInt64(0, BigInt(v), true);
+        this._push(b);
+    }
+    writeFloat(v) {
+        const b = new Uint8Array(4);
+        new DataView(b.buffer).setFloat32(0, v, true);
+        this._push(b);
+    }
+    writeDouble(v) {
+        const b = new Uint8Array(8);
+        new DataView(b.buffer).setFloat64(0, v, true);
+        this._push(b);
+    }
+    writeString(s) {
+        const bytes = new TextEncoder().encode(s);
+        if (bytes.length > 0xffff) throw new Error(`String too long for T_STRING: ${bytes.length} > 65535`);
+        this.writeUInt16(bytes.length);
+        this._push(bytes);
+    }
+    writeBytes(bytes) {
+        this._push(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
+    }
+
+    toUint8Array() {
+        const out = new Uint8Array(this.length);
+        let off = 0;
+        for (const c of this.chunks) {
+            out.set(c, off);
+            off += c.length;
+        }
+        return out;
+    }
+}
+
+function writePayload(w, type, value) {
+    switch (type) {
+        case TagType.T_END: return;
+        case TagType.T_BOOL: w.writeUInt8(value ? 1 : 0); return;
+        case TagType.T_INT8: w.writeInt8(value); return;
+        case TagType.T_INT16: w.writeInt16(value); return;
+        case TagType.T_INT32: w.writeInt32(value); return;
+        case TagType.T_INT64: w.writeInt64(value); return;
+        case TagType.T_UINT8: w.writeUInt8(value); return;
+        case TagType.T_UINT16: w.writeUInt16(value); return;
+        case TagType.T_UINT32: w.writeUInt32(value); return;
+        case TagType.T_UINT64: w.writeUInt64(value); return;
+        case TagType.T_FLOAT: w.writeFloat(value); return;
+        case TagType.T_DOUBLE: w.writeDouble(value); return;
+        case TagType.T_STRING: w.writeString(value); return;
+        case TagType.T_BYTEARRAY:
+            w.writeUInt32(value.length);
+            w.writeBytes(value);
+            return;
+        case TagType.T_VECTOR2_FLOAT: w.writeFloat(value.x); w.writeFloat(value.y); return;
+        case TagType.T_VECTOR2_INT: w.writeInt32(value.x); w.writeInt32(value.y); return;
+        case TagType.T_VECTOR2_DOUBLE: w.writeDouble(value.x); w.writeDouble(value.y); return;
+
+        case TagType.T_LIST: {
+            const list = value || { elementType: TagType.T_END, items: [] };
+            w.writeUInt8(list.elementType);
+            w.writeUInt32(list.items.length);
+            for (const item of list.items) {
+                writePayload(w, list.elementType, item.value);
+            }
+            return;
+        }
+
+        case TagType.T_COMPOUND: {
+            const entries = value || [];
+            for (const entry of entries) {
+                w.writeUInt8(entry.type);
+                w.writeString(entry.name);
+                writePayload(w, entry.type, entry.value);
+            }
+            w.writeUInt8(TagType.T_END);
+            return;
+        }
+
+        default:
+            throw new Error(`Unknown TagType ${type} during serialize`);
+    }
+}
+
+function serializeBBT(parsed) {
+    const w = new Writer();
+    w.writeInt32(BBT_MAGIC);
+    w.writeString(parsed.name);
+    w.writeUInt8(parsed.rootType);
+    w.writeString(parsed.rootName);
+    writePayload(w, parsed.rootType, parsed.root);
+    return w.toUint8Array();
+}
+
+window.BBT = { parseBBT, serializeBBT, TagType, TagTypeName };
+
+})();
