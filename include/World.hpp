@@ -10,11 +10,19 @@
 
 #include <cstdint>
 #include <unordered_map>
+#include <unordered_set>
 #include <filesystem>
 #include <optional>
 #include <vector>
 
 #include <SFML/System/Vector2.hpp>
+
+enum class ChunkState : uint8_t
+{
+    Unloaded = 0,
+    Lazy     = 1,
+    Loaded   = 2
+};
 
 enum class GenerationType : uint32_t
 {
@@ -42,9 +50,24 @@ protected:
     std::unordered_map<int, Chunk> chunks;
     std::unordered_map<UUID, Entity> entities;
 
+    // Snapshot of the chunk-state partition for the current tick, recomputed by
+    // ChunkLoadSystem from player positions. Everything else (entity systems,
+    // random ticks, unload) reads from these to avoid O(players) scans.
+    std::unordered_set<int> loaded_chunk_positions;
+    std::unordered_set<int> lazy_chunk_positions;
+
 public:
 
     virtual ~World() = default;
+
+    void refreshChunkStates();
+
+    ChunkState chunkState(int chunk_position) const;
+    bool isChunkLoaded(int chunk_position) const;
+    bool isChunkLazy(int chunk_position) const;
+
+    const std::unordered_set<int>& loadedChunks() const { return loaded_chunk_positions; }
+    const std::unordered_set<int>& lazyChunks()   const { return lazy_chunk_positions; }
 
     Chunk& getChunk(int chunk_position);
     Block getBlock(int world_x, int world_y);
@@ -80,9 +103,13 @@ public:
 
     static constexpr float DAY_CYCLE_DURATION = 1200.0f;
     static constexpr int SEA_LEVEL = 75;
-    static constexpr int SIMULATION_DISTANCE = 10;
-    static constexpr int MAX_CHUNKS_LOADED = 24;
-    static constexpr int PREFFERED_CHUNKS_LOADED = 16;
+
+    // Loaded radius (in chunks) around each player. Entities tick only in loaded
+    // chunks; blocks tick in loaded + lazy. Lazy is a single-ring buffer past
+    // the loaded edge, so block updates (e.g. water flow, scheduled ticks) can
+    // propagate just outside the player's active area without entity cost.
+    static constexpr int SIMULATION_DISTANCE = 8;
+    static constexpr int LAZY_DISTANCE       = SIMULATION_DISTANCE + 1;
 };
 
 inline std::filesystem::path getWorldsPath()

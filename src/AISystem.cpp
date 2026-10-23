@@ -60,6 +60,8 @@ void AISystem(World& world, float dt)
         auto& transform = entity.getComponent<TransformComponent>();
         auto& physics   = entity.getComponent<PhysicsComponent>();
 
+        if (!world.isChunkLoaded(transform.chunkPosition())) continue;
+
         ai.stateTimer    += dt;
         ai.attackCooldown = std::max(0.0f, ai.attackCooldown - dt);
         ai.dirty = true;

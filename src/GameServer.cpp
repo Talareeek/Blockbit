@@ -48,14 +48,11 @@ GameServer::GameServer(std::string name, unsigned int seed, GenerationProperties
 
 void GameServer::sendChunkTo(uint32_t client_id, int around_chunk_position)
 {
-    constexpr int chunk_count = World::SIMULATION_DISTANCE + 1;
-    int start = around_chunk_position - chunk_count / 2;
-
     auto& known_chunks = clients[client_id].known_chunks;
 
-    for (int i = 0; i < chunk_count; i++)
+    for (int offset = -World::LAZY_DISTANCE; offset <= World::LAZY_DISTANCE; ++offset)
     {
-        int chunk_position = start + i;
+        int chunk_position = around_chunk_position + offset;
         world.loadOrCreateChunk(chunk_position);
 
         ChunkPacket initialization;
@@ -67,8 +64,6 @@ void GameServer::sendChunkTo(uint32_t client_id, int around_chunk_position)
 
 void GameServer::streamChunksToClients()
 {
-    constexpr int half_distance = World::SIMULATION_DISTANCE / 2;
-
     for(auto& [client_id, data] : clients)
     {
         if(nickname_to_entity.contains(data.nickname))
@@ -77,14 +72,12 @@ void GameServer::streamChunksToClients()
 
             if(!entity.hasComponent<TransformComponent>()) continue;
 
-            double player_x = entity.getComponent<TransformComponent>().position.x;
-
-            int player_chunk = (player_x >= 0.0f) ? static_cast<int>(player_x) / CHUNK_WIDTH : (static_cast<int>(player_x) - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
+            int player_chunk = entity.getComponent<TransformComponent>().chunkPosition();
 
             auto& known_chunks = data.known_chunks;
             auto& chunks = world.getChunks();
 
-            for (int chunk_position = player_chunk - half_distance; chunk_position <= player_chunk + half_distance; ++chunk_position)
+            for (int chunk_position = player_chunk - World::LAZY_DISTANCE; chunk_position <= player_chunk + World::LAZY_DISTANCE; ++chunk_position)
             {
                 if (known_chunks.contains(chunk_position)) continue;
                 auto iterator = chunks.find(chunk_position);

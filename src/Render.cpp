@@ -1163,60 +1163,103 @@ void renderBar(int max, int value, sf::Color primary_color, sf::Color secondary_
     target.draw(background);
 
     const float factor = std::clamp(static_cast<float>(value) / static_cast<float>(max), 0.0f, 1.0f);
-    if (factor <= 0.0f) return;
 
     static const PerlinNoise3D bar_perlin(1337u);
     static sf::Clock bar_clock;
     const float t = bar_clock.getElapsedTime().asSeconds();
 
-    const float filled_width = bounds.size.x * factor;
-
-    const int cols = std::max(16, static_cast<int>(filled_width / 6.0f));
-    const int rows = std::max(3, static_cast<int>(bounds.size.y / 4.0f));
-
-    auto clip = [](float c) {
-        return static_cast<std::uint8_t>(std::clamp(c, 0.0f, 255.0f));
-    };
-
-    auto sample = [&](float u, float v) {
-        const sf::Color base = lerpColor(secondary_color, primary_color, u);
-
-        const double n1 = bar_perlin.noise(u * 4.0, v * 2.5, t * 0.6);
-        const double n2 = bar_perlin.noise(u * 9.0 + 11.3, v * 5.0, t * 1.4 + 7.7);
-        const float n = static_cast<float>(n1 * 0.65 + n2 * 0.35);
-
-        const float brightness = 0.65f + n * 0.75f;
-
-        return sf::Color(
-            clip(base.r * brightness),
-            clip(base.g * brightness),
-            clip(base.b * brightness),
-            base.a
-        );
-    };
-
-    for (int row = 0; row < rows; ++row)
+    if (factor > 0.0f)
     {
-        const float v0 = static_cast<float>(row)     / static_cast<float>(rows);
-        const float v1 = static_cast<float>(row + 1) / static_cast<float>(rows);
+        const float filled_width = bounds.size.x * factor;
 
-        sf::VertexArray strip(sf::PrimitiveType::TriangleStrip, (cols + 1) * 2);
+        const float cell_px = std::max(3.0f, bounds.size.y * 0.22f);
 
-        for (int col = 0; col <= cols; ++col)
+        const float leading_edge = std::min(filled_width, cell_px * 1.5f);
+        const float noise_width = filled_width - leading_edge;
+
+        auto clip = [](float c) {
+            return static_cast<std::uint8_t>(std::clamp(c, 0.0f, 255.0f));
+        };
+
+        auto sample = [&](float u, float v) {
+            const sf::Color base = lerpColor(secondary_color, primary_color, u);
+
+            const double n1 = bar_perlin.noise(u * 10.0, v * 6.0, t * 0.8);
+            const double n2 = bar_perlin.noise(u * 24.0 + 11.3, v * 14.0, t * 1.8 + 7.7);
+            const double n3 = bar_perlin.noise(u * 55.0 + 3.1, v * 28.0, t * 2.6 + 2.2);
+            const float n_raw = static_cast<float>(n1 * 0.5 + n2 * 0.32 + n3 * 0.18);
+
+            const float sign = n_raw < 0.0f ? -1.0f : 1.0f;
+            const float n = sign * std::pow(std::abs(n_raw), 0.4f);
+
+            const float brightness = 0.55f + n * 1.15f;
+
+            return sf::Color(
+                clip(base.r * brightness),
+                clip(base.g * brightness),
+                clip(base.b * brightness),
+                base.a
+            );
+        };
+
+        if (noise_width > 0.0f)
         {
-            const float u = static_cast<float>(col) / static_cast<float>(cols);
+            const int cols = std::max(1, static_cast<int>(noise_width / cell_px));
+            const int rows = std::max(2, static_cast<int>(bounds.size.y / cell_px));
 
-            const sf::Vector2f p0 = bounds.position + sf::Vector2f(filled_width * u, bounds.size.y * v0);
-            const sf::Vector2f p1 = bounds.position + sf::Vector2f(filled_width * u, bounds.size.y * v1);
+            sf::VertexArray cells(sf::PrimitiveType::Triangles, static_cast<std::size_t>(cols) * static_cast<std::size_t>(rows) * 6);
 
-            strip[col * 2 + 0].position = p0;
-            strip[col * 2 + 0].color    = sample(u, v0);
-            strip[col * 2 + 1].position = p1;
-            strip[col * 2 + 1].color    = sample(u, v1);
+            for (int row = 0; row < rows; ++row)
+            {
+                for (int col = 0; col < cols; ++col)
+                {
+                    const float u = (static_cast<float>(col) + 0.5f) / static_cast<float>(cols);
+                    const float v = (static_cast<float>(row) + 0.5f) / static_cast<float>(rows);
+                    const sf::Color c = sample(u, v);
+
+                    const float x0 = bounds.position.x + noise_width * static_cast<float>(col)     / static_cast<float>(cols);
+                    const float x1 = bounds.position.x + noise_width * static_cast<float>(col + 1) / static_cast<float>(cols);
+                    const float y0 = bounds.position.y + bounds.size.y * static_cast<float>(row)     / static_cast<float>(rows);
+                    const float y1 = bounds.position.y + bounds.size.y * static_cast<float>(row + 1) / static_cast<float>(rows);
+
+                    const std::size_t i = (static_cast<std::size_t>(row) * static_cast<std::size_t>(cols) + static_cast<std::size_t>(col)) * 6;
+                    cells[i + 0] = sf::Vertex{{x0, y0}, c};
+                    cells[i + 1] = sf::Vertex{{x1, y0}, c};
+                    cells[i + 2] = sf::Vertex{{x1, y1}, c};
+                    cells[i + 3] = sf::Vertex{{x0, y0}, c};
+                    cells[i + 4] = sf::Vertex{{x1, y1}, c};
+                    cells[i + 5] = sf::Vertex{{x0, y1}, c};
+                }
+            }
+
+            target.draw(cells);
         }
 
-        target.draw(strip);
+        sf::RectangleShape leading({leading_edge, bounds.size.y});
+        leading.setPosition({bounds.position.x + noise_width, bounds.position.y});
+        leading.setFillColor(primary_color);
+        target.draw(leading);
     }
+
+    const float frame_thickness = std::max(1.0f, bounds.size.y * 0.06f);
+    sf::RectangleShape frame(bounds.size);
+    frame.setPosition(bounds.position);
+    frame.setFillColor(sf::Color::Transparent);
+    frame.setOutlineColor(sf::Color(0, 0, 0, 220));
+    frame.setOutlineThickness(-frame_thickness);
+    target.draw(frame);
+
+    const unsigned int character_size = std::max(8u, static_cast<unsigned int>(bounds.size.y * 0.4f));
+    sf::Text value_text(AssetManager::getFont(AssetManager::FontID::PressStart2P),
+                        std::to_string(value),
+                        character_size);
+    value_text.setFillColor(sf::Color::White);
+
+    const sf::FloatRect text_bounds = value_text.getLocalBounds();
+    value_text.setOrigin({text_bounds.position.x + text_bounds.size.x * 0.5f,
+                          text_bounds.position.y + text_bounds.size.y * 0.5f});
+    value_text.setPosition(bounds.position + bounds.size * 0.5f);
+    target.draw(value_text);
 }
 
 void renderHotbar(std::array<ItemStack, 9> items, uint8_t selected_slot, sf::RenderTarget& target)

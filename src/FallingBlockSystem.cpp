@@ -51,6 +51,8 @@ void FallingBlockSystem(ServerWorld& world)
         const auto& transform = entity.getComponent<TransformComponent>();
         const auto& falling   = entity.getComponent<FallingBlockComponent>();
 
+        if (!world.isChunkLoaded(transform.chunkPosition())) continue;
+
         // Entity is 1x1 and position is bottom-left (per TransformComponent
         // convention used by DroppedItem/Pig/Player). Resting cell is the
         // tile under the entity's bottom edge.

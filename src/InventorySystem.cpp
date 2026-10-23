@@ -18,6 +18,7 @@ void InventorySystem(World& world)
         {
             if(!entity.hasComponent<ItemComponent>() || !entity.hasComponent<TransformComponent>()) continue;
             if(entity.getComponent<ItemComponent>().item.empty()) continue;
+            if(!world.isChunkLoaded(entity.getComponent<TransformComponent>().chunkPosition())) continue;
             item_ids.push_back(id);
         }
 
@@ -78,12 +79,16 @@ void InventorySystem(World& world)
         auto& item = entity.getComponent<ItemComponent>();
         auto& itemTransform = entity.getComponent<TransformComponent>();
 
+        if(!world.isChunkLoaded(itemTransform.chunkPosition())) continue;
+
         for(auto& [id, other] : world.getEntities())
         {
             if(!other.hasComponent<InventoryComponent>() || !other.hasComponent<TransformComponent>()) continue;
 
             auto& inventory = other.getComponent<InventoryComponent>();
             auto& inventoryTransform = other.getComponent<TransformComponent>();
+
+            if(!world.isChunkLoaded(inventoryTransform.chunkPosition())) continue;
             
             sf::FloatRect itemRect(sf::Vector2f(itemTransform.position), sf::Vector2f(itemTransform.size));
             sf::FloatRect inventoryRect(sf::Vector2f(inventoryTransform.position), sf::Vector2f(inventoryTransform.size));

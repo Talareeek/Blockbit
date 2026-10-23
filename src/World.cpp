@@ -231,11 +231,62 @@ std::pair<double, double> World::getSimulationRangeForEntity(const UUID entity)
 {
     auto& transform = getEntity(entity).getComponent<TransformComponent>();
 
-    int entity_chunk = transform.position.x / CHUNK_WIDTH;
+    int entity_chunk = transform.chunkPosition();
 
     return
     {
         static_cast<float>((entity_chunk - SIMULATION_DISTANCE) * CHUNK_WIDTH),
         static_cast<float>((entity_chunk + SIMULATION_DISTANCE) * CHUNK_WIDTH + CHUNK_WIDTH)
     };
+}
+
+void World::refreshChunkStates()
+{
+    loaded_chunk_positions.clear();
+    lazy_chunk_positions.clear();
+
+    for (const auto& [id, entity] : entities)
+    {
+        if (!entity.hasComponent<PlayerControlledComponent>()) continue;
+        if (!entity.hasComponent<TransformComponent>()) continue;
+
+        int player_chunk = entity.getComponent<TransformComponent>().chunkPosition();
+
+        for (int offset = -LAZY_DISTANCE; offset <= LAZY_DISTANCE; ++offset)
+        {
+            int chunk_position = player_chunk + offset;
+            if (std::abs(offset) <= SIMULATION_DISTANCE)
+            {
+                loaded_chunk_positions.insert(chunk_position);
+            }
+            else
+            {
+                lazy_chunk_positions.insert(chunk_position);
+            }
+        }
+    }
+
+    // A chunk simultaneously inside one player's loaded radius and another's
+    // lazy ring must be treated as loaded.
+    for (int chunk_position : loaded_chunk_positions)
+    {
+        lazy_chunk_positions.erase(chunk_position);
+    }
+}
+
+ChunkState World::chunkState(int chunk_position) const
+{
+    if (loaded_chunk_positions.contains(chunk_position)) return ChunkState::Loaded;
+    if (lazy_chunk_positions.contains(chunk_position))   return ChunkState::Lazy;
+    return ChunkState::Unloaded;
+}
+
+bool World::isChunkLoaded(int chunk_position) const
+{
+    return loaded_chunk_positions.contains(chunk_position);
+}
+
+bool World::isChunkLazy(int chunk_position) const
+{
+    return lazy_chunk_positions.contains(chunk_position);
 }

@@ -49,6 +49,8 @@ void PhysicsSystem(World& world, float deltaTime)
 
         auto& t = entity.getComponent<TransformComponent>();
 
+        if(!world.isChunkLoaded(t.chunkPosition())) continue;
+
         const double size_x = t.size.x;
         const double size_y = t.size.y;
 

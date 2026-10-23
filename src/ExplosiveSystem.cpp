@@ -44,6 +44,7 @@ void ExplosiveSystem(World& world, float dt)
     for(auto& [id, entity] : entities)
     {
         if(!entity.hasComponent<ExplosiveComponent>() || !entity.hasComponent<TransformComponent>()) continue;
+        if(!world.isChunkLoaded(entity.getComponent<TransformComponent>().chunkPosition())) continue;
 
         auto& explosive = entity.getComponent<ExplosiveComponent>();
         explosive.timer += dt;

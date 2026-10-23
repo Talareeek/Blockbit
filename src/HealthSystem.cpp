@@ -24,6 +24,9 @@ void HealthSystem(World& world, float dt)
     {
         if(!entity.hasComponent<HealthComponent>()) continue;
 
+        if(entity.hasComponent<TransformComponent>()
+           && !world.isChunkLoaded(entity.getComponent<TransformComponent>().chunkPosition())) continue;
+
         auto& health = entity.getComponent<HealthComponent>();
 
         if(health.since_last_damaged < HealthComponent::DAMAGE_FLASH_DURATION)

@@ -1,62 +1,41 @@
 #include "../include/ChunkUnloadSystem.hpp"
-#include "../include/GameCommon.hpp"
-#include "../include/Entity.hpp"
-#include "../include/TransformComponent.hpp"
+#include "../include/PlayerControlledComponent.hpp"
 
-static bool isChunkSafe(int chunkPos, const std::vector<UUID>& playerIds, World& world)
-{
-    for (UUID playerId : playerIds)
-    {
-        int player_chunk = world.getEntity(playerId).getComponent<TransformComponent>().position.x / CHUNK_WIDTH;
-        int min_safe = player_chunk - World::SIMULATION_DISTANCE / 2;
-        int max_safe = player_chunk + World::SIMULATION_DISTANCE / 2;
-        if (chunkPos >= min_safe && chunkPos <= max_safe) return true;
-    }
-    return false;
-}
+#include <vector>
 
 void ChunkUnloadSystem(ServerWorld& world)
 {
-    if(world.getChunks().size() <= World::MAX_CHUNKS_LOADED) return;
+    std::vector<int> to_evict;
+    to_evict.reserve(world.getChunks().size());
 
-    auto playerIds = world.getPlayerEntityIDs();
-
-    while(world.getChunks().size() > World::PREFFERED_CHUNKS_LOADED)
+    for (const auto& [chunk_position, chunk] : world.getChunks())
     {
-        std::vector<int> keys;
-        for(auto& a : world.getChunks())
+        if (world.chunkState(chunk_position) == ChunkState::Unloaded)
         {
-            keys.push_back(a.first);
+            to_evict.push_back(chunk_position);
+        }
+    }
+
+    for (int chunk_position : to_evict)
+    {
+        world.saveChunk(chunk_position);
+
+        // Collect entities to remove from ECS before erasing the chunk — they'll
+        // come back next time the chunk is loaded (loadChunkEntities re-adds).
+        // Players are never evicted this way: their presence IS what keeps a
+        // chunk loaded, so a player's chunk cannot be in Unloaded state.
+        std::vector<UUID> entity_ids(
+            world.getChunks().at(chunk_position).entity_ids.begin(),
+            world.getChunks().at(chunk_position).entity_ids.end());
+
+        for (UUID id : entity_ids)
+        {
+            if (!world.doesEntityExist(id)) continue;
+            if (world.getEntity(id).hasComponent<PlayerControlledComponent>()) continue;
+            world.removeEntity(id);
         }
 
-        if(keys.empty()) break;
-
-        int min = keys[0];
-        int max = keys[0];
-
-        for(auto& a : keys)
-        {
-            if(a > max) max = a;
-            if(a < min) min = a;
-        }
-
-        bool erased = false;
-
-        if(!isChunkSafe(min, playerIds, world))
-        {
-            world.saveChunk(min);
-            world.getChunks().erase(min);
-            world.getBlockUpdatePipeline().dropChunk(min);
-            erased = true;
-        }
-        if(world.getChunks().size() > World::PREFFERED_CHUNKS_LOADED && max != min && !isChunkSafe(max, playerIds, world))
-        {
-            world.saveChunk(max);
-            world.getChunks().erase(max);
-            world.getBlockUpdatePipeline().dropChunk(max);
-            erased = true;
-        }
-
-        if(!erased) break;
+        world.getChunks().erase(chunk_position);
+        world.getBlockUpdatePipeline().dropChunk(chunk_position);
     }
 }

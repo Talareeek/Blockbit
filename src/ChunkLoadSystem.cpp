@@ -1,24 +1,21 @@
 #include "../include/ChunkLoadSystem.hpp"
+#include "../include/PlayerControlledComponent.hpp"
 #include "../include/TransformComponent.hpp"
 
-#include <cmath>
-
-void ChunkLoadSystem(ServerWorld& world, float dt)
+void ChunkLoadSystem(ServerWorld& world, float /*dt*/)
 {
-    auto position_to_chunk = [](sf::Vector2<double> position) -> int
+    for (auto& [id, entity] : world.getEntities())
     {
-        return static_cast<int>(std::floor(position.x / 16.0));
-    };
+        if (!entity.hasComponent<PlayerControlledComponent>()) continue;
+        if (!entity.hasComponent<TransformComponent>()) continue;
 
-    for(auto& [id, entity] : world.getEntities())
-    {
-        if(!entity.hasComponent<TransformComponent>()) continue;
+        int player_chunk = entity.getComponent<TransformComponent>().chunkPosition();
 
-        const auto& t = entity.getComponent<TransformComponent>();
-        const int left_chunk  = position_to_chunk(t.position);
-        const int right_chunk = position_to_chunk({t.position.x + t.size.x, t.position.y});
-
-        world.loadOrCreateChunk(left_chunk);
-        if(right_chunk != left_chunk) world.loadOrCreateChunk(right_chunk);
+        for (int offset = -World::LAZY_DISTANCE; offset <= World::LAZY_DISTANCE; ++offset)
+        {
+            world.loadOrCreateChunk(player_chunk + offset);
+        }
     }
+
+    world.refreshChunkStates();
 }

@@ -4,7 +4,6 @@
 #include "../include/GameCommon.hpp"
 #include "../include/Entity.hpp"
 #include "../include/ServerWorld.hpp"
-#include "../include/PlayerControlledComponent.hpp"
 
 void TransformSystem(ServerWorld& world)
 {
@@ -13,6 +12,8 @@ void TransformSystem(ServerWorld& world)
         if(!entity.hasComponent<TransformComponent>()) continue;
 
         auto& transform = entity.getComponent<TransformComponent>();
+
+        if(!world.isChunkLoaded(transform.chunkPosition())) continue;
 
         if(transform.moved())
         {
@@ -37,17 +38,6 @@ void TransformSystem(ServerWorld& world)
             health.health -= 1;
             health.since_last_damaged = 0.0f;
             health.dirty = true;
-        }
-
-        if(entity.hasComponent<PlayerControlledComponent>())
-        {
-            int chunk_lowest = transform.chunkPosition() - World::SIMULATION_DISTANCE / 2;
-            int chunk_highest = transform.chunkPosition() + World::SIMULATION_DISTANCE / 2;
-
-            for (int i = chunk_lowest; i <= chunk_highest; i++)
-            {
-                world.loadOrCreateChunk(i);
-            }
         }
     }
 }

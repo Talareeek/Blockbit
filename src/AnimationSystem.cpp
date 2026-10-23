@@ -1,6 +1,7 @@
 #include "../include/AnimationSystem.hpp"
 #include "../include/AnimationComponent.hpp"
 #include "../include/RenderComponent.hpp"
+#include "../include/TransformComponent.hpp"
 #include "../include/World.hpp"
 
 void AnimationSystem(World& world, float dt)
@@ -8,6 +9,9 @@ void AnimationSystem(World& world, float dt)
     for(auto& [id, entity] : world.getEntities())
     {
         if(!entity.hasComponent<AnimationComponent>() || !entity.hasComponent<RenderComponent>()) continue;
+
+        if(entity.hasComponent<TransformComponent>()
+           && !world.isChunkLoaded(entity.getComponent<TransformComponent>().chunkPosition())) continue;
 
         auto& animation = entity.getComponent<AnimationComponent>();
         auto& render = entity.getComponent<RenderComponent>();
