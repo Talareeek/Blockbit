@@ -21,8 +21,6 @@ private:
     GenerationProperties generation_properties;
     PerlinNoise perlin{0};
 
-    float passive_mob_spawn_timer{0.0f};
-
 public:
 
     ServerWorld(const std::filesystem::path path);

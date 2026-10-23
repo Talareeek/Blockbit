@@ -23,6 +23,7 @@
 #include "../include/FallingBlockSystem.hpp"
 #include "../include/AnimationComponent.hpp"
 #include "../include/AnimationSystem.hpp"
+#include "../include/MobSpawnSystem.hpp"
 #include "../include/Prefab.hpp"
 #include "../include/ChestView.hpp"
 #include "../include/InventoryView.hpp"
@@ -498,7 +499,7 @@ void GameServer::update(float dt)
             }
         }
 
-        world.trySpawnPassiveMobs(dt);
+        MobSpawnSystem(world, dt);
 
         tick++;
 
