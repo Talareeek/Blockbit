@@ -16,10 +16,11 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -g")
 endif()
 
-# Find SFML
-find_package(SFML REQUIRED COMPONENTS Graphics Window System Audio)
+# Opt-out release flavour for the headless/dedicated server: pure -O3,
+# no debug info. Driven by build-headless.sh (sets BLOCKBIT_HEADLESS_STRIP=ON).
+option(BLOCKBIT_HEADLESS_STRIP "Build BlockbitServer with release flags stripped of debug info" OFF)
 
-# Threads (asio)
+find_package(SFML REQUIRED COMPONENTS Graphics Window System Audio)
 find_package(Threads REQUIRED)
 
 # zstd
@@ -49,7 +50,6 @@ endif()
 
 find_package(tinyxml2 REQUIRED)
 
-# Dear ImGui + ImGui-SFML (fetched at configure time, no submodules to init)
 include(FetchContent)
 FetchContent_Declare(imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui
@@ -59,8 +59,8 @@ FetchContent_Declare(imgui
 FetchContent_MakeAvailable(imgui)
 
 set(IMGUI_DIR ${imgui_SOURCE_DIR})
-set(IMGUI_SFML_FIND_SFML OFF)   # SFML already found above
-set(IMGUI_SFML_IMGUI_DEMO ON)   # ImGui::ShowDemoWindow()
+set(IMGUI_SFML_FIND_SFML OFF)
+set(IMGUI_SFML_IMGUI_DEMO ON)
 FetchContent_Declare(imgui-sfml
     GIT_REPOSITORY https://github.com/SFML/imgui-sfml
     GIT_TAG v3.0
@@ -68,47 +68,176 @@ FetchContent_Declare(imgui-sfml
 )
 FetchContent_MakeAvailable(imgui-sfml)
 
-# nlohmann/json
-include(FetchContent)
-
 FetchContent_Declare(
     nlohmann_json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
     GIT_TAG v3.12.0
     GIT_SHALLOW TRUE
 )
-
 FetchContent_MakeAvailable(nlohmann_json)
 
 
-# Source files
-file(GLOB_RECURSE SOURCES "src/*.cpp")
+# -----------------------------------------------------------------------------
+# Source partitioning
+# -----------------------------------------------------------------------------
+# Everything under src/*.cpp is bucketed:
+#
+#   BLOCKBIT_CLIENT_ONLY_SOURCES
+#       Pure UI/menu/window/local-client code. Only linked into Blockbit.
+#
+#   BLOCKBIT_ENTRY_CLIENT        -> main.cpp (Blockbit entry)
+#   BLOCKBIT_ENTRY_HEADLESS      -> HeadlessMain.cpp (BlockbitServer entry)
+#
+#   BLOCKBIT_CORE_SOURCES
+#       Everything else. Compiled into TWO object libraries with different
+#       defines:
+#           bb_core_client — plain build; ClientX view classes compile normally
+#           bb_core_server — HEADLESS_BUILD defined; ClientX bodies and
+#                            graphics-only command handlers are excluded
+#
+#   Why double-compile:
+#       The View .cpp files (ChestView/FurnaceView/InventoryView/CraftingView)
+#       contain BOTH the server-side ServerXxxView (needed by GameServer) and
+#       the ImGui-tied ClientXxxView in the same translation unit. Keeping the
+#       GameServer linkable without touching UIElement/Slot/renderItemInfo
+#       means those TUs have to be compiled a second time with HEADLESS_BUILD
+#       set so the client bodies drop out.
+#
+#   AssetManager.cpp and Input.cpp are in the shared bucket because:
+#       - Block.hpp has an inline lambda that calls AssetManager::getGameTexture
+#         (default_render_rect), so Block.cpp needs AssetManager symbols at
+#         link time whether or not we're on headless.
+#       - processWorldInputs() lives in Input.cpp and is called by GameServer.
+file(GLOB_RECURSE _ALL_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/src/*.cpp")
 
-# Create executable
-add_executable(Blockbit ${SOURCES})
+set(_CLIENT_ONLY_BASENAMES
+    Account.cpp
+    AccountWidget.cpp
+    AnnouncementState.cpp
+    AuthorGameState.cpp
+    BlockAtlas.cpp
+    Button.cpp
+    ChatUI.cpp
+    Checkbox.cpp
+    Client.cpp
+    ClientGameState.cpp
+    Console.cpp
+    CreateWorldState.cpp
+    Game.cpp
+    GameState.cpp
+    GenerationPreview.cpp
+    HealthBar.cpp
+    Hotbar.cpp
+    InputField.cpp
+    InputManager.cpp
+    IntroGameState.cpp
+    Jukebox.cpp
+    Label.cpp
+    LobbyPlayerElement.cpp
+    MenuGameState.cpp
+    NetworkClientTransport.cpp
+    PauseScreenState.cpp
+    RCon.cpp
+    Render.cpp
+    RenderSystem.cpp
+    ServerPreview.cpp
+    SettingsWindow.cpp
+    Slider.cpp
+    Slot.cpp
+    UIElement.cpp
+    UILayout.cpp
+    WorldEntry.cpp
+    WorldList.cpp
+)
 
-# Include directories
-target_include_directories(Blockbit PRIVATE ${CMAKE_SOURCE_DIR}/include)
+set(_HEADLESS_ONLY_BASENAMES
+    HeadlessMain.cpp
+)
 
-# asio standalone (no Boost)
-target_compile_definitions(Blockbit PRIVATE ASIO_STANDALONE)
+set(_CLIENT_ENTRY_BASENAMES
+    main.cpp
+)
 
-# Link libraries
-target_link_libraries(Blockbit PRIVATE
+set(BLOCKBIT_CORE_SOURCES "")
+set(BLOCKBIT_CLIENT_ONLY_SOURCES "")
+set(BLOCKBIT_ENTRY_HEADLESS "")
+set(BLOCKBIT_ENTRY_CLIENT "")
+
+foreach(_src ${_ALL_SOURCES})
+    get_filename_component(_name "${_src}" NAME)
+    if(_name IN_LIST _CLIENT_ENTRY_BASENAMES)
+        list(APPEND BLOCKBIT_ENTRY_CLIENT "${_src}")
+    elseif(_name IN_LIST _HEADLESS_ONLY_BASENAMES)
+        list(APPEND BLOCKBIT_ENTRY_HEADLESS "${_src}")
+    elseif(_name IN_LIST _CLIENT_ONLY_BASENAMES)
+        list(APPEND BLOCKBIT_CLIENT_ONLY_SOURCES "${_src}")
+    else()
+        list(APPEND BLOCKBIT_CORE_SOURCES "${_src}")
+    endif()
+endforeach()
+
+# Interface target that factors out the common include dirs, defines, and
+# transitive link deps the two bb_core variants share. Avoids repeating the
+# find_package targets on both OBJECT libraries.
+add_library(bb_core_deps INTERFACE)
+target_include_directories(bb_core_deps INTERFACE ${CMAKE_SOURCE_DIR}/include)
+target_compile_definitions(bb_core_deps INTERFACE ASIO_STANDALONE)
+target_link_libraries(bb_core_deps INTERFACE
     SFML::Graphics
     SFML::Window
     SFML::System
     SFML::Audio
     Threads::Threads
     tinyxml2::tinyxml2
-    ImGui-SFML::ImGui-SFML
     nlohmann_json::nlohmann_json
     ${ZSTD_TARGET}
 )
 
-# Enable debug info in Release mode as well
+# -----------------------------------------------------------------------------
+# bb_core_client: shared core compiled WITHOUT HEADLESS_BUILD.
+# -----------------------------------------------------------------------------
+add_library(bb_core_client OBJECT ${BLOCKBIT_CORE_SOURCES})
+target_link_libraries(bb_core_client PUBLIC bb_core_deps)
+
+# -----------------------------------------------------------------------------
+# bb_core_server: same sources compiled WITH HEADLESS_BUILD.
+# -----------------------------------------------------------------------------
+add_library(bb_core_server OBJECT ${BLOCKBIT_CORE_SOURCES})
+target_link_libraries(bb_core_server PUBLIC bb_core_deps)
+target_compile_definitions(bb_core_server PRIVATE HEADLESS_BUILD)
+
+# -----------------------------------------------------------------------------
+# Blockbit: client executable (behavior unchanged).
+# -----------------------------------------------------------------------------
+add_executable(Blockbit
+    ${BLOCKBIT_ENTRY_CLIENT}
+    ${BLOCKBIT_CLIENT_ONLY_SOURCES}
+    $<TARGET_OBJECTS:bb_core_client>
+)
+
+target_link_libraries(Blockbit PRIVATE
+    bb_core_deps
+    ImGui-SFML::ImGui-SFML
+)
+
 if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(Blockbit PRIVATE -g)
     endif()
+endif()
+
+# -----------------------------------------------------------------------------
+# BlockbitServer: headless/dedicated server.
+# -----------------------------------------------------------------------------
+add_executable(BlockbitServer
+    ${BLOCKBIT_ENTRY_HEADLESS}
+    $<TARGET_OBJECTS:bb_core_server>
+)
+
+target_link_libraries(BlockbitServer PRIVATE bb_core_deps)
+target_compile_definitions(BlockbitServer PRIVATE HEADLESS_BUILD)
+
+if(BLOCKBIT_HEADLESS_STRIP AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(BlockbitServer PRIVATE -O3)
+    target_link_options(BlockbitServer PRIVATE -s)
 endif()

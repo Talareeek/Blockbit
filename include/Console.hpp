@@ -7,6 +7,7 @@
 #include <mutex>
 #include <streambuf>
 #include <iosfwd>
+#include <functional>
 #include "Command.hpp"
 
 struct ImGuiInputTextCallbackData;
@@ -117,6 +118,14 @@ public:
 
     void assignWorld(World* world);
     void assignGame(Game* game);
+
+    // When set, '/' prefixed input is forwarded to the server through this
+    // relay (serialized as CommandMessagePacket inside the implementation),
+    // instead of being executed locally.
+    void assignCommandRelay(std::function<void(const std::wstring&)> relay);
+
+private:
+    std::function<void(const std::wstring&)> command_relay;
 };
 
 #endif // CONSOLE_HPP

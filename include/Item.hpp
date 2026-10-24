@@ -192,6 +192,12 @@ struct Inventory
 
 extern bool addItem(Inventory& inventory, ItemID itemID, uint32_t quantity);
 
+// Linear scan over itemDatabase matching ItemData::name. Comparison is
+// case-insensitive and treats '_' as equivalent to ' ' so both
+// "Diamond_Pickaxe" and "diamond pickaxe" resolve. Returns std::nullopt when
+// nothing matches.
+std::optional<ItemID> findItemIdByName(const std::string& name);
+
 
 struct Recipe
 {

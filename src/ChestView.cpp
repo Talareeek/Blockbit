@@ -333,6 +333,7 @@ std::deque<SetContentData> ServerChestView::drainPendingContentUpdates()
     return drained;
 }
 
+#ifndef HEADLESS_BUILD
 // ---------- ClientChestView ----------
 
 ClientChestView::ClientChestView()
@@ -494,3 +495,4 @@ std::deque<ViewEventData> ClientChestView::drainPendingEvents()
     drained.swap(pending);
     return drained;
 }
+#endif // HEADLESS_BUILD

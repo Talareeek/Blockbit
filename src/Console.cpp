@@ -3,6 +3,10 @@
 #include "../include/AssetManager.hpp"
 #include "../include/Command.hpp"
 #include "../include/GameCommon.hpp"
+#include "../include/ClientGameState.hpp"
+#include "../include/Game.hpp"
+#include "../include/ClientTransport.hpp"
+#include "../include/Packet.hpp"
 
 #include <iostream>
 #include <deque>
@@ -11,6 +15,26 @@
 #include <cstring>
 
 #include <imgui.h>
+
+namespace
+{
+    class ConsoleSinkContext : public CommandContext
+    {
+    public:
+        ConsoleSinkContext(Console& console, Game* game, World* world)
+            : console_ref(console), game_ptr(game), world_ptr(world) {}
+
+        void reply(const std::wstring& line) override { console_ref.writeLine(line); }
+        void reply(const std::wstring& line, sf::Color color) override { console_ref.writeLine(line, color); }
+        Game* game() override { return game_ptr; }
+        World* world() override { return world_ptr; }
+
+    private:
+        Console& console_ref;
+        Game* game_ptr;
+        World* world_ptr;
+    };
+}
 
 namespace
 {
@@ -122,7 +146,19 @@ void Console::update(float dt)
 
     if(to_proceed.has_value())
     {
-        std::wstringstream stream(to_proceed.value());   
+        std::wstring raw = to_proceed.value();
+        to_proceed = std::nullopt;
+
+        // Server-routed commands: '/' prefix is forwarded to the GameServer so
+        // operator/requires_* checks happen in one place. Everything else runs
+        // locally (max-fps, v-sync, etc.).
+        if(!raw.empty() && raw.front() == L'/' && command_relay)
+        {
+            command_relay(raw.substr(1));
+            return;
+        }
+
+        std::wstringstream stream(raw);
 
         std::wstring command_name;
 
@@ -131,7 +167,6 @@ void Console::update(float dt)
         if(!commandDatabase.contains(command_name))
         {
             std::cerr << "No command found: " << std::string(command_name.begin(), command_name.end()) << '\n';
-            to_proceed = std::nullopt;
             return;
         }
 
@@ -140,13 +175,18 @@ void Console::update(float dt)
         if((command_data.requires_game && game == nullptr) || (command_data.requires_world && world == nullptr))
         {
             std::cerr << "Can't call this command now" << '\n';
-            to_proceed = std::nullopt;
             return;
         }
 
-        commandDatabase[command_name].on_call(to_proceed.value(), (*this), game, world);
-
-        to_proceed = std::nullopt;
+        try
+        {
+            ConsoleSinkContext ctx(*this, game, world);
+            command_data.on_call(raw, ctx);
+        }
+        catch (const CommandException& exception)
+        {
+            std::cerr << exception.message << '\n';
+        }
     }
 }
 
@@ -371,6 +411,11 @@ void Console::assignWorld(World* world)
 void Console::assignGame(Game* game)
 {
     this->game = game;
+}
+
+void Console::assignCommandRelay(std::function<void(const std::wstring&)> relay)
+{
+    this->command_relay = std::move(relay);
 }
 
 void Console::appendLog(std::wstring text, sf::Color color)

@@ -1,5 +1,7 @@
 #include "../include/Item.hpp"
 #include "../include/World.hpp"
+
+#include <cctype>
 #include "../include/Entity.hpp"
 #include "../include/ExplosiveComponent.hpp"
 #include "../include/TransformComponent.hpp"
@@ -928,6 +930,29 @@ bool canStack(const ItemStack& a, const ItemStack& b)
 Inventory::Inventory(size_t size)
 {
     slots.resize(size, {ItemID::None, 0});
+}
+
+std::optional<ItemID> findItemIdByName(const std::string& name)
+{
+    auto normalize = [](const std::string& s)
+    {
+        std::string out;
+        out.reserve(s.size());
+        for (char c : s)
+        {
+            if (c == '_') c = ' ';
+            out.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+        }
+        return out;
+    };
+
+    const std::string needle = normalize(name);
+
+    for (const auto& [id, data] : itemDatabase)
+    {
+        if (normalize(data.name) == needle) return id;
+    }
+    return std::nullopt;
 }
 
 bool addItem(Inventory& inventory, ItemID itemID, uint32_t quantity)

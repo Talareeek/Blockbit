@@ -322,6 +322,7 @@ std::deque<SetContentData> ServerInventoryView::drainPendingContentUpdates()
     return drained;
 }
 
+#ifndef HEADLESS_BUILD
 // ---------- ClientInventoryView ----------
 
 namespace
@@ -761,3 +762,4 @@ std::deque<ViewEventData> ClientInventoryView::drainPendingEvents()
     drained.swap(pending);
     return drained;
 }
+#endif // HEADLESS_BUILD

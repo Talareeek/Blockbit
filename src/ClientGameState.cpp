@@ -75,6 +75,15 @@ ClientGameState::ClientGameState(Game* game, std::filesystem::path world_path, u
         if (!transport || !transport->isConnected()) return;
         transport->send(serializePacket(ChatMessagePacket{std::move(message)}));
     });
+
+    // Slash-prefixed input in Console → server, so operator/requires_* checks
+    // live only in GameServer::processIncoming. Local commands (max-fps etc.)
+    // still run through the normal commandDatabase path in Console::update.
+    game->getConsole().assignCommandRelay([this](const std::wstring& command)
+    {
+        if (!transport || !transport->isConnected()) return;
+        transport->send(serializePacket(CommandMessagePacket{command}));
+    });
 }
 
 ClientGameState::ClientGameState(Game* game, std::string name, unsigned int seed, GenerationProperties generation_properties, uint16_t network_port, std::string nickname) : GameState(game)
@@ -115,6 +124,15 @@ ClientGameState::ClientGameState(Game* game, std::string name, unsigned int seed
         if (!transport || !transport->isConnected()) return;
         transport->send(serializePacket(ChatMessagePacket{std::move(message)}));
     });
+
+    // Slash-prefixed input in Console → server, so operator/requires_* checks
+    // live only in GameServer::processIncoming. Local commands (max-fps etc.)
+    // still run through the normal commandDatabase path in Console::update.
+    game->getConsole().assignCommandRelay([this](const std::wstring& command)
+    {
+        if (!transport || !transport->isConnected()) return;
+        transport->send(serializePacket(CommandMessagePacket{command}));
+    });
 }
 
 ClientGameState::ClientGameState(Game* game, const std::string& host, uint16_t port, std::string nickname) : GameState(game)
@@ -144,6 +162,7 @@ ClientGameState::~ClientGameState()
 
     game->getWindow().setTitle("Blockbit");
     game->getConsole().assignWorld(nullptr);
+    game->getConsole().assignCommandRelay({});
 }
 
 bool ClientGameState::hasPlayerEntity() const
@@ -290,6 +309,11 @@ void ClientGameState::processIncoming()
                 {
                     auto message = deserializeChatMessage(reader);
                     chat.pushMessage(message.message);
+                    // Mirror to the in-game console so the player sees it even
+                    // if the chat panel is hidden — matters most for
+                    // kick/ban/disconnect notifications fired just before the
+                    // connection closes.
+                    game->getConsole().writeLine(message.message);
                     break;
                 }
                 case PacketType::OpenView:

@@ -39,7 +39,13 @@ enum class PacketType : uint8_t
     OpenView,
     CloseView,
     SetContent,
-    ViewEvent
+    ViewEvent,
+
+    // IMPORTANT: new values go at the end. The wire protocol pins packet
+    // type IDs by their declaration order (uint8_t), so inserting in the
+    // middle would silently remap every subsequent packet and break
+    // clients already connected or any saved/pending buffers.
+    CommandMessage
 };
 
 struct InitializationPacket
@@ -103,6 +109,14 @@ struct StatusResponsePacket
 struct ChatMessagePacket
 {
     std::wstring message;
+};
+
+// Issued by a client to run a server-side slash command. Mirror of
+// ChatMessagePacket. Reply (whether success text or CommandException message)
+// comes back as a system ChatMessagePacket addressed to the sender.
+struct CommandMessagePacket
+{
+    std::wstring command;
 };
 
 struct StopTrackingPacket
@@ -237,6 +251,7 @@ std::vector<char> serializePacket(const InputPacket& p);
 std::vector<char> serializePacket(const StatusResponsePacket& p);
 std::vector<char> serializePacket(const LoginPacket& p);
 std::vector<char> serializePacket(const ChatMessagePacket& p);
+std::vector<char> serializePacket(const CommandMessagePacket& p);
 std::vector<char> serializePacket(const ClientSnapshotPacket& p);
 std::vector<char> serializePacket(const OpenViewPacket& p);
 std::vector<char> serializePacket(const CloseViewPacket& p);
@@ -252,6 +267,7 @@ InputPacket          deserializeInput(PacketReader& r);
 StatusResponsePacket deserializeStatusResponse(PacketReader& r);
 LoginPacket deserializeLogin(PacketReader& r);
 ChatMessagePacket deserializeChatMessage(PacketReader& r);
+CommandMessagePacket deserializeCommandMessage(PacketReader& r);
 ClientSnapshotPacket deserializeClientSnapshot(PacketReader& r);
 
 OpenViewPacket deserializeOpenView(PacketReader& r);

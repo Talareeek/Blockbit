@@ -358,6 +358,7 @@ std::deque<SetContentData> ServerFurnaceView::drainPendingContentUpdates()
     return drained;
 }
 
+#ifndef HEADLESS_BUILD
 // ---------- ClientFurnaceView ----------
 
 ClientFurnaceView::ClientFurnaceView()
@@ -605,3 +606,4 @@ std::deque<ViewEventData> ClientFurnaceView::drainPendingEvents()
     drained.swap(pending);
     return drained;
 }
+#endif // HEADLESS_BUILD

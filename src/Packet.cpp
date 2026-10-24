@@ -422,6 +422,15 @@ std::vector<char> serializePacket(const ChatMessagePacket& p)
     return writer.release();
 }
 
+std::vector<char> serializePacket(const CommandMessagePacket& p)
+{
+    PacketWriter writer(PacketType::CommandMessage);
+
+    writer.writeWideString(p.command);
+
+    return writer.release();
+}
+
 std::vector<char> serializePacket(const ClientSnapshotPacket& p)
 {
     PacketWriter writer(PacketType::ClientSnapshot);
@@ -587,6 +596,13 @@ ChatMessagePacket deserializeChatMessage(PacketReader& r)
 {
     ChatMessagePacket p;
     p.message = r.readWideString();
+    return p;
+}
+
+CommandMessagePacket deserializeCommandMessage(PacketReader& r)
+{
+    CommandMessagePacket p;
+    p.command = r.readWideString();
     return p;
 }
 

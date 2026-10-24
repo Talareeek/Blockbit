@@ -41,6 +41,7 @@
 *.dwo
 
 /build/
+build-headless/
 Blockbit
 Blockbit.exe
 /saves/

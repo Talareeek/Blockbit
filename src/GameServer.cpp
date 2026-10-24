@@ -28,24 +28,113 @@
 #include "../include/ChestView.hpp"
 #include "../include/InventoryView.hpp"
 #include "../include/FurnaceBlockEntity.hpp"
+#include "../include/Command.hpp"
+
+#include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <chrono>
+#include <ctime>
+#include <fstream>
+#include <iomanip>
 #include <iostream>
+#include <sstream>
 
-GameServer::GameServer(std::filesystem::path world_path, std::unique_ptr<ServerTransport> transport) : mode(ServerMode::Listen), transport(std::move(transport)), world(world_path)
+namespace
 {
-    this->transport->start();
+    // CommandContext that collects reply lines on the server and flushes them
+    // back to the issuing client as ChatMessagePackets. Headless stdin uses a
+    // different sink (see HeadlessMain.cpp).
+    class NetworkCommandSink : public CommandContext
+    {
+    public:
+        NetworkCommandSink(GameServer& server, uint32_t clientId, std::string nickname, World* world)
+            : server_ref(server), clientId(clientId), nick(std::move(nickname)), world_ptr(world) {}
+
+        void reply(const std::wstring& line) override
+        {
+            server_ref.sendSystemMessageTo(clientId, line);
+        }
+
+        void reply(const std::wstring& line, sf::Color /*color*/) override
+        {
+            server_ref.sendSystemMessageTo(clientId, line);
+        }
+
+        World* world() override           { return world_ptr; }
+        GameServer* server() override     { return &server_ref; }
+        std::string senderNickname() const override { return nick; }
+        bool senderIsOperator() const override      { return server_ref.isOperator(nick); }
+
+    private:
+        GameServer& server_ref;
+        uint32_t clientId;
+        std::string nick;
+        World* world_ptr;
+    };
+
+    std::string currentTimestampIso8601()
+    {
+        auto now = std::chrono::system_clock::now();
+        std::time_t t = std::chrono::system_clock::to_time_t(now);
+        std::tm tm_utc{};
+#if defined(_WIN32)
+        gmtime_s(&tm_utc, &t);
+#else
+        gmtime_r(&t, &tm_utc);
+#endif
+        std::ostringstream oss;
+        oss << std::put_time(&tm_utc, "%Y-%m-%dT%H:%M:%SZ");
+        return oss.str();
+    }
 }
 
-GameServer::GameServer(std::string name, unsigned int seed, GenerationProperties generation_properties, std::unique_ptr<ServerTransport> transport) : mode(ServerMode::Listen), transport(std::move(transport)), world(name, getWorldsPath() / name, seed, generation_properties)
+GameServer::GameServer(std::filesystem::path world_path, std::unique_ptr<ServerTransport> transport) : mode(ServerMode::Listen), server_path(world_path), transport(std::move(transport)), world(world_path)
 {
     this->transport->start();
+    loadOperators();
+    loadBans();
 }
 
-/*GameServer::GameServer(std::filesystem::path server_path, std::unique_ptr<ServerTransport> transport) : mode(ServerMode::Dedicated), transport(std::move(transport)), server_path(server_path)
+GameServer::GameServer(std::string name, unsigned int seed, GenerationProperties generation_properties, std::unique_ptr<ServerTransport> transport) : mode(ServerMode::Listen), server_path(getWorldsPath() / name), transport(std::move(transport)), world(name, getWorldsPath() / name, seed, generation_properties)
 {
+    this->transport->start();
+    loadOperators();
+    loadBans();
+}
 
-}*/
+GameServer::GameServer(std::filesystem::path world_path, std::unique_ptr<ServerTransport> transport, ServerMode mode)
+    : mode(mode), server_path(world_path), transport(std::move(transport)), world(world_path)
+{
+    this->transport->start();
+    loadOperators();
+    loadBans();
+
+    std::cout << "[Server] Dedicated world loaded from " << world_path << '\n';
+}
+
+GameServer::GameServer(std::filesystem::path server_root, std::filesystem::path world_path, std::unique_ptr<ServerTransport> transport)
+    : mode(ServerMode::Dedicated), server_path(std::move(server_root)), transport(std::move(transport)), world(world_path)
+{
+    this->transport->start();
+    loadOperators();
+    loadBans();
+
+    std::cout << "[Server] Dedicated world loaded from " << world_path
+              << " (server dir " << server_path << ")\n";
+}
+
+GameServer::GameServer(std::filesystem::path server_root, std::string name, unsigned int seed, GenerationProperties generation_properties, std::unique_ptr<ServerTransport> transport)
+    : mode(ServerMode::Dedicated), server_path(std::move(server_root)), transport(std::move(transport)),
+      world(name, server_path / "worlds" / name, seed, generation_properties)
+{
+    this->transport->start();
+    loadOperators();
+    loadBans();
+
+    std::cout << "[Server] Created new dedicated world '" << name
+              << "' in " << (server_path / "worlds" / name) << '\n';
+}
 
 void GameServer::sendChunkTo(uint32_t client_id, int around_chunk_position)
 {
@@ -158,6 +247,23 @@ void GameServer::processIncoming()
                         break;
                     }
 
+                    if (const BanEntry* ban = findBan(login.nickname))
+                    {
+                        std::wstring wreason(ban->reason.begin(), ban->reason.end());
+                        std::wstring message = L"[Server] You are banned";
+                        if (!ban->reason.empty()) message += L": " + wreason;
+
+                        sendSystemMessageTo(packet.clientId, message);
+
+                        std::cout << "[Server] Rejected banned nickname "
+                                  << login.nickname << " from client " << packet.clientId
+                                  << " (reason: " << (ban->reason.empty() ? "<none>" : ban->reason) << ")\n";
+
+                        transport->disconnect(packet.clientId, message);
+                        known_clients.erase(packet.clientId);
+                        break;
+                    }
+
                     if(!clients.contains(packet.clientId))
                     {
                         clients[packet.clientId].nickname = login.nickname;
@@ -194,11 +300,11 @@ void GameServer::processIncoming()
                 {
                     StatusResponsePacket response;
 
-                    response.name = "Blockbit Server";
-                    response.description = "A server for Blockbit game";
+                    response.name = server_name;
+                    response.description = server_description;
 
                     response.players = static_cast<uint32_t>(clients.size());
-                    response.max_players = 20;
+                    response.max_players = max_players;
 
                     response.date = daysToDate(world.days);
                     response.hour = daytimeToHour(world.dayTime);
@@ -218,6 +324,66 @@ void GameServer::processIncoming()
                     std::wstring wide_nickname(nickname.begin(), nickname.end());
 
                     sendChat(wide_nickname, chat_message.message);
+
+                    break;
+                }
+                case PacketType::CommandMessage:
+                {
+                    CommandMessagePacket command_message = deserializeCommandMessage(reader);
+
+                    auto it = clients.find(packet.clientId);
+                    if (it == clients.end()) break;
+
+                    const std::string& nickname = it->second.nickname;
+
+                    std::wistringstream stream(command_message.command);
+                    std::wstring command_name;
+                    stream >> command_name;
+
+                    auto cmd_it = commandDatabase.find(command_name);
+                    if (cmd_it == commandDatabase.end())
+                    {
+                        sendSystemMessageTo(packet.clientId, L"No command found: " + command_name);
+                        break;
+                    }
+
+                    const Command& command_data = cmd_it->second;
+
+                    // Server has no Game*: commands marked requires_game can only
+                    // run on the client that owns the window.
+                    if (command_data.requires_game)
+                    {
+                        sendSystemMessageTo(packet.clientId, L"That command is client-only.");
+                        break;
+                    }
+
+                    if (command_data.requires_operator && !isOperator(nickname))
+                    {
+                        std::cerr << "[Server] " << nickname << " attempted operator command: "
+                                  << std::string(command_message.command.begin(), command_message.command.end()) << '\n';
+                        sendSystemMessageTo(packet.clientId, L"You are not an operator.");
+                        break;
+                    }
+
+                    NetworkCommandSink sink(*this, packet.clientId, nickname, &world);
+
+                    try
+                    {
+                        command_data.on_call(command_message.command, sink);
+                        std::cout << "[Server] " << nickname << " ran command: "
+                                  << std::string(command_message.command.begin(), command_message.command.end()) << '\n';
+                    }
+                    catch (const CommandException& exception)
+                    {
+                        std::wstring msg(exception.message.begin(), exception.message.end());
+                        sendSystemMessageTo(packet.clientId, L"Error: " + msg);
+                    }
+                    catch (const std::exception& exception)
+                    {
+                        std::string what = exception.what();
+                        std::wstring wwhat(what.begin(), what.end());
+                        sendSystemMessageTo(packet.clientId, L"Error: " + wwhat);
+                    }
 
                     break;
                 }
@@ -663,6 +829,264 @@ GameServer::~GameServer()
 bool isNicknameAllowed(std::string nickname)
 {
     return nickname.length() >= 4 && nickname.length() <= 15 && nickname.find(" ") == std::string::npos;
+}
+
+std::filesystem::path GameServer::operatorsFilePath() const
+{
+    return server_path / "ops.json";
+}
+
+std::filesystem::path GameServer::legacyOperatorsFilePath() const
+{
+    return server_path / "ops.txt";
+}
+
+void GameServer::loadOperators()
+{
+    operators.clear();
+
+    auto json_path   = operatorsFilePath();
+    auto legacy_path = legacyOperatorsFilePath();
+
+    if (std::filesystem::exists(json_path))
+    {
+        try
+        {
+            std::ifstream in(json_path);
+            nlohmann::json data = nlohmann::json::parse(in, nullptr, true, true);
+
+            if (data.is_array())
+            {
+                for (const auto& entry : data)
+                {
+                    if (entry.is_string()) operators.insert(entry.get<std::string>());
+                }
+            }
+
+            std::cout << "[Server] Loaded " << operators.size() << " operator(s) from " << json_path << '\n';
+            return;
+        }
+        catch (const std::exception& e)
+        {
+            std::cerr << "[Server] Could not parse ops.json: " << e.what() << '\n';
+        }
+    }
+
+    if (std::filesystem::exists(legacy_path))
+    {
+        std::ifstream in(legacy_path);
+        std::string line;
+        while (std::getline(in, line))
+        {
+            auto first = line.find_first_not_of(" \t\r\n");
+            auto last  = line.find_last_not_of(" \t\r\n");
+            if (first == std::string::npos) continue;
+            std::string trimmed = line.substr(first, last - first + 1);
+            if (trimmed.empty() || trimmed[0] == '#') continue;
+            operators.insert(std::move(trimmed));
+        }
+
+        std::cout << "[Server] Migrated " << operators.size()
+                  << " operator(s) from legacy ops.txt to ops.json\n";
+        saveOperators();
+
+        std::error_code ec;
+        std::filesystem::remove(legacy_path, ec);
+        return;
+    }
+
+    try
+    {
+        std::filesystem::create_directories(server_path);
+        saveOperators();
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "[Server] Could not create ops.json: " << e.what() << '\n';
+    }
+}
+
+void GameServer::saveOperators() const
+{
+    try
+    {
+        std::filesystem::create_directories(server_path);
+        nlohmann::json data = nlohmann::json::array();
+        for (const auto& nick : operators) data.push_back(nick);
+        std::ofstream out(operatorsFilePath(), std::ios::trunc);
+        out << data.dump(4);
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "[Server] Could not persist ops.json: " << e.what() << '\n';
+    }
+}
+
+bool GameServer::isOperator(const std::string& nickname) const
+{
+    return operators.contains(nickname);
+}
+
+void GameServer::addOperator(const std::string& nickname)
+{
+    if (operators.insert(nickname).second) saveOperators();
+}
+
+void GameServer::removeOperator(const std::string& nickname)
+{
+    if (operators.erase(nickname) > 0) saveOperators();
+}
+
+std::filesystem::path GameServer::bansFilePath() const
+{
+    return server_path / "banned.json";
+}
+
+void GameServer::loadBans()
+{
+    bans.clear();
+
+    auto path = bansFilePath();
+
+    if (!std::filesystem::exists(path))
+    {
+        try
+        {
+            std::filesystem::create_directories(server_path);
+            saveBans();
+        }
+        catch (const std::exception& e)
+        {
+            std::cerr << "[Server] Could not create banned.json: " << e.what() << '\n';
+        }
+        return;
+    }
+
+    try
+    {
+        std::ifstream in(path);
+        nlohmann::json data = nlohmann::json::parse(in, nullptr, true, true);
+
+        if (!data.is_array())
+        {
+            std::cerr << "[Server] banned.json is not a JSON array; ignoring\n";
+            return;
+        }
+
+        for (const auto& entry : data)
+        {
+            if (!entry.is_object()) continue;
+            if (!entry.contains("nickname")) continue;
+
+            BanEntry be;
+            be.nickname  = entry.value("nickname",  std::string());
+            be.reason    = entry.value("reason",    std::string());
+            be.banned_at = entry.value("banned_at", std::string());
+
+            if (be.nickname.empty()) continue;
+            bans[be.nickname] = std::move(be);
+        }
+
+        std::cout << "[Server] Loaded " << bans.size() << " ban(s) from " << path << '\n';
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "[Server] Could not parse banned.json: " << e.what() << '\n';
+    }
+}
+
+void GameServer::saveBans() const
+{
+    try
+    {
+        std::filesystem::create_directories(server_path);
+
+        nlohmann::json data = nlohmann::json::array();
+        for (const auto& [nick, entry] : bans)
+        {
+            data.push_back({
+                {"nickname",  entry.nickname},
+                {"reason",    entry.reason},
+                {"banned_at", entry.banned_at}
+            });
+        }
+
+        std::ofstream out(bansFilePath(), std::ios::trunc);
+        out << data.dump(4);
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "[Server] Could not persist banned.json: " << e.what() << '\n';
+    }
+}
+
+bool GameServer::isBanned(const std::string& nickname) const
+{
+    return bans.contains(nickname);
+}
+
+const BanEntry* GameServer::findBan(const std::string& nickname) const
+{
+    auto it = bans.find(nickname);
+    if (it == bans.end()) return nullptr;
+    return &it->second;
+}
+
+void GameServer::addBan(const std::string& nickname, const std::string& reason)
+{
+    BanEntry entry;
+    entry.nickname  = nickname;
+    entry.reason    = reason;
+    entry.banned_at = currentTimestampIso8601();
+    bans[nickname]  = std::move(entry);
+    saveBans();
+}
+
+bool GameServer::removeBan(const std::string& nickname)
+{
+    if (bans.erase(nickname) > 0)
+    {
+        saveBans();
+        return true;
+    }
+    return false;
+}
+
+std::optional<uint32_t> GameServer::findClientIdByNickname(const std::string& nickname) const
+{
+    for (const auto& [client_id, data] : clients)
+    {
+        if (data.nickname == nickname) return client_id;
+    }
+    return std::nullopt;
+}
+
+std::optional<UUID> GameServer::findEntityByNickname(const std::string& nickname) const
+{
+    auto it = nickname_to_entity.find(nickname);
+    if (it == nickname_to_entity.end()) return std::nullopt;
+    if (!world.doesEntityExist(it->second)) return std::nullopt;
+    return it->second;
+}
+
+bool GameServer::kickClient(const std::string& nickname, const std::wstring& reason)
+{
+    auto client_id = findClientIdByNickname(nickname);
+    if (!client_id.has_value()) return false;
+
+    std::wstring message = L"[Server] You have been disconnected";
+    if (!reason.empty()) message += L": " + reason;
+
+    sendSystemMessageTo(*client_id, message);
+    transport->disconnect(*client_id, message);
+    return true;
+}
+
+void GameServer::sendSystemMessageTo(uint32_t clientId, const std::wstring& message)
+{
+    ChatMessagePacket packet;
+    packet.message = message + L'\n';
+    transport->send(clientId, serializePacket(packet));
 }
 
 

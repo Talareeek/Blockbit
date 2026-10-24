@@ -5,7 +5,9 @@
 
 #include <cstdint>
 #include <SFML/System.hpp>
+#include <SFML/Graphics/Color.hpp>
 #include <optional>
+#include <filesystem>
 
 #include <imgui.h>
 

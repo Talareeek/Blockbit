@@ -384,6 +384,7 @@ std::deque<SetContentData> ServerCraftingView::drainPendingContentUpdates()
     return drained;
 }
 
+#ifndef HEADLESS_BUILD
 // ---------- ClientCraftingView ----------
 
 ClientCraftingView::ClientCraftingView()
@@ -736,3 +737,4 @@ std::deque<ViewEventData> ClientCraftingView::drainPendingEvents()
     drained.swap(pending);
     return drained;
 }
+#endif // HEADLESS_BUILD
