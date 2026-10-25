@@ -41,7 +41,11 @@ extern sf::Vector2f getSunWorldPosition(const World& world, sf::Vector2f cameraC
 
 extern void renderUIBackground(sf::FloatRect bounds, sf::RenderTarget& target);
 
-extern void NetworkInterpolationSystem(World& world, uint64_t latest_tick, float tick_step, float interpolation_delay_seconds = 0.1f);
+// render_tick is the fractional server-tick index the client wants to display.
+// Compute it as (latest_tick + time_since_snapshot/tick_step) - interpolation_delay_ticks
+// so the view interpolates continuously between snapshots instead of only
+// stepping forward when a new snapshot arrives.
+extern void NetworkInterpolationSystem(World& world, double render_tick);
 
 extern void renderItemInfo(sf::Vector2f position, const ItemStack& item, sf::RenderTarget& target);
 

@@ -36,6 +36,11 @@ private:
     uint16_t tick_rate = 60;
 
     uint64_t latest_tick = 0;
+    float time_since_last_snapshot = 0.0f;
+    // Fractional ticks that remote entities are rendered behind latest_tick.
+    // At 120 Hz this is ~16 ms — enough slack for one dropped snapshot without
+    // starving the interpolator, small enough to feel immediate.
+    static constexpr double INTERPOLATION_DELAY_TICKS = 2.0;
 
     std::optional<UUID> local_player_entity_id;
     UUID my_entity_id;

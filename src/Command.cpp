@@ -149,6 +149,28 @@ std::unordered_map<std::wstring, Command> commandDatabase =
         }
     }},
 
+    {L"say", {false, false, true,
+        [](std::wstring command, CommandContext& context)
+        {
+            auto tokens = tokenize(command);
+            requireArgs(tokens, 2, "Usage: /say \"<message>\"");
+
+            GameServer& server = requireServer(context);
+
+            std::wstring message;
+            for (size_t i = 1; i < tokens.size(); i++)
+            {
+                if (i > 1) message += L' ';
+                message += tokens[i];
+            }
+
+            std::string sender = actingNickname(context);
+            std::wstring nickname = (sender == "<console>") ? L"Server" : utf8tow(sender);
+
+            server.sendChat(nickname, message);
+        }
+    }},
+
 #ifndef HEADLESS_BUILD
     {L"export_block_atlas", {false, false, false,
         [](std::wstring /*command*/, CommandContext& context)

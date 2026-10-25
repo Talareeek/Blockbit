@@ -605,17 +605,29 @@ void GameServer::update(float dt)
         syncConnections();
         processIncoming();
 
+        constexpr size_t INPUT_QUEUE_TARGET   = 1;
+        constexpr size_t INPUT_QUEUE_GRACE    = 2;
+        constexpr size_t INPUT_QUEUE_HARD_CAP = 10;
+
         for (auto& [client_id, queue] : remote_input_queues)
         {
             auto client_it = clients.find(client_id);
             if (client_it == clients.end()) continue;
 
-            while(!queue.empty())
-            {
-                auto iterator = nickname_to_entity.find(client_it->second.nickname);
-                if (iterator == nickname_to_entity.end()) continue;
-                if (!world.doesEntityExist(iterator->second)) continue;
+            auto iterator = nickname_to_entity.find(client_it->second.nickname);
+            if (iterator == nickname_to_entity.end()) continue;
+            if (!world.doesEntityExist(iterator->second)) continue;
 
+            if (queue.size() > INPUT_QUEUE_HARD_CAP)
+            {
+                while (queue.size() > INPUT_QUEUE_TARGET) queue.pop_front();
+            }
+
+            size_t to_consume = 1;
+            if (queue.size() > INPUT_QUEUE_TARGET + INPUT_QUEUE_GRACE) to_consume = 2;
+
+            for (size_t i = 0; i < to_consume && !queue.empty(); ++i)
+            {
                 processWorldInputs(world, std::move(queue.front()), iterator->second);
                 queue.pop_front();
             }

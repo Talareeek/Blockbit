@@ -171,11 +171,24 @@ namespace
 
     // ---------- commands & global state ----------
 
-    std::atomic_bool g_running{true};
+    std::atomic_bool g_running{true};        // false = fully exit the program (SIGINT/SIGTERM)
+    std::atomic_bool g_stop_requested{false}; // true = tear the server down, return to menu
 
     void signalHandler(int /*signum*/)
     {
         g_running = false;
+    }
+
+    // Erase the current prompt line, print `text` (with a trailing newline), then
+    // re-draw the server prompt. Use for any async output emitted during a tick
+    // so the operator's prompt line stays coherent.
+    void writeAsyncLine(const std::string& text)
+    {
+        if (g_use_ansi) std::cout << "\r\x1b[2K";
+        else            std::cout << '\r';
+        std::cout << text;
+        if (text.empty() || text.back() != '\n') std::cout << '\n';
+        printPrompt("server");
     }
 
     class StdoutCommandSink : public CommandContext
@@ -922,7 +935,7 @@ namespace
 
         if (line == "stop" || line == "shutdown" || line == "quit")
         {
-            g_running = false;
+            g_stop_requested = true;
             return;
         }
 
@@ -1029,109 +1042,125 @@ int main(int argc, char* argv[])
     PrefabRegistry::init();
 
     MenuContext ctx{args.server_dir, std::move(config)};
-    if (!runPreServerMenu(ctx)) return 0;
-
-    config = ctx.config; // picked up any menu edits
-    if (config.world_name.empty())
-    {
-        std::cerr << c::red() << "[Server] config.json has no world_name." << c::reset() << '\n';
-        return 1;
-    }
 
     std::signal(SIGINT,  signalHandler);
     std::signal(SIGTERM, signalHandler);
 
-    std::unique_ptr<GameServer> server;
-
-    try
+    while (g_running)
     {
-        auto world_path = args.server_dir / "worlds" / config.world_name;
-        bool world_exists = std::filesystem::exists(world_path);
+        if (!runPreServerMenu(ctx)) return 0;
 
-        auto transport = std::make_unique<NetworkServerTransport>(config.port);
-
-        if (world_exists)
+        config = ctx.config; // picked up any menu edits
+        if (config.world_name.empty())
         {
-            server = std::make_unique<GameServer>(args.server_dir, world_path, std::move(transport));
-            std::cout << c::green() << "[Server] Loaded world '" << config.world_name
-                      << "' on port " << config.port << c::reset() << '\n';
+            std::cerr << c::red() << "[Server] config.json has no world_name." << c::reset() << '\n';
+            continue;
         }
-        else
+
+        std::unique_ptr<GameServer> server;
+
+        try
         {
-            // Legacy path: config pointed at a world that doesn't exist on disk
-            // yet. Generate it now from config.generation / config.seed, matching
-            // the old one-shot behaviour.
-            unsigned int seed = config.seed.value_or(static_cast<unsigned int>(std::rand()));
-            GenerationProperties props = config.generation.value_or(defaultGenerationProperties(GenerationType::Normal));
+            auto world_path = args.server_dir / "worlds" / config.world_name;
+            bool world_exists = std::filesystem::exists(world_path);
 
-            std::filesystem::create_directories(world_path);
+            auto transport = std::make_unique<NetworkServerTransport>(config.port);
 
-            server = std::make_unique<GameServer>(args.server_dir, config.world_name, seed, props, std::move(transport));
-            std::cout << c::green() << "[Server] Created new world '" << config.world_name
-                      << "' seed=" << seed << " on port " << config.port << c::reset() << '\n';
-
-            if (!config.seed.has_value())
+            if (world_exists)
             {
-                config.seed = seed;
-                config.generation = props;
-                saveServerConfig(args.server_dir, config);
+                server = std::make_unique<GameServer>(args.server_dir, world_path, std::move(transport));
+                std::cout << c::green() << "[Server] Loaded world '" << config.world_name
+                          << "' on port " << config.port << c::reset() << '\n';
+            }
+            else
+            {
+                // Legacy path: config pointed at a world that doesn't exist on disk
+                // yet. Generate it now from config.generation / config.seed, matching
+                // the old one-shot behaviour.
+                unsigned int seed = config.seed.value_or(static_cast<unsigned int>(std::rand()));
+                GenerationProperties props = config.generation.value_or(defaultGenerationProperties(GenerationType::Normal));
+
+                std::filesystem::create_directories(world_path);
+
+                server = std::make_unique<GameServer>(args.server_dir, config.world_name, seed, props, std::move(transport));
+                std::cout << c::green() << "[Server] Created new world '" << config.world_name
+                          << "' seed=" << seed << " on port " << config.port << c::reset() << '\n';
+
+                if (!config.seed.has_value())
+                {
+                    config.seed = seed;
+                    config.generation = props;
+                    saveServerConfig(args.server_dir, config);
+                    ctx.config = config;
+                }
+            }
+
+            server->applyServerName(config.server_name);
+            server->applyServerDescription(config.server_description);
+            server->applyMaxPlayers(config.max_players);
+            server->applyTickRate(config.tick_rate);
+
+            server->onChatBroadcast = [](std::wstring message)
+            {
+                std::string narrow(message.begin(), message.end());
+                writeAsyncLine(std::string(c::dim()) + "[Chat] " + c::reset() + narrow);
+            };
+        }
+        catch (const std::exception& exception)
+        {
+            std::cerr << c::red() << "[Server] Failed to start: " << exception.what()
+                      << c::reset() << '\n';
+            continue;
+        }
+
+        const float tick_step = server->getTickStep();
+        const auto step_duration = std::chrono::duration<double>(tick_step);
+
+        std::cout << c::dim() << "[Server] Tick rate: " << server->getTickRate()
+                  << " Hz (step " << tick_step << "s)" << c::reset() << '\n';
+        std::cout << c::dim() << "[Server] Type 'stop' to return to menu, Ctrl+C to quit. "
+                  << "Prefix slash-commands with /, e.g. /op <nick>." << c::reset() << '\n';
+
+        printPrompt("server");
+
+        g_stop_requested = false;
+        auto next_tick = std::chrono::steady_clock::now();
+
+        while (g_running && !g_stop_requested && !server->isUnrecoverable())
+        {
+            auto now = std::chrono::steady_clock::now();
+            if (now < next_tick)
+            {
+                std::this_thread::sleep_for(next_tick - now);
+            }
+            next_tick += std::chrono::duration_cast<std::chrono::steady_clock::duration>(step_duration);
+
+            server->update(tick_step);
+
+            while (auto line = tryReadStdinLine())
+            {
+                processStdinCommand(*server, *line);
+                if (!g_running || g_stop_requested) break;
+                printPrompt("server");
             }
         }
 
-        server->applyServerName(config.server_name);
-        server->applyServerDescription(config.server_description);
-        server->applyMaxPlayers(config.max_players);
-        server->applyTickRate(config.tick_rate);
-    }
-    catch (const std::exception& exception)
-    {
-        std::cerr << c::red() << "[Server] Failed to start: " << exception.what()
-                  << c::reset() << '\n';
-        return 1;
-    }
-
-    const float tick_step = server->getTickStep();
-    const auto step_duration = std::chrono::duration<double>(tick_step);
-
-    std::cout << c::dim() << "[Server] Tick rate: " << server->getTickRate()
-              << " Hz (step " << tick_step << "s)" << c::reset() << '\n';
-    std::cout << c::dim() << "[Server] Type 'stop' / Ctrl+C to shut down. "
-              << "Prefix slash-commands with /, e.g. /op <nick>." << c::reset() << '\n';
-
-    printPrompt("server");
-
-    auto next_tick = std::chrono::steady_clock::now();
-
-    while (g_running && !server->isUnrecoverable())
-    {
-        auto now = std::chrono::steady_clock::now();
-        if (now < next_tick)
+        if (server->isUnrecoverable())
         {
-            std::this_thread::sleep_for(next_tick - now);
+            std::cerr << c::red() << "[Server] Shutting down after unrecoverable state."
+                      << c::reset() << '\n';
         }
-        next_tick += std::chrono::duration_cast<std::chrono::steady_clock::duration>(step_duration);
-
-        server->update(tick_step);
-
-        while (auto line = tryReadStdinLine())
+        else if (g_stop_requested)
         {
-            processStdinCommand(*server, *line);
-            if (!g_running) break;
-            printPrompt("server");
+            std::cout << c::yellow() << "[Server] Server stopped. Returning to menu." << c::reset() << '\n';
         }
-    }
+        else
+        {
+            std::cout << c::yellow() << "[Server] Shutting down." << c::reset() << '\n';
+        }
 
-    if (server->isUnrecoverable())
-    {
-        std::cerr << c::red() << "[Server] Shutting down after unrecoverable state."
-                  << c::reset() << '\n';
+        server.reset();
     }
-    else
-    {
-        std::cout << c::yellow() << "[Server] Shutting down." << c::reset() << '\n';
-    }
-
-    server.reset();
 
     std::cout << c::green() << "[Server] Clean shutdown complete." << c::reset() << '\n';
     return 0;

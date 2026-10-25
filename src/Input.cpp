@@ -110,6 +110,56 @@ std::vector<Input> getInputsFromEvent(const sf::Event& event, sf::Vector2<double
     return inputs;
 }
 
+void applyLocalPlayerInputPrediction(World& world, const std::vector<Input>& inputs, UUID id)
+{
+    if(!world.doesEntityExist(id)) return;
+    auto& entity = world.getEntity(id);
+
+    if(!entity.hasComponent<PhysicsComponent>() ||
+       !entity.hasComponent<TransformComponent>() ||
+       !entity.hasComponent<AnimationComponent>()) return;
+
+    auto& physics = entity.getComponent<PhysicsComponent>();
+    auto& transform = entity.getComponent<TransformComponent>();
+    auto& animation = entity.getComponent<AnimationComponent>();
+
+    for(const auto& input : inputs)
+    {
+        switch(input.type)
+        {
+            case InputType::MOVE:
+            {
+                auto direction = std::get<sf::Vector2<double>>(input.value);
+
+                int block_x = (int)std::floor(transform.position.x + transform.size.x / 2.0f);
+                int block_y = (int)std::floor(transform.position.y);
+                physics.force.x += 45.0f * direction.x / blockDatabase[world.getBlock(block_x, block_y).id].drag;
+
+                if(direction.x < 0.0f) animation.direction = AnimationComponent::Direction::Left;
+                else if(direction.x > 0.0f) animation.direction = AnimationComponent::Direction::Right;
+
+                break;
+            }
+            case InputType::JUMP:
+            {
+                if(physics.onGround)
+                {
+                    physics.velocity.y += 10.0f;
+                    physics.onGround = false;
+                }
+                else if(isSubmerged(world, transform))
+                {
+                    physics.force.y += 60.0f;
+                }
+
+                break;
+            }
+            default:
+                break;
+        }
+    }
+}
+
 void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
 {
     auto& entity = world.getEntity(id);

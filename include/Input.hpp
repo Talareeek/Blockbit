@@ -47,4 +47,10 @@ std::vector<Input> getInputsFromEvent(const sf::Event& event, sf::Vector2<double
 
 void processWorldInputs(World& world, std::vector<Input> inputs, UUID id);
 
+// Client-side player prediction. Applies ONLY movement-related inputs
+// (MOVE, JUMP) to the local player's physics so motion feels instant;
+// server stays authoritative for attack / use / drop / inventory and will
+// correct position via the next snapshot.
+void applyLocalPlayerInputPrediction(World& world, const std::vector<Input>& inputs, UUID id);
+
 #endif // INPUT_HPP

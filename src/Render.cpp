@@ -1191,10 +1191,8 @@ void renderStars(float phase, sf::RenderWindow& window)
     window.setView(previous);
 }
 
-void NetworkInterpolationSystem(World& world, uint64_t latest_tick, float tick_step, float interpolation_delay_seconds)
+void NetworkInterpolationSystem(World& world, double render_tick)
 {
-    double render_tick = static_cast<double>(latest_tick) - (interpolation_delay_seconds / tick_step);
-
     for (auto& [id, entity] : world.getEntities())
     {
         if (!entity.hasComponent<NetworkInterpolationComponent>() || !entity.hasComponent<TransformComponent>()) continue;
@@ -1218,7 +1216,21 @@ void NetworkInterpolationSystem(World& world, uint64_t latest_tick, float tick_s
 
         if (render_tick >= static_cast<double>(history.back().tick))
         {
-            transform.render_position = history.back().position;
+            // No sample newer than render_tick yet — extrapolate briefly from the
+            // last two samples so the entity keeps moving instead of freezing.
+            const auto& a = history[history.size() - 2];
+            const auto& b = history.back();
+            const double span = static_cast<double>(b.tick) - static_cast<double>(a.tick);
+            if (span > 0.0)
+            {
+                const double overshoot = std::min(render_tick - static_cast<double>(b.tick), span);
+                const double alpha = 1.0 + overshoot / span;
+                transform.render_position = a.position + (b.position - a.position) * alpha;
+            }
+            else
+            {
+                transform.render_position = b.position;
+            }
             continue;
         }
 
