@@ -207,6 +207,15 @@ float dayLightFraction(Date date)
     return mean - amp * std::cos(angle);
 }
 
+Season seasonOfYear(Date date)
+{
+    if(date.month > Date::Month::December || (date.month == Date::Month::December && date.day >= 22)) return Season::Winter;
+    else if(date.month > Date::Month::September || (date.month == Date::Month::September && date.day >= 23)) return Season::Spring;
+    else if(date.month > Date::Month::June || (date.month == Date::Month::June && date.day >= 22)) return Season::Spring;
+    else if(date.month > Date::Month::March || (date.month == Date::Month::March && date.day >= 21)) return Season::Spring;
+    else return Season::Winter;
+}
+
 float dayLength(Date date)
 {
     return dayLightFraction(date) * World::DAY_CYCLE_DURATION;

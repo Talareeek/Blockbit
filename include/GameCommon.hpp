@@ -68,8 +68,17 @@ struct Date
     uint32_t year;
 };
 
+enum class Season
+{
+    Spring,
+    Summer,
+    Autumn,
+    Winter
+};
+
 Hour daytimeToHour(float daytime);
 Date daysToDate(uint64_t days);
+Season seasonOfYear(Date date);
 
 std::string dateAndHourString(Date date, Hour hour);
 
