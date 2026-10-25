@@ -15,6 +15,7 @@
 #include <cstring>
 
 #include <imgui.h>
+#include <imgui-SFML.h>
 
 namespace
 {
@@ -196,6 +197,8 @@ void Console::render()
 
     ImGui::Begin("Console", &open, ImGuiWindowFlags_NoCollapse);
 
+    if(console_font) ImGui::PushFont(console_font);
+
     ImGui::PushStyleColor(ImGuiCol_FrameBg, SFMLColorToImGuiColor(sf::Color::Transparent));
 
     const float suggestionsHeight = (input[0] != '\0') ? ImGui::GetTextLineHeightWithSpacing() * 4.0f + ImGui::GetStyle().FramePadding.y * 2.0f : 0.0f;
@@ -261,7 +264,25 @@ void Console::render()
         reclaimFocus = true;
     }
 
+    if(console_font) ImGui::PopFont();
+
     ImGui::End();
+}
+
+void Console::setupFont(const std::string& path, float size_pixels)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    console_font = io.Fonts->AddFontFromFileTTF(path.c_str(), size_pixels);
+    if(!console_font)
+    {
+        std::cerr << "Console: failed to load font: " << path << '\n';
+        return;
+    }
+    if(!ImGui::SFML::UpdateFontTexture())
+    {
+        std::cerr << "Console: failed to update ImGui font texture\n";
+        console_font = nullptr;
+    }
 }
 
 

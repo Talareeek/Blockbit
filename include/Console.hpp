@@ -11,6 +11,7 @@
 #include "Command.hpp"
 
 struct ImGuiInputTextCallbackData;
+struct ImFont;
 
 class ConsoleSink
 {
@@ -115,6 +116,10 @@ public:
     void writeLine(std::wstring string);
     void writeLine(std::wstring string, sf::Color color);
 
+    // Loads a TTF for the console and rebuilds the ImGui font atlas. Call
+    // after ImGui::SFML::Init (and after any re-init, since the atlas is
+    // destroyed with the context and the returned ImFont* becomes invalid).
+    void setupFont(const std::string& path, float size_pixels = 16.0f);
 
     void assignWorld(World* world);
     void assignGame(Game* game);
@@ -126,6 +131,8 @@ public:
 
 private:
     std::function<void(const std::wstring&)> command_relay;
+
+    ImFont* console_font = nullptr;
 };
 
 #endif // CONSOLE_HPP

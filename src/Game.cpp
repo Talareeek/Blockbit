@@ -162,6 +162,7 @@ Game::Game()
 
 
     console.assignGame(this);
+    console.setupFont("resources/fonts/FiraCode-Regular.ttf");
 
     settings_window.assignGame(this);
 }
@@ -377,6 +378,8 @@ void Game::applyGraphicsSettings()
     window.setFramerateLimit(Settings::graphics.fps_limit);
 
     if(!ImGui::SFML::Init(window)) throw std::runtime_error("Failed re-initializing ImGui-SFML");
+
+    console.setupFont("resources/fonts/FiraCode-Regular.ttf");
 
     sf::View view(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)}));
     window.setView(view);
