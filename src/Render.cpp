@@ -179,16 +179,18 @@ namespace
         return it->second;
     }
 
-    // Sky-light brightness tracks daytime roughly along the sun's elevation.
-    // The curve is intentionally flat around noon and midnight so transitions
-    // don't feel abrupt; the shader clamps against u_ambient_min below so
-    // caves never go pitch black regardless of day_factor.
-    float computeDayFactor(float day_time)
+    // Sky-light brightness tracks the sun's elevation. The curve is
+    // intentionally flat around noon and midnight so transitions don't feel
+    // abrupt; the shader clamps against u_ambient_min below so caves never go
+    // pitch black regardless of day_factor.
+    //
+    // phase is a seasonal-remapped time where noon is always at 0.5 and
+    // midnight at 0, so this stays correct year-round even as the daylight
+    // span shrinks or stretches.
+    float computeDayFactor(float phase)
     {
         constexpr float TAU = 6.2831853f;
-        float t = day_time / World::DAY_CYCLE_DURATION;
-        // Phase so day_factor peaks at t=0.5 (noon-ish) and bottoms at t=0 (midnight).
-        float raw = -std::cos(t * TAU) * 0.5f + 0.5f;
+        float raw = -std::cos(phase * TAU) * 0.5f + 0.5f;
         return std::clamp(raw, 0.0f, 1.0f);
     }
 }
@@ -209,15 +211,21 @@ void BuildChunkMesh(ClientWorld& world, int chunk_position)
 
             auto block_data = blockDatabase[block.id];
 
-            if(!block_data.render.has_value()) continue;
+            const sf::Vector2f position(x, y);
+
+            // Lightmap covers the full cell so air (and the air portion of a
+            // partial-fluid tile) is darkened by block/sky light too. Sky-
+            // exposed air sits at level 15 and stays bright at noon; cave air
+            // and night-time air darken with the lightmap.
+            appendLightmapQuad(mesh.lightmap_vertices, {position, {1.0f, 1.0f}});
+
+            if (!block_data.render.has_value()) continue;
 
             auto texture_id = block_data.render->texture;
 
             const sf::IntRect& texture_uv = BlockAtlas::getUV(texture_id);
 
             sf::IntRect final_uv = {texture_uv.position + block_data.render->rect(block).position, block_data.render->rect(block).size};
-
-            sf::Vector2f position(x, y);
 
             auto bounds = block_data.render->render_bounds(block);
 
@@ -235,11 +243,6 @@ void BuildChunkMesh(ClientWorld& world, int chunk_position)
             };
 
             appendQuad(mesh.vertices, final_rect, final_uv, anim_color);
-
-            // Lightmap overlay matches the painted block footprint exactly,
-            // so sky visible through air (and through the air portion of a
-            // partial-fluid tile) stays undarkened.
-            appendLightmapQuad(mesh.lightmap_vertices, final_rect);
         }
     }
 
@@ -304,13 +307,11 @@ void renderSky(sf::RenderTarget& target, sf::Color top, sf::Color bottom)
     target.setView(previous);
 }
 
-void renderSunAndMoon(float daytime, sf::RenderWindow& window)
+void renderSunAndMoon(float phase, sf::RenderWindow& window)
 {
     sf::Shader& shader = AssetManager::getShader(AssetManager::ShaderID::Sun);
 
-    float passed = daytime / World::DAY_CYCLE_DURATION;
-
-    float sun_angle  = passed * 2.0f * static_cast<float>(std::numbers::pi);
+    float sun_angle  = phase * 2.0f * static_cast<float>(std::numbers::pi);
     float moon_angle = sun_angle + static_cast<float>(std::numbers::pi);
 
     float W = static_cast<float>(window.getSize().x);
@@ -372,7 +373,7 @@ sf::Vector2f getSunWorldPosition(const World& world, sf::Vector2f cameraCenter)
     constexpr float PI = 3.14159265359f;
     constexpr float SUN_DISTANCE = 200.0f;
 
-    float t = std::fmod(world.getDayTime() / World::DAY_CYCLE_DURATION, 1.0f);
+    float t = solarPhase(world.getDayTime(), world.days);
 
     float normalized = std::clamp((t - 0.25f) / 0.5f, 0.0f, 1.0f);
     float angle = normalized * PI;
@@ -390,7 +391,7 @@ void RenderWorld(ClientWorld& world, const sf::Vector2<double> camera, sf::Rende
 
     int centerChunk = static_cast<int>(std::floor(camera.x / static_cast<double>(CHUNK_WIDTH)));
 
-    const float day_factor   = computeDayFactor(world.getDayTime());
+    const float day_factor   = computeDayFactor(solarPhase(world.getDayTime(), world.days));
     // Sky light runs from max=15 at noon down to min=4 at midnight (4/15 floor).
     // ambient_min stays at 0 so sky-exposed tiles can actually reach the "4"
     // floor at midnight instead of being clamped higher by ambient — unlit
@@ -1109,7 +1110,7 @@ struct Star
     float twinklePhase;
 };
 
-void renderStars(float daytime, sf::RenderWindow& window)
+void renderStars(float phase, sf::RenderWindow& window)
 {
     static std::vector<Star> stars;
     static sf::Vector2u window_size_generated;
@@ -1142,8 +1143,7 @@ void renderStars(float daytime, sf::RenderWindow& window)
         }
     }
 
-    float passed  = daytime / World::DAY_CYCLE_DURATION;
-    float sun_angle = passed * 2.0f * static_cast<float>(std::numbers::pi);
+    float sun_angle = phase * 2.0f * static_cast<float>(std::numbers::pi);
     float sunHeight = -std::cos(sun_angle);
 
     float nightFactor = std::clamp(-sunHeight * 1.6f, 0.f, 1.f);
@@ -1477,7 +1477,7 @@ void RenderMinimap(ClientWorld& world, sf::Vector2<double> camera, sf::RenderTar
     view.setSize({view.getSize().x, -(view.getSize().y)});
     render_texture.setView(view);
 
-    auto [sky_top, sky_bottom] = getSkyGradient(world.getDayTime() / World::DAY_CYCLE_DURATION);
+    auto [sky_top, sky_bottom] = getSkyGradient(solarPhase(world.getDayTime(), world.days));
     renderSky(render_texture, sky_top, sky_bottom);
 
     float unit_size = static_cast<float>(texture_size.x) / 80.0f;

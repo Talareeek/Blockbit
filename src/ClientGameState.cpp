@@ -719,7 +719,7 @@ void ClientGameState::render(sf::RenderWindow& window)
 
     if (!isLocalSession() && !initialized)
     {
-        auto [sky_top, sky_bottom] = getSkyGradient(local_world.getDayTime() / World::DAY_CYCLE_DURATION);
+        auto [sky_top, sky_bottom] = getSkyGradient(solarPhase(local_world.getDayTime(), local_world.days));
         renderSky(window, sky_top, sky_bottom);
 
         sf::Text waiting(AssetManager::getFont(AssetManager::FontID::PressStart2P), "Connecting to " + remote_address + "...", 28);
@@ -739,13 +739,14 @@ void ClientGameState::render(sf::RenderWindow& window)
     window.setView(game_view);
 
     // SKY
-    auto [sky_top, sky_bottom] = getSkyGradient(local_world.getDayTime() / World::DAY_CYCLE_DURATION);
+    const float sun_phase = solarPhase(local_world.getDayTime(), local_world.days);
+    auto [sky_top, sky_bottom] = getSkyGradient(sun_phase);
     renderSky(window, sky_top, sky_bottom);
 
-    renderStars(local_world.getDayTime(), window);
+    renderStars(sun_phase, window);
 
     // SUN AND MOON
-    renderSunAndMoon(local_world.getDayTime(), window);
+    renderSunAndMoon(sun_phase, window);
 
     // UPDATING CAMERA
     if(hasPlayerEntity()) camera = local_world.getEntity(local_player_entity_id.value()).getComponent<TransformComponent>().position + sf::Vector2<double>(0.5, -0.5);
@@ -822,13 +823,20 @@ std::string ClientGameState::debugString()
         auto simulation_range = local_world.getSimulationRangeForEntity(local_player_entity_id.value());
         Climate climate = local_world.climateAt(static_cast<int>(local_world.getEntity(local_player_entity_id.value()).getComponent<TransformComponent>().position.x));
 
+        const Date today = daysToDate(local_world.days);
+        const uint16_t daylight_minutes = static_cast<uint16_t>(dayLightFraction(today) * 1440.0f);
+        std::ostringstream daylight_stream;
+        daylight_stream << std::setw(2) << std::setfill('0') << (daylight_minutes / 60) << ':'
+                        << std::setw(2) << std::setfill('0') << (daylight_minutes % 60);
+
         debug_string +=
             "X: " + std::to_string(local_world.getEntity(local_player_entity_id.value()).getComponent<TransformComponent>().position.x) +
             " Y: " + std::to_string(local_world.getEntity(local_player_entity_id.value()).getComponent<TransformComponent>().position.y) + '\n' +
             "CHUNKS LOADED: " + std::to_string(local_world.getChunks().size()) + '\n' +
             "SIMULATION RANGE: " + std::to_string(simulation_range.first) + " - " + std::to_string(simulation_range.second) + '\n' +
             "INPUTS: " + std::to_string(inputs.size()) + '\n' +
-            "TIME: " + dateAndHourString(daysToDate(local_world.days), daytimeToHour(local_world.dayTime)) + '\n' +
+            "TIME: " + dateAndHourString(today, daytimeToHour(local_world.dayTime)) + '\n' +
+            "DAY LENGTH: " + daylight_stream.str() + '\n' +
             "CLIMATE:\n" +
             "\tTEMPERATURE: " + std::to_string(climate.temperature) + '\n' +
             "\tHUMIDITY: " + std::to_string(climate.humidity) + '\n' +

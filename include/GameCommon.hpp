@@ -73,4 +73,28 @@ Date daysToDate(uint64_t days);
 
 std::string dateAndHourString(Date date, Hour hour);
 
+// Seasonal daylight model.
+//
+// The world's calendar is Gregorian; day length tracks solstices so the
+// shortest day is 1 January and the longest is 1 July. The total length of a
+// day/night cycle stays fixed at World::DAY_CYCLE_DURATION — only the split
+// between daylight and night slides across the year.
+constexpr float SHORTEST_DAY_FRACTION = 0.30f;
+constexpr float LONGEST_DAY_FRACTION  = 0.70f;
+
+uint16_t dayOfYear(Date date);
+
+// Fraction of a cycle that is daylight. In [SHORTEST_DAY_FRACTION, LONGEST_DAY_FRACTION].
+float dayLightFraction(Date date);
+
+// Daylight duration in game-seconds for the given calendar date.
+float dayLength(Date date);
+
+// Remap raw dayTime to a normalized phase in [0, 1): 0=midnight, 0.25=sunrise,
+// 0.5=noon, 0.75=sunset. Feed this to sky/sun/moon/star/lighting code so
+// sunrise and sunset shift with the season but noon/midnight stay anchored.
+float solarPhase(float dayTime, uint64_t days);
+
+bool isDaylight(float dayTime, uint64_t days);
+
 #endif // GAME_COMMON_HPP

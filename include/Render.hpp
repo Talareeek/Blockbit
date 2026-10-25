@@ -26,9 +26,12 @@ extern std::pair<sf::Color, sf::Color> getSkyGradient(float t);
 
 extern void renderSky(sf::RenderTarget& target, sf::Color top, sf::Color bottom);
 
-extern void renderSunAndMoon(float daytime, sf::RenderWindow& window);
+// phase is a normalized sun phase in [0, 1): 0=midnight, 0.25=sunrise,
+// 0.5=noon, 0.75=sunset. Compute with GameCommon::solarPhase so sunrise /
+// sunset slide with the season.
+extern void renderSunAndMoon(float phase, sf::RenderWindow& window);
 
-extern void renderStars(float daytime, sf::RenderWindow& window);
+extern void renderStars(float phase, sf::RenderWindow& window);
 
 extern sf::Vector2i getMouseBlockPosition(sf::Vector2<double> camera, const sf::RenderWindow& window);
 

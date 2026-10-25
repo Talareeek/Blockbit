@@ -171,6 +171,77 @@ Date daysToDate(uint64_t days)
     return result;
 }
 
+uint16_t dayOfYear(Date date)
+{
+    uint16_t doy = 0;
+    for (uint8_t m = 0; m < static_cast<uint8_t>(date.month); ++m)
+    {
+        doy += daysInMonth(static_cast<Date::Month>(m), date.year);
+    }
+    return static_cast<uint16_t>(doy + date.day - 1);
+}
+
+float dayLightFraction(Date date)
+{
+    const uint16_t doy    = dayOfYear(date);
+    const uint16_t summer = dayOfYear(Date{1, Date::Month::July, date.year});
+    const uint16_t total  = daysInYear(date.year);
+
+    constexpr float PI = 3.14159265358979f;
+
+    // Piecewise so the extremes land exactly on 1 Jan and 1 July despite the
+    // two halves of the year being unequal in length.
+    float angle;
+    if (doy <= summer)
+    {
+        angle = (static_cast<float>(doy) / static_cast<float>(summer)) * PI;
+    }
+    else
+    {
+        const uint16_t winter_half = static_cast<uint16_t>(total - summer);
+        angle = PI + (static_cast<float>(doy - summer) / static_cast<float>(winter_half)) * PI;
+    }
+
+    constexpr float mean = (SHORTEST_DAY_FRACTION + LONGEST_DAY_FRACTION) * 0.5f;
+    constexpr float amp  = (LONGEST_DAY_FRACTION - SHORTEST_DAY_FRACTION) * 0.5f;
+    return mean - amp * std::cos(angle);
+}
+
+float dayLength(Date date)
+{
+    return dayLightFraction(date) * World::DAY_CYCLE_DURATION;
+}
+
+float solarPhase(float dayTime, uint64_t days)
+{
+    const Date  date = daysToDate(days);
+    const float frac = dayLightFraction(date);
+    const float t    = std::fmod(dayTime / World::DAY_CYCLE_DURATION, 1.0f);
+
+    const float sunrise = 0.5f - frac * 0.5f;
+    const float sunset  = 0.5f + frac * 0.5f;
+
+    if (t >= sunrise && t <= sunset)
+    {
+        return 0.25f + (t - sunrise) / (sunset - sunrise) * 0.5f;
+    }
+
+    const float night_len = 1.0f - frac;
+    if (t > sunset)
+    {
+        return 0.75f + (t - sunset) / night_len * 0.5f;
+    }
+    return std::fmod(0.75f + (1.0f - sunset + t) / night_len * 0.5f, 1.0f);
+}
+
+bool isDaylight(float dayTime, uint64_t days)
+{
+    const Date  date = daysToDate(days);
+    const float frac = dayLightFraction(date);
+    const float t    = std::fmod(dayTime / World::DAY_CYCLE_DURATION, 1.0f);
+    return t >= (0.5f - frac * 0.5f) && t <= (0.5f + frac * 0.5f);
+}
+
 std::string dateAndHourString(Date date, Hour hour)
 {
     std::ostringstream stream;

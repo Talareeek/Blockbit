@@ -7,6 +7,7 @@
 #include "../include/PlayerControlledComponent.hpp"
 #include "../include/Block.hpp"
 #include "../include/Chunk.hpp"
+#include "../include/GameCommon.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -65,7 +66,7 @@ namespace
 
     bool isDaytime(World& world)
     {
-        return world.getDayTime() < World::DAY_CYCLE_DURATION * 0.5f;
+        return isDaylight(world.getDayTime(), world.days);
     }
 
     // Classify an existing mob entity into a category so caps and despawn
