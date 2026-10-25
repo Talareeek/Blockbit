@@ -108,7 +108,8 @@ public:
     {
         Sun,
         Brightness,
-        BlockAnimation
+        BlockAnimation,
+        LightingOverlay
     };
 
     enum class SoundID : uint32_t

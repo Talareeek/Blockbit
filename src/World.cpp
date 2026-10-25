@@ -15,6 +15,7 @@
 #include "../include/HealthComponent.hpp"
 #include "../include/BBT.hpp"
 #include "../include/NormalWorldGenerator.hpp"
+#include "../include/WorldLightView.hpp"
 
 #include <zstd.h>
 #include <iostream>
@@ -84,15 +85,64 @@ void World::setBlock(int wx, int wy, Block block)
     if(!chunks.contains(chunk_position)) return;
 
     Chunk& chunk = chunks[chunk_position];
+
+    // Capture the previous block's lighting attributes before mutating. We
+    // can't read them after the write and the relighter needs the delta.
+    Block previous = chunk.blocks[local_y][local_x];
+    uint8_t prev_emission = 0, prev_opacity = 15;
+    if (auto it = blockDatabase.find(previous.id); it != blockDatabase.end())
+    {
+        prev_emission = it->second.light_emission;
+        prev_opacity  = it->second.light_opacity;
+    }
+    uint8_t next_emission = 0, next_opacity = 15;
+    if (auto it = blockDatabase.find(block.id); it != blockDatabase.end())
+    {
+        next_emission = it->second.light_emission;
+        next_opacity  = it->second.light_opacity;
+    }
+
     chunk.blocks[local_y][local_x] = block;
     chunk.dirty = true;
     chunk.meshDirty = true;
     chunk.generated = true;
+
+    // Lightmap must only be recomputed once the lightmap vectors have been
+    // sized at least once by initializeChunkSkyLight; skipping the pass for
+    // uninitialized chunks also avoids partial writes before the first lit
+    // chunk sweep.
+    if (chunk.light.initialized)
+    {
+        WorldLightView view(*this);
+        relightOnBlockChange(view, wx, wy,
+                             prev_emission, prev_opacity,
+                             next_emission, next_opacity);
+    }
 }
 
 void World::setBlock(sf::Vector2i position, Block block)
 {
     setBlock(position.x, position.y, block);
+}
+
+uint8_t World::getBlockLight(int wx, int wy) const
+{
+    if (wy < 0 || wy >= CHUNK_HEIGHT) return 0;
+    int cp = (wx >= 0) ? wx / CHUNK_WIDTH : (wx - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
+    auto it = chunks.find(cp);
+    if (it == chunks.end() || it->second.light.block_light.empty()) return 0;
+    int local_x = wx - cp * CHUNK_WIDTH;
+    return it->second.light.block_light[static_cast<size_t>(wy) * CHUNK_WIDTH + local_x];
+}
+
+uint8_t World::getSkyLight(int wx, int wy) const
+{
+    if (wy < 0 || wy >= CHUNK_HEIGHT) return 0;
+    int cp = (wx >= 0) ? wx / CHUNK_WIDTH : (wx - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
+    auto it = chunks.find(cp);
+    if (it == chunks.end() || it->second.light.sky_light.empty()) return 0;
+    int local_x = wx - cp * CHUNK_WIDTH;
+    return it->second.light.sky_light[static_cast<size_t>(wy) * CHUNK_WIDTH + local_x];
 }
 
 BlockEntity* World::getBlockEntity(int world_x, int world_y)

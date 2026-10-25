@@ -211,6 +211,19 @@ namespace
         if (entry.surface.requires_sky && !sky) return false;
         if (entry.surface.forbids_sky  &&  sky) return false;
 
+        // Light gates. The light query is cheap (O(1) lookup into the
+        // lightmap vector), so we always evaluate it; defaults of 15 mean
+        // "unrestricted" for existing entries.
+        if (entry.max_block_light < 15)
+        {
+            if (world.getBlockLight(wx, wy) > entry.max_block_light) return false;
+        }
+        if (entry.max_total_light < 15)
+        {
+            uint8_t total = std::max(world.getBlockLight(wx, wy), world.getSkyLight(wx, wy));
+            if (total > entry.max_total_light) return false;
+        }
+
         sf::Vector2<double> pos{
             static_cast<double>(wx) + 0.5 - entry.entity_size.x / 2.0,
             static_cast<double>(wy)

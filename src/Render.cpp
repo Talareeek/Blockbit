@@ -12,6 +12,9 @@
 #include "../include/PerlinNoise.hpp"
 #include "../include/NormalWorldGenerator.hpp"
 #include "../include/DungeonShooterWorldGenerator.hpp"
+#include "../include/WorldLightView.hpp"
+#include "../include/LightingSystem.hpp"
+#include "../include/Settings.hpp"
 
 #include <memory>
 #include <random>
@@ -82,6 +85,33 @@ namespace
         vertex_array.append(vertex3);
     }
 
+    // Lightmap quad for a single block. Position and texCoord are identical
+    // (world chunk-local coords map 1:1 to lightmap pixel coords by design),
+    // so GL_LINEAR filtering at the shared block corners produces smooth
+    // per-vertex lighting across adjacent cells.
+    void appendLightmapQuad(sf::VertexArray& vertex_array, const sf::FloatRect& bounds)
+    {
+        sf::Vertex v0, v1, v2, v3;
+        const float x0 = bounds.position.x;
+        const float y0 = bounds.position.y;
+        const float x1 = bounds.position.x + bounds.size.x;
+        const float y1 = bounds.position.y + bounds.size.y;
+
+        v0.position  = {x0, y0}; v0.texCoords = {x0, y0};
+        v1.position  = {x1, y0}; v1.texCoords = {x1, y0};
+        v2.position  = {x1, y1}; v2.texCoords = {x1, y1};
+        v3.position  = {x0, y1}; v3.texCoords = {x0, y1};
+        v0.color = v1.color = v2.color = v3.color = sf::Color::White;
+
+        vertex_array.append(v0);
+        vertex_array.append(v1);
+        vertex_array.append(v2);
+
+        vertex_array.append(v0);
+        vertex_array.append(v2);
+        vertex_array.append(v3);
+    }
+
     // Shared across RenderWorld and RenderMinimap so animations stay in sync
     // between the main view and the minimap mesh.
     sf::Clock& blockAnimationClock()
@@ -101,6 +131,66 @@ namespace
 
         states.shader = &shader;
     }
+
+    // Pack a chunk's lightmap into a flat RGBA buffer: R = block_light * 17,
+    // G = sky_light * 17 (so a nibble 0..15 maps exactly to 0..255 — no divide
+    // needed in the shader). Row 0 is world y=0 (bottom); the SFML "image top
+    // = row 0" convention and the client's Y-flipped view line up so this
+    // row ordering samples right-side up on screen.
+    std::array<uint8_t, static_cast<size_t>(CHUNK_WIDTH) * static_cast<size_t>(CHUNK_HEIGHT) * 4>
+    packChunkLightmap(const ChunkLightData& light)
+    {
+        std::array<uint8_t, static_cast<size_t>(CHUNK_WIDTH) * static_cast<size_t>(CHUNK_HEIGHT) * 4> pixels{};
+        if (light.block_light.empty() || light.sky_light.empty())
+        {
+            return pixels; // all zero = pitch black until first lighting pass
+        }
+
+        constexpr int kScale = 17;  // 15 * 17 = 255
+        for (int y = 0; y < CHUNK_HEIGHT; ++y)
+        {
+            for (int x = 0; x < CHUNK_WIDTH; ++x)
+            {
+                const size_t src_idx = static_cast<size_t>(y) * CHUNK_WIDTH + x;
+                const size_t dst_idx = (static_cast<size_t>(y) * CHUNK_WIDTH + x) * 4;
+                pixels[dst_idx + 0] = static_cast<uint8_t>(light.block_light[src_idx] * kScale);
+                pixels[dst_idx + 1] = static_cast<uint8_t>(light.sky_light[src_idx]   * kScale);
+                pixels[dst_idx + 2] = 0;
+                pixels[dst_idx + 3] = 255;
+            }
+        }
+        return pixels;
+    }
+
+    // One-time per chunk-position: materialize an RGBA sf::Texture and set
+    // GL_LINEAR filtering so the smooth lightmap sampling comes for free.
+    // try_emplace constructs sf::Texture in-place to avoid relying on
+    // sf::Texture being movable in the current SFML version.
+    sf::Texture& ensureLightTexture(ClientWorld& world, int chunk_position)
+    {
+        auto& textures = world.getChunkLightTextures();
+        auto [it, inserted] = textures.try_emplace(
+            chunk_position, sf::Vector2u{CHUNK_WIDTH, CHUNK_HEIGHT});
+        if (inserted)
+        {
+            it->second.setSmooth(true);
+            it->second.setRepeated(false);
+        }
+        return it->second;
+    }
+
+    // Sky-light brightness tracks daytime roughly along the sun's elevation.
+    // The curve is intentionally flat around noon and midnight so transitions
+    // don't feel abrupt; the shader clamps against u_ambient_min below so
+    // caves never go pitch black regardless of day_factor.
+    float computeDayFactor(float day_time)
+    {
+        constexpr float TAU = 6.2831853f;
+        float t = day_time / World::DAY_CYCLE_DURATION;
+        // Phase so day_factor peaks at t=0.5 (noon-ish) and bottoms at t=0 (midnight).
+        float raw = -std::cos(t * TAU) * 0.5f + 0.5f;
+        return std::clamp(raw, 0.0f, 1.0f);
+    }
 }
 
 void BuildChunkMesh(ClientWorld& world, int chunk_position)
@@ -109,6 +199,7 @@ void BuildChunkMesh(ClientWorld& world, int chunk_position)
     ChunkMesh& mesh = world.getChunkMeshes()[chunk_position];
 
     mesh.vertices.clear();
+    mesh.lightmap_vertices.clear();
 
     for (int y = 0; y < CHUNK_HEIGHT; y++)
     {
@@ -144,6 +235,11 @@ void BuildChunkMesh(ClientWorld& world, int chunk_position)
             };
 
             appendQuad(mesh.vertices, final_rect, final_uv, anim_color);
+
+            // Lightmap overlay matches the painted block footprint exactly,
+            // so sky visible through air (and through the air portion of a
+            // partial-fluid tile) stays undarkened.
+            appendLightmapQuad(mesh.lightmap_vertices, final_rect);
         }
     }
 
@@ -294,6 +390,15 @@ void RenderWorld(ClientWorld& world, const sf::Vector2<double> camera, sf::Rende
 
     int centerChunk = static_cast<int>(std::floor(camera.x / static_cast<double>(CHUNK_WIDTH)));
 
+    const float day_factor   = computeDayFactor(world.getDayTime());
+    // Sky light runs from max=15 at noon down to min=4 at midnight (4/15 floor).
+    // ambient_min stays at 0 so sky-exposed tiles can actually reach the "4"
+    // floor at midnight instead of being clamped higher by ambient — unlit
+    // caves still get some brightness via block-penetrating light.
+    constexpr float ambient_min      = 0.0f;
+    constexpr float night_sky_floor  = 4.0f / 15.0f;
+    const     float effect_strength  = std::clamp(Settings::graphics.lighting_effect_strength, 0.0f, 1.0f);
+
     for (int i = centerChunk - 2; i <= centerChunk + 2; ++i)
     {
         Chunk& chunk = world.getChunk(i);
@@ -307,6 +412,47 @@ void RenderWorld(ClientWorld& world, const sf::Vector2<double> camera, sf::Rende
             BuildChunkMesh(world, i);
         }
 
+        // Lazy-init lighting the first time we see this chunk on the client.
+        // We rely on the same deterministic BFS the server runs, so the
+        // lightmap derived here will match what the server would have
+        // computed from the same blocks.
+        //
+        // After the per-chunk sky seed we also re-flood from the edge columns
+        // of any neighbor that was already lit, so light which lived in those
+        // chunks before we knew about this one gets a chance to spill back
+        // across the boundary. Without this the seam at a chunk border is
+        // visible wherever one side was lit from a direction the other side
+        // can't re-derive from scratch (e.g. cave light leaking sideways).
+        if (!chunk.light.initialized)
+        {
+            WorldLightView view(world);
+            initializeChunkSkyLight(view, i, CHUNK_WIDTH, CHUNK_HEIGHT);
+            chunk.light.initialized = true;
+
+            auto& all_chunks = world.getChunks();
+            std::deque<LightNode> cross_block, cross_sky;
+            for (int neighbor_cp : {i - 1, i + 1})
+            {
+                auto n_it = all_chunks.find(neighbor_cp);
+                if (n_it == all_chunks.end()) continue;
+                if (!n_it->second.light.initialized) continue;
+
+                const int wx = (neighbor_cp < i)
+                    ? neighbor_cp * CHUNK_WIDTH + CHUNK_WIDTH - 1
+                    : neighbor_cp * CHUNK_WIDTH;
+
+                for (int y = 0; y < CHUNK_HEIGHT; ++y)
+                {
+                    uint8_t bl = view.getLight(wx, y, LightChannel::Block);
+                    uint8_t sl = view.getLight(wx, y, LightChannel::Sky);
+                    if (bl > 1) cross_block.push_back({wx, y, bl});
+                    if (sl > 1) cross_sky.push_back({wx, y, sl});
+                }
+            }
+            propagateLight(view, std::move(cross_block), LightChannel::Block);
+            propagateLight(view, std::move(cross_sky),   LightChannel::Sky);
+        }
+
         float translate_x = static_cast<float>((static_cast<double>(i * CHUNK_WIDTH) - camera.x)) * unit_size;
         float translate_y = static_cast<float>(-camera.y) * unit_size;
 
@@ -317,6 +463,33 @@ void RenderWorld(ClientWorld& world, const sf::Vector2<double> camera, sf::Rende
         applyBlockAnimationShader(states);
 
         window.draw(mesh.vertices, states);
+
+        // --- Lighting overlay pass ---------------------------------------
+        // Multiply blend: dst_new = overlay_rgb * dst_old. The shader outputs
+        // the final light factor (max of block/sky light, clamped against
+        // ambient_min). One extra draw call per visible chunk.
+        sf::Texture& light_tex = ensureLightTexture(world, i);
+        if (chunk.light.texture_dirty)
+        {
+            auto pixels = packChunkLightmap(chunk.light);
+            light_tex.update(pixels.data());
+            chunk.light.texture_dirty = false;
+        }
+
+        sf::Shader& lighting_shader = AssetManager::getShader(AssetManager::ShaderID::LightingOverlay);
+        lighting_shader.setUniform("texture", sf::Shader::CurrentTexture);
+        lighting_shader.setUniform("u_day_factor",      day_factor);
+        lighting_shader.setUniform("u_ambient_min",     ambient_min);
+        lighting_shader.setUniform("u_night_sky_floor", night_sky_floor);
+        lighting_shader.setUniform("u_effect_strength", effect_strength);
+
+        sf::RenderStates overlay_states;
+        overlay_states.texture   = &light_tex;
+        overlay_states.transform = states.transform;  // same chunk-to-screen mapping
+        overlay_states.shader    = &lighting_shader;
+        overlay_states.blendMode = sf::BlendMultiply;
+
+        window.draw(mesh.lightmap_vertices, overlay_states);
     }
 }
 

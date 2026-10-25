@@ -153,6 +153,7 @@ Game::Game()
     AssetManager::loadShader(AssetManager::ShaderID::Sun, "resources/shaders/sun.frag");
     AssetManager::loadShader(AssetManager::ShaderID::Brightness, "resources/shaders/brightness.frag");
     AssetManager::loadShader(AssetManager::ShaderID::BlockAnimation, "resources/shaders/block_animation.frag");
+    AssetManager::loadShader(AssetManager::ShaderID::LightingOverlay, "resources/shaders/lighting_overlay.frag");
 
     AssetManager::loadSound(AssetManager::SoundID::Click, "resources/sounds/click.wav");
 

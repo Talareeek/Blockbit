@@ -227,6 +227,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 0.0,
+            .light_opacity = 1,
         }
     },
     { BlockID::Stone,
@@ -319,7 +320,8 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
                 .onPlace            = water_on_place,
                 .onNeighborChanged  = water_on_neighbor_changed,
                 .onScheduledTick    = water_on_scheduled_tick
-            }
+            },
+            .light_opacity = 3,
         }
     },
     { BlockID::Coal_Ore,
@@ -462,7 +464,8 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .hardness = 0.2f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Oak_Leaves, .render_bounds = default_render_bounds, .rect = default_render_rect},
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
-            .drop = DropProperties{.always_drop = true, .drop = ItemID::Oak_Leaves}
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Oak_Leaves},
+            .light_opacity = 2,
         }
     },
     { BlockID::Oak_Planks,
@@ -500,7 +503,9 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .drag = 1.0f,
             .hardness = 0.0f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Fire, .render_bounds = default_render_bounds, .rect = default_render_rect},
-            .mining = MiningProperties{.mining_resistance = 0, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}}
+            .mining = MiningProperties{.mining_resistance = 0, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
+            .light_emission = 15,
+            .light_opacity = 1,
         }
     },
     { BlockID::Sand,

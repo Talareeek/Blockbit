@@ -12,6 +12,7 @@
 #include "../include/ItemComponent.hpp"
 #include "../include/ItemInstance.hpp"
 #include "../include/RenderComponent.hpp"
+#include "../include/WorldLightView.hpp"
 
 #include <fstream>
 #include <zstd.h>
@@ -852,6 +853,41 @@ void ServerWorld::loadOrCreateChunk(int chunk_position)
 
         chunks[chunk_position] =
             world_generator->generateChunk(chunk_position);
+    }
+
+    // Light the freshly materialized chunk. We do this *after* the chunk is
+    // in the map so the WorldLightView adapter finds it. Also re-seeds from
+    // the right/left edge of each loaded neighbor so light that already lived
+    // in those chunks can flood back across the boundary.
+    auto chunk_it = chunks.find(chunk_position);
+    if (chunk_it != chunks.end())
+    {
+        WorldLightView view(*this);
+        initializeChunkSkyLight(view, chunk_position, CHUNK_WIDTH, CHUNK_HEIGHT);
+        chunk_it->second.light.initialized = true;
+
+        std::deque<LightNode> cross_block, cross_sky;
+        for (int neighbor_cp : {chunk_position - 1, chunk_position + 1})
+        {
+            auto n_it = chunks.find(neighbor_cp);
+            if (n_it == chunks.end()) continue;
+            if (!n_it->second.light.initialized) continue;
+
+            // World-x of the neighbor's shared-edge column.
+            int wx = (neighbor_cp < chunk_position)
+                ? neighbor_cp * CHUNK_WIDTH + CHUNK_WIDTH - 1
+                : neighbor_cp * CHUNK_WIDTH;
+
+            for (int y = 0; y < CHUNK_HEIGHT; ++y)
+            {
+                uint8_t bl = view.getLight(wx, y, LightChannel::Block);
+                uint8_t sl = view.getLight(wx, y, LightChannel::Sky);
+                if (bl > 1) cross_block.push_back({wx, y, bl});
+                if (sl > 1) cross_sky.push_back({wx, y, sl});
+            }
+        }
+        propagateLight(view, std::move(cross_block), LightChannel::Block);
+        propagateLight(view, std::move(cross_sky),   LightChannel::Sky);
     }
 }
 

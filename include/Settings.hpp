@@ -14,6 +14,7 @@ public:
         uint32_t window_width = 1280;
         uint32_t window_height = 720;
         uint32_t fps_limit = 100;
+        float lighting_effect_strength = 0.75f;
     };
 
     struct Audio

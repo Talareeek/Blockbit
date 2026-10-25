@@ -39,6 +39,7 @@ void Settings::load()
             graphics.window_width  = g.value("window_width",  graphics.window_width);
             graphics.window_height = g.value("window_height", graphics.window_height);
             graphics.fps_limit     = g.value("fps_limit",     graphics.fps_limit);
+            graphics.lighting_effect_strength = g.value("lighting_effect_strength", graphics.lighting_effect_strength);
         }
 
         if(data.contains("audio"))
@@ -69,7 +70,8 @@ void Settings::save()
             {"vsync",         graphics.vsync},
             {"window_width",  graphics.window_width},
             {"window_height", graphics.window_height},
-            {"fps_limit",     graphics.fps_limit}
+            {"fps_limit",     graphics.fps_limit},
+            {"lighting_effect_strength", graphics.lighting_effect_strength}
         };
         data["audio"] = {
             {"master_volume", audio.master_volume},

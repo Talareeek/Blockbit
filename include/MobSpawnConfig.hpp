@@ -47,11 +47,18 @@ struct SpawnEntry
 
     SurfaceRule surface;
 
-    // Time-of-day gate. The game has no block-level lighting, so "light"
-    // reduces to day/night (via World::dayTime). "Darkness" of caves is
-    // expressed via SurfaceRule::forbids_sky, not here.
+    // Time-of-day gate. Independent of the lightmap because the day/night
+    // *cycle* and the *current light at a tile* can disagree (torches at
+    // night, caves during the day).
     bool day_allowed   = true;
     bool night_allowed = true;
+
+    // Light gates for monsters that only spawn in darkness. Both default to
+    // 15 (no restriction). The spawn tile is rejected if its block_light
+    // exceeds max_block_light or max(block,sky) exceeds max_total_light.
+    // Hostile mobs typically want (7, 7); day-neutral mobs stay at (15, 15).
+    uint8_t max_block_light = 15;
+    uint8_t max_total_light = 15;
 
     // AABB used for collision validation at the proposed position.
     sf::Vector2<double> entity_size{1.0, 1.0};

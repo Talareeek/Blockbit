@@ -74,6 +74,8 @@ void SettingsWindow::render()
             Settings::graphics.fps_limit = static_cast<uint32_t>(fps_limit);
         }
 
+        ImGui::SliderFloat("Lighting effect strength", &Settings::graphics.lighting_effect_strength, 0.0f, 1.0f, "%.2f");
+
         if(ImGui::Button("Apply graphics"))
         {
             apply_graphics_requested = true;

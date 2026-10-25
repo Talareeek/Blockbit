@@ -76,6 +76,11 @@ public:
     virtual void setBlock(int wx, int wy, Block block);
     void setBlock(sf::Vector2i position, Block block);
 
+    // Lightmap queries. Return 0 for cells outside loaded chunks or where
+    // lighting has not been initialized yet.
+    uint8_t getBlockLight(int wx, int wy) const;
+    uint8_t getSkyLight(int wx, int wy) const;
+
     BlockEntity* getBlockEntity(int world_x, int world_y);
     void setBlockEntity(int world_x, int world_y, std::unique_ptr<BlockEntity> entity);
     void removeBlockEntity(int world_x, int world_y);

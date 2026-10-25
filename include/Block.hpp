@@ -135,6 +135,13 @@ struct BlockData
     // Participates in random ticks (grass spread, plant growth, ice melting).
     // Density is global, controlled by BlockUpdatePipeline::random_ticks_per_chunk.
     bool random_tickable = false;
+
+    // Light behaviour. See LightingSystem.hpp for the model.
+    //   light_emission  0..15, 0 = not a source.
+    //   light_opacity   0..15. 1 = air-equivalent (one-step attenuation).
+    //                   2..14 = translucent, 15 = fully blocking.
+    uint8_t light_emission = 0;
+    uint8_t light_opacity  = 15;
 };
 
 extern std::unordered_map<BlockID, BlockData> blockDatabase;

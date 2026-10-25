@@ -3,6 +3,7 @@
 
 #include "Block.hpp"
 #include "BlockEntity.hpp"
+#include "ChunkLightData.hpp"
 #include "Climate.hpp"
 #include "UUID.hpp"
 
@@ -28,6 +29,8 @@ struct Chunk
     Biome biomes[CHUNK_WIDTH];
 
     std::unordered_map<uint16_t, std::unique_ptr<BlockEntity>> block_entities;
+
+    ChunkLightData light;
 
     bool dirty;
     bool generated;
@@ -82,6 +85,7 @@ private:
         std::memcpy(blocks, other.blocks, sizeof(blocks));
         std::memcpy(climates, other.climates, sizeof(climates));
         std::memcpy(biomes, other.biomes, sizeof(biomes));
+        light = other.light;
         dirty = other.dirty;
         generated = other.generated;
         meshDirty = other.meshDirty;
