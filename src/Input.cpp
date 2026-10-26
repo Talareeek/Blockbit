@@ -199,6 +199,13 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
             }
             case InputType::JUMP:
             {
+                if(player.noclip)
+                {
+                    player.jump = true;
+                    player.dirty = true;
+                    break;
+                }
+
                 if(physics.onGround)
                 {
                     physics.velocity.y += 10.0f;

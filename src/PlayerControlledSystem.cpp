@@ -27,6 +27,35 @@ void PlayerControlledSystem(World& world, float dt)
         auto& transform = entity.getComponent<TransformComponent>();
         auto& inventory = entity.getComponent<InventoryComponent>();
 
+        if(player.noclip && entity.hasComponent<PhysicsComponent>())
+        {
+            constexpr double NOCLIP_SPEED = 20.0;
+
+            auto& physics = entity.getComponent<PhysicsComponent>();
+
+            if(player.jump)
+            {
+                sf::Vector2<double> dir = player.cursor_position - transform.center();
+                double len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
+                if(len > 1e-6)
+                {
+                    dir.x /= len;
+                    dir.y /= len;
+
+                    transform.position.x += dir.x * NOCLIP_SPEED * dt;
+                    transform.position.y += dir.y * NOCLIP_SPEED * dt;
+                    transform.render_position = transform.position;
+                    transform.dirty = true;
+                }
+
+                player.jump = false;
+                player.dirty = true;
+            }
+
+            physics.velocity = {0.0f, 0.0f};
+            physics.force = {0.0f, 0.0f};
+        }
+
         if (entity.hasComponent<AnimationComponent>() && entity.hasComponent<PhysicsComponent>())
         {
             auto& animation = entity.getComponent<AnimationComponent>();

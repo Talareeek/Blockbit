@@ -627,6 +627,55 @@ std::unordered_map<std::wstring, Command> commandDatabase =
         }
     }},
 
+    {L"noclip", {false, true, true,
+        [](std::wstring command, CommandContext& context)
+        {
+            GameServer& server = requireServer(context);
+            World& world = *context.world();
+
+            auto tokens = tokenize(command);
+
+            std::string target_nick;
+            if (tokens.size() >= 2)
+            {
+                target_nick = wtoutf8(tokens[1]);
+
+                if (!context.senderIsOperator() && target_nick != context.senderNickname())
+                    throw CommandException{"Only operators can toggle noclip on other players."};
+            }
+            else
+            {
+                target_nick = context.senderNickname();
+                if (target_nick.empty() || target_nick == "<console>")
+                    throw CommandException{"Usage: /noclip <player>"};
+            }
+
+            auto entity_id = server.findEntityByNickname(target_nick);
+            if (!entity_id.has_value())
+                throw CommandException{"Player not online: " + target_nick};
+
+            Entity& self = world.getEntity(*entity_id);
+            if (!self.hasComponent<PlayerControlledComponent>() || !self.hasComponent<PhysicsComponent>())
+                throw CommandException{"Target has no player/physics components."};
+
+            auto& player = self.getComponent<PlayerControlledComponent>();
+            auto& physics = self.getComponent<PhysicsComponent>();
+
+            player.noclip = !player.noclip;
+            player.jump = false;
+            player.dirty = true;
+
+            physics.isStatic = player.noclip;
+            physics.isGravityActive = !player.noclip;
+            physics.velocity = {0.0f, 0.0f};
+            physics.force = {0.0f, 0.0f};
+            physics.dirty = true;
+
+            std::wstring state = player.noclip ? L"enabled" : L"disabled";
+            context.reply(L"Noclip " + state + L" for " + utf8tow(target_nick));
+        }
+    }},
+
     {L"spawn-mannequin", {false, true, true,
         [](std::wstring command, CommandContext& context)
         {

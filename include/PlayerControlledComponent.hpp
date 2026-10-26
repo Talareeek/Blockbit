@@ -35,6 +35,8 @@ struct PlayerControlledComponent : public Component
 
     sf::Vector2<double> move_direction;
 
+    bool noclip = false;
+
     // Transient per-tick request queue: anything the player interacts with
     // (an item's onUse, a block, etc.) can push a ready-to-run ServerView
     // onto this queue and GameServer will hand it to the owning client as
@@ -71,6 +73,7 @@ struct PlayerControlledComponent : public Component
         compound["mid_attack"] = Tag(mid_attack);
         compound["mining_block"] = Tag(mining_block);
         compound["mining_time"] = Tag(mining_time);
+        compound["noclip"] = Tag(noclip);
 
         return Tag(compound);
     }
@@ -83,6 +86,7 @@ struct PlayerControlledComponent : public Component
         if (compound.count("mid_attack"))   mid_attack   = tag["mid_attack"].get<bool>();
         if (compound.count("mining_block")) mining_block = tag["mining_block"].get<sf::Vector2i>();
         if (compound.count("mining_time"))  mining_time  = tag["mining_time"].get<float>();
+        if (compound.count("noclip"))       noclip       = tag["noclip"].get<bool>();
     }
 
     std::unique_ptr<Component> clone() const override
@@ -103,6 +107,7 @@ struct PlayerControlledComponent : public Component
         out->change_slot       = change_slot;
         out->jump              = jump;
         out->move_direction    = move_direction;
+        out->noclip            = noclip;
         return out;
     }
 };

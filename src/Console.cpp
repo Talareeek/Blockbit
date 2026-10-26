@@ -186,6 +186,11 @@ void Console::update(float dt)
         }
         catch (const CommandException& exception)
         {
+            if (command_relay && exception.message == "This command can only be run on the server.")
+            {
+                command_relay(raw);
+                return;
+            }
             std::cerr << exception.message << '\n';
         }
     }
