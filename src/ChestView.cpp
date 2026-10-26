@@ -245,9 +245,9 @@ void ServerChestView::onOpen(World& world)
         // Mirror open state onto the block's metadata so clients can render it
         // without needing to know about block entities.
         Block current = world.getBlock(chest_position.x, chest_position.y);
-        if (current.id == BlockID::Chest && current.metadata != 1)
+        if (current.id == BlockID::Chest && !ChestState::unpack(current.metadata).open)
         {
-            world.setBlock(chest_position.x, chest_position.y, {BlockID::Chest, 1});
+            world.setBlock(chest_position.x, chest_position.y, {BlockID::Chest, ChestState{true}.pack()});
         }
 
         for (uint16_t i = 0; i < 36 && i < chest->stacks.size(); ++i)
@@ -284,9 +284,9 @@ void ServerChestView::onClose(World& world)
         if (chest->viewers == 0)
         {
             Block current = world.getBlock(chest_position.x, chest_position.y);
-            if (current.id == BlockID::Chest && current.metadata != 0)
+            if (current.id == BlockID::Chest && ChestState::unpack(current.metadata).open)
             {
-                world.setBlock(chest_position.x, chest_position.y, {BlockID::Chest, 0});
+                world.setBlock(chest_position.x, chest_position.y, {BlockID::Chest, ChestState{false}.pack()});
             }
         }
     }

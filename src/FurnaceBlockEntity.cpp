@@ -109,7 +109,7 @@ void FurnaceBlockEntity::tick(World& world, float dt)
         Block current = world.getBlock(this->position.x, this->position.y);
         if (current.id == BlockID::Furnace)
         {
-            const uint8_t desired_meta = now_lit ? 1u : 0u;
+            const uint16_t desired_meta = FurnaceState{now_lit}.pack();
             if (current.metadata != desired_meta)
             {
                 world.setBlock(this->position.x, this->position.y, {BlockID::Furnace, desired_meta});

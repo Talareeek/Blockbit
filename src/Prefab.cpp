@@ -149,7 +149,7 @@ UUID spawnDroppedItem(World& world, sf::Vector2<double> position, const ItemStac
     return id;
 }
 
-UUID spawnFallingBlock(World& world, sf::Vector2<double> position, BlockID block_id, uint8_t metadata)
+UUID spawnFallingBlock(World& world, sf::Vector2<double> position, BlockID block_id, uint16_t metadata)
 {
     Entity entity = PrefabRegistry::get(PrefabID::FallingBlock).cloneAs(generateUUID());
 

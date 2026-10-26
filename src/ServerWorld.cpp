@@ -420,7 +420,7 @@ void ServerWorld::saveChunkEnvironment(int chunk_position)
     auto iterator = chunks.find(chunk_position);
     if(iterator == chunks.end()) return;
 
-    size_t block_size = sizeof(BlockID) + sizeof(uint8_t);
+    size_t block_size = sizeof(BlockID) + sizeof(uint16_t);
     size_t raw_size = CHUNK_WIDTH * CHUNK_HEIGHT * block_size + 16 * sizeof(Climate) + 16 * sizeof(Biome);
 
     std::vector<char> raw(raw_size);
@@ -435,8 +435,8 @@ void ServerWorld::saveChunkEnvironment(int chunk_position)
             std::memcpy(ptr, &block.id, sizeof(BlockID));
             ptr += sizeof(BlockID);
 
-            std::memcpy(ptr, &block.metadata, sizeof(uint8_t));
-            ptr += sizeof(uint8_t);
+            std::memcpy(ptr, &block.metadata, sizeof(uint16_t));
+            ptr += sizeof(uint16_t);
         }
     }
 
@@ -614,7 +614,7 @@ void ServerWorld::loadChunkEnvironment(int chunk_position)
 {
     std::filesystem::path chunk_path = path / ("chunk_" + std::to_string(chunk_position)) / "environment";
 
-    size_t expected_raw_size = CHUNK_WIDTH * CHUNK_HEIGHT * (sizeof(BlockID) + sizeof(uint8_t)) + CHUNK_WIDTH * (sizeof(Climate) + sizeof(Biome));
+    size_t expected_raw_size = CHUNK_WIDTH * CHUNK_HEIGHT * (sizeof(BlockID) + sizeof(uint16_t)) + CHUNK_WIDTH * (sizeof(Climate) + sizeof(Biome));
 
     auto discardCorrupt = [&](const std::string& reason)
     {
@@ -715,8 +715,8 @@ void ServerWorld::loadChunkEnvironment(int chunk_position)
             std::memcpy(&block.id, ptr, sizeof(BlockID));
             ptr += sizeof(BlockID);
 
-            std::memcpy(&block.metadata, ptr, sizeof(uint8_t));
-            ptr += sizeof(uint8_t);
+            std::memcpy(&block.metadata, ptr, sizeof(uint16_t));
+            ptr += sizeof(uint16_t);
         }
     }
 

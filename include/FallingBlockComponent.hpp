@@ -14,10 +14,10 @@
 struct FallingBlockComponent : public Component
 {
     BlockID  block_id = BlockID::Air;
-    uint8_t  metadata = 0;
+    uint16_t metadata = 0;
 
     FallingBlockComponent() = default;
-    FallingBlockComponent(BlockID id, uint8_t meta) : block_id(id), metadata(meta) {}
+    FallingBlockComponent(BlockID id, uint16_t meta) : block_id(id), metadata(meta) {}
 
     std::string name() const override { return "FallingBlockComponent"; }
 
@@ -34,7 +34,7 @@ struct FallingBlockComponent : public Component
     void deserialize(const Tag& tag) override
     {
         block_id = static_cast<BlockID>(tag["block_id"].get<uint32_t>());
-        metadata = tag["metadata"].get<uint8_t>();
+        metadata = tag["metadata"].get<uint16_t>();
     }
 
     std::unique_ptr<Component> clone() const override

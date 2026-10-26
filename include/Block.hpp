@@ -8,6 +8,7 @@
 #include <vector>
 #include "Item.hpp"
 #include "AssetManager.hpp"
+#include "BlockStates.hpp"
 
 // Forward decls so client-only translation units can include Block.hpp without
 // pulling in the whole server-side update pipeline. Concrete type lives in
@@ -49,8 +50,8 @@ enum class BlockID : uint32_t
 
 struct Block
 {
-    BlockID id;
-    uint8_t metadata;
+    BlockID  id;
+    uint16_t metadata;
 };
 
 struct MiningProperties
@@ -160,22 +161,22 @@ inline auto default_render_rect = [](Block block_instance) -> sf::IntRect
 
 inline auto water_render_bounds = [](Block block_instance) -> sf::FloatRect
 {
-    return {{0.0f, 0.0f}, {1.0f, static_cast<float>(16 - (9 - block_instance.metadata)) / 16.0f}};
+    const uint8_t level = WaterState::unpack(block_instance.metadata).level;
+    return {{0.0f, 0.0f}, {1.0f, static_cast<float>(16 - (9 - level)) / 16.0f}};
 };
 
 inline auto water_render_rect = [](Block block_instance) -> sf::IntRect
 {
-    auto data = blockDatabase[block_instance.id];
-
-    return {{0, 0}, {16, 16 - (9 - block_instance.metadata)}};
+    const uint8_t level = WaterState::unpack(block_instance.metadata).level;
+    return {{0, 0}, {16, 16 - (9 - level)}};
 };
 
 inline auto chest_render_bounds = [](Block block_instance) -> sf::FloatRect
 {
-    // Open chest (metadata = 1) is drawn shorter so the lid area appears
-    // "lifted" — the client has no second texture, so the state change is
-    // conveyed by shrinking the top-of-the-sprite.
-    if (block_instance.metadata == 1)
+    // Open chest is drawn shorter so the lid area appears "lifted" — the
+    // client has no second texture, so the state change is conveyed by
+    // shrinking the top of the sprite.
+    if (ChestState::unpack(block_instance.metadata).open)
     {
         return {{1.0f / 16.0f, 0.0f}, {14.0f / 16.0f, 9.0f / 16.0f}};
     }
@@ -184,7 +185,7 @@ inline auto chest_render_bounds = [](Block block_instance) -> sf::FloatRect
 
 inline auto chest_render_rect = [](Block block_instance) -> sf::IntRect
 {
-    if (block_instance.metadata == 1)
+    if (ChestState::unpack(block_instance.metadata).open)
     {
         return {{1, 2}, {14, 9}};
     }
@@ -201,13 +202,13 @@ inline auto furnace_render_bounds = [](Block) -> sf::FloatRect
 
 inline auto furnace_render_rect = [](Block block_instance) -> sf::IntRect
 {
-    if (block_instance.metadata == 1) return {{16, 0}, {16, 16}};
+    if (FurnaceState::unpack(block_instance.metadata).lit) return {{16, 0}, {16, 16}};
     return {{0, 0}, {16, 16}};
 };
 
 inline auto furnace_animation = [](Block block_instance) -> BlockAnimation
 {
-    if (block_instance.metadata == 1) return {2, 400};
+    if (FurnaceState::unpack(block_instance.metadata).lit) return {2, 400};
     return {1, 0};
 };
 
@@ -221,12 +222,6 @@ inline auto woodcutter_render_rect = [](Block) -> sf::IntRect
 inline auto woodcutter_animation = [](Block) -> BlockAnimation
 {
     return {2, 400};
-};
-
-enum class WaterLevel : uint8_t
-{
-    FULL = 8,
-    SOURCE = 9
 };
 
 extern ItemID blockToItem(BlockID block);

@@ -436,8 +436,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
 
                 if(
                     world.getBlock(block_pos.x, block_pos.y).id == BlockID::Water &&
-                    world.getBlock(block_pos.x, block_pos.y).metadata ==
-                        static_cast<uint8_t>(WaterLevel::SOURCE)
+                    WaterState::unpack(world.getBlock(block_pos.x, block_pos.y).metadata).level ==
+                        WaterState::SOURCE
                 )
                 {
                     world.setBlock(
@@ -481,8 +481,8 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
                     world.getBlock(block_pos.x, block_pos.y).id == BlockID::Air ||
                     (
                         world.getBlock(block_pos.x, block_pos.y).id == BlockID::Water &&
-                        world.getBlock(block_pos.x, block_pos.y).metadata <
-                            static_cast<uint8_t>(WaterLevel::SOURCE)
+                        WaterState::unpack(world.getBlock(block_pos.x, block_pos.y).metadata).level <
+                            WaterState::SOURCE
                     )
                 )
                 {
@@ -491,7 +491,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
                         block_pos.y,
                         {
                             BlockID::Water,
-                            static_cast<uint8_t>(WaterLevel::SOURCE)
+                            WaterState{WaterState::SOURCE}.pack()
                         }
                     );
 
@@ -552,9 +552,9 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
 
                     if(--furnace->fuel.quantity == 0) furnace->fuel = {ItemID::None, 0};
 
-                    if(target.metadata != 1)
+                    if(!FurnaceState::unpack(target.metadata).lit)
                     {
-                        world.setBlock(position.x, position.y, {BlockID::Furnace, 1});
+                        world.setBlock(position.x, position.y, {BlockID::Furnace, FurnaceState{true}.pack()});
                     }
 
                     return false;

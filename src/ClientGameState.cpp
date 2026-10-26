@@ -686,7 +686,7 @@ void ClientGameState::update(float dt)
                 for (int x = 0; x < CHUNK_WIDTH; ++x)
                 {
                     if (chunk.blocks[y][x].id == BlockID::Furnace &&
-                        chunk.blocks[y][x].metadata == 0)
+                        !FurnaceState::unpack(chunk.blocks[y][x].metadata).lit)
                     {
                         chunk.meshDirty = true;
                         goto next_chunk;

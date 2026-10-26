@@ -33,7 +33,7 @@ void FallingBlockSystem(ServerWorld& world)
         UUID         entity_id;
         sf::Vector2i cell;
         BlockID      block_id;
-        uint8_t      metadata;
+        uint16_t     metadata;
         bool         place_block;   // false → drop as item instead
     };
 

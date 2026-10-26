@@ -36,6 +36,6 @@ sf::Vector2f randomDropSpread(float spread_factor);
 
 UUID spawnDroppedItem(World& world, sf::Vector2<double> position, const ItemStack& stack, sf::Vector2f force = {0.0f, 0.0f});
 
-UUID spawnFallingBlock(World& world, sf::Vector2<double> position, BlockID block_id, uint8_t metadata = 0);
+UUID spawnFallingBlock(World& world, sf::Vector2<double> position, BlockID block_id, uint16_t metadata = 0);
 
 #endif // PREFAB_HPP

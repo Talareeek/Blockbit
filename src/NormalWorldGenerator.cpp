@@ -365,7 +365,7 @@ void NormalWorldGenerator::generateTerrain(Chunk& chunk, std::array<int, CHUNK_W
             }
             else if (y < SEA_LEVEL)
             {
-                chunk.blocks[y][x] = {BlockID::Water, static_cast<uint8_t>(WaterLevel::SOURCE)};
+                chunk.blocks[y][x] = {BlockID::Water, WaterState{WaterState::SOURCE}.pack()};
             }
             else
             {

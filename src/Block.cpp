@@ -70,14 +70,14 @@ namespace
     // Without that, it evaporates — same decay rule the old sweep used.
     bool water_is_fed(World& world, sf::Vector2i pos, uint8_t level)
     {
-        if (level == static_cast<uint8_t>(WaterLevel::SOURCE)) return true;
+        if (level == WaterState::SOURCE) return true;
 
         if (world.getBlock(pos.x, pos.y + 1).id == BlockID::Water) return true;
 
         Block left  = world.getBlock(pos.x - 1, pos.y);
         Block right = world.getBlock(pos.x + 1, pos.y);
-        if (left.id  == BlockID::Water && left.metadata  > level) return true;
-        if (right.id == BlockID::Water && right.metadata > level) return true;
+        if (left.id  == BlockID::Water && WaterState::unpack(left.metadata).level  > level) return true;
+        if (right.id == BlockID::Water && WaterState::unpack(right.metadata).level > level) return true;
         return false;
     }
 
@@ -103,9 +103,7 @@ namespace
         Block self = ctx.world.getBlock(pos.x, pos.y);
         if (self.id != BlockID::Water) return;
 
-        const uint8_t level  = self.metadata;
-        const uint8_t SOURCE = static_cast<uint8_t>(WaterLevel::SOURCE);
-        const uint8_t FULL   = static_cast<uint8_t>(WaterLevel::FULL);
+        const uint8_t level = WaterState::unpack(self.metadata).level;
 
         // Air-ing the cell fires NC on neighbours, which reschedules the next
         // weaker water in the chain — the decay cascade unwinds one tick-delay
@@ -122,7 +120,7 @@ namespace
         // falling water keeps its strength until it hits something to spread on.
         if (below.id == BlockID::Air)
         {
-            ctx.world.setBlock(pos.x, pos.y - 1, {BlockID::Water, FULL});
+            ctx.world.setBlock(pos.x, pos.y - 1, {BlockID::Water, WaterState{WaterState::FULL}.pack()});
             return;
         }
 
@@ -135,16 +133,16 @@ namespace
 
         // SOURCE and FULL both project level 7 sideways; everything else
         // decreases by one, matching the old sweep's reach.
-        const uint8_t new_level = (level < SOURCE)
+        const uint8_t new_level = (level < WaterState::SOURCE)
             ? static_cast<uint8_t>(level - 1)
-            : static_cast<uint8_t>(FULL - 1);
+            : static_cast<uint8_t>(WaterState::FULL - 1);
 
         auto try_flow = [&](int tx, int ty)
         {
             Block target = ctx.world.getBlock(tx, ty);
             if (!water_cell_passable(target)) return;
-            if (target.id == BlockID::Water && target.metadata >= new_level) return;
-            ctx.world.setBlock(tx, ty, {BlockID::Water, new_level});
+            if (target.id == BlockID::Water && WaterState::unpack(target.metadata).level >= new_level) return;
+            ctx.world.setBlock(tx, ty, {BlockID::Water, WaterState{new_level}.pack()});
         };
 
         try_flow(pos.x - 1, pos.y);
