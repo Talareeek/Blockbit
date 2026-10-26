@@ -12,31 +12,36 @@ namespace
         return b.id == BlockID::Air || b.id == BlockID::Water || b.id == BlockID::Lava;
     }
 
-    void sand_try_schedule_fall(BlockUpdateContext& ctx, sf::Vector2i pos)
+    bool is_falling_block(BlockID id)
+    {
+        return id == BlockID::Sand || id == BlockID::Gravel;
+    }
+
+    void falling_try_schedule_fall(BlockUpdateContext& ctx, sf::Vector2i pos)
     {
         Block below = ctx.world.getBlock(pos.x, pos.y - 1);
         if (!falling_block_can_leave_into(below)) return;
         ctx.pipeline.scheduleTick(pos, 2);  // 2-tick delay matches vanilla sand
     }
 
-    void sand_on_place(BlockUpdateContext& ctx, sf::Vector2i pos)
+    void falling_on_place(BlockUpdateContext& ctx, sf::Vector2i pos)
     {
-        sand_try_schedule_fall(ctx, pos);
+        falling_try_schedule_fall(ctx, pos);
     }
 
-    void sand_on_post_placement(BlockUpdateContext& ctx, sf::Vector2i pos, uint8_t /*from_direction*/)
+    void falling_on_post_placement(BlockUpdateContext& ctx, sf::Vector2i pos, uint8_t /*from_direction*/)
     {
         // A neighbour change may have opened a hole below us. Only reschedule
-        // if we're still sand and we don't already have a pending tick.
-        if (ctx.world.getBlock(pos.x, pos.y).id != BlockID::Sand) return;
+        // if we're still a falling block and we don't already have a pending tick.
+        if (!is_falling_block(ctx.world.getBlock(pos.x, pos.y).id)) return;
         if (ctx.pipeline.hasScheduledTick(pos)) return;
-        sand_try_schedule_fall(ctx, pos);
+        falling_try_schedule_fall(ctx, pos);
     }
 
-    void sand_on_scheduled_tick(BlockUpdateContext& ctx, sf::Vector2i pos)
+    void falling_on_scheduled_tick(BlockUpdateContext& ctx, sf::Vector2i pos)
     {
         Block self = ctx.world.getBlock(pos.x, pos.y);
-        if (self.id != BlockID::Sand) return;
+        if (!is_falling_block(self.id)) return;
 
         Block below = ctx.world.getBlock(pos.x, pos.y - 1);
         if (!falling_block_can_leave_into(below)) return;
@@ -259,6 +264,7 @@ ItemID blockToItem(BlockID block)
         case BlockID::Bricks: return ItemID::Bricks;
         case BlockID::Furnace: return ItemID::Furnace;
         case BlockID::Workbench: return ItemID::Workbench;
+        case BlockID::Gravel: return ItemID::Gravel;
         default: return ItemID::None;
     }
 }
@@ -292,6 +298,7 @@ BlockID itemToBlock(ItemID item)
         case ItemID::Bricks: return BlockID::Bricks;
         case ItemID::Furnace: return BlockID::Furnace;
         case ItemID::Workbench: return BlockID::Workbench;
+        case ItemID::Gravel: return BlockID::Gravel;
         default: return BlockID::Air;
     }
 }
@@ -617,9 +624,9 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .mining = MiningProperties{.mining_resistance = 2, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}},
             .drop = DropProperties{.always_drop = true, .drop = ItemID::Sand},
             .callbacks = {
-                .onPlace            = sand_on_place,
-                .onPostPlacement    = sand_on_post_placement,
-                .onScheduledTick    = sand_on_scheduled_tick
+                .onPlace            = falling_on_place,
+                .onPostPlacement    = falling_on_post_placement,
+                .onScheduledTick    = falling_on_scheduled_tick
             }
         }
     },
@@ -699,6 +706,29 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Workbench, .render_bounds = default_render_bounds, .rect = default_render_rect},
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
             .drop = DropProperties{.always_drop = true, .drop = ItemID::Workbench}
+        }
+    },
+    { BlockID::Gravel,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 0.6f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Gravel, .render_bounds = default_render_bounds, .rect = default_render_rect},
+            .mining = MiningProperties{.mining_resistance = 2, .desired_tool = {.tool_type = ToolType::Shovel, .level = 1}},
+            .drop = DropProperties{
+                .always_drop = true,
+                .drop = ItemID::Gravel,
+                .alternative_drop_chance = 0.1f,
+                .alternative_drop = ItemID::Flint,
+            },
+            .callbacks = {
+                .onPlace            = falling_on_place,
+                .onPostPlacement    = falling_on_post_placement,
+                .onScheduledTick    = falling_on_scheduled_tick
+            }
         }
     },
 };

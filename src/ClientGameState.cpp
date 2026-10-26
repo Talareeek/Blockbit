@@ -382,8 +382,11 @@ void ClientGameState::sendTickInputs()
     if (!transport || !transport->isConnected()) return;
     if (my_entity_id == UUID()) return;
 
-    auto polled = getInputs(local_world, camera, game->getWindow());
-    inputs.insert(inputs.end(), std::make_move_iterator(polled.begin()), std::make_move_iterator(polled.end()));
+    if (!free_camera)
+    {
+        auto polled = getInputs(local_world, camera, game->getWindow());
+        inputs.insert(inputs.end(), std::make_move_iterator(polled.begin()), std::make_move_iterator(polled.end()));
+    }
 
     if (inputs.empty()) return;
 
@@ -621,19 +624,23 @@ void ClientGameState::update(float dt)
         {
             float unit_size = game->getWindow().getView().getSize().y / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
 
+            sf::Vector2<double> view_center;
+            if (free_camera)
+            {
+                view_center = free_camera_position;
+            }
+            else
+            {
+                const auto& position = local_world.getEntity(local_player_entity_id.value())
+                                           .getComponent<TransformComponent>()
+                                           .position;
+                view_center = { position.x + 0.5, position.y - 0.5 };
+            }
+
             sf::View view{
                 sf::Vector2f{
-                    static_cast<float>(
-                        local_world.getEntity(local_player_entity_id.value())
-                            .getComponent<TransformComponent>()
-                            .position.x + 0.5f
-                    ) * unit_size,
-
-                    static_cast<float>(
-                        local_world.getEntity(local_player_entity_id.value())
-                            .getComponent<TransformComponent>()
-                            .position.y - 0.5f
-                    ) * unit_size
+                    static_cast<float>(view_center.x) * unit_size,
+                    static_cast<float>(view_center.y) * unit_size
                 },
                 sf::Vector2f{
                     static_cast<float>(game->getWindow().getSize().x),
@@ -722,6 +729,24 @@ void ClientGameState::update(float dt)
         debug = !debug;
     }
 
+    if(acceptsPlayerInput() && InputManager::isLazyKeyPressed(sf::Keyboard::Key::F4))
+    {
+        free_camera = !free_camera;
+        if(free_camera) free_camera_position = camera;
+    }
+
+    if(acceptsPlayerInput() && free_camera)
+    {
+        sf::Vector2<double> direction{0.0, 0.0};
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) direction.x -= 1.0;
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) direction.x += 1.0;
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) direction.y += 1.0;
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) direction.y -= 1.0;
+        double speed = FREE_CAMERA_SPEED * (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift) ? 3.0 : 1.0);
+        free_camera_position.x += direction.x * speed * dt;
+        free_camera_position.y += direction.y * speed * dt;
+    }
+
     last_fps_update += dt;
 
     if(last_fps_update >= 1.0f)
@@ -768,7 +793,8 @@ void ClientGameState::render(sf::RenderWindow& window)
     renderSunAndMoon(sun_phase, window);
 
     // UPDATING CAMERA
-    if(hasPlayerEntity()) camera = local_world.getEntity(local_player_entity_id.value()).getComponent<TransformComponent>().position + sf::Vector2<double>(0.5, -0.5);
+    if(free_camera) camera = free_camera_position;
+    else if(hasPlayerEntity()) camera = local_world.getEntity(local_player_entity_id.value()).getComponent<TransformComponent>().position + sf::Vector2<double>(0.5, -0.5);
 
     // ENTITIES
     RenderEntities(local_world, camera, window);

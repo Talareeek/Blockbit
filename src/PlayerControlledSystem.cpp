@@ -127,8 +127,17 @@ void PlayerControlledSystem(World& world, float dt)
 
                     if(block_data.drop.has_value() && (proper_tool || block_data.drop->always_drop))
                     {
-                        std::uniform_int_distribution drop_range(block_data.drop->min_amount, block_data.drop->max_amount);
-                        ItemStack drop = {block_data.drop->drop, drop_range(rng)};
+                        ItemStack drop;
+                        if(block_data.drop->alternative_drop_chance > 0.0f &&
+                           std::uniform_real_distribution<float>(0.0f, 1.0f)(rng) < block_data.drop->alternative_drop_chance)
+                        {
+                            drop = {block_data.drop->alternative_drop, 1};
+                        }
+                        else
+                        {
+                            std::uniform_int_distribution drop_range(block_data.drop->min_amount, block_data.drop->max_amount);
+                            drop = {block_data.drop->drop, drop_range(rng)};
+                        }
                         spawnDroppedItem(world, {block_position.x + 0.25, block_position.y + 0.25}, drop, randomDropSpread(60.0f));
                     }
 
@@ -172,9 +181,11 @@ void PlayerControlledSystem(World& world, float dt)
             {
                 auto& selected = inventory.inventory.slots[inventory.selectedSlot];
 
-                // Clicking a furnace with a Lighter in hand should still light
-                // it, not pop open the UI. Fall through to the item-use path.
-                if(!(!selected.empty() && selected.itemID == ItemID::Lighter))
+                // Clicking a furnace with a Lighter or Flint in hand should
+                // still light it, not pop open the UI. Fall through to the
+                // item-use path.
+                bool lights_furnace = !selected.empty() && (selected.itemID == ItemID::Lighter || selected.itemID == ItemID::Flint);
+                if(!lights_furnace)
                 {
                     player.pending_view_opens.push_back(std::make_unique<ServerFurnaceView>(block_position, id));
                     player.mid_usage = false;

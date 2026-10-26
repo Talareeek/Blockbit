@@ -43,6 +43,7 @@ public:
         Bricks,
         Furnace,
         Workbench,
+        Gravel,
 
 
         // ITEMS
@@ -58,6 +59,7 @@ public:
         Diamond,
         Ruby,
         Stick,
+        Flint,
 
 
         // ENTITIES

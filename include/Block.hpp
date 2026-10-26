@@ -46,7 +46,8 @@ enum class BlockID : uint32_t
     Chest,
     Bricks,
     Furnace,
-    Workbench
+    Workbench,
+    Gravel
 };
 
 struct Block
@@ -69,6 +70,11 @@ struct DropProperties
 
     uint8_t min_amount = 1;
     uint8_t max_amount = 1;
+
+    // Rolled per break: with probability `alternative_drop_chance` the normal
+    // drop is replaced by a single `alternative_drop`. 0.0 disables the roll.
+    float alternative_drop_chance = 0.0f;
+    ItemID alternative_drop = ItemID::None;
 };
 
 // Shader-side animation descriptor. frame_count == 1 means "no animation";

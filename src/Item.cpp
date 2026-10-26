@@ -914,6 +914,64 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .category = ItemCategory::Block
         }
     },
+    {
+        ItemID::Gravel,
+        {
+            .name = "Gravel",
+            .texture = AssetManager::GameTextureID::Gravel,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Flint,
+        {
+            .name = "Flint",
+            .texture = AssetManager::GameTextureID::Flint,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Misc,
+            .onUse = [](World& world, sf::Vector2f mouse, UUID user) -> bool
+            {
+                (void)user;
+                sf::Vector2i position = {
+                    static_cast<int>(std::floor(mouse.x)),
+                    static_cast<int>(std::floor(mouse.y))
+                };
+
+                Block target = world.getBlock(position.x, position.y);
+
+                if(target.id != BlockID::Furnace) return false;
+
+                auto* furnace = dynamic_cast<FurnaceBlockEntity*>(world.getBlockEntity(position.x, position.y));
+                if(!furnace) return false;
+                if(furnace->isLit()) return false;
+                if(furnace->fuel.empty() || furnace->input.empty()) return false;
+
+                auto fuel_it = fuelBurnTimes.find(furnace->fuel.itemID);
+                if(fuel_it == fuelBurnTimes.end()) return false;
+
+                auto smelt_it = smeltingRecipes.find(furnace->input.itemID);
+                if(smelt_it == smeltingRecipes.end()) return false;
+
+                furnace->lit = true;
+                furnace->burn_time_total     = fuel_it->second;
+                furnace->burn_time_remaining = fuel_it->second;
+                furnace->cook_time_total     = smelt_it->second.cook_time;
+                furnace->cook_time_remaining = smelt_it->second.cook_time;
+
+                if(--furnace->fuel.quantity == 0) furnace->fuel = {ItemID::None, 0};
+
+                if(!FurnaceState::unpack(target.metadata).lit)
+                {
+                    world.setBlock(position.x, position.y, {BlockID::Furnace, FurnaceState{true}.pack()});
+                }
+
+                return true;
+            }
+        }
+    },
 };
 
 bool ItemStack::empty() const

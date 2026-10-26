@@ -57,6 +57,8 @@ enum class ItemID : uint32_t
     Sand,
     Coarse_Dirt,
     Snow,
+    Gravel,
+    Flint,
 
     // TOOLS
     Wooden_Pickaxe,

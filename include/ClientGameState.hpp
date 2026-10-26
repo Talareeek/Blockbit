@@ -65,6 +65,10 @@ private:
     bool debug = false;
     bool hide_ui = false;
 
+    bool free_camera = false;
+    sf::Vector2<double> free_camera_position{};
+    static constexpr double FREE_CAMERA_SPEED = 20.0;
+
     int fps = 0;
     float last_fps_update = 1.0f;
 

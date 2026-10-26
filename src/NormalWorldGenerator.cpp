@@ -83,6 +83,7 @@ namespace
         {FeatureType::GoldOre,    BlockID::Gold_Ore,    5, 60, 4, 6},
         {FeatureType::DiamondOre, BlockID::Diamond_Ore, 5, 25, 2, 5},
         {FeatureType::RubyOre,    BlockID::Ruby_Ore,    5, 15, 1, 4},
+        {FeatureType::Gravel,     BlockID::Gravel,      5, 120, 8, 14},
     };
 
     const OreDef* findOre(FeatureType type)
@@ -302,10 +303,11 @@ ColumnData NormalWorldGenerator::getColumn(int world_x) const
 
     if (underwater || (beach && !keeps_biome_surface))
     {
-        col.top_block = Block{BlockID::Sand, 0};
+        const BlockID shore_block = (col.climate.temperature < -0.1) ? BlockID::Gravel : BlockID::Sand;
+        col.top_block = Block{shore_block, 0};
 
         for (int i = 0; i < 3; i++)
-            col.sub_blocks[i] = Block{BlockID::Sand, 0};
+            col.sub_blocks[i] = Block{shore_block, 0};
     }
 
     return col;
