@@ -2,7 +2,7 @@
 #include "../include/Button.hpp"
 
 #include <algorithm>
-#include <cstdlib>
+#include <random>
 #include <string>
 
 namespace
@@ -59,7 +59,8 @@ void GenerationPreview::setSeed(unsigned int s)
 
 void GenerationPreview::rerollSeed()
 {
-    setSeed(static_cast<unsigned int>(std::rand()));
+    static thread_local std::mt19937 rng(std::random_device{}());
+    setSeed(static_cast<unsigned int>(rng()));
 }
 
 void GenerationPreview::refreshSeedLabel()

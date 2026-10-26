@@ -89,14 +89,14 @@ namespace
     }
 }
 
-GameServer::GameServer(std::filesystem::path world_path, std::unique_ptr<ServerTransport> transport) : mode(ServerMode::Listen), server_path(world_path), transport(std::move(transport)), world(world_path)
+GameServer::GameServer(std::filesystem::path world_path, std::unique_ptr<ServerTransport> transport) : mode(ServerMode::Listen), server_path(world_path), world(world_path), transport(std::move(transport))
 {
     this->transport->start();
     loadOperators();
     loadBans();
 }
 
-GameServer::GameServer(std::string name, unsigned int seed, GenerationProperties generation_properties, std::unique_ptr<ServerTransport> transport) : mode(ServerMode::Listen), server_path(getWorldsPath() / name), transport(std::move(transport)), world(name, getWorldsPath() / name, seed, generation_properties)
+GameServer::GameServer(std::string name, unsigned int seed, GenerationProperties generation_properties, std::unique_ptr<ServerTransport> transport) : mode(ServerMode::Listen), server_path(getWorldsPath() / name), world(name, getWorldsPath() / name, seed, generation_properties), transport(std::move(transport))
 {
     this->transport->start();
     loadOperators();
@@ -104,7 +104,7 @@ GameServer::GameServer(std::string name, unsigned int seed, GenerationProperties
 }
 
 GameServer::GameServer(std::filesystem::path world_path, std::unique_ptr<ServerTransport> transport, ServerMode mode)
-    : mode(mode), server_path(world_path), transport(std::move(transport)), world(world_path)
+    : mode(mode), server_path(world_path), world(world_path), transport(std::move(transport))
 {
     this->transport->start();
     loadOperators();
@@ -114,7 +114,7 @@ GameServer::GameServer(std::filesystem::path world_path, std::unique_ptr<ServerT
 }
 
 GameServer::GameServer(std::filesystem::path server_root, std::filesystem::path world_path, std::unique_ptr<ServerTransport> transport)
-    : mode(ServerMode::Dedicated), server_path(std::move(server_root)), transport(std::move(transport)), world(world_path)
+    : mode(ServerMode::Dedicated), server_path(std::move(server_root)), world(world_path), transport(std::move(transport))
 {
     this->transport->start();
     loadOperators();
@@ -125,8 +125,9 @@ GameServer::GameServer(std::filesystem::path server_root, std::filesystem::path 
 }
 
 GameServer::GameServer(std::filesystem::path server_root, std::string name, unsigned int seed, GenerationProperties generation_properties, std::unique_ptr<ServerTransport> transport)
-    : mode(ServerMode::Dedicated), server_path(std::move(server_root)), transport(std::move(transport)),
-      world(name, server_path / "worlds" / name, seed, generation_properties)
+    : mode(ServerMode::Dedicated), server_path(std::move(server_root)),
+      world(name, server_path / "worlds" / name, seed, generation_properties),
+      transport(std::move(transport))
 {
     this->transport->start();
     loadOperators();

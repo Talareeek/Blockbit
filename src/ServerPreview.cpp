@@ -63,40 +63,6 @@ void ServerPreview::update(float dt)
 
 }
 
-namespace
-{
-    void fitText(sf::Text& text, float max_width)
-    {
-        if (max_width <= 0.0f)
-        {
-            text.setString("");
-            return;
-        }
-
-        if (text.getLocalBounds().size.x <= max_width) return;
-
-        sf::String original = text.getString();
-        sf::String truncated = original;
-
-        const sf::String ellipsis = "...";
-        text.setString(ellipsis);
-        if (text.getLocalBounds().size.x > max_width)
-        {
-            text.setString("");
-            return;
-        }
-
-        while (!truncated.isEmpty())
-        {
-            truncated = truncated.substring(0, truncated.getSize() - 1);
-            text.setString(truncated + ellipsis);
-            if (text.getLocalBounds().size.x <= max_width) return;
-        }
-
-        text.setString(ellipsis);
-    }
-}
-
 void ServerPreview::render(sf::RenderWindow& window)
 {
     if (!packet) return;

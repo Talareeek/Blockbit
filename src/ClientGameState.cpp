@@ -39,7 +39,7 @@
 
 ClientGameState::ClientGameState(Game* game, std::filesystem::path world_path, uint16_t network_port, std::string nickname) : GameState(game)
 {
-    game->getWindow().setTitle("Blockbit - " + (network_port == 0) ? "Singleplayer" : "Host");
+    game->getWindow().setTitle(std::string("Blockbit - ") + (network_port == 0 ? "Singleplayer" : "Host"));
 
     this->nickname = std::move(nickname);
 
@@ -88,7 +88,7 @@ ClientGameState::ClientGameState(Game* game, std::filesystem::path world_path, u
 
 ClientGameState::ClientGameState(Game* game, std::string name, unsigned int seed, GenerationProperties generation_properties, uint16_t network_port, std::string nickname) : GameState(game)
 {
-    game->getWindow().setTitle("Blockbit - " + (network_port == 0) ? "Singleplayer" : "Host");
+    game->getWindow().setTitle(std::string("Blockbit - ") + (network_port == 0 ? "Singleplayer" : "Host"));
 
     this->nickname = std::move(nickname);
 

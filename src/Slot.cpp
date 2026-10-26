@@ -49,7 +49,6 @@ void Slot::render(sf::RenderWindow& window)
 {
     sf::RectangleShape background(size * 0.9f);
     background.setPosition(position + size * 0.05f);
-    sf::Color color(0, 0, 0, 128);
     background.setFillColor(background_color);
     background.setOutlineColor((hovered) ? sf::Color::White : outline_color);
     background.setOutlineThickness(size.x / 20.0f);
@@ -85,7 +84,6 @@ void Slot::render(sf::RenderTarget& window)
 {
     sf::RectangleShape background(size * 0.9f);
     background.setPosition(position + size * 0.05f);
-    sf::Color color(0, 0, 0, 128);
     background.setFillColor(background_color);
     background.setOutlineColor((hovered) ? sf::Color::White : outline_color);
     background.setOutlineThickness(size.x / 20.0f);

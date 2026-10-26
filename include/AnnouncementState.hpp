@@ -17,9 +17,9 @@ public:
 
     void handleEvent(const sf::Event& event) override;
 
-    void update(float dt);
+    void update(float dt) override;
 
-    void render(sf::RenderWindow& window);
+    void render(sf::RenderWindow& window) override;
 };
 
 #endif // ANNOUNCEMENT_STATE_HPP

@@ -2,7 +2,6 @@
 #include "../include/AssetManager.hpp"
 
 constexpr int HEIGHT_FACTOR = 5;
-constexpr uint32_t PLAYER_TEXTURE_ID = 0;
 constexpr float STEP_LENGTH = 0.5f;
 
 LobbyPlayerElement::LobbyPlayerElement() : UIElement({0.0f, 0.0f}, {0.0f, 0.0f})

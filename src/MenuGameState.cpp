@@ -81,8 +81,6 @@ MenuGameState::MenuGameState(Game* game) : GameState(game), serverPreview(&statu
 
     settings.updateScreenRelative(game->getWindow().getSize());
 
-    UIElement::ScreenRelative sliderRelative{{0.30f, 0.45f}, {0.30f, 0.08f}, UIElement::ScreenRelative::ScaleMode::UniformByHeight};
-
     backgroundTexture = generateBackground();
 
     sf::Music background_music = std::move(AssetManager::getMusic(AssetManager::MusicID::Dream));
@@ -189,11 +187,6 @@ void MenuGameState::update(float dt)
 
     worldList.position = {size.x * 0.75f, 0.0f};
     worldList.size = {size.x * 0.25f, static_cast<float>(size.y)};
-
-    float fieldW = size.y * 0.32f;
-    float fieldH = size.y * 0.06f;
-    float fieldX = (size.x * 0.75f - fieldW) * 0.5f;
-    float fieldY = size.y * 0.78f;
 
     worldList.update(dt);
     quit.update(dt);

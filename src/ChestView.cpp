@@ -16,6 +16,7 @@
 
 namespace
 {
+#ifndef HEADLESS_BUILD
     constexpr unsigned int TEXTURE_RECT_WIDTH  = 202;
     constexpr unsigned int TEXTURE_RECT_HEIGHT = 183;
 
@@ -27,18 +28,19 @@ namespace
     constexpr float SLOT_PX_SIZE = 20.0f;
     constexpr float SLOT_PX_GAP  = 2.0f;
 
-    std::vector<uint8_t> encodeStack(const ItemStack& stack)
-    {
-        std::vector<uint8_t> buffer(sizeof(ItemStack));
-        std::memcpy(buffer.data(), &stack, sizeof(ItemStack));
-        return buffer;
-    }
-
     bool decodeStack(const std::vector<uint8_t>& payload, ItemStack& out)
     {
         if (payload.size() != sizeof(ItemStack)) return false;
         std::memcpy(&out, payload.data(), sizeof(ItemStack));
         return true;
+    }
+#endif
+
+    std::vector<uint8_t> encodeStack(const ItemStack& stack)
+    {
+        std::vector<uint8_t> buffer(sizeof(ItemStack));
+        std::memcpy(buffer.data(), &stack, sizeof(ItemStack));
+        return buffer;
     }
 
     ChestBlockEntity* getChest(World& world, sf::Vector2i position)

@@ -11,9 +11,9 @@
 #include <imgui.h>
 
 #include <array>
-#include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <random>
 #include <sstream>
 #include <string>
 
@@ -69,7 +69,8 @@ void CreateWorldState::createWorld()
 
     std::filesystem::create_directories(path);
 
-    unsigned int seed_value = static_cast<unsigned int>(std::rand());
+    static thread_local std::mt19937 rng(std::random_device{}());
+    unsigned int seed_value = static_cast<unsigned int>(rng());
     if (!seed_text.empty())
     {
         std::istringstream stream(seed_text);

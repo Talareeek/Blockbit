@@ -1462,8 +1462,6 @@ void renderHotbar(std::array<ItemStack, 9> items, uint8_t selected_slot, sf::Ren
     float slotStart = size.x * (3.f / 202.f);
     float verticalOffset = size.y * (3.f / 26.f);
 
-    float itemSize = slotWidth - slotSpacing;
-
     for(int i = 0; i < 9; i++)
     {
         ItemStack& stack = items[i];

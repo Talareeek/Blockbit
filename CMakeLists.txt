@@ -16,6 +16,14 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -g")
 endif()
 
+# Warning flags applied only to project-owned targets (bb_core_client,
+# bb_core_server, Blockbit, BlockbitServer) — never to fetched dependencies
+# such as imgui, imgui-sfml, or nlohmann_json.
+set(BLOCKBIT_WARNING_FLAGS "")
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    set(BLOCKBIT_WARNING_FLAGS -Wall)
+endif()
+
 # Opt-out release flavour for the headless/dedicated server: pure -O3,
 # no debug info. Driven by build-headless.sh (sets BLOCKBIT_HEADLESS_STRIP=ON).
 option(BLOCKBIT_HEADLESS_STRIP "Build BlockbitServer with release flags stripped of debug info" OFF)
@@ -198,6 +206,7 @@ target_link_libraries(bb_core_deps INTERFACE
 # -----------------------------------------------------------------------------
 add_library(bb_core_client OBJECT ${BLOCKBIT_CORE_SOURCES})
 target_link_libraries(bb_core_client PUBLIC bb_core_deps)
+target_compile_options(bb_core_client PRIVATE ${BLOCKBIT_WARNING_FLAGS})
 
 # -----------------------------------------------------------------------------
 # bb_core_server: same sources compiled WITH HEADLESS_BUILD.
@@ -205,6 +214,7 @@ target_link_libraries(bb_core_client PUBLIC bb_core_deps)
 add_library(bb_core_server OBJECT ${BLOCKBIT_CORE_SOURCES})
 target_link_libraries(bb_core_server PUBLIC bb_core_deps)
 target_compile_definitions(bb_core_server PRIVATE HEADLESS_BUILD)
+target_compile_options(bb_core_server PRIVATE ${BLOCKBIT_WARNING_FLAGS})
 
 # -----------------------------------------------------------------------------
 # Blockbit: client executable (behavior unchanged).
@@ -219,6 +229,7 @@ target_link_libraries(Blockbit PRIVATE
     bb_core_deps
     ImGui-SFML::ImGui-SFML
 )
+target_compile_options(Blockbit PRIVATE ${BLOCKBIT_WARNING_FLAGS})
 
 if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
@@ -236,6 +247,7 @@ add_executable(BlockbitServer
 
 target_link_libraries(BlockbitServer PRIVATE bb_core_deps)
 target_compile_definitions(BlockbitServer PRIVATE HEADLESS_BUILD)
+target_compile_options(BlockbitServer PRIVATE ${BLOCKBIT_WARNING_FLAGS})
 
 if(BLOCKBIT_HEADLESS_STRIP AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(BlockbitServer PRIVATE -O3)

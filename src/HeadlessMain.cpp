@@ -41,6 +41,7 @@
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <random>
 #include <sstream>
 #include <string>
 #include <system_error>
@@ -76,7 +77,7 @@ namespace
         inline const char* red()     { return ansi("\x1b[31m"); }
         inline const char* green()   { return ansi("\x1b[32m"); }
         inline const char* yellow()  { return ansi("\x1b[33m"); }
-        inline const char* blue()    { return ansi("\x1b[34m"); }
+        [[maybe_unused]] inline const char* blue() { return ansi("\x1b[34m"); }
         inline const char* magenta() { return ansi("\x1b[35m"); }
         inline const char* cyan()    { return ansi("\x1b[36m"); }
         inline const char* gray()    { return ansi("\x1b[90m"); }
@@ -785,7 +786,8 @@ namespace
         }
 
         std::string seed_text = promptLine("seed (blank = random)", "");
-        unsigned int seed = static_cast<unsigned int>(std::rand());
+        static thread_local std::mt19937 rng(std::random_device{}());
+        unsigned int seed = static_cast<unsigned int>(rng());
         if (!seed_text.empty())
         {
             try { seed = static_cast<unsigned int>(std::stoul(seed_text)); }
@@ -988,8 +990,6 @@ int main(int argc, char* argv[])
     std::cout << c::dim() << "[Blockbit Dedicated Server " << __DATE__ << " " << __TIME__ << " build]"
               << c::reset() << '\n';
 
-    std::srand(static_cast<unsigned int>(std::time(nullptr)));
-
     CliArgs args;
     if (!parseArgs(argc, argv, args))
     {
@@ -1077,7 +1077,8 @@ int main(int argc, char* argv[])
                 // Legacy path: config pointed at a world that doesn't exist on disk
                 // yet. Generate it now from config.generation / config.seed, matching
                 // the old one-shot behaviour.
-                unsigned int seed = config.seed.value_or(static_cast<unsigned int>(std::rand()));
+                static thread_local std::mt19937 fallback_rng(std::random_device{}());
+                unsigned int seed = config.seed.value_or(static_cast<unsigned int>(fallback_rng()));
                 GenerationProperties props = config.generation.value_or(defaultGenerationProperties(GenerationType::Normal));
 
                 std::filesystem::create_directories(world_path);

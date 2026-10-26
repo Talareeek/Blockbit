@@ -37,8 +37,6 @@ void Hotbar::render(sf::RenderWindow& window)
 
     if(!inventory) return;
 
-    float itemSize = slotWidth - slotSpacing;
-
     for(int i = 0; i < 9; i++)
     {
         ItemStack& stack = inventory->inventory.slots[i];

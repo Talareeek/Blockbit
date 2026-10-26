@@ -8,8 +8,6 @@ class AccountWidget
 {
 private:
 
-    bool hovered = false;
-
     char input[16] = {};
 
     bool editing = false;

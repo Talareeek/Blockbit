@@ -50,30 +50,11 @@ class Console
 {
 private:
 
-    enum class ResizeEdge
-    {
-        None,
-        Top,
-        Bottom,
-        Left,
-        Right,
-        TopLeft,
-        TopRight,
-        BottomLeft,
-        BottomRight
-    };
-
     struct LogEntry
     {
         std::wstring text;
         sf::Color color;
     };
-
-    ResizeEdge currentEdge = ResizeEdge::None;
-    bool dragging = false;
-    sf::Vector2f lastMousePos;
-
-    bool moving = false;
 
     bool open = false;
 
@@ -100,8 +81,6 @@ private:
 
     std::vector<std::string> findMatches(const std::string& prefix) const;
 
-
-    float cursorTimer = 0.0f;
 
     World* world = nullptr;
 

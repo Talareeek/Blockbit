@@ -1,7 +1,7 @@
 #include "../include/GameState.hpp"
 #include "../include/Game.hpp"
 
-GameState::GameState(Game* game) : game(game), on_top{true}
+GameState::GameState(Game* game) : on_top{true}, game(game)
 {
 
 }

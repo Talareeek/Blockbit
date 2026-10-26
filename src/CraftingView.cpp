@@ -18,6 +18,7 @@
 
 namespace
 {
+#ifndef HEADLESS_BUILD
     constexpr unsigned int TEXTURE_RECT_WIDTH  = 202;
     constexpr unsigned int TEXTURE_RECT_HEIGHT = 183;
 
@@ -46,6 +47,7 @@ namespace
     constexpr float INGREDIENT_COL_TOP_Y  = 14.0f;
     constexpr float INGREDIENT_COL_HEIGHT = 52.0f;
     constexpr int   INGREDIENT_SLOTS_PER_COL = 4;
+#endif
 
     std::vector<uint8_t> encodeStack(const ItemStack& stack)
     {
@@ -104,6 +106,7 @@ namespace
         inventory.addItemWithLeftover(requested.itemID, requested.quantity);
     }
 
+#ifndef HEADLESS_BUILD
     bool hasIngredients(const std::array<ItemStack, 36>& inventory_stacks, const Recipe& recipe)
     {
         for (const auto& ingredient : recipe.ingredients)
@@ -117,6 +120,7 @@ namespace
         }
         return true;
     }
+#endif
 }
 
 // ---------- ServerCraftingView ----------

@@ -16,6 +16,7 @@
 
 namespace
 {
+#ifndef HEADLESS_BUILD
     constexpr unsigned int TEXTURE_RECT_WIDTH  = 202;
     constexpr unsigned int TEXTURE_RECT_HEIGHT = 183;
 
@@ -30,26 +31,11 @@ namespace
     constexpr float PLAYER_GRID_PX_X = 3.0f;
     constexpr float PLAYER_GRID_PX_Y = 94.0f;
 
-    std::vector<uint8_t> encodeStack(const ItemStack& stack)
-    {
-        std::vector<uint8_t> buffer(sizeof(ItemStack));
-        std::memcpy(buffer.data(), &stack, sizeof(ItemStack));
-        return buffer;
-    }
-
     bool decodeStack(const std::vector<uint8_t>& payload, ItemStack& out)
     {
         if (payload.size() != sizeof(ItemStack)) return false;
         std::memcpy(&out, payload.data(), sizeof(ItemStack));
         return true;
-    }
-
-    std::vector<uint8_t> encodeProgress(float remaining, float total)
-    {
-        std::vector<uint8_t> buffer(sizeof(float) * 2);
-        std::memcpy(buffer.data(),                 &remaining, sizeof(float));
-        std::memcpy(buffer.data() + sizeof(float), &total,     sizeof(float));
-        return buffer;
     }
 
     bool decodeProgress(const std::vector<uint8_t>& payload, float& remaining, float& total)
@@ -58,6 +44,22 @@ namespace
         std::memcpy(&remaining, payload.data(),                 sizeof(float));
         std::memcpy(&total,     payload.data() + sizeof(float), sizeof(float));
         return true;
+    }
+#endif
+
+    std::vector<uint8_t> encodeStack(const ItemStack& stack)
+    {
+        std::vector<uint8_t> buffer(sizeof(ItemStack));
+        std::memcpy(buffer.data(), &stack, sizeof(ItemStack));
+        return buffer;
+    }
+
+    std::vector<uint8_t> encodeProgress(float remaining, float total)
+    {
+        std::vector<uint8_t> buffer(sizeof(float) * 2);
+        std::memcpy(buffer.data(),                 &remaining, sizeof(float));
+        std::memcpy(buffer.data() + sizeof(float), &total,     sizeof(float));
+        return buffer;
     }
 
     FurnaceBlockEntity* getFurnace(World& world, sf::Vector2i position)

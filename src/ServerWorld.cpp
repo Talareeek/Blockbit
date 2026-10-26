@@ -148,7 +148,7 @@ void ServerWorld::removeEntity(UUID id)
     World::removeEntity(id);
 }
 
-ServerWorld::ServerWorld(const std::string name, const std::filesystem::path path, unsigned int seed, GenerationProperties generation_properties) : name(name), path(path), seed(seed), perlin(seed), generation_properties{generation_properties}
+ServerWorld::ServerWorld(const std::string name, const std::filesystem::path path, unsigned int seed, GenerationProperties generation_properties) : path(path), name(name), seed(seed), generation_properties{generation_properties}, perlin(seed)
 {
     world_generator = makeWorldGenerator(seed, this->generation_properties);
 

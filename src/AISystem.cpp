@@ -7,12 +7,14 @@
 #include "../include/Block.hpp"
 
 #include <cmath>
-#include <cstdlib>
 #include <limits>
+#include <random>
 
 static float frand01()
 {
-    return static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
+    static thread_local std::mt19937 rng(std::random_device{}());
+    static thread_local std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+    return dist(rng);
 }
 
 static bool obstacleAhead(World& world, const TransformComponent& t, int dir)

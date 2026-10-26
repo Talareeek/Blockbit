@@ -167,9 +167,7 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
     if(!entity.hasComponent<PhysicsComponent>() || !entity.hasComponent<RenderComponent>() || !entity.hasComponent<TransformComponent>() || !entity.hasComponent<InventoryComponent>() || !entity.hasComponent<PlayerControlledComponent>()) return;
 
     auto& physics = entity.getComponent<PhysicsComponent>();
-    auto& render = entity.getComponent<RenderComponent>();
     auto& transform = entity.getComponent<TransformComponent>();
-    auto& inventory = entity.getComponent<InventoryComponent>();
     auto& player = entity.getComponent<PlayerControlledComponent>();
     auto& animation = entity.getComponent<AnimationComponent>();
 
