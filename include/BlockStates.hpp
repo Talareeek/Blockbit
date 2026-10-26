@@ -18,6 +18,19 @@ struct WaterState
     static WaterState unpack(uint16_t v) { return { static_cast<uint8_t>(v & 0xF) }; }
 };
 
+// Lava spreads half as far as water: FULL projects level 3 sideways, chain
+// decays level 2 → 1 → stop. Max 3 cells of horizontal reach from a source.
+struct LavaState
+{
+    static constexpr uint8_t FULL   = 4;
+    static constexpr uint8_t SOURCE = 5;
+
+    uint8_t level = 0;
+
+    uint16_t pack() const { return static_cast<uint16_t>(level & 0xF); }
+    static LavaState unpack(uint16_t v) { return { static_cast<uint8_t>(v & 0xF) }; }
+};
+
 struct ChestState
 {
     bool open = false;

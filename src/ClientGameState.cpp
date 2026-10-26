@@ -27,6 +27,7 @@
 #include "../include/InventoryView.hpp"
 #include "../include/FurnaceView.hpp"
 #include "../include/CraftingView.hpp"
+#include "../include/Settings.hpp"
 
 #include <iostream>
 #include <algorithm>
@@ -780,6 +781,10 @@ void ClientGameState::render(sf::RenderWindow& window)
 
     // BLOCK OUTLINE
     RenderBlockOutline(local_world, camera, getMouseBlockPosition(camera, window), window);
+
+    // DEBUG OVERLAYS
+    if (Settings::debug.render_hitboxes)      RenderEntityHitboxes(local_world, camera, window);
+    if (Settings::debug.render_chunk_borders) RenderChunkBorders(camera, window);
 
 
     window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));

@@ -24,8 +24,15 @@ public:
         float sound_volume = 100.0f;
     };
 
+    struct Debug
+    {
+        bool render_hitboxes = false;
+        bool render_chunk_borders = false;
+    };
+
     static Graphics graphics;
     static Audio audio;
+    static Debug debug;
 
     static void load();
     static void save();
@@ -33,5 +40,6 @@ public:
 
 inline Settings::Graphics Settings::graphics{};
 inline Settings::Audio Settings::audio{};
+inline Settings::Debug Settings::debug{};
 
 #endif // SETTINGS_HPP

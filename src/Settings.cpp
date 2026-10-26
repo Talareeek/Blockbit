@@ -49,6 +49,13 @@ void Settings::load()
             audio.music_volume  = a.value("music_volume",  audio.music_volume);
             audio.sound_volume  = a.value("sound_volume",  audio.sound_volume);
         }
+
+        if(data.contains("debug"))
+        {
+            const auto& d = data["debug"];
+            debug.render_hitboxes      = d.value("render_hitboxes",      debug.render_hitboxes);
+            debug.render_chunk_borders = d.value("render_chunk_borders", debug.render_chunk_borders);
+        }
     }
     catch(const std::exception& e)
     {
@@ -77,6 +84,10 @@ void Settings::save()
             {"master_volume", audio.master_volume},
             {"music_volume",  audio.music_volume},
             {"sound_volume",  audio.sound_volume}
+        };
+        data["debug"] = {
+            {"render_hitboxes",      debug.render_hitboxes},
+            {"render_chunk_borders", debug.render_chunk_borders}
         };
 
         std::ofstream file(path);

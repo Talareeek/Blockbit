@@ -903,7 +903,7 @@ sf::Vector2<double> ServerWorld::getSpawnPoint()
     auto chunkOf = [](int x) { return (x >= 0) ? x / CHUNK_WIDTH : (x - CHUNK_WIDTH + 1) / CHUNK_WIDTH; };
 
     auto isPassable = [](Block b) { return b.id == BlockID::Air; };
-    auto isFloor    = [](Block b) { return b.id != BlockID::Air && b.id != BlockID::Water; };
+    auto isFloor    = [](Block b) { return b.id != BlockID::Air && b.id != BlockID::Water && b.id != BlockID::Lava; };
 
     auto findSpawnY = [&](int wx) -> std::optional<int>
     {

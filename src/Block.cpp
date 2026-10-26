@@ -5,11 +5,11 @@
 
 namespace
 {
-    // Can a falling block pass through this cell on the way down? Air and water
-    // are both passable; water gets displaced by the final landing.
+    // Can a falling block pass through this cell on the way down? Air, water
+    // and lava are passable; the fluid gets displaced by the final landing.
     bool falling_block_can_leave_into(Block b)
     {
-        return b.id == BlockID::Air || b.id == BlockID::Water;
+        return b.id == BlockID::Air || b.id == BlockID::Water || b.id == BlockID::Lava;
     }
 
     void sand_try_schedule_fall(BlockUpdateContext& ctx, sf::Vector2i pos)
@@ -143,6 +143,87 @@ namespace
             if (!water_cell_passable(target)) return;
             if (target.id == BlockID::Water && WaterState::unpack(target.metadata).level >= new_level) return;
             ctx.world.setBlock(tx, ty, {BlockID::Water, WaterState{new_level}.pack()});
+        };
+
+        try_flow(pos.x - 1, pos.y);
+        try_flow(pos.x + 1, pos.y);
+    }
+
+    // Lava uses the same cascade as water but ticks three times slower and
+    // caps horizontal reach at ~3 cells (half of water's ~7). Levels follow
+    // LavaState (FULL=4, SOURCE=5) instead of WaterState.
+    constexpr int LAVA_TICK_DELAY = 90;
+
+    bool lava_cell_passable(Block b)
+    {
+        return b.id == BlockID::Air || b.id == BlockID::Lava;
+    }
+
+    bool lava_is_fed(World& world, sf::Vector2i pos, uint8_t level)
+    {
+        if (level == LavaState::SOURCE) return true;
+
+        if (world.getBlock(pos.x, pos.y + 1).id == BlockID::Lava) return true;
+
+        Block left  = world.getBlock(pos.x - 1, pos.y);
+        Block right = world.getBlock(pos.x + 1, pos.y);
+        if (left.id  == BlockID::Lava && LavaState::unpack(left.metadata).level  > level) return true;
+        if (right.id == BlockID::Lava && LavaState::unpack(right.metadata).level > level) return true;
+        return false;
+    }
+
+    void lava_schedule_self(BlockUpdateContext& ctx, sf::Vector2i pos)
+    {
+        if (ctx.world.getBlock(pos.x, pos.y).id != BlockID::Lava) return;
+        if (ctx.pipeline.hasScheduledTick(pos)) return;
+        ctx.pipeline.scheduleTick(pos, LAVA_TICK_DELAY);
+    }
+
+    void lava_on_place(BlockUpdateContext& ctx, sf::Vector2i pos)
+    {
+        lava_schedule_self(ctx, pos);
+    }
+
+    void lava_on_neighbor_changed(BlockUpdateContext& ctx, sf::Vector2i pos, sf::Vector2i /*neighbor*/)
+    {
+        lava_schedule_self(ctx, pos);
+    }
+
+    void lava_on_scheduled_tick(BlockUpdateContext& ctx, sf::Vector2i pos)
+    {
+        Block self = ctx.world.getBlock(pos.x, pos.y);
+        if (self.id != BlockID::Lava) return;
+
+        const uint8_t level = LavaState::unpack(self.metadata).level;
+
+        if (!lava_is_fed(ctx.world, pos, level))
+        {
+            ctx.world.setBlock(pos.x, pos.y, {BlockID::Air, 0});
+            return;
+        }
+
+        Block below = ctx.world.getBlock(pos.x, pos.y - 1);
+
+        if (below.id == BlockID::Air)
+        {
+            ctx.world.setBlock(pos.x, pos.y - 1, {BlockID::Lava, LavaState{LavaState::FULL}.pack()});
+            return;
+        }
+
+        if (below.id == BlockID::Lava) return;
+
+        if (level <= 1) return;
+
+        const uint8_t new_level = (level < LavaState::SOURCE)
+            ? static_cast<uint8_t>(level - 1)
+            : static_cast<uint8_t>(LavaState::FULL - 1);
+
+        auto try_flow = [&](int tx, int ty)
+        {
+            Block target = ctx.world.getBlock(tx, ty);
+            if (!lava_cell_passable(target)) return;
+            if (target.id == BlockID::Lava && LavaState::unpack(target.metadata).level >= new_level) return;
+            ctx.world.setBlock(tx, ty, {BlockID::Lava, LavaState{new_level}.pack()});
         };
 
         try_flow(pos.x - 1, pos.y);
@@ -319,6 +400,24 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
                 .onNeighborChanged  = water_on_neighbor_changed,
                 .onScheduledTick    = water_on_scheduled_tick
             },
+            .light_opacity = 3,
+        }
+    },
+    { BlockID::Lava,
+        {
+            .solid = false,
+            .transparent = true,
+            .breakable = false,
+            .liquid = true,
+            .drag = 8.0f,
+            .hardness = 0.0f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Lava, .render_bounds = lava_render_bounds, .rect = lava_render_rect},
+            .callbacks = {
+                .onPlace            = lava_on_place,
+                .onNeighborChanged  = lava_on_neighbor_changed,
+                .onScheduledTick    = lava_on_scheduled_tick
+            },
+            .light_emission = 15,
             .light_opacity = 3,
         }
     },

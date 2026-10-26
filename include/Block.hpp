@@ -25,6 +25,7 @@ enum class BlockID : uint32_t
     Obsidian,
     Bedrock,
     Water,
+    Lava,
     Coal_Ore,
     Iron_Ore,
     Gold_Ore,
@@ -169,6 +170,18 @@ inline auto water_render_rect = [](Block block_instance) -> sf::IntRect
 {
     const uint8_t level = WaterState::unpack(block_instance.metadata).level;
     return {{0, 0}, {16, 16 - (9 - level)}};
+};
+
+inline auto lava_render_bounds = [](Block block_instance) -> sf::FloatRect
+{
+    const uint8_t level = LavaState::unpack(block_instance.metadata).level;
+    return {{0.0f, 0.0f}, {1.0f, static_cast<float>(16 - (LavaState::SOURCE - level) * 3) / 16.0f}};
+};
+
+inline auto lava_render_rect = [](Block block_instance) -> sf::IntRect
+{
+    const uint8_t level = LavaState::unpack(block_instance.metadata).level;
+    return {{0, 0}, {16, 16 - (LavaState::SOURCE - level) * 3}};
 };
 
 inline auto chest_render_bounds = [](Block block_instance) -> sf::FloatRect

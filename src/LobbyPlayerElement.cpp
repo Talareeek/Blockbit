@@ -36,7 +36,13 @@ void LobbyPlayerElement::update(float dt)
 
 void LobbyPlayerElement::render(sf::RenderWindow& window)
 {
-    size = {static_cast<float>(window.getSize().y) / static_cast<float>(HEIGHT_FACTOR), static_cast<float>(window.getSize().y) / static_cast<float>(HEIGHT_FACTOR)};
+    constexpr int FRAME_W = 12;
+    constexpr int FRAME_H = 16;
+
+    const float h = static_cast<float>(window.getSize().y) / static_cast<float>(HEIGHT_FACTOR);
+    const float w = h * static_cast<float>(FRAME_W) / static_cast<float>(FRAME_H);
+
+    size = {w, h};
     position = {(static_cast<float>(window.getSize().x) - size.x) / 2.0f, (static_cast<float>(window.getSize().y) - size.y) / 2.0f};
 
     sf::RectangleShape rect(size);
@@ -44,29 +50,25 @@ void LobbyPlayerElement::render(sf::RenderWindow& window)
 
     rect.setTexture(&AssetManager::getGameTexture(AssetManager::GameTextureID::Player));
 
+    // player.png is 48x16: idle frames 0,1 at x=0,12 and walking frames 2,3 at x=24,36.
+    // Walking frames natively face left; RIGHT mirrors them via a negative-width texture rect.
+    const int idle_x = step ? 0 : FRAME_W;
+    const int walk_x = step ? 2 * FRAME_W : 3 * FRAME_W;
+
     sf::IntRect texture_rect;
 
     switch(direction)
     {
-    case Direction::LEFT:
-
-        if(step) texture_rect = {{0, 32}, {16, 16}};
-        else texture_rect = {{32, 16}, {16, 16}};
-
+    case Direction::CENTER:
+        texture_rect = {{idle_x, 0}, {FRAME_W, FRAME_H}};
         break;
 
-    case Direction::CENTER:
-
-        if(step) texture_rect = {{0, 16}, {16, 16}};
-        else texture_rect = {{16, 16}, {16, 16}};
-
+    case Direction::LEFT:
+        texture_rect = {{walk_x, 0}, {FRAME_W, FRAME_H}};
         break;
 
     case Direction::RIGHT:
-
-        if(step) texture_rect = {{32, 32}, {16, 16}};
-        else texture_rect = {{16, 32}, {16, 16}};
-
+        texture_rect = {{walk_x + FRAME_W, 0}, {-FRAME_W, FRAME_H}};
         break;
     }
 

@@ -92,6 +92,12 @@ void SettingsWindow::render()
         if(audio_changed) apply_audio_requested = true;
     }
 
+    if(ImGui::CollapsingHeader("Debug", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        ImGui::Checkbox("Render hitboxes",      &Settings::debug.render_hitboxes);
+        ImGui::Checkbox("Render chunk borders", &Settings::debug.render_chunk_borders);
+    }
+
     ImGui::Separator();
 
     if(ImGui::Button("Save"))

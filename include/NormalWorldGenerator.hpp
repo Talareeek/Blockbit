@@ -114,7 +114,8 @@ public:
     double getHeightNoise(double x) const;
     int getHeight(int worldX) const;
 
-    static constexpr int SEA_LEVEL = 75;
+    static constexpr int SEA_LEVEL  = 75;
+    static constexpr int LAVA_LEVEL = 12;
 
     static constexpr int TREE_GRID = 7;
     static constexpr int TREE_RADIUS = 3;

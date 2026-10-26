@@ -107,7 +107,8 @@ public:
     uint64_t days{0};
 
     static constexpr float DAY_CYCLE_DURATION = 1200.0f;
-    static constexpr int SEA_LEVEL = 75;
+    static constexpr int SEA_LEVEL  = 75;
+    static constexpr int LAVA_LEVEL = 12;
 
     // Loaded radius (in chunks) around each player. Entities tick only in loaded
     // chunks; blocks tick in loaded + lazy. Lazy is a single-ring buffer past

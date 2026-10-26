@@ -21,6 +21,7 @@ public:
         Obsidian,
         Bedrock,
         Water,
+        Lava,
         Coal_Ore,
         Iron_Ore,
         Gold_Ore,

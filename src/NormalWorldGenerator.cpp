@@ -323,6 +323,17 @@ Chunk NormalWorldGenerator::generateChunk(int chunk_position)
 
     generateCaves(chunk, heights);
 
+    for (int x = 0; x < CHUNK_WIDTH; x++)
+    {
+        for (int y = 1; y < LAVA_LEVEL; y++)
+        {
+            if (chunk.blocks[y][x].id == BlockID::Air)
+            {
+                chunk.blocks[y][x] = {BlockID::Lava, LavaState{LavaState::SOURCE}.pack()};
+            }
+        }
+    }
+
     generateFeatures(chunk);
 
     chunk.generated = true;
@@ -350,6 +361,39 @@ void NormalWorldGenerator::generateTerrain(Chunk& chunk, std::array<int, CHUNK_W
             if (y == 0)
             {
                 chunk.blocks[y][x] = {BlockID::Bedrock, 0};
+            }
+            else if (y <= 4)
+            {
+                // Minecraft-style bedrock crust: bottom row (y=0) is solid, the
+                // four rows above scatter bedrock with falling probability
+                // (y=1 ~80%, y=2 ~60%, y=3 ~40%, y=4 ~20%). Hash is a function
+                // of world_x and y only — identical across every world,
+                // independent of the generator seed.
+                const uint32_t h = mix32(static_cast<uint32_t>(world_x) * 374761393u
+                                       ^ static_cast<uint32_t>(y)       * 668265263u);
+                const uint32_t roll = h % 100u;
+                const uint32_t threshold = 100u - static_cast<uint32_t>(y) * 20u;
+
+                if (roll < threshold)
+                {
+                    chunk.blocks[y][x] = {BlockID::Bedrock, 0};
+                }
+                else if (y < col.height - 4)
+                {
+                    chunk.blocks[y][x] = {BlockID::Stone, 0};
+                }
+                else if (y < col.height - 1)
+                {
+                    chunk.blocks[y][x] = col.sub_blocks[col.height - 2 - y];
+                }
+                else if (y == col.height - 1)
+                {
+                    chunk.blocks[y][x] = col.top_block;
+                }
+                else
+                {
+                    chunk.blocks[y][x] = {BlockID::Air, 0};
+                }
             }
             else if (y < col.height - 4)
             {
@@ -387,8 +431,12 @@ void NormalWorldGenerator::generateCaves(Chunk& chunk, const std::array<int, CHU
         const int surface = heights[x];
         const int max_y = std::min(surface - CRUST, CHUNK_HEIGHT - 1);
 
-        for (int y = 5; y <= max_y; y++)
+        for (int y = 1; y <= max_y; y++)
         {
+            // Bedrock crust (y=0..4) is honoured: cave carving stays non-
+            // destructive against the scatter pattern laid down by terrain gen.
+            if (chunk.blocks[y][x].id == BlockID::Bedrock) continue;
+
             const double noise = perlin.noise(world_x * 0.05, y * 0.05);
 
             const double depth = static_cast<double>(surface - y - CRUST);

@@ -630,6 +630,101 @@ void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf
     window.draw(shape);
 }
 
+void RenderEntityHitboxes(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window)
+{
+    const float unit_size = static_cast<float>(window.getSize().y) / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
+    const float thickness = std::max(1.0f, unit_size / 16.0f);
+
+    sf::VertexArray lines(sf::PrimitiveType::Triangles);
+
+    auto pushLine = [&](sf::Vector2f a, sf::Vector2f b, sf::Color color)
+    {
+        sf::Vector2f dir = b - a;
+        float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
+        if (len <= 0.0f) return;
+        sf::Vector2f n{-dir.y / len, dir.x / len};
+        sf::Vector2f off = n * (thickness * 0.5f);
+
+        sf::Vertex v0{a - off, color}; v0.texCoords = {0.f, 0.f};
+        sf::Vertex v1{b - off, color}; v1.texCoords = {0.f, 0.f};
+        sf::Vertex v2{b + off, color}; v2.texCoords = {0.f, 0.f};
+        sf::Vertex v3{a + off, color}; v3.texCoords = {0.f, 0.f};
+
+        lines.append(v0); lines.append(v1); lines.append(v2);
+        lines.append(v0); lines.append(v2); lines.append(v3);
+    };
+
+    const sf::Color color(0, 255, 0);
+
+    for (auto& [id, entity] : world.getEntities())
+    {
+        if (!entity.hasComponent<TransformComponent>()) continue;
+        auto& transform = entity.getComponent<TransformComponent>();
+
+        const float x0 = static_cast<float>(transform.render_position.x - camera.x) * unit_size;
+        const float y0 = static_cast<float>(transform.render_position.y - camera.y) * unit_size;
+        const float x1 = x0 + static_cast<float>(transform.size.x) * unit_size;
+        const float y1 = y0 + static_cast<float>(transform.size.y) * unit_size;
+
+        pushLine({x0, y0}, {x1, y0}, color);
+        pushLine({x1, y0}, {x1, y1}, color);
+        pushLine({x1, y1}, {x0, y1}, color);
+        pushLine({x0, y1}, {x0, y0}, color);
+    }
+
+    if (lines.getVertexCount() > 0) window.draw(lines);
+}
+
+void RenderChunkBorders(const sf::Vector2<double> camera, sf::RenderWindow& window)
+{
+    const float unit_size = static_cast<float>(window.getSize().y) / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
+    const float thickness = std::max(1.0f, unit_size / 16.0f);
+
+    const int centerChunk = static_cast<int>(std::floor(camera.x / static_cast<double>(CHUNK_WIDTH)));
+
+    sf::VertexArray lines(sf::PrimitiveType::Triangles);
+
+    auto pushLine = [&](sf::Vector2f a, sf::Vector2f b, sf::Color color)
+    {
+        sf::Vector2f dir = b - a;
+        float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
+        if (len <= 0.0f) return;
+        sf::Vector2f n{-dir.y / len, dir.x / len};
+        sf::Vector2f off = n * (thickness * 0.5f);
+
+        sf::Vertex v0{a - off, color}; v0.texCoords = {0.f, 0.f};
+        sf::Vertex v1{b - off, color}; v1.texCoords = {0.f, 0.f};
+        sf::Vertex v2{b + off, color}; v2.texCoords = {0.f, 0.f};
+        sf::Vertex v3{a + off, color}; v3.texCoords = {0.f, 0.f};
+
+        lines.append(v0); lines.append(v1); lines.append(v2);
+        lines.append(v0); lines.append(v2); lines.append(v3);
+    };
+
+    const sf::Color side_color(255, 255, 0);
+    const sf::Color cap_color(255, 128, 0);
+
+    const float y_bottom = static_cast<float>(0.0 - camera.y) * unit_size;
+    const float y_top    = static_cast<float>(static_cast<double>(CHUNK_HEIGHT) - camera.y) * unit_size;
+
+    for (int i = centerChunk - 2; i <= centerChunk + 3; ++i)
+    {
+        const float x = static_cast<float>(static_cast<double>(i * CHUNK_WIDTH) - camera.x) * unit_size;
+        pushLine({x, y_bottom}, {x, y_top}, side_color);
+    }
+
+    for (int i = centerChunk - 2; i <= centerChunk + 2; ++i)
+    {
+        const float x_left  = static_cast<float>(static_cast<double>(i * CHUNK_WIDTH) - camera.x) * unit_size;
+        const float x_right = static_cast<float>(static_cast<double>((i + 1) * CHUNK_WIDTH) - camera.x) * unit_size;
+
+        pushLine({x_left, y_bottom}, {x_right, y_bottom}, cap_color);
+        pushLine({x_left, y_top},    {x_right, y_top},    cap_color);
+    }
+
+    if (lines.getVertexCount() > 0) window.draw(lines);
+}
+
 // Mining-progress destruction overlay.
 //
 // Each cell is a block-local sub-pixel; the 3D-Perlin field is sampled in

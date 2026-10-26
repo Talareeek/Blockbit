@@ -15,12 +15,12 @@ namespace
         return (v < static_cast<double>(i)) ? i - 1 : i;
     }
 
-    // Can a falling block land into this cell? Air and water yes; anything else
+    // Can a falling block land into this cell? Air and fluids yes; anything else
     // is treated as an obstruction and the block drops as an item instead
     // (matches MC: sand lands on open torch → torch pops as item, sand lays down).
     bool is_landable(Block b)
     {
-        return b.id == BlockID::Air || b.id == BlockID::Water;
+        return b.id == BlockID::Air || b.id == BlockID::Water || b.id == BlockID::Lava;
     }
 }
 

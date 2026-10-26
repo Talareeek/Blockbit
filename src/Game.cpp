@@ -98,6 +98,7 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Obsidian, "resources/textures/obsidian.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Bedrock, "resources/textures/bedrock.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Water, "resources/textures/water.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Lava, "resources/textures/lava.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Coal_Ore, "resources/textures/coal_ore.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Iron_Ore, "resources/textures/iron_ore.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Gold_Ore, "resources/textures/gold_ore.png");
@@ -127,6 +128,7 @@ Game::Game()
     BlockAtlas::add(AssetManager::GameTextureID::Obsidian);
     BlockAtlas::add(AssetManager::GameTextureID::Bedrock);
     BlockAtlas::add(AssetManager::GameTextureID::Water);
+    BlockAtlas::add(AssetManager::GameTextureID::Lava);
     BlockAtlas::add(AssetManager::GameTextureID::Coal_Ore);
     BlockAtlas::add(AssetManager::GameTextureID::Iron_Ore);
     BlockAtlas::add(AssetManager::GameTextureID::Gold_Ore);

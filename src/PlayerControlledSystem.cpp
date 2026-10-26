@@ -188,7 +188,7 @@ void PlayerControlledSystem(World& world, float dt)
 
             if(selected.empty()) break;
 
-            if((world.getBlock(block_position.x, block_position.y).id == BlockID::Air || world.getBlock(block_position.x, block_position.y).id == BlockID::Water) && isBlockInRange(transform, block_position, 4.0f) && itemDatabase[selected.itemID].category == ItemCategory::Block)
+            if((world.getBlock(block_position.x, block_position.y).id == BlockID::Air || world.getBlock(block_position.x, block_position.y).id == BlockID::Water || world.getBlock(block_position.x, block_position.y).id == BlockID::Lava) && isBlockInRange(transform, block_position, 4.0f) && itemDatabase[selected.itemID].category == ItemCategory::Block)
             {
                 bool collides = false;
 

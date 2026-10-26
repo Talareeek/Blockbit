@@ -227,6 +227,26 @@ std::unordered_map<std::wstring, Command> commandDatabase =
             context.reply(L"V-Sync set to " + std::wstring((vsync) ? L"true" : L"false"));
         }
     }},
+
+    {L"open", {true, false, false,
+        [](std::wstring command, CommandContext& context)
+        {
+            auto tokens = tokenize(command);
+            requireArgs(tokens, 2, "Usage: /open settings");
+
+            const std::wstring& target = tokens[1];
+
+            if (target == L"settings")
+            {
+                context.game()->getSettingsWindow().show();
+                context.reply(L"Opened settings");
+            }
+            else
+            {
+                throw CommandException{"Unknown target. Usage: open settings"};
+            }
+        }
+    }},
 #endif
 
     {L"exit", {false, false, false,
