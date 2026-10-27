@@ -377,6 +377,74 @@ void ClientGameState::processIncoming()
     }
 }
 
+void ClientGameState::updateViewTransform()
+{
+    sf::Vector2<double> base_center{0.0, 0.0};
+    bool have_player = hasPlayerEntity();
+
+    if (free_camera)
+    {
+        base_center = free_camera_position;
+    }
+    else if (have_player)
+    {
+        base_center = local_world.getEntity(local_player_entity_id.value())
+                          .getComponent<TransformComponent>()
+                          .position + sf::Vector2<double>(0.5, -0.5);
+    }
+    else
+    {
+        camera = base_center;
+        view_scale = 1.0f;
+        return;
+    }
+
+    double scale = 1.0;
+    sf::Vector2<double> shift{0.0, 0.0};
+
+    // Zoom-out so you can see what's being pointed at past your reach: when the
+    // cursor leaves the reach ring (dig/attack distance + 1) the view scales up
+    // toward the cursor direction while the opposite edge stays anchored. Base
+    // view center is used to compute cursor world coords so successive frames
+    // don't feed shifted-camera values back into the distance calculation.
+    sf::Vector2u win = game->getWindow().getSize();
+    if (Settings::render.reach_zoom_enabled && !free_camera && have_player && !content_view && win.x > 0 && win.y > 0)
+    {
+        auto& player_transform = local_world.getEntity(local_player_entity_id.value()).getComponent<TransformComponent>();
+        sf::Vector2<double> player_center = player_transform.center();
+
+        double unit = static_cast<double>(win.y) / static_cast<double>(WORLD_UNIT_SIZE_FACTOR);
+        sf::Vector2i mouse = sf::Mouse::getPosition(game->getWindow());
+
+        double offset_x = (static_cast<double>(mouse.x) - static_cast<double>(win.x) * 0.5) / unit;
+        double offset_y = (static_cast<double>(win.y) * 0.5 - static_cast<double>(mouse.y)) / unit;
+        sf::Vector2<double> cursor_world{base_center.x + offset_x, base_center.y + offset_y};
+
+        double dx = cursor_world.x - player_center.x;
+        double dy = cursor_world.y - player_center.y;
+        double distance = std::sqrt(dx * dx + dy * dy);
+
+        constexpr double REACH_RADIUS = 4.0 + 1.0;
+        double strength = static_cast<double>(Settings::render.reach_zoom_scale);
+
+        if (distance > REACH_RADIUS && strength > 0.0)
+        {
+            double overshoot_ratio = (distance - REACH_RADIUS) / REACH_RADIUS;
+            scale = 1.0 + overshoot_ratio * strength;
+
+            double half_w_world = static_cast<double>(win.x) * 0.5 / unit;
+            double half_h_world = static_cast<double>(win.y) * 0.5 / unit;
+            double inv_dist = 1.0 / distance;
+
+            shift.x = (dx * inv_dist) * (scale - 1.0) * half_w_world;
+            shift.y = (dy * inv_dist) * (scale - 1.0) * half_h_world;
+        }
+    }
+
+    camera = base_center + shift;
+    view_scale = static_cast<float>(scale);
+}
+
 void ClientGameState::sendTickInputs()
 {
     if (!transport || !transport->isConnected()) return;
@@ -620,31 +688,20 @@ void ClientGameState::update(float dt)
 
     while(since_last_tick >= tick_step)
     {
+        updateViewTransform();
+
         if (player_ui_initialized)
         {
             float unit_size = game->getWindow().getView().getSize().y / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
 
-            sf::Vector2<double> view_center;
-            if (free_camera)
-            {
-                view_center = free_camera_position;
-            }
-            else
-            {
-                const auto& position = local_world.getEntity(local_player_entity_id.value())
-                                           .getComponent<TransformComponent>()
-                                           .position;
-                view_center = { position.x + 0.5, position.y - 0.5 };
-            }
-
             sf::View view{
                 sf::Vector2f{
-                    static_cast<float>(view_center.x) * unit_size,
-                    static_cast<float>(view_center.y) * unit_size
+                    static_cast<float>(camera.x) * unit_size,
+                    static_cast<float>(camera.y) * unit_size
                 },
                 sf::Vector2f{
-                    static_cast<float>(game->getWindow().getSize().x),
-                    static_cast<float>(game->getWindow().getSize().y)
+                    static_cast<float>(game->getWindow().getSize().x) * view_scale,
+                    static_cast<float>(game->getWindow().getSize().y) * view_scale
                 }
             };
 
@@ -655,7 +712,13 @@ void ClientGameState::update(float dt)
 
         onTick(tick_step);
 
-        sf::View game_view({0.0f, 0.0f}, {static_cast<float>(game->getWindow().getSize().x), static_cast<float>(game->getWindow().getSize().y)});
+        sf::View game_view(
+            {0.0f, 0.0f},
+            {
+                static_cast<float>(game->getWindow().getSize().x) * view_scale,
+                static_cast<float>(game->getWindow().getSize().y) * view_scale
+            }
+        );
         game_view.setSize({game_view.getSize().x, -game_view.getSize().y});
         game->getWindow().setView(game_view);
 
@@ -777,8 +840,17 @@ void ClientGameState::render(sf::RenderWindow& window)
     }
 
 
+    // UPDATING CAMERA
+    updateViewTransform();
+
     // GAME RENDER
-    sf::View game_view({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)});
+    sf::View game_view(
+        {0.0f, 0.0f},
+        {
+            static_cast<float>(window.getSize().x) * view_scale,
+            static_cast<float>(window.getSize().y) * view_scale
+        }
+    );
     game_view.setSize({game_view.getSize().x, -game_view.getSize().y});
     window.setView(game_view);
 
@@ -791,10 +863,6 @@ void ClientGameState::render(sf::RenderWindow& window)
 
     // SUN AND MOON
     renderSunAndMoon(sun_phase, window);
-
-    // UPDATING CAMERA
-    if(free_camera) camera = free_camera_position;
-    else if(hasPlayerEntity()) camera = local_world.getEntity(local_player_entity_id.value()).getComponent<TransformComponent>().position + sf::Vector2<double>(0.5, -0.5);
 
     // ENTITIES
     RenderEntities(local_world, camera, window);

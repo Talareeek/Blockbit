@@ -87,6 +87,9 @@ private:
     float furnace_animation_timer = 0.0f;
 
     sf::Vector2<double> camera;
+    float view_scale = 1.0f;
+
+    void updateViewTransform();
 
     void tryInitializePlayerUI();
     bool hasPlayerEntity() const;

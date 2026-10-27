@@ -56,6 +56,13 @@ void Settings::load()
             debug.render_hitboxes      = d.value("render_hitboxes",      debug.render_hitboxes);
             debug.render_chunk_borders = d.value("render_chunk_borders", debug.render_chunk_borders);
         }
+
+        if(data.contains("render"))
+        {
+            const auto& r = data["render"];
+            render.reach_zoom_enabled = r.value("reach_zoom_enabled", render.reach_zoom_enabled);
+            render.reach_zoom_scale   = r.value("reach_zoom_scale",   render.reach_zoom_scale);
+        }
     }
     catch(const std::exception& e)
     {
@@ -88,6 +95,10 @@ void Settings::save()
         data["debug"] = {
             {"render_hitboxes",      debug.render_hitboxes},
             {"render_chunk_borders", debug.render_chunk_borders}
+        };
+        data["render"] = {
+            {"reach_zoom_enabled", render.reach_zoom_enabled},
+            {"reach_zoom_scale",   render.reach_zoom_scale}
         };
 
         std::ofstream file(path);

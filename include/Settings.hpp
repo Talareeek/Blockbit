@@ -30,9 +30,16 @@ public:
         bool render_chunk_borders = false;
     };
 
+    struct Render
+    {
+        bool reach_zoom_enabled = true;
+        float reach_zoom_scale = 0.15f;
+    };
+
     static Graphics graphics;
     static Audio audio;
     static Debug debug;
+    static Render render;
 
     static void load();
     static void save();
@@ -41,5 +48,6 @@ public:
 inline Settings::Graphics Settings::graphics{};
 inline Settings::Audio Settings::audio{};
 inline Settings::Debug Settings::debug{};
+inline Settings::Render Settings::render{};
 
 #endif // SETTINGS_HPP

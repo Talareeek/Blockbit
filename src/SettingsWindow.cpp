@@ -92,6 +92,12 @@ void SettingsWindow::render()
         if(audio_changed) apply_audio_requested = true;
     }
 
+    if(ImGui::CollapsingHeader("Render", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        ImGui::Checkbox("Reach-zoom", &Settings::render.reach_zoom_enabled);
+        ImGui::SliderFloat("Reach-zoom scale", &Settings::render.reach_zoom_scale, 0.0f, 4.0f, "%.2f");
+    }
+
     if(ImGui::CollapsingHeader("Debug", ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::Checkbox("Render hitboxes",      &Settings::debug.render_hitboxes);
