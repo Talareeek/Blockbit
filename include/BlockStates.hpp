@@ -47,4 +47,17 @@ struct FurnaceState
     static FurnaceState unpack(uint16_t v) { return { (v & 0x1) != 0 }; }
 };
 
+// Cactus column tracks whether this is the topmost cell. The top texture lives
+// at x=16 in cactus.png so the mesh builder can shift the UV without looking at
+// the world — the state is baked into the metadata when the cactus grows.
+// Default metadata (0) means is_top so a freshly placed cactus renders as the
+// top variant without the placement path having to know about the state.
+struct CactusState
+{
+    bool is_top = true;
+
+    uint16_t pack() const { return is_top ? uint16_t{0} : uint16_t{1}; }
+    static CactusState unpack(uint16_t v) { return { (v & 0x1) == 0 }; }
+};
+
 #endif // BLOCK_STATES_HPP

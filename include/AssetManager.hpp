@@ -44,6 +44,7 @@ public:
         Furnace,
         Workbench,
         Gravel,
+        Cactus,
 
 
         // ITEMS

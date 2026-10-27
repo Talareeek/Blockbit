@@ -487,6 +487,11 @@ void NormalWorldGenerator::generateFeatures(Chunk& chunk)
         generateFeature(chunk, tree);
     }
 
+    for (const FeaturePlacement& cactus : getCactusPlacements(chunk.chunk_position))
+    {
+        generateFeature(chunk, cactus);
+    }
+
     const int neighbor_range = (MAX_VEIN_REACH + CHUNK_WIDTH - 1) / CHUNK_WIDTH;
 
     for (const OreDef& ore : ORES)
@@ -506,6 +511,12 @@ void NormalWorldGenerator::generateFeature(Chunk& chunk, const FeaturePlacement&
     if (feature.type == FeatureType::OakTree)
     {
         generateOakTree(chunk, feature);
+        return;
+    }
+
+    if (feature.type == FeatureType::Cactus)
+    {
+        generateCactus(chunk, feature);
         return;
     }
 
@@ -618,6 +629,72 @@ std::vector<FeaturePlacement> NormalWorldGenerator::getOrePlacements(int chunk_p
     }
 
     return result;
+}
+
+std::vector<FeaturePlacement> NormalWorldGenerator::getCactusPlacements(int chunk_position) const
+{
+    std::vector<FeaturePlacement> result;
+
+    const int chunk_min = chunk_position * CHUNK_WIDTH;
+    const int chunk_max = chunk_min + CHUNK_WIDTH - 1;
+
+    const int grid_min = floorDiv(chunk_min, CACTUS_GRID);
+    const int grid_max = floorDiv(chunk_max, CACTUS_GRID);
+
+    for (int grid_x = grid_min; grid_x <= grid_max; grid_x++)
+    {
+        SmallRng rng(featureSeed(grid_x, 0, FeatureType::Cactus));
+
+        const int world_x = grid_x * CACTUS_GRID + rng.range(CACTUS_GRID);
+
+        const double roll = rng.unit();
+        const uint32_t cactus_seed = rng.next();
+
+        if (world_x < chunk_min || world_x > chunk_max)
+            continue;
+
+        const ColumnData col = getColumn(world_x);
+
+        if (col.top_biome != Biome::Desert)
+            continue;
+
+        if (col.top_block.id != BlockID::Sand)
+            continue;
+
+        if (col.height <= SEA_LEVEL + 2)
+            continue;
+
+        // ~40% of candidate grid cells spawn a cactus; combined with grid=9 that
+        // leaves a desert dotted but not covered.
+        if (roll > 0.4)
+            continue;
+
+        result.push_back(FeaturePlacement{FeatureType::Cactus, world_x, col.height, cactus_seed});
+    }
+
+    return result;
+}
+
+void NormalWorldGenerator::generateCactus(Chunk& chunk, const FeaturePlacement& feature)
+{
+    SmallRng rng(feature.seed);
+
+    const int local_x = feature.x - chunk.chunk_position * CHUNK_WIDTH;
+    if (local_x < 0 || local_x >= CHUNK_WIDTH) return;
+
+    // 1..3 inclusive — new world chunks ship with cacti at various growth stages
+    // instead of everything starting at height 1.
+    const int height = 1 + rng.range(3);
+
+    for (int i = 0; i < height; i++)
+    {
+        const int y = feature.y + i;
+        if (y < 0 || y >= CHUNK_HEIGHT) return;
+        if (chunk.blocks[y][local_x].id != BlockID::Air) return;
+
+        const bool is_top = (i == height - 1);
+        chunk.blocks[y][local_x] = {BlockID::Cactus, CactusState{is_top}.pack()};
+    }
 }
 
 void NormalWorldGenerator::generateOreVein(Chunk& chunk, const FeaturePlacement& feature, BlockID ore, int size)

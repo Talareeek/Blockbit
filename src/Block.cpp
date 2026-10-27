@@ -3,6 +3,8 @@
 #include "../include/ServerWorld.hpp"
 #include "../include/Prefab.hpp"
 
+#include <algorithm>
+
 namespace
 {
     // Can a falling block pass through this cell on the way down? Air, water
@@ -154,6 +156,51 @@ namespace
         try_flow(pos.x + 1, pos.y);
     }
 
+    constexpr int CACTUS_MAX_HEIGHT = 3;
+
+    void cactus_on_post_placement(BlockUpdateContext& ctx, sf::Vector2i pos, uint8_t /*from_direction*/)
+    {
+        Block self = ctx.world.getBlock(pos.x, pos.y);
+        if (self.id != BlockID::Cactus) return;
+
+        // Support (sand/cactus below) is handled by BlockData::support_blocks_below
+        // via the pipeline — this callback only reconciles the is_top flag so
+        // the mesh picks up the correct texture when the column changes.
+        const bool should_be_top = ctx.world.getBlock(pos.x, pos.y + 1).id != BlockID::Cactus;
+        const bool is_top = CactusState::unpack(self.metadata).is_top;
+        if (should_be_top != is_top)
+        {
+            ctx.pipeline.setBlockSuppressNC(pos, {BlockID::Cactus, CactusState{should_be_top}.pack()});
+        }
+    }
+
+    void cactus_on_random_tick(BlockUpdateContext& ctx, sf::Vector2i pos)
+    {
+        Block self = ctx.world.getBlock(pos.x, pos.y);
+        if (self.id != BlockID::Cactus) return;
+
+        // Growth is driven from the topmost cell so a 2-tall cactus only picks
+        // up one random tick per sampling instead of one per segment.
+        if (!CactusState::unpack(self.metadata).is_top) return;
+
+        int height = 1;
+        for (int y = pos.y - 1; y >= 0; --y)
+        {
+            if (ctx.world.getBlock(pos.x, y).id != BlockID::Cactus) break;
+            ++height;
+        }
+
+        if (height >= CACTUS_MAX_HEIGHT) return;
+
+        Block above = ctx.world.getBlock(pos.x, pos.y + 1);
+        if (above.id != BlockID::Air) return;
+
+        // Suppress NC so neighbouring sand/water don't fire logical updates for
+        // what is logically a self-contained growth step.
+        ctx.pipeline.setBlockSuppressNC(pos, {BlockID::Cactus, CactusState{false}.pack()});
+        ctx.pipeline.setBlockSuppressNC({pos.x, pos.y + 1}, {BlockID::Cactus, CactusState{true}.pack()});
+    }
+
     // Lava uses the same cascade as water but ticks three times slower and
     // caps horizontal reach at ~3 cells (half of water's ~7). Levels follow
     // LavaState (FULL=4, SOURCE=5) instead of WaterState.
@@ -265,8 +312,21 @@ ItemID blockToItem(BlockID block)
         case BlockID::Furnace: return ItemID::Furnace;
         case BlockID::Workbench: return ItemID::Workbench;
         case BlockID::Gravel: return ItemID::Gravel;
+        case BlockID::Cactus: return ItemID::Cactus;
         default: return ItemID::None;
     }
+}
+
+bool canPlaceBlock(World& world, BlockID id, sf::Vector2i position)
+{
+    auto it = blockDatabase.find(id);
+    if (it == blockDatabase.end()) return true;
+
+    const auto& support = it->second.support_blocks_below;
+    if (support.empty()) return true;
+
+    Block below = world.getBlock(position.x, position.y - 1);
+    return std::find(support.begin(), support.end(), below.id) != support.end();
 }
 
 BlockID itemToBlock(ItemID item)
@@ -299,6 +359,7 @@ BlockID itemToBlock(ItemID item)
         case ItemID::Furnace: return BlockID::Furnace;
         case ItemID::Workbench: return BlockID::Workbench;
         case ItemID::Gravel: return BlockID::Gravel;
+        case ItemID::Cactus: return BlockID::Cactus;
         default: return BlockID::Air;
     }
 }
@@ -314,6 +375,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .drag = 1.0f,
             .hardness = 0.0,
             .light_opacity = 1,
+            .lets_light = true,
         }
     },
     { BlockID::Stone,
@@ -408,6 +470,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
                 .onScheduledTick    = water_on_scheduled_tick
             },
             .light_opacity = 3,
+            .lets_light = true,
         }
     },
     { BlockID::Lava,
@@ -426,6 +489,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             },
             .light_emission = 15,
             .light_opacity = 3,
+            .lets_light = true,
         }
     },
     { BlockID::Coal_Ore,
@@ -610,6 +674,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .mining = MiningProperties{.mining_resistance = 0, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
             .light_emission = 15,
             .light_opacity = 1,
+            .lets_light = true,
         }
     },
     { BlockID::Sand,
@@ -658,7 +723,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
     },
     { BlockID::Chest,
         {
-            .solid = true,
+            .solid = false,
             .transparent = false,
             .breakable = true,
             .liquid = false,
@@ -666,7 +731,8 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .hardness = 2.0f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Chest, .render_bounds = chest_render_bounds, .rect = chest_render_rect},
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
-            .drop = DropProperties{.always_drop = true, .drop = ItemID::Chest}
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Chest},
+            .lets_light = true,
         }
     },
     { BlockID::Bricks,
@@ -729,6 +795,28 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
                 .onPostPlacement    = falling_on_post_placement,
                 .onScheduledTick    = falling_on_scheduled_tick
             }
+        }
+    },
+    { BlockID::Cactus,
+        {
+            .solid = true,
+            .transparent = true,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 0.4f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Cactus, .render_bounds = default_render_bounds, .rect = cactus_render_rect},
+            .mining = MiningProperties{.mining_resistance = 1, .desired_tool = {.tool_type = ToolType::None, .level = 0}},
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Cactus},
+            .callbacks = {
+                .onPostPlacement = cactus_on_post_placement,
+                .onRandomTick    = cactus_on_random_tick
+            },
+            .pp_accept_mask = DIRECTION_MASK_FROM_BELOW | DIRECTION_MASK_FROM_ABOVE,
+            .random_tickable = true,
+            .support_blocks_below = {BlockID::Sand, BlockID::Cactus},
+            .light_opacity = 2,
+            .lets_light = true,
         }
     },
 };

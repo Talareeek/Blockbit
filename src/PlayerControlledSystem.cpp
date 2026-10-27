@@ -221,12 +221,14 @@ void PlayerControlledSystem(World& world, float dt)
                     }
                 }
 
-                if(!collides)
+                const BlockID placing = itemToBlock(selected.itemID);
+
+                if(!collides && canPlaceBlock(world, placing, block_position))
                 {
                     selected.quantity--;
                     inventory.dirty = true;
 
-                    world.setBlock(block_position.x, block_position.y, {itemToBlock(selected.itemID), 0});
+                    world.setBlock(block_position.x, block_position.y, {placing, 0});
                 }
             }
             else if(itemDatabase[selected.itemID].category != ItemCategory::Block)

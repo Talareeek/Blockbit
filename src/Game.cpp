@@ -123,6 +123,7 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Furnace, "resources/textures/furnace.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Workbench, "resources/textures/workbench.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Gravel, "resources/textures/gravel.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Cactus, "resources/textures/cactus.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Flint, "resources/textures/flint.png");
 
     BlockAtlas::add(AssetManager::GameTextureID::Stone);
@@ -155,6 +156,7 @@ Game::Game()
     BlockAtlas::add(AssetManager::GameTextureID::Furnace);
     BlockAtlas::add(AssetManager::GameTextureID::Workbench);
     BlockAtlas::add(AssetManager::GameTextureID::Gravel);
+    BlockAtlas::add(AssetManager::GameTextureID::Cactus);
     BlockAtlas::build();
 
     AssetManager::loadShader(AssetManager::ShaderID::Sun, "resources/shaders/sun.frag");

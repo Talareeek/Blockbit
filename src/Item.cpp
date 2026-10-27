@@ -925,6 +925,16 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         }
     },
     {
+        ItemID::Cactus,
+        {
+            .name = "Cactus",
+            .texture = AssetManager::GameTextureID::Cactus,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
         ItemID::Flint,
         {
             .name = "Flint",

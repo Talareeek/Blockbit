@@ -92,7 +92,8 @@ enum class ItemID : uint32_t
     Iron_Ingot,
     Gold_Ingot,
 
-    Workbench
+    Workbench,
+    Cactus
 };
 
 enum class ItemRarity

@@ -1,5 +1,6 @@
 #include "../include/BlockUpdatePipeline.hpp"
 #include "../include/ServerWorld.hpp"
+#include "../include/Prefab.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -133,6 +134,36 @@ void BlockUpdatePipeline::processOneEvent(
         auto neighbor_data_it = blockDatabase.find(neighbor.id);
         if (neighbor_data_it == blockDatabase.end()) continue;
         const BlockData& neighbor_data = neighbor_data_it->second;
+
+        // Declarative support check: a change directly below a block that
+        // requires support (from_dir == Down means we are its support) may
+        // snap it off. Runs before the regular PP callback so a block that
+        // just lost its ground doesn't also run its own PP logic.
+        if (from_dir == Direction::Down && !neighbor_data.support_blocks_below.empty())
+        {
+            const auto& ids = neighbor_data.support_blocks_below;
+            const bool supported = std::find(ids.begin(), ids.end(), ev.current.id) != ids.end();
+            if (!supported)
+            {
+                world.setBlock(neighbor_pos.x, neighbor_pos.y, {BlockID::Air, 0});
+                if (neighbor_data.drop.has_value())
+                {
+                    const auto& drop = neighbor_data.drop.value();
+                    spawnDroppedItem(
+                        world,
+                        {static_cast<double>(neighbor_pos.x) + 0.25,
+                         static_cast<double>(neighbor_pos.y) + 0.25},
+                        ItemStack{drop.drop, drop.min_amount},
+                        randomDropSpread(60.0f)
+                    );
+                }
+                // The setBlock we just issued enqueues its own PendingPropagation
+                // event; nested PP from it will cascade the break upward.
+                const size_t marker = world.pending_propagation_events.size() - 1;
+                drainNestedUpTo(marker, visit_counts);
+                continue;
+            }
+        }
 
         if (neighbor_data.callbacks.onPostPlacement == nullptr) continue;
         if ((neighbor_data.pp_accept_mask & directionBit(from_dir)) == 0) continue;

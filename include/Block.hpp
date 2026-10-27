@@ -47,7 +47,8 @@ enum class BlockID : uint32_t
     Bricks,
     Furnace,
     Workbench,
-    Gravel
+    Gravel,
+    Cactus
 };
 
 struct Block
@@ -144,12 +145,25 @@ struct BlockData
     // Density is global, controlled by BlockUpdatePipeline::random_ticks_per_chunk.
     bool random_tickable = false;
 
+    // If non-empty, the block directly below must have one of these IDs.
+    // Enforced at two layers so plants, torches, etc. need no bespoke code:
+    //   - canPlaceBlock() rejects placement when the ground doesn't match.
+    //   - BlockUpdatePipeline drops this block when its support disappears.
+    std::vector<BlockID> support_blocks_below;
+
     // Light behaviour. See LightingSystem.hpp for the model.
     //   light_emission  0..15, 0 = not a source.
     //   light_opacity   0..15. 1 = air-equivalent (one-step attenuation).
     //                   2..14 = translucent, 15 = fully blocking.
     uint8_t light_emission = 0;
     uint8_t light_opacity  = 15;
+
+    // Chunk-mesh lightmap treats this cell as air: the sky-exposure scan
+    // ignores it when picking the topmost blocker, and if this cell is itself
+    // sky-exposed its lightmap quad is skipped so the sky gradient shows
+    // through unchanged. Set for water/lava/fire/air etc. — anything whose
+    // visuals should not read as "dark cave air".
+    bool lets_light = false;
 };
 
 extern std::unordered_map<BlockID, BlockData> blockDatabase;
@@ -231,6 +245,14 @@ inline auto furnace_animation = [](Block block_instance) -> BlockAnimation
     return {1, 0};
 };
 
+// Cactus texture is 32x16: body (x=0) and top (x=16). CactusState::is_top is
+// baked into metadata when the plant grows so the mesh builder can pick the
+// correct half without consulting the world.
+inline auto cactus_render_rect = [](Block block_instance) -> sf::IntRect
+{
+    return {{CactusState::unpack(block_instance.metadata).is_top ? 16 : 0, 0}, {16, 16}};
+};
+
 // Woodcutter texture is 32x16: two 16x16 frames side by side. The mesh anchors
 // at frame 0 and the shader shifts U each tick.
 inline auto woodcutter_render_rect = [](Block) -> sf::IntRect
@@ -246,5 +268,11 @@ inline auto woodcutter_animation = [](Block) -> BlockAnimation
 extern ItemID blockToItem(BlockID block);
 
 extern BlockID itemToBlock(ItemID item);
+
+class World;
+
+// Consults BlockData::support_blocks_below. Returns true for blocks that
+// declare no support requirement, so the caller can use it unconditionally.
+extern bool canPlaceBlock(World& world, BlockID id, sf::Vector2i position);
 
 #endif // BLOCK_HPP

@@ -203,6 +203,26 @@ void BuildChunkMesh(ClientWorld& world, int chunk_position)
     mesh.vertices.clear();
     mesh.lightmap_vertices.clear();
 
+    // Per-column highest y that holds a sky-blocking cell. -1 if the column
+    // has nothing but lets_light cells. Lets_light cells above this line are
+    // sky-exposed and skip the overlay so the sky gradient shows through
+    // unchanged; everything else (including lets_light cells with a blocker
+    // above) still gets the lightmap applied so the computed light level
+    // drives the shading.
+    std::array<int, CHUNK_WIDTH> highest_blocker{};
+    for (int x = 0; x < CHUNK_WIDTH; ++x)
+    {
+        highest_blocker[x] = -1;
+        for (int y = CHUNK_HEIGHT - 1; y >= 0; --y)
+        {
+            if (!blockDatabase[chunk.blocks[y][x].id].lets_light)
+            {
+                highest_blocker[x] = y;
+                break;
+            }
+        }
+    }
+
     for (int y = 0; y < CHUNK_HEIGHT; y++)
     {
         for (int x = 0; x < CHUNK_WIDTH; x++)
@@ -213,11 +233,10 @@ void BuildChunkMesh(ClientWorld& world, int chunk_position)
 
             const sf::Vector2f position(x, y);
 
-            // Lightmap covers the full cell so air (and the air portion of a
-            // partial-fluid tile) is darkened by block/sky light too. Sky-
-            // exposed air sits at level 15 and stays bright at noon; cave air
-            // and night-time air darken with the lightmap.
-            appendLightmapQuad(mesh.lightmap_vertices, {position, {1.0f, 1.0f}});
+            const bool sky_exposed_lets_light =
+                block_data.lets_light && y > highest_blocker[x];
+            if (!sky_exposed_lets_light)
+                appendLightmapQuad(mesh.lightmap_vertices, {position, {1.0f, 1.0f}});
 
             if (!block_data.render.has_value()) continue;
 
@@ -541,9 +560,6 @@ void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf
     constexpr float INSET = 1.0f / 16.0f;
 
     {
-        Block hovered = world.getBlock(block.x, block.y);
-        if (hovered.id == BlockID::Air) return;
-
         if (!world.doesEntityExist(viewerEntityId)) return;
         auto& viewer = world.getEntity(viewerEntityId);
         if (!viewer.hasComponent<TransformComponent>()) return;
