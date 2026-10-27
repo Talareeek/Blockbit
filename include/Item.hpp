@@ -162,7 +162,7 @@ struct ItemData
 
     std::optional<uint32_t> maxDurability;
 
-    std::function<bool(World& world, sf::Vector2f mouse, UUID user)> onUse = [](World&, sf::Vector2f, UUID) -> bool {return false;};
+    std::function<bool(World& world, sf::Vector2<double> mouse, UUID user)> onUse = [](World&, sf::Vector2<double>, UUID) -> bool {return false;};
 };
 
 extern std::unordered_map<ItemID, ItemData> itemDatabase;

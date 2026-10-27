@@ -27,21 +27,30 @@ int positionToChunk(sf::Vector2<double> position)
 
 bool isInRange(TransformComponent& player, TransformComponent& target, float range)
 {
-    sf::Vector2f player_closest = sf::Vector2f(player.position) + sf::Vector2f((target.position.x > player.position.x) ? static_cast<float>(player.size.x) : 0.0f, (target.position.y > player.position.y) ? static_cast<float>(player.size.y) : 0.0f);
-    sf::Vector2f target_closest = sf::Vector2f(target.position) + sf::Vector2f((player.position.x > target.position.x) ? static_cast<float>(target.size.x) : 0.0f, (player.position.y > target.position.y) ? static_cast<float>(target.size.y) : 0.0f);
-
-    float distance = std::sqrt(std::pow(player_closest.x - target_closest.x, 2) + std::pow(player_closest.y - target_closest.y, 2));
-
-    return distance <= range;
+    return shortestDistance(player, target) <= range;
 }
 
 bool isBlockInRange(TransformComponent& player, sf::Vector2i& block, float range)
 {
-    sf::Vector2f player_closest = sf::Vector2f(player.position) + sf::Vector2f((block.x > player.position.x) ? static_cast<float>(player.size.x) : 0.0f, (block.y > player.position.y) ? static_cast<float>(player.size.y) : 0.0f);
-    sf::Vector2f block_closest = sf::Vector2f(block) + sf::Vector2f((player.position.x > static_cast<float>(block.x)) ? 1.0f : 0.0f, (player.position.y > static_cast<float>(block.y)) ? 1.0f : 0.0f);
-    float distance = std::sqrt(std::pow(player_closest.x - block_closest.x, 2) + std::pow(player_closest.y - block_closest.y, 2));
+    const double block_min_x = static_cast<double>(block.x);
+    const double block_max_x = block_min_x + 1.0;
+    const double block_min_y = static_cast<double>(block.y);
+    const double block_max_y = block_min_y + 1.0;
 
-    return distance <= range;
+    const double player_min_x = player.position.x;
+    const double player_max_x = player.position.x + player.size.x;
+    const double player_min_y = player.position.y;
+    const double player_max_y = player.position.y + player.size.y;
+
+    double dx = 0.0;
+    if(block_min_x > player_max_x) dx = block_min_x - player_max_x;
+    else if(player_min_x > block_max_x) dx = player_min_x - block_max_x;
+
+    double dy = 0.0;
+    if(block_min_y > player_max_y) dy = block_min_y - player_max_y;
+    else if(player_min_y > block_max_y) dy = player_min_y - block_max_y;
+
+    return std::sqrt(dx * dx + dy * dy) <= static_cast<double>(range);
 }
 
 float shortestDistance(const TransformComponent& a, const TransformComponent& b)

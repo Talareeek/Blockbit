@@ -31,8 +31,10 @@
 #include <atomic>
 #include <cerrno>
 #include <chrono>
+#include <condition_variable>
 #include <csignal>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
@@ -40,7 +42,9 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <optional>
+#include <queue>
 #include <random>
 #include <sstream>
 #include <string>
@@ -48,8 +52,11 @@
 #include <thread>
 #include <vector>
 
-#include <poll.h>
-#include <unistd.h>
+#ifdef _WIN32
+    #include <io.h>
+#else
+    #include <unistd.h>
+#endif
 
 namespace
 {
@@ -64,7 +71,11 @@ namespace
     void detectAnsiSupport()
     {
         if (std::getenv("NO_COLOR")) { g_use_ansi = false; return; }
-        g_use_ansi = isatty(STDOUT_FILENO) != 0;
+    #ifdef _WIN32
+        g_use_ansi = _isatty(_fileno(stdout)) != 0;
+    #else
+        g_use_ansi = isatty(fileno(stdout)) != 0;
+    #endif
     }
 
     const char* ansi(const char* code) { return g_use_ansi ? code : ""; }
@@ -359,26 +370,68 @@ namespace
         }
     }
 
+    // Background thread drains stdin into a queue so both the blocking menu
+    // prompts and the server-loop non-blocking checks share one reader. This
+    // sidesteps poll()/read() which don't exist on Windows; std::getline is
+    // the only truly portable stdin primitive.
+    class StdinQueue
+    {
+        std::mutex m;
+        std::condition_variable cv;
+        std::queue<std::string> lines;
+        bool eof = false;
+    public:
+        StdinQueue()
+        {
+            std::thread([this]
+            {
+                std::string line;
+                while (std::getline(std::cin, line))
+                {
+                    {
+                        std::lock_guard<std::mutex> lock(m);
+                        lines.push(std::move(line));
+                    }
+                    cv.notify_all();
+                    line.clear();
+                }
+                {
+                    std::lock_guard<std::mutex> lock(m);
+                    eof = true;
+                }
+                cv.notify_all();
+            }).detach();
+        }
+
+        std::optional<std::string> tryGet()
+        {
+            std::lock_guard<std::mutex> lock(m);
+            if (lines.empty()) return std::nullopt;
+            std::string line = std::move(lines.front());
+            lines.pop();
+            return line;
+        }
+
+        std::optional<std::string> get()
+        {
+            std::unique_lock<std::mutex> lock(m);
+            cv.wait(lock, [this]{ return !lines.empty() || eof; });
+            if (lines.empty()) return std::nullopt;
+            std::string line = std::move(lines.front());
+            lines.pop();
+            return line;
+        }
+    };
+
+    StdinQueue& stdinQueue()
+    {
+        static StdinQueue q;
+        return q;
+    }
+
     std::optional<std::string> tryReadStdinLine()
     {
-        static std::string buffer;
-
-        pollfd pfd{STDIN_FILENO, POLLIN, 0};
-        int ret = poll(&pfd, 1, 0);
-        if (ret <= 0) return std::nullopt;
-        if (!(pfd.revents & POLLIN)) return std::nullopt;
-
-        char chunk[256];
-        ssize_t n = read(STDIN_FILENO, chunk, sizeof(chunk));
-        if (n <= 0) return std::nullopt;
-
-        buffer.append(chunk, chunk + n);
-        auto nl = buffer.find('\n');
-        if (nl == std::string::npos) return std::nullopt;
-
-        std::string line = buffer.substr(0, nl);
-        buffer.erase(0, nl + 1);
-        return line;
+        return stdinQueue().tryGet();
     }
 
     // Reads a prompted line from stdin. Writes the prompt (with optional default
@@ -392,9 +445,9 @@ namespace
         }
         std::cout << c::gray() << ": " << c::reset() << std::flush;
 
-        std::string line;
-        if (!std::getline(std::cin, line) || line.empty()) return default_value;
-        return line;
+        auto maybe = stdinQueue().get();
+        if (!maybe || maybe->empty()) return default_value;
+        return std::move(*maybe);
     }
 
     // Numbered menu picker; returns the chosen index or defaults_idx on empty.
@@ -414,8 +467,9 @@ namespace
         std::cout << c::gray() << "  pick 1-" << options.size()
                   << " [" << (default_idx + 1) << "]: " << c::reset() << std::flush;
 
-        std::string line;
-        if (!std::getline(std::cin, line) || line.empty()) return default_idx;
+        auto maybe_pick = stdinQueue().get();
+        if (!maybe_pick || maybe_pick->empty()) return default_idx;
+        std::string line = std::move(*maybe_pick);
 
         try
         {
@@ -916,12 +970,13 @@ namespace
             std::cout << '\n';
             printPrompt();
 
-            std::string line;
-            if (!std::getline(std::cin, line))
+            auto maybe_line = stdinQueue().get();
+            if (!maybe_line)
             {
                 std::cout << '\n' << c::dim() << "  stdin closed, exiting." << c::reset() << '\n';
                 return false;
             }
+            std::string line = std::move(*maybe_line);
 
             MenuAction action = dispatchMenuCommand(ctx, line);
             if (action == MenuAction::Exit)  return false;
@@ -1100,6 +1155,7 @@ int main(int argc, char* argv[])
             server->applyServerDescription(config.server_description);
             server->applyMaxPlayers(config.max_players);
             server->applyTickRate(config.tick_rate);
+            server->applyMaxTicksPerFrame(config.max_ticks_per_frame);
 
             server->onChatBroadcast = [](std::wstring message)
             {
@@ -1134,6 +1190,14 @@ int main(int argc, char* argv[])
             {
                 std::this_thread::sleep_for(next_tick - now);
             }
+
+            auto max_backlog = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                step_duration * static_cast<double>(server->getMaxTicksPerFrame()));
+            if (std::chrono::steady_clock::now() - next_tick > max_backlog)
+            {
+                next_tick = std::chrono::steady_clock::now();
+            }
+
             next_tick += std::chrono::duration_cast<std::chrono::steady_clock::duration>(step_duration);
 
             server->update(tick_step);

@@ -110,6 +110,12 @@ public:
     static constexpr int SEA_LEVEL  = 75;
     static constexpr int LAVA_LEVEL = 12;
 
+    // World border — every column at X >= BORDER_X is treated as solid by
+    // physics and painted as a diagonal-stripe wall by the client. Positioned
+    // absurdly far out so ordinary play never reaches it; it's effectively the
+    // max playable X.
+    static constexpr int BORDER_X = 100000000;
+
     // Loaded radius (in chunks) around each player. Entities tick only in loaded
     // chunks; blocks tick in loaded + lazy. Lazy is a single-ring buffer past
     // the loaded edge, so block updates (e.g. water flow, scheduled ticks) can
@@ -125,7 +131,7 @@ inline std::filesystem::path getWorldsPath()
     #ifdef _WIN32
         const char* appdata = std::getenv("APPDATA");
         home = appdata ? appdata : "";
-    #elif __linux__
+    #else
         const char* homeenv = std::getenv("HOME");
         home = homeenv ? homeenv : "";
     #endif

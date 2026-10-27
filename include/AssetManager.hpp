@@ -98,7 +98,8 @@ public:
         Logo,
         Chest,
         Furnace,
-        Crafting
+        Crafting,
+        Border
     };
 
     enum class FontID : uint32_t

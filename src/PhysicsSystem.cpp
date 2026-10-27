@@ -119,15 +119,19 @@ void PhysicsSystem(World& world, float deltaTime)
                     const double prev_right = prev_x + size_x;
                     if(prev_right <= static_cast<double>(tx))
                     {
-                        for(int y = y0; y <= y1; ++y)
+                        bool blocked = (tx >= World::BORDER_X) || (tx < -World::BORDER_X);
+                        if(!blocked)
                         {
-                            if(blockDatabase[world.getBlock(tx, y).id].solid)
+                            for(int y = y0; y <= y1; ++y)
                             {
-                                t.position.x = static_cast<double>(tx) - size_x;
-                                vx = 0.0;
-                                dx = 0.0;
-                                break;
+                                if(blockDatabase[world.getBlock(tx, y).id].solid) { blocked = true; break; }
                             }
+                        }
+                        if(blocked)
+                        {
+                            t.position.x = static_cast<double>(tx) - size_x;
+                            vx = 0.0;
+                            dx = 0.0;
                         }
                     }
                 }
@@ -138,15 +142,19 @@ void PhysicsSystem(World& world, float deltaTime)
                     const double prev_left = prev_x;
                     if(prev_left >= static_cast<double>(tx + 1))
                     {
-                        for(int y = y0; y <= y1; ++y)
+                        bool blocked = (tx >= World::BORDER_X) || (tx < -World::BORDER_X);
+                        if(!blocked)
                         {
-                            if(blockDatabase[world.getBlock(tx, y).id].solid)
+                            for(int y = y0; y <= y1; ++y)
                             {
-                                t.position.x = static_cast<double>(tx + 1);
-                                vx = 0.0;
-                                dx = 0.0;
-                                break;
+                                if(blockDatabase[world.getBlock(tx, y).id].solid) { blocked = true; break; }
                             }
+                        }
+                        if(blocked)
+                        {
+                            t.position.x = static_cast<double>(tx + 1);
+                            vx = 0.0;
+                            dx = 0.0;
                         }
                     }
                 }

@@ -686,8 +686,18 @@ void ClientGameState::update(float dt)
 
     since_last_tick += dt;
 
+    uint32_t max_ticks_this_frame = local_server ? local_server->getMaxTicksPerFrame() : 10u;
+    uint32_t ticks_executed = 0;
+
     while(since_last_tick >= tick_step)
     {
+        if (ticks_executed >= max_ticks_this_frame)
+        {
+            since_last_tick = 0.0f;
+            break;
+        }
+        ++ticks_executed;
+
         updateViewTransform();
 
         if (player_ui_initialized)
@@ -870,11 +880,17 @@ void ClientGameState::render(sf::RenderWindow& window)
     // WORLD
     RenderWorld(local_world, camera, window);
 
+    // WORLD BORDER (impassable wall at World::BORDER_X)
+    RenderBorder(camera, view_scale, window);
+
     // DESTRUCTION OVERLAY (Perlin-noise cracks over blocks being mined)
     RenderBlockDestruction(local_world, camera, window);
 
     // BLOCK OUTLINE
-    RenderBlockOutline(local_world, camera, getMouseBlockPosition(camera, window), window);
+    if (hasPlayerEntity())
+    {
+        RenderBlockOutline(local_world, camera, getMouseBlockPosition(camera, window), local_player_entity_id.value(), window);
+    }
 
     // DEBUG OVERLAYS
     if (Settings::debug.render_hitboxes)      RenderEntityHitboxes(local_world, camera, window);

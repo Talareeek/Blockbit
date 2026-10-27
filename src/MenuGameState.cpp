@@ -55,7 +55,7 @@ MenuGameState::MenuGameState(Game* game) : GameState(game), serverPreview(&statu
     #ifdef _WIN32
         const char* appdata = std::getenv("APPDATA");
         home = appdata ? appdata : "";
-    #elif __linux__
+    #else
         const char* homeenv = std::getenv("HOME");
         home = homeenv ? homeenv : "";
     #endif

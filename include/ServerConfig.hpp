@@ -19,6 +19,7 @@ struct ServerConfig
     uint32_t    max_players        = 20;
     uint16_t    port               = 34500;
     uint16_t    tick_rate          = 120;
+    uint32_t    max_ticks_per_frame = 10;
 
     // Which world directory (under <server_dir>/worlds/) to boot.
     std::string world_name;

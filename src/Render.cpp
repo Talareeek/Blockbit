@@ -535,10 +535,21 @@ void RenderBlockOverlay(World& world, const sf::Vector2<double> camera, sf::Rend
 
 #include <iostream>
 
-void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf::Vector2i block, sf::RenderWindow& window)
+void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf::Vector2i block, UUID viewerEntityId, sf::RenderWindow& window)
 {
     constexpr float TRANSITION_DURATION = 0.1f;
     constexpr float INSET = 1.0f / 16.0f;
+
+    {
+        Block hovered = world.getBlock(block.x, block.y);
+        if (hovered.id == BlockID::Air) return;
+
+        if (!world.doesEntityExist(viewerEntityId)) return;
+        auto& viewer = world.getEntity(viewerEntityId);
+        if (!viewer.hasComponent<TransformComponent>()) return;
+        sf::Vector2i block_pos = block;
+        if (!isBlockInRange(viewer.getComponent<TransformComponent>(), block_pos, 4.0f)) return;
+    }
 
     auto resolveBounds = [&]() -> sf::FloatRect
     {
@@ -673,6 +684,69 @@ void RenderEntityHitboxes(World& world, const sf::Vector2<double> camera, sf::Re
     }
 
     if (lines.getVertexCount() > 0) window.draw(lines);
+}
+
+void RenderBorder(const sf::Vector2<double> camera, float view_scale, sf::RenderWindow& window)
+{
+    const float unit_size = static_cast<float>(window.getSize().y) / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
+    const float half_w = static_cast<float>(window.getSize().x) * view_scale * 0.5f;
+    const float half_h = static_cast<float>(window.getSize().y) * view_scale * 0.5f;
+
+    sf::Texture& tex = AssetManager::getUITexture(AssetManager::UITextureID::Border);
+    const float tex_w = static_cast<float>(tex.getSize().x);
+    const float tex_h = static_cast<float>(tex.getSize().y);
+
+    const float y_bottom = -half_h;
+    const float y_top    =  half_h;
+    // One texture copy per world unit in both axes so stripe spacing matches
+    // the block grid regardless of zoom.
+    const float v_max    = (y_top - y_bottom) / unit_size * tex_h;
+
+    auto drawWall = [&](float x_left, float x_right, float u_left, float u_right)
+    {
+        if (x_left >= x_right) return;
+
+        sf::VertexArray quad(sf::PrimitiveType::Triangles, 6);
+        sf::Vertex bl, br, tr, tl;
+        bl.position = {x_left,  y_bottom};  bl.texCoords = {u_left,  v_max};
+        br.position = {x_right, y_bottom};  br.texCoords = {u_right, v_max};
+        tr.position = {x_right, y_top};     tr.texCoords = {u_right, 0.0f};
+        tl.position = {x_left,  y_top};     tl.texCoords = {u_left,  0.0f};
+        bl.color = br.color = tr.color = tl.color = sf::Color::White;
+
+        quad[0] = bl; quad[1] = br; quad[2] = tr;
+        quad[3] = bl; quad[4] = tr; quad[5] = tl;
+
+        sf::RenderStates states;
+        states.texture = &tex;
+        window.draw(quad, states);
+    };
+
+    // Positive border: fills [BORDER_X, +inf). U starts at the clipped-left
+    // edge offset so tiling stays aligned with the world coord grid when the
+    // strip is partially off-screen on the left.
+    const float pos_inner_screen = static_cast<float>((static_cast<double>(World::BORDER_X) - camera.x) * static_cast<double>(unit_size));
+    if (pos_inner_screen < half_w)
+    {
+        const float x_left  = std::max(pos_inner_screen, -half_w);
+        const float x_right = half_w;
+        const float u_left  = (x_left  - pos_inner_screen) / unit_size * tex_w;
+        const float u_right = (x_right - pos_inner_screen) / unit_size * tex_w;
+        drawWall(x_left, x_right, u_left, u_right);
+    }
+
+    // Negative border: fills (-inf, -BORDER_X]. Tile the texture outward from
+    // the inner edge (rightmost world coord of the wall) so the stripe pattern
+    // mirrors the positive side.
+    const float neg_inner_screen = static_cast<float>((static_cast<double>(-World::BORDER_X) - camera.x) * static_cast<double>(unit_size));
+    if (neg_inner_screen > -half_w)
+    {
+        const float x_left  = -half_w;
+        const float x_right = std::min(neg_inner_screen, half_w);
+        const float u_left  = (neg_inner_screen - x_left ) / unit_size * tex_w;
+        const float u_right = (neg_inner_screen - x_right) / unit_size * tex_w;
+        drawWall(x_left, x_right, u_left, u_right);
+    }
 }
 
 void RenderChunkBorders(const sf::Vector2<double> camera, sf::RenderWindow& window)

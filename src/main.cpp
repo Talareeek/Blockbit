@@ -25,6 +25,8 @@
 
 #include "../include/Console.hpp"
 
+#include "../include/GameCommon.hpp"
+
 #include <thread>
 
 #include <string>
@@ -86,7 +88,7 @@ int main(int argc, char* argv[])
     }
     else if (!hostWorld.empty())
     {
-        std::filesystem::path worldPath = std::filesystem::path(std::getenv("HOME")) / "Blockbit" / "saves" / hostWorld;
+        std::filesystem::path worldPath = getHomePath() / "Blockbit" / "saves" / hostWorld;
         if (std::filesystem::exists(worldPath))
         {
             std::cerr << "[main] --host " << hostWorld << " on 34500" << std::endl;
@@ -100,7 +102,7 @@ int main(int argc, char* argv[])
     }
     else if (!loadWorld.empty())
     {
-        std::filesystem::path worldPath = std::filesystem::path(std::getenv("HOME")) / "Blockbit" / "saves" / loadWorld;
+        std::filesystem::path worldPath = getHomePath() / "Blockbit" / "saves" / loadWorld;
         if (std::filesystem::exists(worldPath))
         {
             try

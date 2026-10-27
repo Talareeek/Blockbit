@@ -64,6 +64,7 @@ private:
     std::unordered_map<uint32_t, std::deque<std::vector<Input>>> remote_input_queues;
 
     uint16_t tick_rate = 120;
+    uint32_t max_ticks_per_frame = 10;
     uint64_t tick = 0;
     sf::Clock update_clock;
 
@@ -156,10 +157,12 @@ public:
     void applyServerDescription(std::string desc) { server_description = std::move(desc); }
     void applyMaxPlayers(uint32_t n)              { max_players = n; }
     void applyTickRate(uint16_t rate)             { tick_rate = rate; }
+    void applyMaxTicksPerFrame(uint32_t n)        { max_ticks_per_frame = n == 0 ? 1 : n; }
 
     const std::string& getServerName() const        { return server_name; }
     const std::string& getServerDescription() const { return server_description; }
     uint32_t           getMaxPlayers() const        { return max_players; }
+    uint32_t           getMaxTicksPerFrame() const  { return max_ticks_per_frame; }
 
     ServerMode getMode() const { return mode; }
 

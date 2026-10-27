@@ -55,6 +55,8 @@ Game::Game()
     AssetManager::loadUITexture(AssetManager::UITextureID::Chest, "resources/textures/chest_view.png");
     AssetManager::loadUITexture(AssetManager::UITextureID::Furnace, "resources/textures/furnace_view.png");
     AssetManager::loadUITexture(AssetManager::UITextureID::Crafting, "resources/textures/crafting_view.png");
+    AssetManager::loadUITexture(AssetManager::UITextureID::Border, "resources/textures/border.png");
+    AssetManager::getUITexture(AssetManager::UITextureID::Border).setRepeated(true);
 
 
     //GAME TEXTURES

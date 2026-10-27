@@ -12,11 +12,13 @@ extern void RenderWorld(ClientWorld& world, const sf::Vector2<double> camera, sf
 
 [[deprecated]] extern void RenderBlockOverlay(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window, UUID viewerEntityId);
 
-extern void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf::Vector2i block, sf::RenderWindow& window);
+extern void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf::Vector2i block, UUID viewerEntityId, sf::RenderWindow& window);
 
 extern void RenderEntityHitboxes(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window);
 
 extern void RenderChunkBorders(const sf::Vector2<double> camera, sf::RenderWindow& window);
+
+extern void RenderBorder(const sf::Vector2<double> camera, float view_scale, sf::RenderWindow& window);
 
 extern void RenderBlockDestruction(World& world, sf::Vector2<double> camera, sf::RenderWindow& window);
 

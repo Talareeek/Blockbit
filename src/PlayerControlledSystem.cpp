@@ -231,7 +231,7 @@ void PlayerControlledSystem(World& world, float dt)
             }
             else if(itemDatabase[selected.itemID].category != ItemCategory::Block)
             {
-                if(itemDatabase[selected.itemID].onUse(world, {static_cast<float>(player.cursor_position.x), static_cast<float>(player.cursor_position.y)}, id))
+                if(itemDatabase[selected.itemID].onUse(world, player.cursor_position, id))
                 {
                     selected.quantity--;
                     inventory.dirty = true;

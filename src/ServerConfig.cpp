@@ -49,6 +49,8 @@ std::optional<ServerConfig> loadServerConfig(const std::filesystem::path& server
         c.max_players        = data.value("max_players",        c.max_players);
         c.port               = data.value("port",               c.port);
         c.tick_rate          = data.value("tick_rate",          c.tick_rate);
+        c.max_ticks_per_frame = data.value("max_ticks_per_frame", c.max_ticks_per_frame);
+        if (c.max_ticks_per_frame == 0) c.max_ticks_per_frame = 1;
         c.world_name         = data.value("world_name",         c.world_name);
 
         if (data.contains("seed") && !data["seed"].is_null())
@@ -90,6 +92,7 @@ void saveServerConfig(const std::filesystem::path& server_dir, const ServerConfi
         data["max_players"]        = config.max_players;
         data["port"]               = config.port;
         data["tick_rate"]          = config.tick_rate;
+        data["max_ticks_per_frame"] = config.max_ticks_per_frame;
         data["world_name"]         = config.world_name;
 
         if (config.seed.has_value()) data["seed"] = *config.seed;

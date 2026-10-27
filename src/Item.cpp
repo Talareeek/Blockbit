@@ -90,7 +90,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 16,
             .rarity = ItemRarity::Rare,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2f mouse, UUID user) -> bool
+            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user) -> bool
             {
                 Entity& player = world.getEntity(user);
 
@@ -122,7 +122,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
 
                 explosiveEntity.addComponent(
                     PhysicsComponent{
-                        (mouse - sf::Vector2f(playerPos)) * 3.0f,
+                        sf::Vector2f((mouse - playerPos) * 3.0),
                         {0.0f, 0.0f},
                         {0.0f, 0.0f},
                         1.0f,
@@ -147,7 +147,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 16,
             .rarity = ItemRarity::Epic,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2f mouse, UUID user) -> bool
+            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user) -> bool
             {
                 (void)user;
 
@@ -203,7 +203,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 16,
             .rarity = ItemRarity::Mythic,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2f mouse, UUID user) -> bool
+            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user) -> bool
             {
                 (void)user;
 
@@ -419,7 +419,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Rare,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2f mouse, UUID user) -> bool
+            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user) -> bool
             {
                 Entity& player = world.getEntity(user);
 
@@ -462,7 +462,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Rare,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2f mouse, UUID user)
+            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user)
             {
                 Entity& player = world.getEntity(user);
 
@@ -521,7 +521,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Rare,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2f mouse, UUID user) -> bool
+            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user) -> bool
             {
                 (void)user;
                 sf::Vector2i position = {
@@ -932,7 +932,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 64,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2f mouse, UUID user) -> bool
+            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user) -> bool
             {
                 (void)user;
                 sf::Vector2i position = {
