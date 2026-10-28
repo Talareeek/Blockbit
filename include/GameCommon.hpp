@@ -39,6 +39,14 @@ std::string wstringToString(const std::wstring wstring);
 
 ImVec4 SFMLColorToImGuiColor(const sf::Color color);
 
+#ifndef HEADLESS_BUILD
+// Applies an ImGui style whose accent colors (titles, buttons, borders, slider
+// grabs, headers, tabs, etc.) are driven by Settings::ui.main_color. Call once
+// per frame after ImGui::SFML::Update so changes made in the settings window
+// take effect immediately.
+void applyImGuiTheme();
+#endif
+
 struct Hour
 {
     uint8_t hours;

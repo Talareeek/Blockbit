@@ -103,11 +103,13 @@ private:
 
     bool acceptsPlayerInput() const { return !chat_ui.isActive() && chat_close_cooldown <= 0.0f; }
 
-    bool isLocalSession() const { return local_server.has_value(); }
-
     std::string debugString();
 
 public:
+
+    bool isLocalSession() const { return local_server.has_value(); }
+
+    void saveLocalWorld() { if (local_server) local_server->saveWorld(); }
 
     ClientGameState(Game* game, std::filesystem::path world_path, uint16_t network_port, std::string nickname);
 

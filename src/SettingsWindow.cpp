@@ -98,6 +98,21 @@ void SettingsWindow::render()
         ImGui::SliderFloat("Reach-zoom scale", &Settings::render.reach_zoom_scale, 0.0f, 4.0f, "%.2f");
     }
 
+    if(ImGui::CollapsingHeader("Interface", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        float color[3] = {
+            Settings::ui.main_color.r / 255.0f,
+            Settings::ui.main_color.g / 255.0f,
+            Settings::ui.main_color.b / 255.0f
+        };
+        if(ImGui::ColorEdit3("Main color", color))
+        {
+            Settings::ui.main_color.r = static_cast<std::uint8_t>(color[0] * 255.0f);
+            Settings::ui.main_color.g = static_cast<std::uint8_t>(color[1] * 255.0f);
+            Settings::ui.main_color.b = static_cast<std::uint8_t>(color[2] * 255.0f);
+        }
+    }
+
     if(ImGui::CollapsingHeader("Debug", ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::Checkbox("Render hitboxes",      &Settings::debug.render_hitboxes);

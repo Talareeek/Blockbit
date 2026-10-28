@@ -124,6 +124,8 @@ public:
 
     World& getWorld() { return world; }
 
+    void saveWorld() { world.save(); }
+
     void sendChat(const std::wstring& nickname, const std::wstring& message);
 
     // Replies to a specific client as a system chat line. Used to deliver

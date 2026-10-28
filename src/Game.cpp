@@ -15,6 +15,7 @@
 #include "../include/AuthorGameState.hpp"
 #include "../include/Prefab.hpp"
 #include "../include/Settings.hpp"
+#include "../include/GameCommon.hpp"
 
 #include <imgui.h>
 #include <imgui-SFML.h>
@@ -234,6 +235,7 @@ void Game::handleEvents()
 void Game::update()
 {
     ImGui::SFML::Update(window, sf::seconds(dt));
+    applyImGuiTheme();
 
     handleBufferedStateActions();
 

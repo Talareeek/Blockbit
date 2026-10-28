@@ -4,6 +4,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -63,6 +64,18 @@ void Settings::load()
             render.reach_zoom_enabled = r.value("reach_zoom_enabled", render.reach_zoom_enabled);
             render.reach_zoom_scale   = r.value("reach_zoom_scale",   render.reach_zoom_scale);
         }
+
+        if(data.contains("ui"))
+        {
+            const auto& u = data["ui"];
+            if(u.contains("main_color") && u["main_color"].is_array() && u["main_color"].size() >= 3)
+            {
+                const auto& c = u["main_color"];
+                ui.main_color.r = static_cast<std::uint8_t>(std::clamp<int>(c[0].get<int>(), 0, 255));
+                ui.main_color.g = static_cast<std::uint8_t>(std::clamp<int>(c[1].get<int>(), 0, 255));
+                ui.main_color.b = static_cast<std::uint8_t>(std::clamp<int>(c[2].get<int>(), 0, 255));
+            }
+        }
     }
     catch(const std::exception& e)
     {
@@ -99,6 +112,11 @@ void Settings::save()
         data["render"] = {
             {"reach_zoom_enabled", render.reach_zoom_enabled},
             {"reach_zoom_scale",   render.reach_zoom_scale}
+        };
+        data["ui"] = {
+            {"main_color", { static_cast<int>(ui.main_color.r),
+                             static_cast<int>(ui.main_color.g),
+                             static_cast<int>(ui.main_color.b) }}
         };
 
         std::ofstream file(path);

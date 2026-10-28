@@ -152,6 +152,7 @@ set(_CLIENT_ONLY_BASENAMES
     SettingsWindow.cpp
     Slider.cpp
     Slot.cpp
+    TextButton.cpp
     UIElement.cpp
     UILayout.cpp
     WorldEntry.cpp
@@ -188,7 +189,15 @@ endforeach()
 # transitive link deps the two bb_core variants share. Avoids repeating the
 # find_package targets on both OBJECT libraries.
 add_library(bb_core_deps INTERFACE)
-target_include_directories(bb_core_deps INTERFACE ${CMAKE_SOURCE_DIR}/include)
+# imgui_SOURCE_DIR is listed so GameCommon.hpp picks up the SAME imgui.h that
+# ImGui-SFML (and thus the Blockbit executable) links against. Without this,
+# a system-installed imgui.h with a different ImGuiStyle layout gets found
+# first, and ImGui::GetStyle().Colors[...] writes land at wrong offsets at
+# runtime — heap-corrupting the adjacent fields.
+target_include_directories(bb_core_deps INTERFACE
+    ${CMAKE_SOURCE_DIR}/include
+    ${imgui_SOURCE_DIR}
+)
 target_compile_definitions(bb_core_deps INTERFACE ASIO_STANDALONE)
 target_link_libraries(bb_core_deps INTERFACE
     SFML::Graphics

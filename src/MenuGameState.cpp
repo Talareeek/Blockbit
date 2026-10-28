@@ -3,6 +3,9 @@
 #include "../include/AssetManager.hpp"
 #include "../include/Client.hpp"
 #include "../include/Render.hpp"
+#include "../include/Settings.hpp"
+
+#include <imgui.h>
 
 #include <chrono>
 #include <iostream>
@@ -47,8 +50,8 @@ MenuGameState::MenuGameState(Game* game) : GameState(game), serverPreview(&statu
     if(!blockbit_logo.loadFromFile("resources/textures/blockbit_logo.png")) throw std::runtime_error("Failed loading resources/textures/blockbit_logo.png");
 
 
-    UIElement::ScreenRelative quitRelative{{0.01f, 0.92f}, {0.12f, 0.06f}, UIElement::ScreenRelative::ScaleMode::UniformByHeight};
-    UIElement::ScreenRelative settingsRelative{{0.01f, 0.84f}, {0.12f, 0.06f}, UIElement::ScreenRelative::ScaleMode::UniformByHeight};
+    UIElement::ScreenRelative settingsRelative{{0.015f, 0.82f}, {0.17f, 0.035f}, UIElement::ScreenRelative::ScaleMode::Stretch};
+    UIElement::ScreenRelative quitRelative    {{0.015f, 0.87f}, {0.17f, 0.035f}, UIElement::ScreenRelative::ScaleMode::Stretch};
 
     std::string home;
 
@@ -67,18 +70,18 @@ MenuGameState::MenuGameState(Game* game) : GameState(game), serverPreview(&statu
     std::filesystem::create_directories(savesPath);
     worldList = WorldList(savesPath, game);
 
-    quit = Button(quitRelative, sf::Color::Red, "Quit", [this]()
+    quit = TextButton(quitRelative, "Quit", [this]()
     {
-        this->game->popState(this);
+        this->show_exit_confirmation = true;
     });
-
+    quit.setColors(sf::Color(210, 210, 210), sf::Color(230, 80, 80));
     quit.updateScreenRelative(game->getWindow().getSize());
 
-    settings = Button(settingsRelative, sf::Color(80, 110, 160), "Settings", [this]()
+    settings = TextButton(settingsRelative, "Settings", [this]()
     {
         this->game->getSettingsWindow().show();
     });
-
+    settings.setColors(sf::Color(210, 210, 210), Settings::ui.main_color);
     settings.updateScreenRelative(game->getWindow().getSize());
 
     backgroundTexture = generateBackground();
@@ -181,8 +184,18 @@ void MenuGameState::update(float dt)
 {
     auto size = game->getWindow().getSize();
 
+    const float sidebarWidth = size.x * 0.20f;
+    const float logoWidth = sidebarWidth * 0.80f;
+    const float logoAspect = static_cast<float>(blockbit_logo.getSize().y) / static_cast<float>(blockbit_logo.getSize().x);
+    const float logoHeight = logoWidth * logoAspect;
+    const float logoBottom = size.y * 0.03f + logoHeight;
+
+    accountSlotPosition = {sidebarWidth * 0.10f, logoBottom + size.y * 0.03f};
+    accountSlotSize = {sidebarWidth * 0.80f, size.y * 0.06f};
+
     quit.updateScreenRelative(size);
     settings.updateScreenRelative(size);
+    settings.setColors(sf::Color(210, 210, 210), Settings::ui.main_color);
     worldList.updateScreenRelative(size);
 
     worldList.position = {size.x * 0.75f, 0.0f};
@@ -247,27 +260,92 @@ void MenuGameState::render(sf::RenderWindow& window)
     );
     window.draw(background);
 
+    const float sidebarWidth = window.getSize().x * 0.20f;
+    const float windowHeight = static_cast<float>(window.getSize().y);
+
+    sf::RectangleShape sidebar({sidebarWidth, windowHeight});
+    sidebar.setPosition({0.0f, 0.0f});
+    const sf::Color main = Settings::ui.main_color;
+    sidebar.setFillColor(sf::Color(10, 12, 18, 200));
+    sidebar.setOutlineThickness(2.0f);
+    sidebar.setOutlineColor(sf::Color(main.r, main.g, main.b, 120));
+    window.draw(sidebar);
+
+    sf::RectangleShape sidebarEdge({3.0f, windowHeight});
+    sidebarEdge.setPosition({sidebarWidth, 0.0f});
+    sidebarEdge.setFillColor(sf::Color(main.r, main.g, main.b, 180));
+    window.draw(sidebarEdge);
+
     sf::RectangleShape logo;
     logo.setTexture(&blockbit_logo);
+    logo.setSize({static_cast<float>(blockbit_logo.getSize().x), static_cast<float>(blockbit_logo.getSize().y)});
 
-    logo.setSize({static_cast<float>(logo.getTexture()->getSize().x), static_cast<float>(logo.getTexture()->getSize().y)});
-
-    float factor = (static_cast<float>(window.getSize().x) / 5.0f) / static_cast<float>(logo.getTexture()->getSize().x);
+    const float logoWidth = sidebarWidth * 0.80f;
+    const float factor = logoWidth / static_cast<float>(blockbit_logo.getSize().x);
     logo.setScale({factor, factor});
-
-    logo.setPosition({50.0f, 50.0f});
-
+    logo.setPosition({sidebarWidth * 0.10f, windowHeight * 0.03f});
     window.draw(logo);
-
-    account.performImGui();
-
 
     worldList.render(window);
 
     if (hasStatus && worldList.multiplayerActive()) serverPreview.render(window);
-    quit.render(window);
     settings.render(window);
+    quit.render(window);
     player.render(window);
+
+    account.performImGui(accountSlotPosition, accountSlotSize);
+
+    renderExitConfirmation();
+}
+
+void MenuGameState::renderExitConfirmation()
+{
+    if(!show_exit_confirmation) return;
+
+    const sf::Vector2u window_size = game->getWindow().getSize();
+    const ImVec2 size(360.0f, 140.0f);
+    const ImVec2 position(
+        (static_cast<float>(window_size.x) - size.x) * 0.5f,
+        (static_cast<float>(window_size.y) - size.y) * 0.5f
+    );
+
+    ImGui::SetNextWindowPos(position, ImGuiCond_Always);
+    ImGui::SetNextWindowSize(size, ImGuiCond_Always);
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize
+                           | ImGuiWindowFlags_NoMove
+                           | ImGuiWindowFlags_NoCollapse
+                           | ImGuiWindowFlags_NoSavedSettings;
+
+    bool open = true;
+    if(ImGui::Begin("Quit", &open, flags))
+    {
+        const char* text = "Do you want to quit?";
+        const ImVec2 text_size = ImGui::CalcTextSize(text);
+        ImGui::SetCursorPosX((size.x - text_size.x) * 0.5f);
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 8.0f);
+        ImGui::TextUnformatted(text);
+
+        ImGui::Dummy(ImVec2(0.0f, 12.0f));
+
+        const float button_width = 110.0f;
+        const float spacing = 20.0f;
+        ImGui::SetCursorPosX((size.x - button_width * 2.0f - spacing) * 0.5f);
+
+        if(ImGui::Button("Yes", ImVec2(button_width, 0.0f)))
+        {
+            show_exit_confirmation = false;
+            game->popState(this);
+        }
+        ImGui::SameLine(0.0f, spacing);
+        if(ImGui::Button("No", ImVec2(button_width, 0.0f)))
+        {
+            show_exit_confirmation = false;
+        }
+    }
+    ImGui::End();
+
+    if(!open) show_exit_confirmation = false;
 }
 
 void MenuGameState::onObscured()

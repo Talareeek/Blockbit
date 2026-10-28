@@ -4,6 +4,8 @@
 #include "UIElement.hpp"
 #include "Account.hpp"
 
+#include <SFML/System/Vector2.hpp>
+
 class AccountWidget
 {
 private:
@@ -14,7 +16,7 @@ private:
 
 public:
 
-    void performImGui();
+    void performImGui(sf::Vector2f position, sf::Vector2f size);
 };
 
 #endif // ACCOUNT_WIDGET_HPP

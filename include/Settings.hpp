@@ -3,6 +3,8 @@
 
 #include <cstdint>
 
+#include <SFML/Graphics/Color.hpp>
+
 class Settings
 {
 public:
@@ -36,10 +38,16 @@ public:
         float reach_zoom_scale = 0.15f;
     };
 
+    struct UI
+    {
+        sf::Color main_color{255, 190, 60};
+    };
+
     static Graphics graphics;
     static Audio audio;
     static Debug debug;
     static Render render;
+    static UI ui;
 
     static void load();
     static void save();
@@ -49,5 +57,6 @@ inline Settings::Graphics Settings::graphics{};
 inline Settings::Audio Settings::audio{};
 inline Settings::Debug Settings::debug{};
 inline Settings::Render Settings::render{};
+inline Settings::UI Settings::ui{};
 
 #endif // SETTINGS_HPP

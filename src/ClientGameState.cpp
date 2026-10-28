@@ -684,6 +684,12 @@ void ClientGameState::update(float dt)
 
     float tick_step = 1.0f / static_cast<float>(tick_rate);
 
+    if (local_server && !onTop())
+    {
+        since_last_tick = 0.0f;
+        return;
+    }
+
     since_last_tick += dt;
 
     uint32_t max_ticks_this_frame = local_server ? local_server->getMaxTicksPerFrame() : 10u;
@@ -792,7 +798,7 @@ void ClientGameState::update(float dt)
 
     if(acceptsPlayerInput() && !content_view && view_close_cooldown <= 0.0f && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
     {
-        game->pushState(this, std::make_unique<PauseScreenState>(game));
+        game->pushState(this, std::make_unique<PauseScreenState>(game, this));
     }
 
     if (content_view) content_view->update(dt);

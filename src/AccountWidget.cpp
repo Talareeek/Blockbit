@@ -3,15 +3,10 @@
 
 #include <imgui.h>
 
-void AccountWidget::performImGui()
+void AccountWidget::performImGui(sf::Vector2f position, sf::Vector2f size)
 {
-    ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
-    ImVec2 screen = ImGui::GetIO().DisplaySize;
-
-    float width = screen.x * 0.10f;
-    float height = width * 9.0f / 16.0f;
-
-    ImGui::SetNextWindowSize(ImVec2(width, height));
+    ImGui::SetNextWindowPos(ImVec2(position.x, position.y));
+    ImGui::SetNextWindowSize(ImVec2(size.x, size.y));
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
                               ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings;

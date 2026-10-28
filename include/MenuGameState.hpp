@@ -2,7 +2,7 @@
 #define MENU_GAME_STATE_HPP
 
 #include "GameState.hpp"
-#include "Button.hpp"
+#include "TextButton.hpp"
 #include "AccountWidget.hpp"
 #include "Slot.hpp"
 #include "WorldList.hpp"
@@ -28,10 +28,13 @@ private:
 
 
     AccountWidget account;
-    Button quit;
-    Button settings;
+    TextButton quit;
+    TextButton settings;
     WorldList worldList;
     LobbyPlayerElement player;
+
+    sf::Vector2f accountSlotPosition;
+    sf::Vector2f accountSlotSize;
 
     StatusResponsePacket statusPacket{};
     bool hasStatus = false;
@@ -55,8 +58,11 @@ private:
 
     sf::Texture backgroundTexture;
 
+    bool show_exit_confirmation = false;
+
     void beginProbe(const std::string& text);
     void cancelActiveProbe();
+    void renderExitConfirmation();
 
 public:
 

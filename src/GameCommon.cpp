@@ -3,7 +3,9 @@
 #include "../include/World.hpp"
 #include "../include/Entity.hpp"
 #include "../include/TransformComponent.hpp"
+#include "../include/Settings.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <stdexcept>
 #include <string>
@@ -105,6 +107,86 @@ ImVec4 SFMLColorToImGuiColor(const sf::Color color)
 {
     return ImVec4((float)color.r / 255.0f, (float)color.g / 255.0f, (float)color.b / 255.0f, (float)color.a / 255.0f);
 }
+
+#ifndef HEADLESS_BUILD
+void applyImGuiTheme()
+{
+    const sf::Color m = Settings::ui.main_color;
+    const float r = static_cast<float>(m.r) / 255.0f;
+    const float g = static_cast<float>(m.g) / 255.0f;
+    const float b = static_cast<float>(m.b) / 255.0f;
+
+    auto tint = [&](float scale, float alpha) {
+        return ImVec4(std::clamp(r * scale, 0.0f, 1.0f),
+                      std::clamp(g * scale, 0.0f, 1.0f),
+                      std::clamp(b * scale, 0.0f, 1.0f),
+                      alpha);
+    };
+
+    const ImVec4 accent        = tint(1.00f, 1.00f);
+    const ImVec4 accent_dim    = tint(0.55f, 1.00f);
+    const ImVec4 accent_bright = tint(1.20f, 1.00f);
+
+    ImGuiStyle& style = ImGui::GetStyle();
+    ImVec4* c = style.Colors;
+
+    c[ImGuiCol_WindowBg]            = ImVec4(0.04f, 0.05f, 0.07f, 0.90f);
+    c[ImGuiCol_ChildBg]             = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    c[ImGuiCol_PopupBg]             = ImVec4(0.06f, 0.07f, 0.10f, 0.95f);
+    c[ImGuiCol_Border]              = tint(1.0f, 0.60f);
+    c[ImGuiCol_BorderShadow]        = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+
+    c[ImGuiCol_FrameBg]             = tint(0.20f, 0.55f);
+    c[ImGuiCol_FrameBgHovered]      = tint(0.45f, 0.65f);
+    c[ImGuiCol_FrameBgActive]       = tint(0.65f, 0.75f);
+
+    c[ImGuiCol_TitleBg]             = tint(0.30f, 0.90f);
+    c[ImGuiCol_TitleBgActive]       = tint(0.60f, 0.95f);
+    c[ImGuiCol_TitleBgCollapsed]    = tint(0.30f, 0.60f);
+    c[ImGuiCol_MenuBarBg]           = tint(0.25f, 0.90f);
+
+    c[ImGuiCol_ScrollbarBg]         = ImVec4(0.02f, 0.03f, 0.05f, 0.60f);
+    c[ImGuiCol_ScrollbarGrab]       = tint(0.50f, 0.80f);
+    c[ImGuiCol_ScrollbarGrabHovered]= tint(0.80f, 0.90f);
+    c[ImGuiCol_ScrollbarGrabActive] = accent;
+
+    c[ImGuiCol_CheckMark]           = accent_bright;
+    c[ImGuiCol_SliderGrab]          = accent;
+    c[ImGuiCol_SliderGrabActive]    = accent_bright;
+
+    c[ImGuiCol_Button]              = tint(0.40f, 0.80f);
+    c[ImGuiCol_ButtonHovered]       = accent;
+    c[ImGuiCol_ButtonActive]        = tint(0.80f, 1.00f);
+
+    c[ImGuiCol_Header]              = tint(0.45f, 0.70f);
+    c[ImGuiCol_HeaderHovered]       = tint(0.75f, 0.85f);
+    c[ImGuiCol_HeaderActive]        = accent;
+
+    c[ImGuiCol_Separator]           = tint(0.60f, 0.50f);
+    c[ImGuiCol_SeparatorHovered]    = tint(0.90f, 0.80f);
+    c[ImGuiCol_SeparatorActive]     = accent;
+
+    c[ImGuiCol_ResizeGrip]          = tint(0.80f, 0.40f);
+    c[ImGuiCol_ResizeGripHovered]   = tint(0.90f, 0.80f);
+    c[ImGuiCol_ResizeGripActive]    = accent;
+
+    c[ImGuiCol_Tab]                 = tint(0.40f, 0.80f);
+    c[ImGuiCol_TabHovered]          = accent;
+    c[ImGuiCol_TabActive]           = tint(0.80f, 1.00f);
+    c[ImGuiCol_TabUnfocused]        = tint(0.25f, 0.80f);
+    c[ImGuiCol_TabUnfocusedActive]  = tint(0.50f, 0.90f);
+
+    c[ImGuiCol_PlotLines]           = accent_dim;
+    c[ImGuiCol_PlotLinesHovered]    = accent_bright;
+    c[ImGuiCol_PlotHistogram]       = accent;
+    c[ImGuiCol_PlotHistogramHovered]= accent_bright;
+
+    c[ImGuiCol_TextSelectedBg]      = tint(1.0f, 0.35f);
+    c[ImGuiCol_NavHighlight]        = accent;
+    c[ImGuiCol_NavWindowingHighlight]= tint(1.0f, 0.70f);
+    c[ImGuiCol_DragDropTarget]      = accent_bright;
+}
+#endif
 
 Hour daytimeToHour(float daytime)
 {
