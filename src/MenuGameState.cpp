@@ -53,20 +53,7 @@ MenuGameState::MenuGameState(Game* game) : GameState(game), serverPreview(&statu
     UIElement::ScreenRelative settingsRelative{{0.015f, 0.82f}, {0.17f, 0.035f}, UIElement::ScreenRelative::ScaleMode::Stretch};
     UIElement::ScreenRelative quitRelative    {{0.015f, 0.87f}, {0.17f, 0.035f}, UIElement::ScreenRelative::ScaleMode::Stretch};
 
-    std::string home;
-
-    #ifdef _WIN32
-        const char* appdata = std::getenv("APPDATA");
-        home = appdata ? appdata : "";
-    #else
-        const char* homeenv = std::getenv("HOME");
-        home = homeenv ? homeenv : "";
-    #endif
-
-    std::filesystem::path savesPath = home.empty() ? std::filesystem::temp_directory_path() : std::filesystem::path(home);
-    savesPath /= "Blockbit";
-    savesPath /= "saves";
-
+    std::filesystem::path savesPath = getWorldsPath();
     std::filesystem::create_directories(savesPath);
     worldList = WorldList(savesPath, game);
 

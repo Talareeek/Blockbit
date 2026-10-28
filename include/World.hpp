@@ -124,23 +124,14 @@ public:
     static constexpr int LAZY_DISTANCE       = SIMULATION_DISTANCE + 1;
 };
 
+// Forward-declared in GameCommon.hpp; defined in src/GameCommon.cpp. Picks
+// the right per-OS base dir (incl. an Android branch that reads
+// ANativeActivity::internalDataPath).
+std::filesystem::path getHomePath();
+
 inline std::filesystem::path getWorldsPath()
 {
-    std::string home;
-
-    #ifdef _WIN32
-        const char* appdata = std::getenv("APPDATA");
-        home = appdata ? appdata : "";
-    #else
-        const char* homeenv = std::getenv("HOME");
-        home = homeenv ? homeenv : "";
-    #endif
-
-    std::filesystem::path savesPath = home.empty() ? std::filesystem::temp_directory_path() : std::filesystem::path(home);
-    savesPath /= "Blockbit";
-    savesPath /= "saves";
-
-    return savesPath;
+    return getHomePath() / "Blockbit" / "saves";
 }
 
 #endif // WORLD_HPP

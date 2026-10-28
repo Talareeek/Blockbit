@@ -35,7 +35,12 @@ option(BLOCKBIT_HEADLESS_STRIP "Build BlockbitServer with release flags stripped
 # (asio/zstd/tinyxml2) for FetchContent variants.
 # -----------------------------------------------------------------------------
 if(ANDROID)
+    # Note: when the Android gradle wrapper does `add_subdirectory(<repo root>)`,
+    # CMAKE_SOURCE_DIR points at the wrapper's dir (android/app/src/main/cpp),
+    # not here. CMAKE_CURRENT_SOURCE_DIR is the repo root while this file runs.
+
     include(FetchContent)
+
     FetchContent_Declare(SFML
         GIT_REPOSITORY https://github.com/SFML/SFML.git
         GIT_TAG 3.1.0
@@ -45,14 +50,136 @@ if(ANDROID)
     )
     FetchContent_MakeAvailable(SFML)
 
-    # Note: when the Android gradle wrapper does `add_subdirectory(<repo root>)`,
-    # CMAKE_SOURCE_DIR points at the wrapper's dir (android/app/src/main/cpp),
-    # not here. CMAKE_CURRENT_SOURCE_DIR is the repo root while this file runs.
-    add_library(Blockbit SHARED
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/android_main.cpp
+    # zstd — static lib only. Its CMakeLists lives under build/cmake.
+    set(ZSTD_BUILD_STATIC   ON  CACHE BOOL "" FORCE)
+    set(ZSTD_BUILD_SHARED   OFF CACHE BOOL "" FORCE)
+    set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
+    set(ZSTD_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
+    # Note: github.com/facebook/zstd 404s as of late 2026; upstream now lives
+    # under the original author's account.
+    FetchContent_Declare(zstd
+        GIT_REPOSITORY https://github.com/Cyan4973/zstd.git
+        GIT_TAG v1.5.7
+        GIT_SHALLOW ON
+        EXCLUDE_FROM_ALL
+        SOURCE_SUBDIR build/cmake
     )
+    FetchContent_MakeAvailable(zstd)
+
+    # tinyxml2
+    set(tinyxml2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(tinyxml2
+        GIT_REPOSITORY https://github.com/leethomason/tinyxml2.git
+        GIT_TAG 10.0.0
+        GIT_SHALLOW ON
+        EXCLUDE_FROM_ALL
+    )
+    FetchContent_MakeAvailable(tinyxml2)
+
+    # asio — standalone, header-only. Blockbit links against this + ASIO_STANDALONE.
+    FetchContent_Declare(asio
+        GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+        GIT_TAG asio-1-30-2
+        GIT_SHALLOW ON
+        EXCLUDE_FROM_ALL
+    )
+    FetchContent_MakeAvailable(asio)
+    add_library(asio_header_only INTERFACE)
+    target_include_directories(asio_header_only INTERFACE ${asio_SOURCE_DIR}/asio/include)
+
+    # imgui / imgui-sfml / nlohmann_json match the desktop configuration below.
+    FetchContent_Declare(imgui
+        GIT_REPOSITORY https://github.com/ocornut/imgui
+        GIT_TAG v1.91.9b
+        GIT_SHALLOW ON
+    )
+    FetchContent_MakeAvailable(imgui)
+
+    # imgui-sfml's internal FindImGui.cmake reads IMGUI_DIR from the cache; a
+    # plain set() wouldn't survive the FetchContent subdirectory scope.
+    set(IMGUI_DIR ${imgui_SOURCE_DIR} CACHE PATH "" FORCE)
+    # The Android NDK toolchain sets CMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY,
+    # which restricts find_path to the sysroot. The imgui_SOURCE_DIR lives
+    # outside of it, so FindImGui's find_path(IMGUI_INCLUDE_DIR …) would
+    # cache a NOTFOUND. Pre-seed the cache entry so find_path short-circuits.
+    set(IMGUI_INCLUDE_DIR ${imgui_SOURCE_DIR} CACHE PATH "" FORCE)
+
+    # imgui-sfml does find_package(OpenGL REQUIRED) and links OpenGL::GL.
+    # Android ships GLESv2/EGL, not desktop GL. Drop a shim FindOpenGL.cmake
+    # into a dir we prepend to CMAKE_MODULE_PATH so imgui-sfml finds our
+    # replacement before CMake's bundled one.
+    set(_bb_opengl_shim ${CMAKE_BINARY_DIR}/android-opengl-shim)
+    file(MAKE_DIRECTORY ${_bb_opengl_shim})
+    file(WRITE ${_bb_opengl_shim}/FindOpenGL.cmake
+"if(NOT TARGET OpenGL::GL)
+    add_library(OpenGL::GL INTERFACE IMPORTED)
+    set_target_properties(OpenGL::GL PROPERTIES
+        INTERFACE_LINK_LIBRARIES \"GLESv2;EGL\"
+    )
+endif()
+set(OpenGL_FOUND TRUE)
+set(OPENGL_FOUND TRUE)
+")
+    list(PREPEND CMAKE_MODULE_PATH ${_bb_opengl_shim})
+
+    set(IMGUI_SFML_FIND_SFML OFF)
+    set(IMGUI_SFML_IMGUI_DEMO OFF)
+    # imgui-sfml 3.0's render path uses desktop-GL fixed-function calls
+    # (glPolygonMode, glPopAttrib, GL_POLYGON_MODE) that don't exist in
+    # GLES. Strip them on Android — they're not needed to render ImGui
+    # correctly on GLES, just lose a tiny bit of state-restore fidelity.
+    FetchContent_Declare(imgui-sfml
+        GIT_REPOSITORY https://github.com/SFML/imgui-sfml
+        GIT_TAG v3.0
+        GIT_SHALLOW ON
+        # CMake treats ';' as a list separator in PATCH_COMMAND args, so drop
+        # the trailing semicolon from the sed patterns. The leftover ';' after
+        # each replacement forms a valid empty C++ statement.
+        PATCH_COMMAND sed -i
+            -e "s|glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)|/* GLES skip */|"
+            -e "s|glGetIntegerv(GL_POLYGON_MODE, last_polygon_mode)|/* GLES skip */|"
+            -e "s|glPopAttrib()|/* GLES skip */|"
+            # `[[]0[]]` matches a literal `[0]` without needing backslashes
+            # (which CMake's PATCH_COMMAND arg processing strips).
+            -e "s|glPolygonMode(GL_FRONT, (GLenum)last_polygon_mode[[]0[]])|/* GLES skip */|"
+            -e "s|glPolygonMode(GL_BACK, (GLenum)last_polygon_mode[[]1[]])|/* GLES skip */|"
+            imgui-SFML.cpp
+    )
+    FetchContent_MakeAvailable(imgui-sfml)
+
+    FetchContent_Declare(nlohmann_json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG v3.12.0
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(nlohmann_json)
+
+    # Pull every src/*.cpp except desktop/headless entry points. android_main.cpp
+    # provides the Android entry; its contents are guarded by #ifdef __ANDROID__
+    # so it compiles to nothing on desktop.
+    file(GLOB_RECURSE _ANDROID_SOURCES CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+    list(FILTER _ANDROID_SOURCES EXCLUDE REGEX ".*/main\\.cpp$")
+    list(FILTER _ANDROID_SOURCES EXCLUDE REGEX ".*/HeadlessMain\\.cpp$")
+
+    add_library(Blockbit SHARED ${_ANDROID_SOURCES})
     target_compile_features(Blockbit PRIVATE cxx_std_20)
-    target_link_libraries(Blockbit PRIVATE SFML::Graphics android log)
+    target_include_directories(Blockbit PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${imgui_SOURCE_DIR}
+    )
+    target_compile_definitions(Blockbit PRIVATE ASIO_STANDALONE)
+    target_link_libraries(Blockbit PRIVATE
+        SFML::Graphics
+        SFML::Audio
+        ImGui-SFML::ImGui-SFML
+        libzstd_static
+        tinyxml2::tinyxml2
+        nlohmann_json::nlohmann_json
+        asio_header_only
+        android
+        log
+    )
     # ANativeActivity_onCreate lives in SFML::Main; whole-archive keeps it from
     # being stripped out of libBlockbit.so so the NativeActivity loader finds it.
     target_link_libraries(Blockbit PUBLIC

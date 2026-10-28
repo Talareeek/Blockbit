@@ -991,18 +991,7 @@ std::string ClientGameState::debugString()
 
 void ClientGameState::saveScreenshot(sf::RenderWindow& window)
 {
-    std::filesystem::path directory;
-
-    #ifdef _WIN32
-        const char* appdata = std::getenv("APPDATA");
-        directory = appdata ? std::filesystem::path(appdata) : std::filesystem::temp_directory_path();
-    #else
-        const char* home = std::getenv("HOME");
-        directory = home ? std::filesystem::path(home) : std::filesystem::temp_directory_path();
-    #endif
-
-    directory /= "Blockbit";
-    directory /= "screenshots";
+    std::filesystem::path directory = getHomePath() / "Blockbit" / "screenshots";
 
     try
     {

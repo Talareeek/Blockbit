@@ -10,6 +10,11 @@
 #include <stdexcept>
 #include <string>
 
+#ifdef __ANDROID__
+#include <SFML/System/NativeActivity.hpp>
+#include <android/native_activity.h>
+#endif
+
 Entity& entityWithID(UUID id, World& world)
 {
     if(world.getEntities().contains(id)) return world.getEntities().at(id);;
@@ -87,7 +92,20 @@ std::filesystem::path getHomePath()
 {
     std::filesystem::path directory;
 
-    #ifdef _WIN32
+    #if defined(__ANDROID__)
+        // ANativeActivity::internalDataPath is the app's private read/write
+        // directory. It survives app updates and OS reboots. Saves and
+        // settings live under this.
+        if (ANativeActivity* activity = sf::getNativeActivity();
+            activity && activity->internalDataPath)
+        {
+            directory = std::filesystem::path(activity->internalDataPath);
+        }
+        else
+        {
+            directory = std::filesystem::temp_directory_path();
+        }
+    #elif defined(_WIN32)
         const char* appdata = std::getenv("APPDATA");
         directory = appdata ? std::filesystem::path(appdata) : std::filesystem::temp_directory_path();
     #else

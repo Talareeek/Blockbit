@@ -3,6 +3,7 @@
 
 #include <SFML/Graphics.hpp>
 
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -16,7 +17,10 @@ private:
 
     inline static std::unordered_map<AssetManager::GameTextureID, sf::IntRect> uvMap;
 
-    inline static sf::Texture atlasTexture;
+    // optional so construction is deferred to build() — the sf::Texture ctor
+    // touches SFML's GL/activity state, which on Android is only valid once
+    // ANativeActivity_onCreate has run.
+    inline static std::optional<sf::Texture> atlasTexture;
 
 public:
 

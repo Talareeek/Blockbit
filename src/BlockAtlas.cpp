@@ -42,17 +42,18 @@ bool BlockAtlas::build()
         x += size.x;
     }
 
-    if (!atlasTexture.loadFromImage(atlasImage))
+    if (!atlasTexture.has_value()) atlasTexture.emplace();
+    if (!atlasTexture->loadFromImage(atlasImage))
         return false;
 
-    atlasTexture.setSmooth(false);
+    atlasTexture->setSmooth(false);
 
     return true;
 }
 
 const sf::Texture& BlockAtlas::getTexture()
 {
-    return atlasTexture;
+    return *atlasTexture;
 }
 
 const sf::IntRect& BlockAtlas::getUV(AssetManager::GameTextureID textureID)
