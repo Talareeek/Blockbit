@@ -44,7 +44,7 @@ namespace
 
 MenuGameState::MenuGameState(Game* game) : GameState(game), serverPreview(&statusPacket)
 {
-    if(!blockbit_logo.loadFromFile("resources/textures/blockbit_logo_white.png")) throw std::runtime_error("Failed loading resources/textures/blockbit_logo_white.png");
+    if(!blockbit_logo.loadFromFile("resources/textures/blockbit_logo.png")) throw std::runtime_error("Failed loading resources/textures/blockbit_logo.png");
 
 
     UIElement::ScreenRelative quitRelative{{0.01f, 0.92f}, {0.12f, 0.06f}, UIElement::ScreenRelative::ScaleMode::UniformByHeight};
