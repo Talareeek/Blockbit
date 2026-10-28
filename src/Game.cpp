@@ -26,12 +26,23 @@ Game::Game()
 
     fullscreen = Settings::graphics.fullscreen;
 
+#ifdef __ANDROID__
+    // On Android the OS owns the display geometry — ignore the saved
+    // Settings::graphics.{window_width, height, fullscreen} and always open
+    // native-resolution fullscreen.
+    window.create(
+        sf::VideoMode::getDesktopMode(),
+        "Blockbit",
+        sf::State::Fullscreen
+    );
+#else
     window.create(
         fullscreen ? sf::VideoMode::getDesktopMode()
                    : sf::VideoMode({Settings::graphics.window_width, Settings::graphics.window_height}),
         "Blockbit",
         fullscreen ? sf::State::Fullscreen : sf::State::Windowed
     );
+#endif
     window.setVerticalSyncEnabled(Settings::graphics.vsync);
     if(Settings::graphics.fps_limit > 0) window.setFramerateLimit(Settings::graphics.fps_limit);
 	
