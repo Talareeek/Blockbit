@@ -28,6 +28,43 @@ endif()
 # no debug info. Driven by build-headless.sh (sets BLOCKBIT_HEADLESS_STRIP=ON).
 option(BLOCKBIT_HEADLESS_STRIP "Build BlockbitServer with release flags stripped of debug info" OFF)
 
+# -----------------------------------------------------------------------------
+# Android: minimal scaffold. Phase 3 ships a green-window stub (src/android_main.cpp)
+# packaged as libBlockbit.so for a NativeActivity. Later phases will progressively
+# enable real Blockbit sources behind __ANDROID__ guards and swap system deps
+# (asio/zstd/tinyxml2) for FetchContent variants.
+# -----------------------------------------------------------------------------
+if(ANDROID)
+    include(FetchContent)
+    FetchContent_Declare(SFML
+        GIT_REPOSITORY https://github.com/SFML/SFML.git
+        GIT_TAG 3.1.0
+        GIT_SHALLOW ON
+        EXCLUDE_FROM_ALL
+        SYSTEM
+    )
+    FetchContent_MakeAvailable(SFML)
+
+    # Note: when the Android gradle wrapper does `add_subdirectory(<repo root>)`,
+    # CMAKE_SOURCE_DIR points at the wrapper's dir (android/app/src/main/cpp),
+    # not here. CMAKE_CURRENT_SOURCE_DIR is the repo root while this file runs.
+    add_library(Blockbit SHARED
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/android_main.cpp
+    )
+    target_compile_features(Blockbit PRIVATE cxx_std_20)
+    target_link_libraries(Blockbit PRIVATE SFML::Graphics android log)
+    # ANativeActivity_onCreate lives in SFML::Main; whole-archive keeps it from
+    # being stripped out of libBlockbit.so so the NativeActivity loader finds it.
+    target_link_libraries(Blockbit PUBLIC
+        -Wl,--whole-archive
+        SFML::Main
+        -Wl,--no-whole-archive
+    )
+    # Google Play requires all new apps to support 16 KB page sizes.
+    target_link_options(Blockbit PRIVATE "-Wl,-z,max-page-size=16384")
+    return()
+endif()
+
 find_package(SFML REQUIRED COMPONENTS Graphics Window System Audio)
 find_package(Threads REQUIRED)
 
