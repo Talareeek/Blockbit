@@ -313,6 +313,7 @@ ItemID blockToItem(BlockID block)
         case BlockID::Workbench: return ItemID::Workbench;
         case BlockID::Gravel: return ItemID::Gravel;
         case BlockID::Cactus: return ItemID::Cactus;
+        case BlockID::Dead_Bush: return ItemID::Dead_Bush;
         default: return ItemID::None;
     }
 }
@@ -360,6 +361,7 @@ BlockID itemToBlock(ItemID item)
         case ItemID::Workbench: return BlockID::Workbench;
         case ItemID::Gravel: return BlockID::Gravel;
         case ItemID::Cactus: return BlockID::Cactus;
+        case ItemID::Dead_Bush: return BlockID::Dead_Bush;
         default: return BlockID::Air;
     }
 }
@@ -634,6 +636,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
             .drop = DropProperties{.always_drop = true, .drop = ItemID::Oak_Leaves},
             .light_opacity = 2,
+            .lets_light = true,
         }
     },
     { BlockID::Oak_Planks,
@@ -659,7 +662,8 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .hardness = 2.0f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Woodcutter, .render_bounds = default_render_bounds, .rect = woodcutter_render_rect, .animation = woodcutter_animation},
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
-            .drop = DropProperties{.always_drop = true, .drop = ItemID::Woodcutter}
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Woodcutter},
+            .lets_light = true,
         }
     },
     { BlockID::Fire,
@@ -816,6 +820,22 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .random_tickable = true,
             .support_blocks_below = {BlockID::Sand, BlockID::Cactus},
             .light_opacity = 2,
+            .lets_light = true,
+        }
+    },
+    { BlockID::Dead_Bush,
+        {
+            .solid = false,
+            .transparent = true,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 0.0f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Dead_Bush, .render_bounds = default_render_bounds, .rect = default_render_rect},
+            .mining = MiningProperties{.mining_resistance = 0, .desired_tool = {.tool_type = ToolType::None, .level = 0}},
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Dead_Bush},
+            .support_blocks_below = {BlockID::Sand},
+            .light_opacity = 1,
             .lets_light = true,
         }
     },

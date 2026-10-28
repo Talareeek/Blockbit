@@ -45,6 +45,7 @@ public:
         Workbench,
         Gravel,
         Cactus,
+        Dead_Bush,
 
 
         // ITEMS

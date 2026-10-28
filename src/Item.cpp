@@ -935,6 +935,16 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         }
     },
     {
+        ItemID::Dead_Bush,
+        {
+            .name = "Dead Bush",
+            .texture = AssetManager::GameTextureID::Dead_Bush,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
         ItemID::Flint,
         {
             .name = "Flint",

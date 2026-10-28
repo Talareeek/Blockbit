@@ -50,7 +50,8 @@ enum class FeatureType
     Boulder,
     Grass,
 
-    Cactus
+    Cactus,
+    DeadBush
 };
 
 struct FeaturePlacement
@@ -96,6 +97,7 @@ private:
     std::vector<FeaturePlacement> getTreePlacements(int chunk_position) const;
     std::vector<FeaturePlacement> getOrePlacements(int chunk_position, FeatureType type) const;
     std::vector<FeaturePlacement> getCactusPlacements(int chunk_position) const;
+    std::vector<FeaturePlacement> getDeadBushPlacements(int chunk_position) const;
 
     void generateFeatures(Chunk& chunk);
     void generateFeature(Chunk& chunk, const FeaturePlacement& feature);
@@ -103,6 +105,7 @@ private:
     void generateOakTree(Chunk& chunk, const FeaturePlacement& feature);
     void generateOreVein(Chunk& chunk, const FeaturePlacement& feature, BlockID ore, int size);
     void generateCactus(Chunk& chunk, const FeaturePlacement& feature);
+    void generateDeadBush(Chunk& chunk, const FeaturePlacement& feature);
 
     void generateTerrain(Chunk& chunk, std::array<int, CHUNK_WIDTH>& heights);
     void generateCaves(Chunk& chunk, const std::array<int, CHUNK_WIDTH>& heights);
@@ -126,6 +129,8 @@ public:
     static constexpr int TREE_RADIUS = 3;
 
     static constexpr int CACTUS_GRID = 9;
+
+    static constexpr int DEAD_BUSH_GRID = 5;
 
     static constexpr int BIOME_BLEND = 40;
 

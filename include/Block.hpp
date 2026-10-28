@@ -48,7 +48,8 @@ enum class BlockID : uint32_t
     Furnace,
     Workbench,
     Gravel,
-    Cactus
+    Cactus,
+    Dead_Bush
 };
 
 struct Block

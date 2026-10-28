@@ -492,6 +492,11 @@ void NormalWorldGenerator::generateFeatures(Chunk& chunk)
         generateFeature(chunk, cactus);
     }
 
+    for (const FeaturePlacement& dead_bush : getDeadBushPlacements(chunk.chunk_position))
+    {
+        generateFeature(chunk, dead_bush);
+    }
+
     const int neighbor_range = (MAX_VEIN_REACH + CHUNK_WIDTH - 1) / CHUNK_WIDTH;
 
     for (const OreDef& ore : ORES)
@@ -517,6 +522,12 @@ void NormalWorldGenerator::generateFeature(Chunk& chunk, const FeaturePlacement&
     if (feature.type == FeatureType::Cactus)
     {
         generateCactus(chunk, feature);
+        return;
+    }
+
+    if (feature.type == FeatureType::DeadBush)
+    {
+        generateDeadBush(chunk, feature);
         return;
     }
 
@@ -695,6 +706,64 @@ void NormalWorldGenerator::generateCactus(Chunk& chunk, const FeaturePlacement& 
         const bool is_top = (i == height - 1);
         chunk.blocks[y][local_x] = {BlockID::Cactus, CactusState{is_top}.pack()};
     }
+}
+
+std::vector<FeaturePlacement> NormalWorldGenerator::getDeadBushPlacements(int chunk_position) const
+{
+    std::vector<FeaturePlacement> result;
+
+    const int chunk_min = chunk_position * CHUNK_WIDTH;
+    const int chunk_max = chunk_min + CHUNK_WIDTH - 1;
+
+    const int grid_min = floorDiv(chunk_min, DEAD_BUSH_GRID);
+    const int grid_max = floorDiv(chunk_max, DEAD_BUSH_GRID);
+
+    for (int grid_x = grid_min; grid_x <= grid_max; grid_x++)
+    {
+        SmallRng rng(featureSeed(grid_x, 0, FeatureType::DeadBush));
+
+        const int world_x = grid_x * DEAD_BUSH_GRID + rng.range(DEAD_BUSH_GRID);
+
+        const double roll = rng.unit();
+        const uint32_t bush_seed = rng.next();
+
+        if (world_x < chunk_min || world_x > chunk_max)
+            continue;
+
+        const ColumnData col = getColumn(world_x);
+
+        if (col.top_biome != Biome::Desert)
+            continue;
+
+        if (col.top_block.id != BlockID::Sand)
+            continue;
+
+        if (col.height <= SEA_LEVEL + 2)
+            continue;
+
+        // Sparser than cactus (grid=5, 25% roll) so the desert reads as "mostly
+        // empty with the occasional dried-up shrub."
+        if (roll > 0.25)
+            continue;
+
+        result.push_back(FeaturePlacement{FeatureType::DeadBush, world_x, col.height, bush_seed});
+    }
+
+    return result;
+}
+
+void NormalWorldGenerator::generateDeadBush(Chunk& chunk, const FeaturePlacement& feature)
+{
+    const int local_x = feature.x - chunk.chunk_position * CHUNK_WIDTH;
+    if (local_x < 0 || local_x >= CHUNK_WIDTH) return;
+
+    const int y = feature.y;
+    if (y < 0 || y >= CHUNK_HEIGHT) return;
+
+    // Don't trample a cactus or other feature that landed on the same column.
+    if (chunk.blocks[y][local_x].id != BlockID::Air) return;
+
+    chunk.blocks[y][local_x] = {BlockID::Dead_Bush, 0};
 }
 
 void NormalWorldGenerator::generateOreVein(Chunk& chunk, const FeaturePlacement& feature, BlockID ore, int size)
