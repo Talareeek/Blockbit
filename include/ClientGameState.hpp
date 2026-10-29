@@ -12,6 +12,7 @@
 #include "Chat.hpp"
 #include "ChatUI.hpp"
 #include "RCon.hpp"
+#include "TouchInputOverlay.hpp"
 #include "View.hpp"
 
 #include <memory>
@@ -88,6 +89,10 @@ private:
 
     sf::Vector2<double> camera;
     float view_scale = 1.0f;
+
+    // Virtual on-screen controls. Alive on every platform but only receives
+    // sf::Event::TouchXxx events on Android; renders nothing on desktop.
+    TouchInputOverlay touch_overlay;
 
     void updateViewTransform();
 

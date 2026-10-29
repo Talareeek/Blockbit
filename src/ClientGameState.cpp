@@ -454,6 +454,11 @@ void ClientGameState::sendTickInputs()
     {
         auto polled = getInputs(local_world, camera, game->getWindow());
         inputs.insert(inputs.end(), std::make_move_iterator(polled.begin()), std::make_move_iterator(polled.end()));
+
+        auto touch_frame = touch_overlay.collectFrameInputs();
+        inputs.insert(inputs.end(),
+                      std::make_move_iterator(touch_frame.begin()),
+                      std::make_move_iterator(touch_frame.end()));
     }
 
     if (inputs.empty()) return;
@@ -597,6 +602,12 @@ void ClientGameState::handleEvent(const sf::Event& event)
 
     auto new_inputs = ::getInputsFromEvent(event, camera, game->getWindow());
     inputs.insert(inputs.end(), std::make_move_iterator(new_inputs.begin()), std::make_move_iterator(new_inputs.end()));
+
+    // Mobile touch controls parse the same event stream and append to the
+    // same inputs vector. collectFrameInputs() runs below in update() for
+    // held events (joystick direction, held jump); one-shot presses go
+    // through here via handleEvent.
+    touch_overlay.handleEvent(event, game->getWindow());
 
     if(local_server.has_value()) rcon.handleEvent(event);
 }
@@ -750,7 +761,15 @@ void ClientGameState::update(float dt)
         game_view.setSize({game_view.getSize().x, -game_view.getSize().y});
         game->getWindow().setView(game_view);
 
+#ifdef __ANDROID__
+        // On Android there is no mouse — route the aim through the touch
+        // overlay instead. aimWorldPos returns the last tap position in the
+        // play area, or just below the camera center when nothing is tapped.
+        const sf::Vector2<double> aim = touch_overlay.aimWorldPos(game->getWindow(), camera);
+        ClientSnapshotPacket packet = {.cursor_x = aim.x, .cursor_y = aim.y};
+#else
         ClientSnapshotPacket packet = {.cursor_x = getMouseWorldPosition(camera, game->getWindow()).x, .cursor_y = getMouseWorldPosition(camera, game->getWindow()).y};
+#endif
 
         transport->send(serializePacket(packet));
 
@@ -938,6 +957,13 @@ void ClientGameState::render(sf::RenderWindow& window)
             if (content_view) content_view->render(window);
 
             RenderMinimap(local_world, camera, window);
+
+#ifdef __ANDROID__
+            // Touch overlay sits on top of the HUD so the player's thumbs
+            // can see where to grab. Only drawn on Android; nothing else
+            // ever calls render() on this object.
+            touch_overlay.render(window);
+#endif
         }
 
         if(debug)
