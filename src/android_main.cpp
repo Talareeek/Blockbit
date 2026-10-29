@@ -5,17 +5,19 @@
 // desktop entry in main.cpp is excluded from the Android build by the
 // if(ANDROID) branch in the top-level CMakeLists.txt.
 //
-// Phase 4: hardcoded singleplayer boot. Loads a save at
+// Boot path: hardcoded singleplayer. Loads a save at
 //   <internalDataPath>/Blockbit/saves/android_dev
-// creating a flat world if it doesn't exist yet.
+// creating a flat world if it doesn't exist yet. A proper menu replaces
+// this in Phase 7.
 
 #ifdef __ANDROID__
 
 #include "../include/Game.hpp"
 #include "../include/ClientGameState.hpp"
-#include "../include/AuthorGameState.hpp"
 #include "../include/GameCommon.hpp"
 #include "../include/World.hpp"
+
+#include <android/log.h>
 
 #include <filesystem>
 #include <iostream>
@@ -26,10 +28,13 @@ namespace
     constexpr const char* kWorldName = "android_dev";
     constexpr const char* kNickname  = "AndroidPlayer";
     constexpr unsigned int kSeed     = 1337u;
+    constexpr const char* kLogTag    = "Blockbit";
 }
 
 int main(int /*argc*/, char* /*argv*/[])
 {
+    __android_log_write(ANDROID_LOG_INFO, kLogTag, "main() entered");
+
     try
     {
         Game game;

@@ -41,10 +41,17 @@ private:
     void handleBufferedStateActions();
 
     void handleEvents();
+    void processEvent(const sf::Event& event);
 
     void update();
 
     void render();
+
+    // Driven by sf::Event::FocusLost / FocusGained. On Android these also
+    // fire as MouseLeft / MouseEntered — handle both. When !foreground we
+    // skip update()/render() and block on waitEvent() so the game pauses
+    // without burning battery.
+    bool foreground = true;
 
     std::vector<std::unique_ptr<GameState>> gameStates;
 

@@ -45,9 +45,9 @@ Game::Game()
 #endif
     window.setVerticalSyncEnabled(Settings::graphics.vsync);
     if(Settings::graphics.fps_limit > 0) window.setFramerateLimit(Settings::graphics.fps_limit);
-	
+
 	if (!icon.loadFromFile("resources/textures/grass.png")) throw std::runtime_error("Failed loading an icon");
-	
+
 	window.setIcon(icon);
 
     if (!ImGui::SFML::Init(window)) throw std::runtime_error("Failed initializing ImGui-SFML");
@@ -195,51 +195,69 @@ void Game::handleEvents()
 {
     while(auto event = window.pollEvent())
     {
-        try
+        processEvent(*event);
+    }
+}
+
+void Game::processEvent(const sf::Event& event)
+{
+    try
+    {
+        ImGui::SFML::ProcessEvent(window, event);
+
+        if(event.is<sf::Event::Closed>())
         {
-            ImGui::SFML::ProcessEvent(window, *event);
-
-            if(event->is<sf::Event::Closed>())
-            {
-                window.close();
-            }
-
-            else if(event->is<sf::Event::Resized>())
-            {
-                sf::View view(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(event->getIf<sf::Event::Resized>()->size.x), static_cast<float>(event->getIf<sf::Event::Resized>()->size.y)}));
-                window.setView(view);
-                window.setIcon(icon);
-            }
-
-            else if (event->is<sf::Event::KeyPressed>())
-            {
-                if(event->getIf<sf::Event::KeyPressed>()->code == sf::Keyboard::Key::F11)
-                {
-                    Settings::graphics.fullscreen = !Settings::graphics.fullscreen;
-                    applyGraphicsSettings();
-                    Settings::save();
-                }
-                else if(event->getIf<sf::Event::KeyPressed>()->code == sf::Keyboard::Key::Grave)
-                {
-                    console_visible = !console_visible;
-                }
-            }
-
-            if(!gameStates.empty())
-            {
-                gameStates.back()->handleEvent(*event);
-            }
-
-            console.handleEvent(*event);
+            window.close();
         }
-        catch (const std::bad_alloc&)
+
+        else if(event.is<sf::Event::Resized>())
         {
-            std::cerr << "[Game] bad_alloc handling event\n";
+            sf::View view(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(event.getIf<sf::Event::Resized>()->size.x), static_cast<float>(event.getIf<sf::Event::Resized>()->size.y)}));
+            window.setView(view);
+            window.setIcon(icon);
         }
-        catch (const std::exception& e)
+
+        // SFML sends FocusLost on backgrounding and FocusGained on return.
+        // On Android these also fire as MouseLeft / MouseEntered when the
+        // activity loses or gains the surface — handle both so the pause
+        // path is robust on either platform.
+        else if (event.is<sf::Event::FocusLost>() || event.is<sf::Event::MouseLeft>())
         {
-            std::cerr << "[Game] exception handling event: " << e.what() << '\n';
+            foreground = false;
         }
+        else if (event.is<sf::Event::FocusGained>() || event.is<sf::Event::MouseEntered>())
+        {
+            foreground = true;
+        }
+
+        else if (event.is<sf::Event::KeyPressed>())
+        {
+            if(event.getIf<sf::Event::KeyPressed>()->code == sf::Keyboard::Key::F11)
+            {
+                Settings::graphics.fullscreen = !Settings::graphics.fullscreen;
+                applyGraphicsSettings();
+                Settings::save();
+            }
+            else if(event.getIf<sf::Event::KeyPressed>()->code == sf::Keyboard::Key::Grave)
+            {
+                console_visible = !console_visible;
+            }
+        }
+
+        if(!gameStates.empty())
+        {
+            gameStates.back()->handleEvent(event);
+        }
+
+        console.handleEvent(event);
+    }
+    catch (const std::bad_alloc&)
+    {
+        std::cerr << "[Game] bad_alloc handling event\n";
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "[Game] exception handling event: " << e.what() << '\n';
     }
 }
 
@@ -293,6 +311,20 @@ void Game::run()
 {
     while(window.isOpen())
     {
+        if (!foreground)
+        {
+            // Backgrounded (Android home / app switcher, or desktop focus
+            // loss). Block for the next event (waitEvent) so we don't spin,
+            // drain any extras, then skip update/render. The next foreground
+            // event flips the flag and the normal loop body resumes.
+            if (const auto event = window.waitEvent())
+                processEvent(*event);
+            while (const auto event = window.pollEvent())
+                processEvent(*event);
+            clock.restart();
+            continue;
+        }
+
         dt = clock.restart().asSeconds();
 
         handleEvents();

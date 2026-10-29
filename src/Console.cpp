@@ -276,8 +276,19 @@ void Console::render()
 
 void Console::setupFont(const std::string& path, float size_pixels)
 {
+#ifdef __ANDROID__
+    // ImGui's AddFontFromFileTTF uses stdio fopen() under the hood, which
+    // can't see resources packaged inside the APK (they live behind
+    // AAssetManager, not the local filesystem). Skip the custom font and
+    // let ImGui use its default so Game ctor finishes.
+    (void)path;
+    (void)size_pixels;
+    console_font = nullptr;
+    return;
+#else
     ImGuiIO& io = ImGui::GetIO();
     console_font = io.Fonts->AddFontFromFileTTF(path.c_str(), size_pixels);
+#endif
     if(!console_font)
     {
         std::cerr << "Console: failed to load font: " << path << '\n';

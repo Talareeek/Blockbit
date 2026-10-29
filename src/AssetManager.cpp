@@ -1,5 +1,7 @@
 #include "../include/AssetManager.hpp"
 
+#include <iostream>
+
 std::unordered_map<uint32_t, sf::Texture> AssetManager::textures;
 std::unordered_map<AssetManager::GameTextureID, sf::Texture> AssetManager::game_textures;
 std::unordered_map<AssetManager::UITextureID, sf::Texture> AssetManager::ui_textures;
@@ -27,7 +29,24 @@ void AssetManager::loadFont(AssetManager::FontID id, const std::string& path)
 void AssetManager::loadShader(AssetManager::ShaderID id, const std::string& path)
 {
     sf::Shader shader;
-    if(!shader.loadFromFile(path, sf::Shader::Type::Fragment)) throw std::runtime_error(std::string("AssetManager:\n") + "Failed to load shader: " + path);
+    if(!shader.loadFromFile(path, sf::Shader::Type::Fragment))
+    {
+#ifdef __ANDROID__
+        // SFML 3.1's Android build is pinned to GLES 1, which has no GLSL
+        // shader support — every Shader::loadFromFile returns false. Log and
+        // continue; render paths that call getShader() will throw later and
+        // we handle those at the call sites rather than aborting startup.
+        std::cerr << "[AssetManager] shader skipped (no GLES1 shader support): " << path << '\n';
+        // Install the empty, uninitialized shader anyway so that later
+        // getShader(id) lookups don't throw. Render paths that call
+        // setUniform/draw on the empty shader turn into GL no-ops rather
+        // than hard aborts.
+        shaders[id] = std::move(shader);
+        return;
+#else
+        throw std::runtime_error(std::string("AssetManager:\n") + "Failed to load shader: " + path);
+#endif
+    }
 
     shaders[id] = std::move(shader);
 }

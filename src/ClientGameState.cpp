@@ -563,6 +563,18 @@ void ClientGameState::handleEvent(const sf::Event& event)
             return;
         }
 
+        // Escape (and Android's hardware back, which SFML maps to Escape)
+        // opens the pause menu. Also covered by the polling path below for
+        // desktop key-hold ergonomics, but the event path is required on
+        // Android where Back fires once per press.
+        if (key->code == sf::Keyboard::Key::Escape &&
+            view_close_cooldown <= 0.0f &&
+            !chat_ui.isActive())
+        {
+            game->pushState(this, std::make_unique<PauseScreenState>(game, this));
+            return;
+        }
+
         if (key->code == sf::Keyboard::Key::F1)
         {
             hide_ui = !hide_ui;
