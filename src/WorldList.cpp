@@ -34,6 +34,10 @@ WorldList::WorldList(std::filesystem::path path, Game* game) : game{game}, path(
     connectButton = Button({0.0f, 0.0f}, {0.0f, 0.0f}, sf::Color(55, 90, 130), "Connect");
 
     createButton = Button({0.0f, 0.0f}, {0.0f, 0.0f}, sf::Color(60, 140, 70), "Create World");
+
+#ifdef __ANDROID__
+    mode = Mode::VISIBLE;
+#endif
 }
 
 void WorldList::loadEntries()

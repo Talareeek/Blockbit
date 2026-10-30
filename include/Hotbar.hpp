@@ -14,6 +14,8 @@ private:
 
     InventoryComponent* inventory = nullptr;
 
+    Slot slots[9];
+
 public:
 
     Hotbar();

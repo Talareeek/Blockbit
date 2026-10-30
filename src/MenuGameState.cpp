@@ -319,16 +319,26 @@ void MenuGameState::renderExitConfirmation()
         const float spacing = 20.0f;
         ImGui::SetCursorPosX((size.x - button_width * 2.0f - spacing) * 0.5f);
 
+        ImGui::PushStyleColor(ImGuiCol_Button, SFMLColorToImGuiColor(sf::Color::Green));
+
         if(ImGui::Button("Yes", ImVec2(button_width, 0.0f)))
         {
             show_exit_confirmation = false;
             game->popState(this);
         }
+
+        ImGui::PopStyleColor();
+
+
+        ImGui::PushStyleColor(ImGuiCol_Button, SFMLColorToImGuiColor(sf::Color::Red));
+
         ImGui::SameLine(0.0f, spacing);
         if(ImGui::Button("No", ImVec2(button_width, 0.0f)))
         {
             show_exit_confirmation = false;
         }
+
+        ImGui::PopStyleColor();
     }
     ImGui::End();
 

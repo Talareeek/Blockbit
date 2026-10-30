@@ -16,7 +16,14 @@ public:
         uint32_t window_width = 1280;
         uint32_t window_height = 720;
         uint32_t fps_limit = 100;
-        float lighting_effect_strength = 0.75f;
+#ifdef __ANDROID__
+        bool lighting_effect = false;
+        bool block_animations = false;
+#else
+        bool lighting_effect = true;
+        bool block_animations = true;
+#endif        
+        float lighting_effect_strength = 0.75f;        
     };
 
     struct Audio

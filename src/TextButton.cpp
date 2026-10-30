@@ -48,6 +48,29 @@ void TextButton::handleEvent(const sf::Event& event)
         sf::Vector2i mousePos = event.getIf<sf::Event::MouseMoved>()->position;
         hover = rect.contains(mousePos);
     }
+    else if(event.is<sf::Event::TouchBegan>())
+    {
+        sf::IntRect rect({{static_cast<int>(position.x), static_cast<int>(position.y)}, {static_cast<int>(size.x), static_cast<int>(size.y)}});
+        sf::Vector2i touch_position = event.getIf<sf::Event::TouchBegan>()->position;
+        hover = rect.contains(touch_position);
+    }
+    else if(event.is<sf::Event::TouchMoved>())
+    {
+        sf::IntRect rect({{static_cast<int>(position.x), static_cast<int>(position.y)}, {static_cast<int>(size.x), static_cast<int>(size.y)}});
+        sf::Vector2i touch_position = event.getIf<sf::Event::TouchMoved>()->position;
+        if(!rect.contains(touch_position)) hover = false;
+    }
+    else if(event.is<sf::Event::TouchEnded>())
+    {
+        sf::IntRect rect({{static_cast<int>(position.x), static_cast<int>(position.y)}, {static_cast<int>(size.x), static_cast<int>(size.y)}});
+        sf::Vector2i touch_position = event.getIf<sf::Event::TouchEnded>()->position;
+        if(rect.contains(touch_position))
+        {
+            sound.setVolume(100);
+            sound.play();
+            onClick();
+        }
+    }
 }
 
 void TextButton::update(float dt)

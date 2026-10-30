@@ -108,6 +108,8 @@ public:
     // instead of being executed locally.
     void assignCommandRelay(std::function<void(const std::wstring&)> relay);
 
+    void setOpen(bool open) { this->open = open; }
+
 private:
     std::function<void(const std::wstring&)> command_relay;
 

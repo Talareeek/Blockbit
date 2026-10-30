@@ -2,6 +2,7 @@
 #include <chrono>
 #include <map>
 #include <iostream>
+#include <optional>
 
 #include "../include/Game.hpp"
 #include "../include/Entity.hpp"
@@ -188,7 +189,12 @@ Game::Game()
     console.assignGame(this);
     console.setupFont("resources/fonts/FiraCode-Regular.ttf");
 
-    settings_window.assignGame(this);
+    settings_window.assignGame(this);    
+
+#ifdef __ANDROID__
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.ScaleAllSizes(1.7f);
+#endif
 }
 
 void Game::handleEvents()
@@ -199,10 +205,52 @@ void Game::handleEvents()
     }
 }
 
+#ifdef __ANDROID__
+// Translate finger 0 touch events into synthesized left-mouse events so that
+// ImGui buttons and the custom TextButton/Button widgets — all written for
+// the desktop mouse — work unmodified from a tap. The original Touch event
+// is still delivered right after, which ClientGameState's TouchInputOverlay
+// consumes directly.
+static std::optional<sf::Event> touchToMouse(const sf::Event& event)
+{
+    if (const auto* began = event.getIf<sf::Event::TouchBegan>())
+    {
+        if (began->finger != 0) return std::nullopt;
+        return sf::Event(sf::Event::MouseButtonPressed{
+            sf::Mouse::Button::Left, began->position});
+    }
+    if (const auto* moved = event.getIf<sf::Event::TouchMoved>())
+    {
+        if (moved->finger != 0) return std::nullopt;
+        return sf::Event(sf::Event::MouseMoved{moved->position});
+    }
+    if (const auto* ended = event.getIf<sf::Event::TouchEnded>())
+    {
+        if (ended->finger != 0) return std::nullopt;
+        return sf::Event(sf::Event::MouseButtonReleased{
+            sf::Mouse::Button::Left, ended->position});
+    }
+    return std::nullopt;
+}
+#endif
+
 void Game::processEvent(const sf::Event& event)
 {
     try
     {
+#ifdef __ANDROID__
+        // Synthesize a mouse-equivalent event FIRST so ImGui + custom widgets
+        // react to taps. The real touch event continues through the normal
+        // dispatch below for anything that specifically listens for Touch
+        // (e.g. ClientGameState's TouchInputOverlay).
+        if (const auto synth = touchToMouse(event))
+        {
+            ImGui::SFML::ProcessEvent(window, *synth);
+            if (!gameStates.empty()) gameStates.back()->handleEvent(*synth);
+            console.handleEvent(*synth);
+        }
+#endif
+
         ImGui::SFML::ProcessEvent(window, event);
 
         if(event.is<sf::Event::Closed>())
@@ -221,6 +269,9 @@ void Game::processEvent(const sf::Event& event)
         // On Android these also fire as MouseLeft / MouseEntered when the
         // activity loses or gains the surface — handle both so the pause
         // path is robust on either platform.
+
+#ifdef __ANDROID__
+
         else if (event.is<sf::Event::FocusLost>() || event.is<sf::Event::MouseLeft>())
         {
             foreground = false;
@@ -229,6 +280,8 @@ void Game::processEvent(const sf::Event& event)
         {
             foreground = true;
         }
+
+#endif
 
         else if (event.is<sf::Event::KeyPressed>())
         {
@@ -287,6 +340,8 @@ void Game::render()
 {
     window.clear();
 
+    window.resetGLStates();
+
     if(!gameStates.empty())
     {
         for(auto& state : gameStates)
@@ -309,6 +364,11 @@ void Game::render()
 
 void Game::run()
 {
+    // Reset the clock so the first iteration's dt doesn't include the (possibly
+    // multi-second) Game constructor time. Without this the first dt is huge
+    // and short-timeout states like AuthorGameState's splash skip instantly.
+    clock.restart();
+
     while(window.isOpen())
     {
         if (!foreground)

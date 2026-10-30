@@ -1,6 +1,7 @@
 #include "../include/SettingsWindow.hpp"
 
 #include "../include/Settings.hpp"
+#include "../include/Game.hpp"
 
 #include <imgui.h>
 
@@ -74,7 +75,11 @@ void SettingsWindow::render()
             Settings::graphics.fps_limit = static_cast<uint32_t>(fps_limit);
         }
 
+        ImGui::Checkbox("Lighting effect", &Settings::graphics.lighting_effect);
+
         ImGui::SliderFloat("Lighting effect strength", &Settings::graphics.lighting_effect_strength, 0.0f, 1.0f, "%.2f");
+
+        ImGui::Checkbox("Block animations", &Settings::graphics.block_animations);
 
         if(ImGui::Button("Apply graphics"))
         {
@@ -117,6 +122,10 @@ void SettingsWindow::render()
     {
         ImGui::Checkbox("Render hitboxes",      &Settings::debug.render_hitboxes);
         ImGui::Checkbox("Render chunk borders", &Settings::debug.render_chunk_borders);
+        if(ImGui::Button("Console"))
+        {
+            game->getConsole().setOpen(true);
+        }
     }
 
     ImGui::Separator();

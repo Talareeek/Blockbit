@@ -600,8 +600,15 @@ void ClientGameState::handleEvent(const sf::Event& event)
     game_view.setSize({game_view.getSize().x, -game_view.getSize().y});
     game->getWindow().setView(game_view);
 
+#ifndef __ANDROID__
+    // On desktop the mouse drives ATTACK_START / USE_START. On Android the
+    // very same event stream contains synthesized mouse clicks (translated
+    // from touches by Game::processEvent) so that menu widgets work — but
+    // routing those through getInputsFromEvent would make every world tap
+    // fire ATTACK_START. The touch overlay below handles gameplay inputs.
     auto new_inputs = ::getInputsFromEvent(event, camera, game->getWindow());
     inputs.insert(inputs.end(), std::make_move_iterator(new_inputs.begin()), std::make_move_iterator(new_inputs.end()));
+#endif
 
     // Mobile touch controls parse the same event stream and append to the
     // same inputs vector. collectFrameInputs() runs below in update() for

@@ -62,6 +62,7 @@ private:
 
     void beginProbe(const std::string& text);
     void cancelActiveProbe();
+    
     void renderExitConfirmation();
 
 public:

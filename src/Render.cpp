@@ -85,6 +85,44 @@ namespace
         vertex_array.append(vertex3);
     }
 
+    void appendQuad(sf::VertexArray& vertex_array, const sf::FloatRect& bounds, const sf::IntRect& uv)
+    {
+        sf::Vertex vertex0, vertex1, vertex2, vertex3;
+
+        const sf::Vector2f uvPos  = sf::Vector2f(static_cast<float>(uv.position.x), static_cast<float>(uv.position.y));
+        const sf::Vector2f uvSize = sf::Vector2f(static_cast<float>(uv.size.x), static_cast<float>(uv.size.y));
+
+        // Sub-texel inset: atlas tiles are packed with no gutter, so a UV
+        // landing exactly on a tile boundary can bleed into the neighbour
+        // under rasterizer rounding. A small epsilon (<< 1 texel) is enough
+        // to pin nearest-neighbour sampling to this tile without compressing
+        // the edge texels — half-texel inset shrinks them to ~1/2 of an
+        // interior texel on screen, which is visible as "thin borders".
+        constexpr float INSET = 1.0f / 256.0f;
+        const float u0 = uvPos.x + INSET;
+        const float v0y = uvPos.y + INSET;
+        const float u1 = uvPos.x + uvSize.x - INSET;
+        const float v1y = uvPos.y + uvSize.y - INSET;
+
+        vertex0.position = {bounds.position.x, bounds.position.y};
+        vertex1.position = {bounds.position.x + bounds.size.x, bounds.position.y};
+        vertex2.position = {bounds.position.x + bounds.size.x, bounds.position.y + bounds.size.y};
+        vertex3.position = {bounds.position.x, bounds.position.y + bounds.size.y};
+
+        vertex0.texCoords = {u0, v1y};
+        vertex1.texCoords = {u1, v1y};
+        vertex2.texCoords = {u1, v0y};
+        vertex3.texCoords = {u0, v0y};
+
+        vertex_array.append(vertex0);
+        vertex_array.append(vertex1);
+        vertex_array.append(vertex2);
+
+        vertex_array.append(vertex0);
+        vertex_array.append(vertex2);
+        vertex_array.append(vertex3);
+    }
+
     // Lightmap quad for a single block. Position and texCoord are identical
     // (world chunk-local coords map 1:1 to lightmap pixel coords by design),
     // so GL_LINEAR filtering at the shared block corners produces smooth
@@ -250,18 +288,22 @@ void BuildChunkMesh(ClientWorld& world, int chunk_position)
 
             sf::FloatRect final_rect = {position + bounds.position, bounds.size};
 
+            
+
+            
             // Static blocks encode frame_count=1 so the shader short-circuits
             // and samples the texCoord unchanged.
             const BlockAnimation anim = block_data.render->animation(block);
             const uint16_t duration_cs = anim.frame_duration_ms / 10u;
-            sf::Color anim_color{
+            sf::Color anim_color = {
                 anim.frame_count,
                 static_cast<uint8_t>(std::min<int>(final_uv.size.x, 255)),
                 static_cast<uint8_t>(std::min<uint16_t>(duration_cs, 255)),
                 255
             };
 
-            appendQuad(mesh.vertices, final_rect, final_uv, anim_color);
+            if(Settings::graphics.block_animations) appendQuad(mesh.vertices, final_rect, final_uv, anim_color);
+            else appendQuad(mesh.vertices, final_rect, final_uv);
         }
     }
 
@@ -480,36 +522,40 @@ void RenderWorld(ClientWorld& world, const sf::Vector2<double> camera, sf::Rende
         states.texture = &BlockAtlas::getTexture();
         states.transform.translate({translate_x, translate_y});
         states.transform.scale({unit_size, unit_size});
-        applyBlockAnimationShader(states);
+        if(Settings::graphics.block_animations) applyBlockAnimationShader(states);
 
         window.draw(mesh.vertices, states);
 
-        // --- Lighting overlay pass ---------------------------------------
-        // Multiply blend: dst_new = overlay_rgb * dst_old. The shader outputs
-        // the final light factor (max of block/sky light, clamped against
-        // ambient_min). One extra draw call per visible chunk.
-        sf::Texture& light_tex = ensureLightTexture(world, i);
-        if (chunk.light.texture_dirty)
+        if(Settings::graphics.lighting_effect)
         {
-            auto pixels = packChunkLightmap(chunk.light);
-            light_tex.update(pixels.data());
-            chunk.light.texture_dirty = false;
+            // --- Lighting overlay pass ---------------------------------------
+            // Multiply blend: dst_new = overlay_rgb * dst_old. The shader outputs
+            // the final light factor (max of block/sky light, clamped against
+            // ambient_min). One extra draw call per visible chunk.
+            sf::Texture& light_tex = ensureLightTexture(world, i);
+            if (chunk.light.texture_dirty)
+            {
+                auto pixels = packChunkLightmap(chunk.light);
+                light_tex.update(pixels.data());
+                chunk.light.texture_dirty = false;
+            }
+
+            sf::RenderStates overlay_states;
+
+            sf::Shader& lighting_shader = AssetManager::getShader(AssetManager::ShaderID::LightingOverlay);
+            lighting_shader.setUniform("texture", sf::Shader::CurrentTexture);
+            lighting_shader.setUniform("u_day_factor",      day_factor);
+            lighting_shader.setUniform("u_ambient_min",     ambient_min);
+            lighting_shader.setUniform("u_night_sky_floor", night_sky_floor);
+            lighting_shader.setUniform("u_effect_strength", effect_strength);
+
+            overlay_states.shader    = &lighting_shader;        
+            overlay_states.texture   = &light_tex;
+            overlay_states.transform = states.transform;  // same chunk-to-screen mapping
+            overlay_states.blendMode = sf::BlendMultiply;
+
+            window.draw(mesh.lightmap_vertices, overlay_states);
         }
-
-        sf::Shader& lighting_shader = AssetManager::getShader(AssetManager::ShaderID::LightingOverlay);
-        lighting_shader.setUniform("texture", sf::Shader::CurrentTexture);
-        lighting_shader.setUniform("u_day_factor",      day_factor);
-        lighting_shader.setUniform("u_ambient_min",     ambient_min);
-        lighting_shader.setUniform("u_night_sky_floor", night_sky_floor);
-        lighting_shader.setUniform("u_effect_strength", effect_strength);
-
-        sf::RenderStates overlay_states;
-        overlay_states.texture   = &light_tex;
-        overlay_states.transform = states.transform;  // same chunk-to-screen mapping
-        overlay_states.shader    = &lighting_shader;
-        overlay_states.blendMode = sf::BlendMultiply;
-
-        window.draw(mesh.lightmap_vertices, overlay_states);
     }
 }
 
