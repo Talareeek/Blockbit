@@ -19,7 +19,7 @@
 
 namespace
 {
-    constexpr std::array<BlockID, 10> BLOCK_OPTIONS
+    constexpr std::array<BlockID, 22> BLOCK_OPTIONS
     {
         BlockID::Bedrock,
         BlockID::Stone,
@@ -30,7 +30,19 @@ namespace
         BlockID::Snow,
         BlockID::Cobblestone,
         BlockID::Obsidian,
-        BlockID::Oak_Planks
+        BlockID::Gravel,
+        BlockID::Bricks,
+        BlockID::Oak_Log,
+        BlockID::Oak_Planks,
+        BlockID::Coal_Ore,
+        BlockID::Iron_Ore,
+        BlockID::Gold_Ore,
+        BlockID::Diamond_Ore,
+        BlockID::Ruby_Ore,
+        BlockID::Coal_Block,
+        BlockID::Iron_Block,
+        BlockID::Gold_Block,
+        BlockID::Ruby_Block
     };
 
     int blockOptionIndex(BlockID id)

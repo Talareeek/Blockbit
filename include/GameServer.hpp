@@ -68,6 +68,13 @@ private:
     uint64_t tick = 0;
     sf::Clock update_clock;
 
+    // Block updates run at a fixed 20 Hz regardless of server tick_rate. The
+    // pipeline carries its own tick counter so scheduleTick(delay=N) is in
+    // 20 Hz units (one block-tick = 50 ms), decoupled from server tick scale.
+    static constexpr float BLOCK_UPDATE_STEP = 1.0f / 20.0f;
+    float block_update_accumulator = 0.0f;
+    uint64_t block_update_tick = 0;
+
     uint32_t consecutive_tick_exceptions = 0;
     bool unrecoverable = false;
 

@@ -693,12 +693,31 @@ void GameServer::update(float dt)
         // ticks (which can cascade propagation again via drainPropagation inside
         // the loop), then random ticks. broadcastBlockUpdates right after picks
         // up every resulting block state within this same tick.
+        //
+        // Gated at a fixed 20 Hz (BLOCK_UPDATE_STEP) so block updates stay on a
+        // constant cadence regardless of server tick_rate. If more than one
+        // step has accumulated (server stall / slow frame) we catch up, capped
+        // at max_ticks_per_frame iterations to avoid runaway work.
+        block_update_accumulator += dt;
         {
             auto& pipeline = world.getBlockUpdatePipeline();
-            pipeline.setCurrentTick(tick);
-            pipeline.drainPropagation();
-            pipeline.processScheduled();
-            pipeline.runRandomTicks();
+            uint32_t iterations = 0;
+            while (block_update_accumulator >= BLOCK_UPDATE_STEP && iterations < max_ticks_per_frame)
+            {
+                block_update_accumulator -= BLOCK_UPDATE_STEP;
+                ++block_update_tick;
+                ++iterations;
+
+                pipeline.setCurrentTick(block_update_tick);
+                pipeline.drainPropagation();
+                pipeline.processScheduled();
+                pipeline.runRandomTicks();
+            }
+            if (block_update_accumulator >= BLOCK_UPDATE_STEP)
+            {
+                // Hit the catch-up cap; discard the backlog to avoid snowballing.
+                block_update_accumulator = 0.0f;
+            }
         }
 
         streamChunksToClients();

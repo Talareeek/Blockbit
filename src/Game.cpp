@@ -314,10 +314,40 @@ void Game::processEvent(const sf::Event& event)
     }
 }
 
+#ifdef __ANDROID__
+#include <SFML/System/NativeActivity.hpp>
+#include <android/log.h>
+#include <android/native_activity.h>
+#endif
+
 void Game::update()
 {
     ImGui::SFML::Update(window, sf::seconds(dt));
     applyImGuiTheme();
+
+#ifdef __ANDROID__
+    // Toggle the Android soft keyboard based on ImGui's text-input focus.
+    // ANativeActivity_show/hideSoftInput are the native-API equivalents of
+    // InputMethodManager.showSoftInput — no JNI needed. SFML then forwards
+    // the typed characters back as sf::Event::TextEntered, which
+    // ImGui-SFML routes into whatever widget currently owns focus.
+    static bool prev_wants_text = false;
+    const bool wants_text = ImGui::GetIO().WantTextInput;
+
+    if (wants_text != prev_wants_text)
+    {
+        console.writeLine(L"Keyboard should be");
+
+        if (ANativeActivity* activity = sf::getNativeActivity())
+        {
+            if (wants_text)
+                ANativeActivity_showSoftInput(activity, 2);  // SHOW_FORCED
+            else
+                ANativeActivity_hideSoftInput(activity, 1);  // HIDE_IMPLICIT_ONLY
+        }
+        prev_wants_text = wants_text;
+    }
+#endif
 
     handleBufferedStateActions();
 

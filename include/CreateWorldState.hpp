@@ -21,7 +21,7 @@ private:
 
     Mode mode = Mode::Normal;
 
-    char name_buffer[64] = {};
+    char name_buffer[64] = "New world";
     char seed_buffer[32] = {};
 
     float base_height  = 55.0f;
