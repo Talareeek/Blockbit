@@ -945,6 +945,16 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         }
     },
     {
+        ItemID::Smooth_Stone,
+        {
+            .name = "Smooth Stone",
+            .texture = AssetManager::GameTextureID::Smooth_Stone,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
         ItemID::Flint,
         {
             .name = "Flint",

@@ -173,56 +173,67 @@ void relightOnBlockChange(LightView& view,
     handleChannel(LightChannel::Sky, /*emission_matters=*/false);
 }
 
-void initializeChunkSkyLight(LightView& view,
-                             int chunk_position,
-                             int chunk_width,
-                             int chunk_height)
+void initializeChunkGroupSkyLight(LightView& view,
+                                  const std::vector<int>& chunk_positions,
+                                  int chunk_width,
+                                  int chunk_height)
 {
     std::deque<LightNode> sky_seeds;
     std::deque<LightNode> block_seeds;
 
-    const int base_x = chunk_position * chunk_width;
-
-    for (int local_x = 0; local_x < chunk_width; ++local_x)
+    for (int chunk_position : chunk_positions)
     {
-        const int wx = base_x + local_x;
-        bool sky_exposed = true;
+        const int base_x = chunk_position * chunk_width;
 
-        for (int y = chunk_height - 1; y >= 0; --y)
+        for (int local_x = 0; local_x < chunk_width; ++local_x)
         {
-            const uint8_t op = view.getOpacity(wx, y);
+            const int wx = base_x + local_x;
+            bool sky_exposed = true;
 
-            // Any air cell with no block above it gets the full sky level
-            // directly — the shader scales it down with the day/night cycle.
-            // The first non-air cell seen in the column closes sky exposure
-            // for everything below; those cells start at 0 and the BFS fills
-            // them in from the exposed cap plus from any lateral neighbors.
-            if (sky_exposed && op <= kAirOpacity)
+            for (int y = chunk_height - 1; y >= 0; --y)
             {
-                view.setLight(wx, y, LightChannel::Sky, kMaxLevel);
-                sky_seeds.push_back({wx, y, kMaxLevel});
-            }
-            else
-            {
-                view.setLight(wx, y, LightChannel::Sky, 0);
-                if (op > kAirOpacity) sky_exposed = false;
-            }
+                const uint8_t op = view.getOpacity(wx, y);
 
-            // Collect block-light emitters at the same time to avoid a second
-            // chunk sweep.
-            uint8_t emission = view.getEmission(wx, y);
-            if (emission > 0)
-            {
-                view.setLight(wx, y, LightChannel::Block, emission);
-                if (emission > 1) block_seeds.push_back({wx, y, emission});
-            }
-            else
-            {
-                view.setLight(wx, y, LightChannel::Block, 0);
+                // Any air cell with no block above it gets the full sky level
+                // directly — the shader scales it down with the day/night cycle.
+                // The first non-air cell seen in the column closes sky exposure
+                // for everything below; those cells start at 0 and the BFS fills
+                // them in from the exposed cap plus from any lateral neighbors.
+                if (sky_exposed && op <= kAirOpacity)
+                {
+                    view.setLight(wx, y, LightChannel::Sky, kMaxLevel);
+                    sky_seeds.push_back({wx, y, kMaxLevel});
+                }
+                else
+                {
+                    view.setLight(wx, y, LightChannel::Sky, 0);
+                    if (op > kAirOpacity) sky_exposed = false;
+                }
+
+                // Collect block-light emitters at the same time to avoid a second
+                // chunk sweep.
+                uint8_t emission = view.getEmission(wx, y);
+                if (emission > 0)
+                {
+                    view.setLight(wx, y, LightChannel::Block, emission);
+                    if (emission > 1) block_seeds.push_back({wx, y, emission});
+                }
+                else
+                {
+                    view.setLight(wx, y, LightChannel::Block, 0);
+                }
             }
         }
     }
 
     propagateLight(view, std::move(sky_seeds),   LightChannel::Sky);
     propagateLight(view, std::move(block_seeds), LightChannel::Block);
+}
+
+void initializeChunkSkyLight(LightView& view,
+                             int chunk_position,
+                             int chunk_width,
+                             int chunk_height)
+{
+    initializeChunkGroupSkyLight(view, {chunk_position}, chunk_width, chunk_height);
 }

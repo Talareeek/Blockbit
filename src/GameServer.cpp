@@ -213,8 +213,15 @@ void GameServer::syncConnections()
                 it->second.content_view->onClose(world);
                 it->second.content_view.reset();
             }
-            deactivatePlayerFor(it->second.nickname);
+            std::string nickname = it->second.nickname;
+            deactivatePlayerFor(nickname);
             clients.erase(it);
+            known_clients.erase(client_id);
+            remote_input_queues.erase(client_id);
+
+            std::wstring wide_nickname(nickname.begin(), nickname.end());
+            sendSystemMessageToAll(L"[color=#FFFF00]" + wide_nickname + L" left the game[/color]");
+            continue;
         }
         known_clients.erase(client_id);
         remote_input_queues.erase(client_id);
@@ -275,6 +282,9 @@ void GameServer::processIncoming()
                         transport->send(packet.clientId, serializePacket(TrackPacket{entity_id}));
 
                         std::cout << "[Server] Logged " << packet.clientId << " as " << login.nickname << '\n';
+
+                        std::wstring wide_nickname(login.nickname.begin(), login.nickname.end());
+                        sendSystemMessageToAll(L"[color=#FFFF00]" + wide_nickname + L" joined the game[/color]");
                     }
                     else
                     {
@@ -776,6 +786,13 @@ void GameServer::spawnPlayerFor(std::string nickname)
 
         entity.addComponent(PlayerControlledComponent{nickname});
 
+        if(entity.hasComponent<InventoryComponent>())
+        {
+            auto& inv_comp = entity.getComponent<InventoryComponent>();
+            addItem(inv_comp.inventory, ItemID::Smooth_Stone, 64);
+            inv_comp.dirty = true;
+        }
+
         nickname_to_entity[nickname] = entity.getID();
 
         world.addEntity(std::move(entity));
@@ -1119,6 +1136,20 @@ void GameServer::sendSystemMessageTo(uint32_t clientId, const std::wstring& mess
     ChatMessagePacket packet;
     packet.message = message + L'\n';
     transport->send(clientId, serializePacket(packet));
+}
+
+void GameServer::sendSystemMessageToAll(const std::wstring& message)
+{
+    ChatMessagePacket packet;
+    packet.message = message + L'\n';
+    auto buffer = serializePacket(packet);
+
+    for (auto client_id : known_clients)
+    {
+        transport->send(client_id, buffer);
+    }
+
+    if (onChatBroadcast) onChatBroadcast(packet.message);
 }
 
 

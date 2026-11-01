@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <deque>
+#include <vector>
 
 // 2D block-based lighting (BFS, FIFO, deterministic).
 //
@@ -89,5 +90,16 @@ void initializeChunkSkyLight(LightView& view,
                              int chunk_position,
                              int chunk_width,
                              int chunk_height);
+
+// Same as initializeChunkSkyLight but seeds every chunk in the group before
+// a single BFS pass. Running it per-chunk would overwrite each chunk's own
+// cells after the previous chunk's propagation already filled them, losing
+// cross-border contributions (e.g. a torch in chunk A would stop illuminating
+// chunk B as soon as B's own init zeroed its cells). Caller is expected to
+// have already cleared the involved chunks' lightmaps.
+void initializeChunkGroupSkyLight(LightView& view,
+                                  const std::vector<int>& chunk_positions,
+                                  int chunk_width,
+                                  int chunk_height);
 
 #endif // LIGHTING_SYSTEM_HPP

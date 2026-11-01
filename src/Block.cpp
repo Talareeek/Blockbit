@@ -314,6 +314,7 @@ ItemID blockToItem(BlockID block)
         case BlockID::Gravel: return ItemID::Gravel;
         case BlockID::Cactus: return ItemID::Cactus;
         case BlockID::Dead_Bush: return ItemID::Dead_Bush;
+        case BlockID::Smooth_Stone: return ItemID::Smooth_Stone;
         default: return ItemID::None;
     }
 }
@@ -362,6 +363,7 @@ BlockID itemToBlock(ItemID item)
         case ItemID::Gravel: return BlockID::Gravel;
         case ItemID::Cactus: return BlockID::Cactus;
         case ItemID::Dead_Bush: return BlockID::Dead_Bush;
+        case ItemID::Smooth_Stone: return BlockID::Smooth_Stone;
         default: return BlockID::Air;
     }
 }
@@ -837,6 +839,19 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .support_blocks_below = {BlockID::Sand},
             .light_opacity = 1,
             .lets_light = true,
+        }
+    },
+    { BlockID::Smooth_Stone,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 2.0f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Smooth_Stone, .render_bounds = default_render_bounds, .rect = smooth_stone_render_rect},
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 1}},
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Smooth_Stone}
         }
     },
 };

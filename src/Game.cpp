@@ -139,6 +139,7 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Cactus, "resources/textures/cactus.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Dead_Bush, "resources/textures/dead_bush.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Flint, "resources/textures/flint.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Smooth_Stone, "resources/textures/smooth_stone.png");
 
     BlockAtlas::add(AssetManager::GameTextureID::Stone);
     BlockAtlas::add(AssetManager::GameTextureID::Grass);
@@ -172,6 +173,7 @@ Game::Game()
     BlockAtlas::add(AssetManager::GameTextureID::Gravel);
     BlockAtlas::add(AssetManager::GameTextureID::Cactus);
     BlockAtlas::add(AssetManager::GameTextureID::Dead_Bush);
+    BlockAtlas::add(AssetManager::GameTextureID::Smooth_Stone);
     BlockAtlas::build();
 
     AssetManager::loadShader(AssetManager::ShaderID::Sun, "resources/shaders/sun.frag");
@@ -318,6 +320,97 @@ void Game::processEvent(const sf::Event& event)
 #include <SFML/System/NativeActivity.hpp>
 #include <android/log.h>
 #include <android/native_activity.h>
+#include <jni.h>
+
+namespace
+{
+    // ANativeActivity_show/hideSoftInput is unreliable on NativeActivity-based
+    // apps (hasCode="false"): the decorView usually isn't focusable, so IMM
+    // silently no-ops on recent Android. Every mature NativeActivity engine
+    // (SDL, Godot, UE) ends up doing the JNI dance below instead.
+    void androidSetSoftKeyboard(bool show)
+    {
+        ANativeActivity* activity = sf::getNativeActivity();
+        if (!activity) return;
+
+        JavaVM* vm = activity->vm;
+        JNIEnv* env = nullptr;
+        bool attached = false;
+        jint status = vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6);
+        if (status == JNI_EDETACHED)
+        {
+            if (vm->AttachCurrentThread(&env, nullptr) != JNI_OK) return;
+            attached = true;
+        }
+        else if (status != JNI_OK)
+        {
+            return;
+        }
+
+        auto cleanup = [&]() {
+            if (env->ExceptionCheck()) env->ExceptionClear();
+            if (attached) vm->DetachCurrentThread();
+        };
+
+        jclass activityClass = env->GetObjectClass(activity->clazz);
+
+        jmethodID getWindow = env->GetMethodID(activityClass, "getWindow",
+            "()Landroid/view/Window;");
+        jobject jwindow = env->CallObjectMethod(activity->clazz, getWindow);
+        jclass windowClass = env->GetObjectClass(jwindow);
+        jmethodID getDecorView = env->GetMethodID(windowClass, "getDecorView",
+            "()Landroid/view/View;");
+        jobject decorView = env->CallObjectMethod(jwindow, getDecorView);
+
+        // decorView must be focusable or showSoftInput will no-op.
+        jclass viewClass = env->GetObjectClass(decorView);
+        jmethodID setFocusable = env->GetMethodID(viewClass, "setFocusable", "(Z)V");
+        jmethodID setFocusableInTouchMode = env->GetMethodID(viewClass, "setFocusableInTouchMode", "(Z)V");
+        jmethodID requestFocus = env->GetMethodID(viewClass, "requestFocus", "()Z");
+        env->CallVoidMethod(decorView, setFocusable, JNI_TRUE);
+        env->CallVoidMethod(decorView, setFocusableInTouchMode, JNI_TRUE);
+        env->CallBooleanMethod(decorView, requestFocus);
+
+        jmethodID getSystemService = env->GetMethodID(
+            activityClass, "getSystemService",
+            "(Ljava/lang/String;)Ljava/lang/Object;");
+        jstring serviceName = env->NewStringUTF("input_method");
+        jobject imm = env->CallObjectMethod(activity->clazz, getSystemService, serviceName);
+        env->DeleteLocalRef(serviceName);
+        if (!imm) { cleanup(); return; }
+
+        jclass immClass = env->GetObjectClass(imm);
+        if (show)
+        {
+            // flags=0 (implicit) — SHOW_FORCED pairs with HIDE_IMPLICIT_ONLY
+            // which won't dismiss on blur. Plain show is enough once the view
+            // is focusable.
+            jmethodID showSoftInput = env->GetMethodID(immClass, "showSoftInput",
+                "(Landroid/view/View;I)Z");
+            env->CallBooleanMethod(imm, showSoftInput, decorView, 0);
+        }
+        else
+        {
+            jmethodID getWindowToken = env->GetMethodID(viewClass, "getWindowToken",
+                "()Landroid/os/IBinder;");
+            jobject token = env->CallObjectMethod(decorView, getWindowToken);
+            jmethodID hideSoftInput = env->GetMethodID(immClass, "hideSoftInputFromWindow",
+                "(Landroid/os/IBinder;I)Z");
+            env->CallBooleanMethod(imm, hideSoftInput, token, 0);
+            if (token) env->DeleteLocalRef(token);
+        }
+
+        env->DeleteLocalRef(immClass);
+        env->DeleteLocalRef(imm);
+        env->DeleteLocalRef(viewClass);
+        env->DeleteLocalRef(decorView);
+        env->DeleteLocalRef(windowClass);
+        env->DeleteLocalRef(jwindow);
+        env->DeleteLocalRef(activityClass);
+
+        cleanup();
+    }
+}
 #endif
 
 void Game::update()
@@ -327,24 +420,14 @@ void Game::update()
 
 #ifdef __ANDROID__
     // Toggle the Android soft keyboard based on ImGui's text-input focus.
-    // ANativeActivity_show/hideSoftInput are the native-API equivalents of
-    // InputMethodManager.showSoftInput — no JNI needed. SFML then forwards
-    // the typed characters back as sf::Event::TextEntered, which
+    // SFML forwards typed characters back as sf::Event::TextEntered, which
     // ImGui-SFML routes into whatever widget currently owns focus.
     static bool prev_wants_text = false;
     const bool wants_text = ImGui::GetIO().WantTextInput;
 
     if (wants_text != prev_wants_text)
     {
-        console.writeLine(L"Keyboard should be");
-
-        if (ANativeActivity* activity = sf::getNativeActivity())
-        {
-            if (wants_text)
-                ANativeActivity_showSoftInput(activity, 2);  // SHOW_FORCED
-            else
-                ANativeActivity_hideSoftInput(activity, 1);  // HIDE_IMPLICIT_ONLY
-        }
+        androidSetSoftKeyboard(wants_text);
         prev_wants_text = wants_text;
     }
 #endif

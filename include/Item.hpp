@@ -94,7 +94,8 @@ enum class ItemID : uint32_t
 
     Workbench,
     Cactus,
-    Dead_Bush
+    Dead_Bush,
+    Smooth_Stone
 };
 
 enum class ItemRarity

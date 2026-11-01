@@ -282,7 +282,16 @@ void BuildChunkMesh(ClientWorld& world, int chunk_position)
 
             const sf::IntRect& texture_uv = BlockAtlas::getUV(texture_id);
 
-            sf::IntRect final_uv = {texture_uv.position + block_data.render->rect(block).position, block_data.render->rect(block).size};
+            const int world_x = chunk_position * CHUNK_WIDTH + x;
+            const BlockNeighbors neighbors{
+                world.getBlock(world_x,     y + 1).id,
+                world.getBlock(world_x + 1, y    ).id,
+                world.getBlock(world_x,     y - 1).id,
+                world.getBlock(world_x - 1, y    ).id
+            };
+
+            const sf::IntRect block_rect = block_data.render->rect(block, neighbors);
+            sf::IntRect final_uv = {texture_uv.position + block_rect.position, block_rect.size};
 
             auto bounds = block_data.render->render_bounds(block);
 
@@ -479,40 +488,46 @@ void RenderWorld(ClientWorld& world, const sf::Vector2<double> camera, sf::Rende
         // lightmap derived here will match what the server would have
         // computed from the same blocks.
         //
-        // After the per-chunk sky seed we also re-flood from the edge columns
-        // of any neighbor that was already lit, so light which lived in those
-        // chunks before we knew about this one gets a chance to spill back
-        // across the boundary. Without this the seam at a chunk border is
-        // visible wherever one side was lit from a direction the other side
-        // can't re-derive from scratch (e.g. cave light leaking sideways).
+        // When a neighbor is already lit we re-light the group together: zero
+        // every member's lightmap and seed every column in one pass before a
+        // single BFS. Lighting the new chunk alone with a cross-flood from
+        // the neighbor's edge leaves a visible seam because the neighbor's
+        // edge was itself computed when this chunk didn't exist — regenerating
+        // from scratch makes the border propagate with full context.
         if (!chunk.light.initialized)
         {
-            WorldLightView view(world);
-            initializeChunkSkyLight(view, i, CHUNK_WIDTH, CHUNK_HEIGHT);
-            chunk.light.initialized = true;
-
             auto& all_chunks = world.getChunks();
-            std::deque<LightNode> cross_block, cross_sky;
+
+            std::vector<int> group;
+            group.push_back(i);
             for (int neighbor_cp : {i - 1, i + 1})
             {
                 auto n_it = all_chunks.find(neighbor_cp);
                 if (n_it == all_chunks.end()) continue;
                 if (!n_it->second.light.initialized) continue;
-
-                const int wx = (neighbor_cp < i)
-                    ? neighbor_cp * CHUNK_WIDTH + CHUNK_WIDTH - 1
-                    : neighbor_cp * CHUNK_WIDTH;
-
-                for (int y = 0; y < CHUNK_HEIGHT; ++y)
-                {
-                    uint8_t bl = view.getLight(wx, y, LightChannel::Block);
-                    uint8_t sl = view.getLight(wx, y, LightChannel::Sky);
-                    if (bl > 1) cross_block.push_back({wx, y, bl});
-                    if (sl > 1) cross_sky.push_back({wx, y, sl});
-                }
+                group.push_back(neighbor_cp);
             }
-            propagateLight(view, std::move(cross_block), LightChannel::Block);
-            propagateLight(view, std::move(cross_sky),   LightChannel::Sky);
+
+            for (int cp : group)
+            {
+                auto it = all_chunks.find(cp);
+                if (it == all_chunks.end()) continue;
+                auto& light = it->second.light;
+                if (!light.block_light.empty())
+                    std::fill(light.block_light.begin(), light.block_light.end(), 0);
+                if (!light.sky_light.empty())
+                    std::fill(light.sky_light.begin(), light.sky_light.end(), 0);
+                light.texture_dirty = true;
+            }
+
+            WorldLightView view(world);
+            initializeChunkGroupSkyLight(view, group, CHUNK_WIDTH, CHUNK_HEIGHT);
+
+            for (int cp : group)
+            {
+                auto it = all_chunks.find(cp);
+                if (it != all_chunks.end()) it->second.light.initialized = true;
+            }
         }
 
         float translate_x = static_cast<float>((static_cast<double>(i * CHUNK_WIDTH) - camera.x)) * unit_size;
@@ -1289,7 +1304,13 @@ sf::Texture generateBackground()
             const auto& data = blockDatabase[block.id];
             if (!data.render.has_value()) continue;
 
-            const sf::IntRect uv = data.render->rect(block);
+            const BlockNeighbors neighbors{
+                getBlock(wx,     wy + 1).id,
+                getBlock(wx + 1, wy    ).id,
+                getBlock(wx,     wy - 1).id,
+                getBlock(wx - 1, wy    ).id
+            };
+            const sf::IntRect uv = data.render->rect(block, neighbors);
             if (uv.size.x <= 0 || uv.size.y <= 0) continue;
 
             sf::Sprite sprite(AssetManager::getGameTexture(data.render->texture));

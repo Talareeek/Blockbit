@@ -15,7 +15,8 @@ struct AIComponent : public Component
     {
         Idle      = 0,
         Wandering = 1,
-        Chasing   = 2
+        Chasing   = 2,
+        Fleeing   = 3
     };
 
     enum class Personality : uint8_t
@@ -42,6 +43,11 @@ struct AIComponent : public Component
 
     // attack pacing
     float attackCooldown = 0.0f;
+
+    // How long we've been chasing without a fresh in-range + line-of-sight
+    // sighting. Lets hostile mobs keep pursuing a target that briefly ducks
+    // behind cover instead of giving up the instant they lose eye contact.
+    float sinceTargetSeen = 0.0f;
 
     static constexpr float    ATTACK_INTERVAL = 1.0f;
     static constexpr uint32_t ATTACK_DAMAGE   = 5;
@@ -105,6 +111,7 @@ struct AIComponent : public Component
         compound["state_duration"] = Tag(stateDuration);
         compound["wander_dir"] = Tag(wanderDir);
         compound["attack_cooldown"] = Tag(attackCooldown);
+        compound["since_target_seen"] = Tag(sinceTargetSeen);
 
         return Tag(compound);
     }
@@ -121,6 +128,10 @@ struct AIComponent : public Component
         stateDuration = tag["state_duration"].get<float>();
         wanderDir = tag["wander_dir"].get<int>();
         attackCooldown = tag["attack_cooldown"].get<float>();
+
+        const auto& compound = tag.get<TagCompound>();
+        if (compound.count("since_target_seen"))
+            sinceTargetSeen = tag["since_target_seen"].get<float>();
     }
 
     std::unique_ptr<Component> clone() const override

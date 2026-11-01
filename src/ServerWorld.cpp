@@ -855,39 +855,46 @@ void ServerWorld::loadOrCreateChunk(int chunk_position)
             world_generator->generateChunk(chunk_position);
     }
 
-    // Light the freshly materialized chunk. We do this *after* the chunk is
-    // in the map so the WorldLightView adapter finds it. Also re-seeds from
-    // the right/left edge of each loaded neighbor so light that already lived
-    // in those chunks can flood back across the boundary.
+    // Re-light the freshly materialized chunk together with any already-lit
+    // neighbor in one pass. If a chunk was previously lit in isolation (the
+    // neighbor on one side wasn't loaded yet), its border cells reflect that
+    // missing context and the seam shows up as a visible light cut once the
+    // other side appears. Regenerating the whole group from scratch — seeding
+    // every column of every member before a single BFS — makes the border
+    // propagate as if the chunks had always been loaded together.
     auto chunk_it = chunks.find(chunk_position);
     if (chunk_it != chunks.end())
     {
-        WorldLightView view(*this);
-        initializeChunkSkyLight(view, chunk_position, CHUNK_WIDTH, CHUNK_HEIGHT);
-        chunk_it->second.light.initialized = true;
-
-        std::deque<LightNode> cross_block, cross_sky;
+        std::vector<int> group;
+        group.push_back(chunk_position);
         for (int neighbor_cp : {chunk_position - 1, chunk_position + 1})
         {
             auto n_it = chunks.find(neighbor_cp);
             if (n_it == chunks.end()) continue;
             if (!n_it->second.light.initialized) continue;
-
-            // World-x of the neighbor's shared-edge column.
-            int wx = (neighbor_cp < chunk_position)
-                ? neighbor_cp * CHUNK_WIDTH + CHUNK_WIDTH - 1
-                : neighbor_cp * CHUNK_WIDTH;
-
-            for (int y = 0; y < CHUNK_HEIGHT; ++y)
-            {
-                uint8_t bl = view.getLight(wx, y, LightChannel::Block);
-                uint8_t sl = view.getLight(wx, y, LightChannel::Sky);
-                if (bl > 1) cross_block.push_back({wx, y, bl});
-                if (sl > 1) cross_sky.push_back({wx, y, sl});
-            }
+            group.push_back(neighbor_cp);
         }
-        propagateLight(view, std::move(cross_block), LightChannel::Block);
-        propagateLight(view, std::move(cross_sky),   LightChannel::Sky);
+
+        for (int cp : group)
+        {
+            auto it = chunks.find(cp);
+            if (it == chunks.end()) continue;
+            auto& light = it->second.light;
+            if (!light.block_light.empty())
+                std::fill(light.block_light.begin(), light.block_light.end(), 0);
+            if (!light.sky_light.empty())
+                std::fill(light.sky_light.begin(), light.sky_light.end(), 0);
+            light.texture_dirty = true;
+        }
+
+        WorldLightView view(*this);
+        initializeChunkGroupSkyLight(view, group, CHUNK_WIDTH, CHUNK_HEIGHT);
+
+        for (int cp : group)
+        {
+            auto it = chunks.find(cp);
+            if (it != chunks.end()) it->second.light.initialized = true;
+        }
     }
 }
 
@@ -912,13 +919,28 @@ sf::Vector2<double> ServerWorld::getSpawnPoint()
         loadOrCreateChunk(chunkOf(cl));
         if (chunkOf(cr) != chunkOf(cl)) loadOrCreateChunk(chunkOf(cr));
 
-        for (int y = CHUNK_HEIGHT - 2; y >= 1; --y)
+        // Resolve each column's surface independently: top-down scan stops at
+        // the first non-passable cell. Spawning one above the taller of the
+        // two guarantees the player lands on the highest exposed block and
+        // never inside a cave pocket beneath a surface — the old joint-scan
+        // could fall through a tree/overhang on one side and bottom out in
+        // an underground air pocket where both columns coincidentally match.
+        auto highestFloor = [&](int x) -> std::optional<int>
         {
-            if (!isPassable(getBlock(cl, y))     || !isPassable(getBlock(cr, y)))     continue;
-            if (!isFloor(getBlock(cl, y - 1))    || !isFloor(getBlock(cr, y - 1)))    continue;
-            return y;
-        }
-        return std::nullopt;
+            for (int y = CHUNK_HEIGHT - 2; y >= 1; --y)
+                if (isFloor(getBlock(x, y))) return y;
+            return std::nullopt;
+        };
+
+        auto fl = highestFloor(cl);
+        auto fr = highestFloor(cr);
+        if (!fl || !fr) return std::nullopt;
+
+        const int spawn_y = std::max(*fl, *fr) + 1;
+        if (spawn_y >= CHUNK_HEIGHT - 1) return std::nullopt;
+        if (!isPassable(getBlock(cl, spawn_y))) return std::nullopt;
+        if (!isPassable(getBlock(cr, spawn_y))) return std::nullopt;
+        return spawn_y;
     };
 
     for (int attempt = 0; attempt < 24; ++attempt)

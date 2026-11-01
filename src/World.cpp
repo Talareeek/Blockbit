@@ -107,6 +107,20 @@ void World::setBlock(int wx, int wy, Block block)
     chunk.meshDirty = true;
     chunk.generated = true;
 
+    // Connected-texture blocks on the border sample into the adjacent chunk, so
+    // a write at local_x 0 / CHUNK_WIDTH-1 has to rebuild that neighbor's mesh
+    // too — otherwise the seam stays stale until the neighbor is touched.
+    if (local_x == 0)
+    {
+        if (auto nb = chunks.find(chunk_position - 1); nb != chunks.end())
+            nb->second.meshDirty = true;
+    }
+    else if (local_x == CHUNK_WIDTH - 1)
+    {
+        if (auto nb = chunks.find(chunk_position + 1); nb != chunks.end())
+            nb->second.meshDirty = true;
+    }
+
     // Lightmap must only be recomputed once the lightmap vectors have been
     // sized at least once by initializeChunkSkyLight; skipping the pass for
     // uninitialized chunks also avoids partial writes before the first lit

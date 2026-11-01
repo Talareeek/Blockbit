@@ -49,7 +49,19 @@ enum class BlockID : uint32_t
     Workbench,
     Gravel,
     Cactus,
-    Dead_Bush
+    Dead_Bush,
+    Smooth_Stone
+};
+
+// Cardinal-neighbor IDs supplied to the per-tile rect() so a block can pick a
+// variant based on which sides it connects to. See smooth_stone_render_rect
+// for the 4-bit connected-texture use case.
+struct BlockNeighbors
+{
+    BlockID up;
+    BlockID right;
+    BlockID down;
+    BlockID left;
 };
 
 struct Block
@@ -92,7 +104,7 @@ struct RenderProperties
 {
     AssetManager::GameTextureID texture;
     std::function<sf::FloatRect(Block block_instance)> render_bounds = [](Block block_instance) -> sf::FloatRect{return {{0.0f, 0.0f}, {0.0f, 0.0f}};};
-    std::function<sf::IntRect(Block block_instance)> rect = [](Block block_instance) -> sf::IntRect{return {{0, 0}, {0, 0}};};
+    std::function<sf::IntRect(Block block_instance, const BlockNeighbors& neighbors)> rect = [](Block, const BlockNeighbors&) -> sf::IntRect{return {{0, 0}, {0, 0}};};
     std::function<BlockAnimation(Block block_instance)> animation = [](Block) -> BlockAnimation { return {}; };
 };
 
@@ -174,7 +186,7 @@ inline auto default_render_bounds = [](Block block_instance) -> sf::FloatRect
     return {{0.0f, 0.0f}, {1.0f, 1.0f}};
 };
 
-inline auto default_render_rect = [](Block block_instance) -> sf::IntRect
+inline auto default_render_rect = [](Block block_instance, const BlockNeighbors&) -> sf::IntRect
 {
     auto data = blockDatabase[block_instance.id];
 
@@ -187,7 +199,7 @@ inline auto water_render_bounds = [](Block block_instance) -> sf::FloatRect
     return {{0.0f, 0.0f}, {1.0f, static_cast<float>(16 - (9 - level)) / 16.0f}};
 };
 
-inline auto water_render_rect = [](Block block_instance) -> sf::IntRect
+inline auto water_render_rect = [](Block block_instance, const BlockNeighbors&) -> sf::IntRect
 {
     const uint8_t level = WaterState::unpack(block_instance.metadata).level;
     return {{0, 0}, {16, 16 - (9 - level)}};
@@ -199,7 +211,7 @@ inline auto lava_render_bounds = [](Block block_instance) -> sf::FloatRect
     return {{0.0f, 0.0f}, {1.0f, static_cast<float>(16 - (LavaState::SOURCE - level) * 3) / 16.0f}};
 };
 
-inline auto lava_render_rect = [](Block block_instance) -> sf::IntRect
+inline auto lava_render_rect = [](Block block_instance, const BlockNeighbors&) -> sf::IntRect
 {
     const uint8_t level = LavaState::unpack(block_instance.metadata).level;
     return {{0, 0}, {16, 16 - (LavaState::SOURCE - level) * 3}};
@@ -217,7 +229,7 @@ inline auto chest_render_bounds = [](Block block_instance) -> sf::FloatRect
     return {{1.0f / 16.0f, 0.0f}, {14.0f / 16.0f, 14.0f / 16.0f}};
 };
 
-inline auto chest_render_rect = [](Block block_instance) -> sf::IntRect
+inline auto chest_render_rect = [](Block block_instance, const BlockNeighbors&) -> sf::IntRect
 {
     if (ChestState::unpack(block_instance.metadata).open)
     {
@@ -234,7 +246,7 @@ inline auto furnace_render_bounds = [](Block) -> sf::FloatRect
     return {{0.0f, 0.0f}, {1.0f, 1.0f}};
 };
 
-inline auto furnace_render_rect = [](Block block_instance) -> sf::IntRect
+inline auto furnace_render_rect = [](Block block_instance, const BlockNeighbors&) -> sf::IntRect
 {
     if (FurnaceState::unpack(block_instance.metadata).lit) return {{16, 0}, {16, 16}};
     return {{0, 0}, {16, 16}};
@@ -249,16 +261,32 @@ inline auto furnace_animation = [](Block block_instance) -> BlockAnimation
 // Cactus texture is 32x16: body (x=0) and top (x=16). CactusState::is_top is
 // baked into metadata when the plant grows so the mesh builder can pick the
 // correct half without consulting the world.
-inline auto cactus_render_rect = [](Block block_instance) -> sf::IntRect
+inline auto cactus_render_rect = [](Block block_instance, const BlockNeighbors&) -> sf::IntRect
 {
     return {{CactusState::unpack(block_instance.metadata).is_top ? 16 : 0, 0}, {16, 16}};
 };
 
 // Woodcutter texture is 32x16: two 16x16 frames side by side. The mesh anchors
 // at frame 0 and the shader shifts U each tick.
-inline auto woodcutter_render_rect = [](Block) -> sf::IntRect
+inline auto woodcutter_render_rect = [](Block, const BlockNeighbors&) -> sf::IntRect
 {
     return {{0, 0}, {16, 16}};
+};
+
+// 4-bit connected-texture pick for smooth_stone. The 64x64 source holds 16
+// 16x16 variants in a 4x4 grid; the index (8u + 4r + 2d + l) is turned into
+// an (x,y) by stepping 16px per tile and wrapping at 64px. "Connected" means
+// the neighbor is the same block id (air at the chunk border reads as not
+// connected, which is what we want for an exposed face).
+inline auto smooth_stone_render_rect = [](Block block_instance, const BlockNeighbors& neighbors) -> sf::IntRect
+{
+    const int u = (neighbors.up    == block_instance.id) ? 1 : 0;
+    const int r = (neighbors.right == block_instance.id) ? 1 : 0;
+    const int d = (neighbors.down  == block_instance.id) ? 1 : 0;
+    const int l = (neighbors.left  == block_instance.id) ? 1 : 0;
+
+    const int offset = (8 * u + 4 * r + 2 * d + l) * 16;
+    return {{offset % 64, (offset / 64) * 16}, {16, 16}};
 };
 
 inline auto woodcutter_animation = [](Block) -> BlockAnimation

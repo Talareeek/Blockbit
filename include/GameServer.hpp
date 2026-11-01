@@ -139,6 +139,8 @@ public:
     // command output/errors back to the issuing player.
     void sendSystemMessageTo(uint32_t clientId, const std::wstring& message);
 
+    void sendSystemMessageToAll(const std::wstring& message);
+
     std::function<void(std::wstring)> onChatBroadcast;
 
     bool isOperator(const std::string& nickname) const;

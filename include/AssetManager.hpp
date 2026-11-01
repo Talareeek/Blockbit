@@ -46,6 +46,7 @@ public:
         Gravel,
         Cactus,
         Dead_Bush,
+        Smooth_Stone,
 
 
         // ITEMS
