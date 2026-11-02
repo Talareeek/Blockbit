@@ -141,7 +141,7 @@ void GameServer::sendChunkTo(uint32_t client_id, int around_chunk_position)
 {
     auto& known_chunks = clients[client_id].known_chunks;
 
-    for (int offset = -World::LAZY_DISTANCE; offset <= World::LAZY_DISTANCE; ++offset)
+    for (int offset = -ServerWorld::LAZY_DISTANCE; offset <= ServerWorld::LAZY_DISTANCE; ++offset)
     {
         int chunk_position = around_chunk_position + offset;
         world.loadOrCreateChunk(chunk_position);
@@ -168,7 +168,7 @@ void GameServer::streamChunksToClients()
             auto& known_chunks = data.known_chunks;
             auto& chunks = world.getChunks();
 
-            for (int chunk_position = player_chunk - World::LAZY_DISTANCE; chunk_position <= player_chunk + World::LAZY_DISTANCE; ++chunk_position)
+            for (int chunk_position = player_chunk - ServerWorld::LAZY_DISTANCE; chunk_position <= player_chunk + ServerWorld::LAZY_DISTANCE; ++chunk_position)
             {
                 if (known_chunks.contains(chunk_position)) continue;
                 auto iterator = chunks.find(chunk_position);
@@ -785,13 +785,6 @@ void GameServer::spawnPlayerFor(std::string nickname)
         if(entity.hasComponent<TransformComponent>()) entity.getComponent<TransformComponent>().position = world.getSpawnPoint();
 
         entity.addComponent(PlayerControlledComponent{nickname});
-
-        if(entity.hasComponent<InventoryComponent>())
-        {
-            auto& inv_comp = entity.getComponent<InventoryComponent>();
-            addItem(inv_comp.inventory, ItemID::Smooth_Stone, 64);
-            inv_comp.dirty = true;
-        }
 
         nickname_to_entity[nickname] = entity.getID();
 

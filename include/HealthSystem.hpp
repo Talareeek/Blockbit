@@ -1,9 +1,9 @@
 #ifndef HEALTH_SYSTEM_HPP
 #define HEALTH_SYSTEM_HPP
 
-#include "World.hpp"
+#include "ServerWorld.hpp"
 #include <vector>
 
-extern void HealthSystem(World& world, float dt);
+extern void HealthSystem(ServerWorld& world, float dt);
 
 #endif // HEALTH_SYSTEM_HPP

@@ -1,8 +1,8 @@
 #ifndef EXPLOSIVE_SYSTEM_HPP
 #define EXPLOSIVE_SYSTEM_HPP
 
-#include "World.hpp"
+#include "ServerWorld.hpp"
 
-extern void ExplosiveSystem(World& world, float dt);
+extern void ExplosiveSystem(ServerWorld& world, float dt);
 
 #endif // EXPLOSIVE_SYSTEM_HPP

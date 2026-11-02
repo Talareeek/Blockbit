@@ -3,14 +3,13 @@
 #include "../include/ItemComponent.hpp"
 #include "../include/InventoryComponent.hpp"
 #include "../include/TransformComponent.hpp"
-#include "../include/World.hpp"
 
 #include <SFML/Graphics.hpp>
 
 #include <algorithm>
 #include <vector>
 
-void InventorySystem(World& world)
+void InventorySystem(ServerWorld& world)
 {
     {
         std::vector<UUID> item_ids;

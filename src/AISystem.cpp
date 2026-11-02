@@ -153,7 +153,7 @@ namespace
     constexpr float AI_MAX_CHASE_RANGE_MUL = 2.0f;
 }
 
-void AISystem(World& world, float dt)
+void AISystem(ServerWorld& world, float dt)
 {
     auto& entities = world.getEntities();
     auto players = collectValidPlayers(world);

@@ -11,7 +11,7 @@ void ChunkLoadSystem(ServerWorld& world, float /*dt*/)
 
         int player_chunk = entity.getComponent<TransformComponent>().chunkPosition();
 
-        for (int offset = -World::LAZY_DISTANCE; offset <= World::LAZY_DISTANCE; ++offset)
+        for (int offset = -ServerWorld::LAZY_DISTANCE; offset <= ServerWorld::LAZY_DISTANCE; ++offset)
         {
             world.loadOrCreateChunk(player_chunk + offset);
         }

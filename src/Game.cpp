@@ -146,6 +146,9 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Smooth_Stone, "resources/textures/smooth_stone.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Diorite, "resources/textures/diorite.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Granite, "resources/textures/granite.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Glass, "resources/textures/glass.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Output_Bulb, "resources/textures/output_bulb.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Ruby_Wire, "resources/textures/ruby_wire.png");
 
     BlockAtlas::add(AssetManager::GameTextureID::Stone);
     BlockAtlas::add(AssetManager::GameTextureID::Grass);
@@ -186,6 +189,9 @@ Game::Game()
     BlockAtlas::add(AssetManager::GameTextureID::Smooth_Stone);
     BlockAtlas::add(AssetManager::GameTextureID::Diorite);
     BlockAtlas::add(AssetManager::GameTextureID::Granite);
+    BlockAtlas::add(AssetManager::GameTextureID::Glass);
+    BlockAtlas::add(AssetManager::GameTextureID::Output_Bulb);
+    BlockAtlas::add(AssetManager::GameTextureID::Ruby_Wire);
     BlockAtlas::build();
 
     AssetManager::loadShader(AssetManager::ShaderID::Sun, "resources/shaders/sun.frag");

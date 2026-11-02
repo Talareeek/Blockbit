@@ -21,6 +21,12 @@ private:
     GenerationProperties generation_properties;
     PerlinNoise perlin{0};
 
+    // Snapshot of the chunk-state partition for the current tick, recomputed by
+    // ChunkLoadSystem from player positions. Everything else (entity systems,
+    // random ticks, unload) reads from these to avoid O(players) scans.
+    std::unordered_set<int> loaded_chunk_positions;
+    std::unordered_set<int> lazy_chunk_positions;
+
 public:
 
     ServerWorld(const std::filesystem::path path);
@@ -29,6 +35,20 @@ public:
     void setBlock(int wx, int wy, Block block) override;
     void setBlock(int wx, int wy, Block block, BlockUpdateFlags flags);
     using World::setBlock;
+
+    void refreshChunkStates();
+
+    ChunkState chunkState(int chunk_position) const override;
+    bool isChunkLoaded(int chunk_position) const override;
+    bool isChunkLazy(int chunk_position) const override;
+
+    const std::unordered_set<int>& loadedChunks() const { return loaded_chunk_positions; }
+    const std::unordered_set<int>& lazyChunks()   const { return lazy_chunk_positions; }
+
+    // Lazy is a single-ring buffer past the loaded edge, so block updates (e.g.
+    // water flow, scheduled ticks) can propagate just outside the player's
+    // active area without entity cost.
+    static constexpr int LAZY_DISTANCE = SIMULATION_DISTANCE + 1;
 
     std::vector<sf::Vector2i> pending_block_updates;
 
@@ -56,6 +76,7 @@ public:
 
     sf::Vector2<double> getSpawnPoint();
     void generateWorldSpawn();
+    void placeStarterItemChestColumn();
 
     void trySpawnPassiveMobs(float dt);
 

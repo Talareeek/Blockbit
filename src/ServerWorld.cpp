@@ -11,8 +11,11 @@
 #include "../include/PhysicsComponent.hpp"
 #include "../include/ItemComponent.hpp"
 #include "../include/ItemInstance.hpp"
+#include "../include/Item.hpp"
 #include "../include/RenderComponent.hpp"
 #include "../include/WorldLightView.hpp"
+
+#include <algorithm>
 
 #include <fstream>
 #include <zstd.h>
@@ -239,6 +242,7 @@ void ServerWorld::saveData()
     data["generation_properties"]["frequency"] = Tag(generation_properties.frequency);
     data["generation_properties"]["amplitude"] = Tag(generation_properties.amplitude);
     data["generation_properties"]["persistence"] = Tag(generation_properties.persistence);
+    data["generation_properties"]["spawn_item_chest_column"] = Tag(generation_properties.spawn_item_chest_column);
 
     TagList flat_layers_list;
     for (const FlatWorldLayer& layer : generation_properties.flat_layers)
@@ -329,6 +333,12 @@ void ServerWorld::loadData()
     if (generation_properties.flat_layers.empty())
     {
         generation_properties.flat_layers = FlatWorldProperties::defaults().layers;
+    }
+
+    auto chest_column_iter = gen_props.find("spawn_item_chest_column");
+    if (chest_column_iter != gen_props.end())
+    {
+        generation_properties.spawn_item_chest_column = chest_column_iter->second.get<bool>();
     }
 
     world_generator = makeWorldGenerator(seed, generation_properties);
@@ -962,6 +972,61 @@ void ServerWorld::generateWorldSpawn()
     {
         chunks[i] = world_generator->generateChunk(i);
     }
+
+    if (generation_properties.type == GenerationType::Normal
+        && generation_properties.spawn_item_chest_column)
+    {
+        placeStarterItemChestColumn();
+    }
+}
+
+void ServerWorld::placeStarterItemChestColumn()
+{
+    int surface_y = -1;
+
+    for (int y = CHUNK_HEIGHT - 2; y >= 1; --y)
+    {
+        if (getBlock(0, y).id != BlockID::Air)
+        {
+            surface_y = y;
+            break;
+        }
+    }
+
+    if (surface_y < 0) return;
+
+    std::vector<ItemID> items;
+    items.reserve(itemDatabase.size());
+
+    for (const auto& [id, data] : itemDatabase)
+    {
+        if (id == ItemID::None) continue;
+        items.push_back(id);
+    }
+
+    std::sort(items.begin(), items.end(),
+        [](ItemID a, ItemID b) { return static_cast<uint32_t>(a) < static_cast<uint32_t>(b); });
+
+    size_t placed = 0;
+    int y = surface_y + 1;
+
+    while (placed < items.size() && y < CHUNK_HEIGHT - 1)
+    {
+        setBlock(0, y, {BlockID::Chest, 0});
+
+        auto* chest = dynamic_cast<ChestBlockEntity*>(getBlockEntity(0, y));
+        if (!chest) { ++y; continue; }
+
+        for (size_t slot = 0; slot < chest->stacks.size() && placed < items.size(); ++slot, ++placed)
+        {
+            ItemID id = items[placed];
+            uint32_t stack_size = itemDatabase.at(id).maxStackSize;
+            if (stack_size == 0) stack_size = 1;
+            chest->stacks[slot] = ItemStack{id, stack_size, std::nullopt};
+        }
+
+        ++y;
+    }
 }
 
 UUID ServerWorld::spawn(PrefabID prefab_id, sf::Vector2<double> position)
@@ -973,5 +1038,56 @@ UUID ServerWorld::spawn(PrefabID prefab_id, sf::Vector2<double> position)
     addEntity(std::move(entity));
 
     return entity.getID();
+}
+
+void ServerWorld::refreshChunkStates()
+{
+    loaded_chunk_positions.clear();
+    lazy_chunk_positions.clear();
+
+    for (const auto& [id, entity] : entities)
+    {
+        if (!entity.hasComponent<PlayerControlledComponent>()) continue;
+        if (!entity.hasComponent<TransformComponent>()) continue;
+
+        int player_chunk = entity.getComponent<TransformComponent>().chunkPosition();
+
+        for (int offset = -LAZY_DISTANCE; offset <= LAZY_DISTANCE; ++offset)
+        {
+            int chunk_position = player_chunk + offset;
+            if (std::abs(offset) <= SIMULATION_DISTANCE)
+            {
+                loaded_chunk_positions.insert(chunk_position);
+            }
+            else
+            {
+                lazy_chunk_positions.insert(chunk_position);
+            }
+        }
+    }
+
+    // A chunk simultaneously inside one player's loaded radius and another's
+    // lazy ring must be treated as loaded.
+    for (int chunk_position : loaded_chunk_positions)
+    {
+        lazy_chunk_positions.erase(chunk_position);
+    }
+}
+
+ChunkState ServerWorld::chunkState(int chunk_position) const
+{
+    if (loaded_chunk_positions.contains(chunk_position)) return ChunkState::Loaded;
+    if (lazy_chunk_positions.contains(chunk_position))   return ChunkState::Lazy;
+    return ChunkState::Unloaded;
+}
+
+bool ServerWorld::isChunkLoaded(int chunk_position) const
+{
+    return loaded_chunk_positions.contains(chunk_position);
+}
+
+bool ServerWorld::isChunkLazy(int chunk_position) const
+{
+    return lazy_chunk_positions.contains(chunk_position);
 }
 

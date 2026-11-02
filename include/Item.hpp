@@ -101,7 +101,10 @@ enum class ItemID : uint32_t
     Dead_Bush,
     Smooth_Stone,
     Diorite,
-    Granite
+    Granite,
+    Glass,
+    Output_Bulb,
+    Ruby_Wire
 };
 
 enum class ItemRarity

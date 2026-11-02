@@ -1015,6 +1015,36 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         }
     },
     {
+        ItemID::Glass,
+        {
+            .name = "Glass",
+            .texture = AssetManager::GameTextureID::Glass,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Output_Bulb,
+        {
+            .name = "Output Bulb",
+            .texture = AssetManager::GameTextureID::Output_Bulb,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Ruby_Wire,
+        {
+            .name = "Ruby Wire",
+            .texture = AssetManager::GameTextureID::Ruby_Wire,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
         ItemID::Flint,
         {
             .name = "Flint",

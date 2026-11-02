@@ -1,5 +1,4 @@
 #include "../include/ExplosiveSystem.hpp"
-#include "../include/World.hpp"
 #include "../include/ExplosiveComponent.hpp"
 #include "../include/PhysicsComponent.hpp"
 #include "../include/TransformComponent.hpp"
@@ -17,7 +16,7 @@ namespace
     constexpr float RADIUS_JITTER = 0.6f;
 }
 
-void ExplosiveSystem(World& world, float dt)
+void ExplosiveSystem(ServerWorld& world, float dt)
 {
     static thread_local std::mt19937 rng(std::random_device{}());
     std::uniform_real_distribution<float> jitter_dist(-RADIUS_JITTER, RADIUS_JITTER);

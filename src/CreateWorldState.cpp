@@ -19,7 +19,7 @@
 
 namespace
 {
-    constexpr std::array<BlockID, 36> BLOCK_OPTIONS
+    constexpr std::array<BlockID, 39> BLOCK_OPTIONS
     {
         BlockID::Air,
         BlockID::Bedrock,
@@ -36,6 +36,7 @@ namespace
         BlockID::Obsidian,
         BlockID::Gravel,
         BlockID::Bricks,
+        BlockID::Glass,
         BlockID::Oak_Log,
         BlockID::Oak_Leaves,
         BlockID::Oak_Planks,
@@ -56,7 +57,9 @@ namespace
         BlockID::Chest,
         BlockID::Furnace,
         BlockID::Workbench,
-        BlockID::Woodcutter
+        BlockID::Woodcutter,
+        BlockID::Output_Bulb,
+        BlockID::Ruby_Wire
     };
 
     int blockOptionIndex(BlockID id)
@@ -126,6 +129,7 @@ void CreateWorldState::createWorld()
     properties.amplitude = amplitude;
     properties.persistence = persistence;
     properties.flat_layers = flat_layers;
+    properties.spawn_item_chest_column = (mode == Mode::Normal) && spawn_item_chest_column;
 
     this->game->popState(this);
     this->game->pushState(this, std::make_unique<ClientGameState>(this->game, world_name, seed_value, properties, 0, Account::username));
@@ -193,6 +197,8 @@ void CreateWorldState::update(float dt)
             ImGui::SliderFloat("Frequency",    &frequency,    0.001f, 0.2f, "%.4f");
             ImGui::SliderFloat("Amplitude",    &amplitude,    0.0f,  2.0f);
             ImGui::SliderFloat("Persistence",  &persistence,  0.0f,  1.0f);
+
+            ImGui::Checkbox("Spawn item chest column at (0, surface)", &spawn_item_chest_column);
         }
         else if (mode == Mode::DungeonShooter)
         {

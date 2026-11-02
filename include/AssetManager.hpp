@@ -53,6 +53,9 @@ public:
         Smooth_Stone,
         Diorite,
         Granite,
+        Glass,
+        Output_Bulb,
+        Ruby_Wire,
 
 
         // ITEMS

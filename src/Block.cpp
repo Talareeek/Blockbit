@@ -321,6 +321,9 @@ ItemID blockToItem(BlockID block)
         case BlockID::Smooth_Stone: return ItemID::Smooth_Stone;
         case BlockID::Diorite: return ItemID::Diorite;
         case BlockID::Granite: return ItemID::Granite;
+        case BlockID::Glass: return ItemID::Glass;
+        case BlockID::Output_Bulb: return ItemID::Output_Bulb;
+        case BlockID::Ruby_Wire: return ItemID::Ruby_Wire;
         default: return ItemID::None;
     }
 }
@@ -376,6 +379,9 @@ BlockID itemToBlock(ItemID item)
         case ItemID::Smooth_Stone: return BlockID::Smooth_Stone;
         case ItemID::Diorite: return BlockID::Diorite;
         case ItemID::Granite: return BlockID::Granite;
+        case ItemID::Glass: return BlockID::Glass;
+        case ItemID::Output_Bulb: return BlockID::Output_Bulb;
+        case ItemID::Ruby_Wire: return BlockID::Ruby_Wire;
         default: return BlockID::Air;
     }
 }
@@ -797,7 +803,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
     },
     { BlockID::Chest,
         {
-            .solid = false,
+            .solid = true,
             .transparent = false,
             .breakable = true,
             .liquid = false,
@@ -917,7 +923,7 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .liquid = false,
             .drag = 1.0f,
             .hardness = 2.0f,
-            .render = RenderProperties{.texture = AssetManager::GameTextureID::Smooth_Stone, .render_bounds = default_render_bounds, .rect = smooth_stone_render_rect},
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Smooth_Stone, .render_bounds = default_render_bounds, .rect = connected_render_rect},
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 1}},
             .drop = DropProperties{.always_drop = true, .drop = ItemID::Smooth_Stone}
         }
@@ -946,6 +952,49 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Granite, .render_bounds = default_render_bounds, .rect = default_render_rect},
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 1}},
             .drop = DropProperties{.always_drop = true, .drop = ItemID::Granite}
+        }
+    },
+    { BlockID::Glass,
+        {
+            .solid = true,
+            .transparent = true,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 0.3f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Glass, .render_bounds = default_render_bounds, .rect = default_render_rect},
+            .mining = MiningProperties{.mining_resistance = 1, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 1}},
+            .drop = DropProperties{.drop = ItemID::Glass},
+            .light_opacity = 1,
+            .lets_light = true,
+        }
+    },
+    { BlockID::Output_Bulb,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 0.3f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Output_Bulb, .render_bounds = default_render_bounds, .rect = output_bulb_render_rect},
+            .mining = MiningProperties{.mining_resistance = 1, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 1}},
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Output_Bulb}
+        }
+    },
+    { BlockID::Ruby_Wire,
+        {
+            .solid = false,
+            .transparent = true,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 0.2f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Ruby_Wire, .render_bounds = default_render_bounds, .rect = connected_render_rect},
+            .mining = MiningProperties{.mining_resistance = 1, .desired_tool = {.tool_type = ToolType::None, .level = 0}},
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Ruby_Wire},
+            .light_opacity = 1,
+            .lets_light = true,
         }
     },
 };

@@ -1,10 +1,10 @@
 #ifndef INVENTORY_SYSTEM_HPP
 #define INVENTORY_SYSTEM_HPP
 
-#include "World.hpp"
+#include "ServerWorld.hpp"
 #include "Entity.hpp"
 #include <vector>
 
-extern void InventorySystem(World& world);
+extern void InventorySystem(ServerWorld& world);
 
 #endif // INVENTORY_SYSTEM_HPP

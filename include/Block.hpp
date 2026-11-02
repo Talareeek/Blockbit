@@ -56,7 +56,10 @@ enum class BlockID : uint32_t
     Dead_Bush,
     Smooth_Stone,
     Diorite,
-    Granite
+    Granite,
+    Glass,
+    Output_Bulb,
+    Ruby_Wire
 };
 
 // Cardinal-neighbor IDs supplied to the per-tile rect() so a block can pick a
@@ -279,25 +282,32 @@ inline auto woodcutter_render_rect = [](Block, const BlockNeighbors&) -> sf::Int
     return {{0, 0}, {16, 16}};
 };
 
-// 4-bit connected-texture pick for smooth_stone. The 64x64 source holds 16
-// 16x16 variants in a 4x4 grid; the index (8u + 4r + 2d + l) is turned into
-// an (x,y) by stepping 16px per tile and wrapping at 64px. "Connected" means
-// the neighbor is the same block id (air at the chunk border reads as not
-// connected, which is what we want for an exposed face).
-inline auto smooth_stone_render_rect = [](Block block_instance, const BlockNeighbors& neighbors) -> sf::IntRect
+// 4-bit connected-texture pick. The 64x64 source holds 16 16x16 variants in a
+// 4x4 grid; the index (8u + 4l + 2d + r) is turned into an (x,y) by stepping
+// 16px per tile and wrapping at 64px. "Connected" means the neighbor is the
+// same block id (air at the chunk border reads as not connected, which is what
+// we want for an exposed face).
+inline auto connected_render_rect = [](Block block_instance, const BlockNeighbors& neighbors) -> sf::IntRect
 {
     const int u = (neighbors.up    == block_instance.id) ? 1 : 0;
     const int r = (neighbors.right == block_instance.id) ? 1 : 0;
     const int d = (neighbors.down  == block_instance.id) ? 1 : 0;
     const int l = (neighbors.left  == block_instance.id) ? 1 : 0;
 
-    const int offset = (8 * u + 4 * r + 2 * d + l) * 16;
+    const int offset = (8 * u + 4 * l + 2 * d + r) * 16;
     return {{offset % 64, (offset / 64) * 16}, {16, 16}};
 };
 
 inline auto woodcutter_animation = [](Block) -> BlockAnimation
 {
     return {2, 400};
+};
+
+// Output_bulb texture is 32x16: frame 0 (x=0) = off, frame 1 (x=16) = on.
+// With no toggle logic yet the mesh always picks frame 0.
+inline auto output_bulb_render_rect = [](Block, const BlockNeighbors&) -> sf::IntRect
+{
+    return {{0, 0}, {16, 16}};
 };
 
 extern ItemID blockToItem(BlockID block);

@@ -9,7 +9,7 @@
 
 #include <algorithm>
 
-void HealthSystem(World& world, float dt)
+void HealthSystem(ServerWorld& world, float dt)
 {
     std::vector<UUID> toDelete;
 

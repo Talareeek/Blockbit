@@ -1,8 +1,8 @@
 #ifndef AI_SYSTEM_HPP
 #define AI_SYSTEM_HPP
 
-#include "World.hpp"
+#include "ServerWorld.hpp"
 
-extern void AISystem(World& world, float dt);
+extern void AISystem(ServerWorld& world, float dt);
 
 #endif // AI_SYSTEM_HPP

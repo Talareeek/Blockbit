@@ -30,6 +30,8 @@ private:
     float amplitude    = 1.0f;
     float persistence  = 0.55f;
 
+    bool spawn_item_chest_column = false;
+
     std::vector<FlatWorldLayer> flat_layers;
 
     sf::Texture background_texture;
