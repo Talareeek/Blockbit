@@ -125,6 +125,10 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Oak_Log, "resources/textures/oak_log.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Oak_Leaves, "resources/textures/oak_leaves.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Oak_Planks, "resources/textures/oak_planks.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Birch_Log, "resources/textures/birch_log.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Birch_Leaves, "resources/textures/birch_leaves.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Spruce_Log, "resources/textures/spruce_log.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Spruce_Leaves, "resources/textures/spruce_leaves.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Woodcutter, "resources/textures/woodcutter.png");    
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Fire, "resources/textures/fire.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Sand, "resources/textures/sand.png");
@@ -140,6 +144,8 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Dead_Bush, "resources/textures/dead_bush.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Flint, "resources/textures/flint.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Smooth_Stone, "resources/textures/smooth_stone.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Diorite, "resources/textures/diorite.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Granite, "resources/textures/granite.png");
 
     BlockAtlas::add(AssetManager::GameTextureID::Stone);
     BlockAtlas::add(AssetManager::GameTextureID::Grass);
@@ -160,6 +166,10 @@ Game::Game()
     BlockAtlas::add(AssetManager::GameTextureID::Oak_Log);
     BlockAtlas::add(AssetManager::GameTextureID::Oak_Leaves);
     BlockAtlas::add(AssetManager::GameTextureID::Oak_Planks);
+    BlockAtlas::add(AssetManager::GameTextureID::Birch_Log);
+    BlockAtlas::add(AssetManager::GameTextureID::Birch_Leaves);
+    BlockAtlas::add(AssetManager::GameTextureID::Spruce_Log);
+    BlockAtlas::add(AssetManager::GameTextureID::Spruce_Leaves);
     BlockAtlas::add(AssetManager::GameTextureID::Woodcutter);
     BlockAtlas::add(AssetManager::GameTextureID::Fire);
     BlockAtlas::add(AssetManager::GameTextureID::Sand);
@@ -174,6 +184,8 @@ Game::Game()
     BlockAtlas::add(AssetManager::GameTextureID::Cactus);
     BlockAtlas::add(AssetManager::GameTextureID::Dead_Bush);
     BlockAtlas::add(AssetManager::GameTextureID::Smooth_Stone);
+    BlockAtlas::add(AssetManager::GameTextureID::Diorite);
+    BlockAtlas::add(AssetManager::GameTextureID::Granite);
     BlockAtlas::build();
 
     AssetManager::loadShader(AssetManager::ShaderID::Sun, "resources/shaders/sun.frag");

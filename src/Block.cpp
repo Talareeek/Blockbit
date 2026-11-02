@@ -305,6 +305,10 @@ ItemID blockToItem(BlockID block)
         case BlockID::Oak_Log: return ItemID::Oak_Log;
         case BlockID::Oak_Leaves: return ItemID::Oak_Leaves;
         case BlockID::Oak_Planks: return ItemID::Oak_Planks;
+        case BlockID::Birch_Log: return ItemID::Birch_Log;
+        case BlockID::Birch_Leaves: return ItemID::Birch_Leaves;
+        case BlockID::Spruce_Log: return ItemID::Spruce_Log;
+        case BlockID::Spruce_Leaves: return ItemID::Spruce_Leaves;
         case BlockID::Woodcutter: return ItemID::Woodcutter;
         case BlockID::Sand: return ItemID::Sand;
         case BlockID::Coarse_Dirt: return ItemID::Coarse_Dirt;
@@ -315,6 +319,8 @@ ItemID blockToItem(BlockID block)
         case BlockID::Cactus: return ItemID::Cactus;
         case BlockID::Dead_Bush: return ItemID::Dead_Bush;
         case BlockID::Smooth_Stone: return ItemID::Smooth_Stone;
+        case BlockID::Diorite: return ItemID::Diorite;
+        case BlockID::Granite: return ItemID::Granite;
         default: return ItemID::None;
     }
 }
@@ -353,6 +359,10 @@ BlockID itemToBlock(ItemID item)
         case ItemID::Oak_Log: return BlockID::Oak_Log;
         case ItemID::Oak_Leaves: return BlockID::Oak_Leaves;
         case ItemID::Oak_Planks: return BlockID::Oak_Planks;
+        case ItemID::Birch_Log: return BlockID::Birch_Log;
+        case ItemID::Birch_Leaves: return BlockID::Birch_Leaves;
+        case ItemID::Spruce_Log: return BlockID::Spruce_Log;
+        case ItemID::Spruce_Leaves: return BlockID::Spruce_Leaves;
         case ItemID::Woodcutter: return BlockID::Woodcutter;
         case ItemID::Sand: return BlockID::Sand;
         case ItemID::Snow: return BlockID::Snow;
@@ -364,6 +374,8 @@ BlockID itemToBlock(ItemID item)
         case ItemID::Cactus: return BlockID::Cactus;
         case ItemID::Dead_Bush: return BlockID::Dead_Bush;
         case ItemID::Smooth_Stone: return BlockID::Smooth_Stone;
+        case ItemID::Diorite: return BlockID::Diorite;
+        case ItemID::Granite: return BlockID::Granite;
         default: return BlockID::Air;
     }
 }
@@ -641,6 +653,62 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .lets_light = true,
         }
     },
+    { BlockID::Birch_Log,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 2.0f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Birch_Log, .render_bounds = default_render_bounds, .rect = default_render_rect},
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Birch_Log}
+        }
+    },
+    { BlockID::Birch_Leaves,
+        {
+            .solid = true,
+            .transparent = true,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 0.2f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Birch_Leaves, .render_bounds = default_render_bounds, .rect = default_render_rect},
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Birch_Leaves},
+            .light_opacity = 2,
+            .lets_light = true,
+        }
+    },
+    { BlockID::Spruce_Log,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 2.0f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Spruce_Log, .render_bounds = default_render_bounds, .rect = default_render_rect},
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Spruce_Log}
+        }
+    },
+    { BlockID::Spruce_Leaves,
+        {
+            .solid = true,
+            .transparent = true,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 0.2f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Spruce_Leaves, .render_bounds = default_render_bounds, .rect = default_render_rect},
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Axe, .level = 1}},
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Spruce_Leaves},
+            .light_opacity = 2,
+            .lets_light = true,
+        }
+    },
     { BlockID::Oak_Planks,
         {
             .solid = true,
@@ -852,6 +920,32 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Smooth_Stone, .render_bounds = default_render_bounds, .rect = smooth_stone_render_rect},
             .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 1}},
             .drop = DropProperties{.always_drop = true, .drop = ItemID::Smooth_Stone}
+        }
+    },
+    { BlockID::Diorite,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 1.5f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Diorite, .render_bounds = default_render_bounds, .rect = default_render_rect},
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 1}},
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Diorite}
+        }
+    },
+    { BlockID::Granite,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 1.5f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Granite, .render_bounds = default_render_bounds, .rect = default_render_rect},
+            .mining = MiningProperties{.mining_resistance = 5, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 1}},
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Granite}
         }
     },
 };

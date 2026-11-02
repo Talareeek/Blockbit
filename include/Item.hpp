@@ -50,6 +50,10 @@ enum class ItemID : uint32_t
     Oak_Log,
     Oak_Leaves,
     Oak_Planks,
+    Birch_Log,
+    Birch_Leaves,
+    Spruce_Log,
+    Spruce_Leaves,
     Bucket,
     Water_Bucket,
     Woodcutter,
@@ -95,7 +99,9 @@ enum class ItemID : uint32_t
     Workbench,
     Cactus,
     Dead_Bush,
-    Smooth_Stone
+    Smooth_Stone,
+    Diorite,
+    Granite
 };
 
 enum class ItemRarity

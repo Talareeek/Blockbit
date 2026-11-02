@@ -34,6 +34,10 @@ public:
         Oak_Log,
         Oak_Leaves,
         Oak_Planks,
+        Birch_Log,
+        Birch_Leaves,
+        Spruce_Log,
+        Spruce_Leaves,
         Woodcutter,
         Fire,
         Sand,
@@ -47,6 +51,8 @@ public:
         Cactus,
         Dead_Bush,
         Smooth_Stone,
+        Diorite,
+        Granite,
 
 
         // ITEMS

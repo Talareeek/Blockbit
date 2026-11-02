@@ -103,6 +103,15 @@ void SettingsWindow::render()
         ImGui::SliderFloat("Reach-zoom scale", &Settings::render.reach_zoom_scale, 0.0f, 4.0f, "%.2f");
     }
 
+    if(ImGui::CollapsingHeader("Minimap", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        ImGui::Checkbox("Enabled", &Settings::minimap.enabled);
+        ImGui::Checkbox("Render shadows", &Settings::minimap.render_shadows);
+        ImGui::SliderFloat("Size",     &Settings::minimap.size,     0.02f, 0.5f, "%.3f");
+        ImGui::SliderFloat("Offset X", &Settings::minimap.offset_x, 0.0f, 500.0f, "%.0f");
+        ImGui::SliderFloat("Offset Y", &Settings::minimap.offset_y, 0.0f, 500.0f, "%.0f");
+    }
+
     if(ImGui::CollapsingHeader("Interface", ImGuiTreeNodeFlags_DefaultOpen))
     {
         float color[3] = {

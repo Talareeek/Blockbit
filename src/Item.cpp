@@ -412,6 +412,46 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         }
     },
     {
+        ItemID::Birch_Log,
+        {
+            .name = "Birch Log",
+            .texture = AssetManager::GameTextureID::Birch_Log,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Birch_Leaves,
+        {
+            .name = "Birch Leaves",
+            .texture = AssetManager::GameTextureID::Birch_Leaves,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Spruce_Log,
+        {
+            .name = "Spruce Log",
+            .texture = AssetManager::GameTextureID::Spruce_Log,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Spruce_Leaves,
+        {
+            .name = "Spruce Leaves",
+            .texture = AssetManager::GameTextureID::Spruce_Leaves,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
         ItemID::Bucket,
         {
             .name = "Bucket",
@@ -955,6 +995,26 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         }
     },
     {
+        ItemID::Diorite,
+        {
+            .name = "Diorite",
+            .texture = AssetManager::GameTextureID::Diorite,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
+        ItemID::Granite,
+        {
+            .name = "Granite",
+            .texture = AssetManager::GameTextureID::Granite,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Common,
+            .category = ItemCategory::Block
+        }
+    },
+    {
         ItemID::Flint,
         {
             .name = "Flint",
@@ -1207,9 +1267,13 @@ std::unordered_map<ItemID, SmeltRecipe> smeltingRecipes
 std::unordered_map<ItemID, float> fuelBurnTimes
 {
     {ItemID::Coal,       80.0f},
-    {ItemID::Oak_Log,    15.0f},
-    {ItemID::Oak_Planks, 15.0f},
-    {ItemID::Oak_Leaves,  1.0f},
+    {ItemID::Oak_Log,       15.0f},
+    {ItemID::Oak_Planks,    15.0f},
+    {ItemID::Oak_Leaves,     1.0f},
+    {ItemID::Birch_Log,     15.0f},
+    {ItemID::Birch_Leaves,   1.0f},
+    {ItemID::Spruce_Log,    15.0f},
+    {ItemID::Spruce_Leaves,  1.0f},
     {ItemID::Woodcutter, 15.0f},
     {ItemID::Stick,       5.0f},
 };

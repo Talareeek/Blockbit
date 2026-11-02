@@ -19,10 +19,14 @@
 
 namespace
 {
-    constexpr std::array<BlockID, 22> BLOCK_OPTIONS
+    constexpr std::array<BlockID, 36> BLOCK_OPTIONS
     {
+        BlockID::Air,
         BlockID::Bedrock,
         BlockID::Stone,
+        BlockID::Smooth_Stone,
+        BlockID::Diorite,
+        BlockID::Granite,
         BlockID::Dirt,
         BlockID::Grass,
         BlockID::Sand,
@@ -33,7 +37,10 @@ namespace
         BlockID::Gravel,
         BlockID::Bricks,
         BlockID::Oak_Log,
+        BlockID::Oak_Leaves,
         BlockID::Oak_Planks,
+        BlockID::Cactus,
+        BlockID::Dead_Bush,
         BlockID::Coal_Ore,
         BlockID::Iron_Ore,
         BlockID::Gold_Ore,
@@ -42,7 +49,14 @@ namespace
         BlockID::Coal_Block,
         BlockID::Iron_Block,
         BlockID::Gold_Block,
-        BlockID::Ruby_Block
+        BlockID::Ruby_Block,
+        BlockID::Water,
+        BlockID::Lava,
+        BlockID::Fire,
+        BlockID::Chest,
+        BlockID::Furnace,
+        BlockID::Workbench,
+        BlockID::Woodcutter
     };
 
     int blockOptionIndex(BlockID id)
@@ -56,6 +70,14 @@ namespace
 
     const char* blockName(BlockID id)
     {
+        switch (id)
+        {
+            case BlockID::Air:   return "Air";
+            case BlockID::Water: return "Water";
+            case BlockID::Lava:  return "Lava";
+            case BlockID::Fire:  return "Fire";
+            default: break;
+        }
         auto item = blockToItem(id);
         auto iter = itemDatabase.find(item);
         if (iter == itemDatabase.end()) return "?";

@@ -963,7 +963,7 @@ void ClientGameState::render(sf::RenderWindow& window)
 
             if (content_view) content_view->render(window);
 
-            RenderMinimap(local_world, camera, window);
+            if(Settings::minimap.enabled) RenderMinimap(local_world, camera, window);
 
 #ifdef __ANDROID__
             // Touch overlay sits on top of the HUD so the player's thumbs

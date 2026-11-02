@@ -50,11 +50,21 @@ public:
         sf::Color main_color{255, 190, 60};
     };
 
+    struct Minimap
+    {
+        bool enabled = true;
+        bool render_shadows = true;
+        float size = 0.1f;        // fraction of window width
+        float offset_x = 50.0f;   // pixels from the left edge
+        float offset_y = 50.0f;   // pixels from the top edge
+    };
+
     static Graphics graphics;
     static Audio audio;
     static Debug debug;
     static Render render;
     static UI ui;
+    static Minimap minimap;
 
     static void load();
     static void save();
@@ -65,5 +75,6 @@ inline Settings::Audio Settings::audio{};
 inline Settings::Debug Settings::debug{};
 inline Settings::Render Settings::render{};
 inline Settings::UI Settings::ui{};
+inline Settings::Minimap Settings::minimap{};
 
 #endif // SETTINGS_HPP

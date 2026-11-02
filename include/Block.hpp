@@ -38,6 +38,10 @@ enum class BlockID : uint32_t
     Oak_Log,
     Oak_Leaves,
     Oak_Planks,
+    Birch_Log,
+    Birch_Leaves,
+    Spruce_Log,
+    Spruce_Leaves,
     Woodcutter,
     Fire,
     Sand,
@@ -50,7 +54,9 @@ enum class BlockID : uint32_t
     Gravel,
     Cactus,
     Dead_Bush,
-    Smooth_Stone
+    Smooth_Stone,
+    Diorite,
+    Granite
 };
 
 // Cardinal-neighbor IDs supplied to the per-tile rect() so a block can pick a

@@ -38,7 +38,7 @@ struct NormalWorldGeneratorProperties
 
 enum class FeatureType
 {
-    OakTree,
+    Tree,
 
     CoalOre,
     IronOre,
@@ -46,6 +46,8 @@ enum class FeatureType
     DiamondOre,
     RubyOre,
     Gravel,
+    Diorite,
+    Granite,
 
     Boulder,
     Grass,
@@ -102,7 +104,7 @@ private:
     void generateFeatures(Chunk& chunk);
     void generateFeature(Chunk& chunk, const FeaturePlacement& feature);
 
-    void generateOakTree(Chunk& chunk, const FeaturePlacement& feature);
+    void generateTree(Chunk& chunk, const FeaturePlacement& feature);
     void generateOreVein(Chunk& chunk, const FeaturePlacement& feature, BlockID ore, int size);
     void generateCactus(Chunk& chunk, const FeaturePlacement& feature);
     void generateDeadBush(Chunk& chunk, const FeaturePlacement& feature);

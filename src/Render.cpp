@@ -880,17 +880,18 @@ void RenderChunkBorders(const sf::Vector2<double> camera, sf::RenderWindow& wind
 //
 // Each cell is a block-local sub-pixel; the 3D-Perlin field is sampled in
 // *world* coordinates so block (bx,by) always maps to the same slice of
-// noise. Progress drives the threshold: as it rises past ENTRY_THRESHOLD,
-// more and more pixels fall under it and get painted black. The sampling
-// grid gives the characteristic "cracked pixel" look.
+// noise. Progress is quantised into STAGES discrete breaking steps so that
+// the overlay mirrors the block's state: the first stage appears as soon
+// as mining starts, and the final stage covers the whole block the frame
+// before it breaks.
 void RenderBlockDestruction(World& world, sf::Vector2<double> camera, sf::RenderWindow& window)
 {
     static const PerlinNoise3D destruction_noise(0xB10CB17u);
 
-    constexpr float  ENTRY_THRESHOLD = 0.15f;
-    constexpr int    RES             = 8;
-    constexpr double NOISE_FREQ      = 4.0;
-    constexpr double NOISE_Z         = 0.5;
+    constexpr int    STAGES     = 10;
+    constexpr int    RES        = 8;
+    constexpr double NOISE_FREQ = 4.0;
+    constexpr double NOISE_Z    = 0.5;
 
     const float unit_size = static_cast<float>(window.getSize().y) / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
     const double pixel_world = 1.0 / static_cast<double>(RES);
@@ -914,9 +915,10 @@ void RenderBlockDestruction(World& world, sf::Vector2<double> camera, sf::Render
         if (bd.hardness <= 0.0f) continue;
 
         const float progress = std::clamp(player.mining_time / bd.hardness, 0.0f, 1.0f);
-        if (progress < ENTRY_THRESHOLD) continue;
+        if (progress <= 0.0f) continue;
 
-        const float effective = (progress - ENTRY_THRESHOLD) / (1.0f - ENTRY_THRESHOLD);
+        const int stage = std::clamp(static_cast<int>(std::ceil(progress * STAGES)), 1, STAGES);
+        const float effective = static_cast<float>(stage) / static_cast<float>(STAGES);
 
         // Clip to the block's visible footprint (water, doors, …).
         const sf::FloatRect bounds = bd.render.has_value()
@@ -1730,7 +1732,11 @@ void RenderMinimap(ClientWorld& world, sf::Vector2<double> camera, sf::RenderTar
 {
     constexpr unsigned int MAX_MINIMAP_TEXTURE_WIDTH = 512;
 
-    sf::Vector2u texture_size = {std::min(target.getSize().x / 10, MAX_MINIMAP_TEXTURE_WIDTH), std::min(target.getSize().x / 10, MAX_MINIMAP_TEXTURE_WIDTH)};
+    const float minimap_scale  = std::clamp(Settings::minimap.size, 0.02f, 1.0f);
+    const float minimap_pixels = static_cast<float>(target.getSize().x) * minimap_scale;
+
+    unsigned int tex_dim = std::min(static_cast<unsigned int>(std::max(minimap_pixels, 1.0f)), MAX_MINIMAP_TEXTURE_WIDTH);
+    sf::Vector2u texture_size = {tex_dim, tex_dim};
 
     sf::RenderTexture render_texture(texture_size);
     render_texture.clear(sf::Color::Transparent);
@@ -1742,8 +1748,13 @@ void RenderMinimap(ClientWorld& world, sf::Vector2<double> camera, sf::RenderTar
     auto [sky_top, sky_bottom] = getSkyGradient(solarPhase(world.getDayTime(), world.days));
     renderSky(render_texture, sky_top, sky_bottom);
 
+    const float day_factor      = computeDayFactor(solarPhase(world.getDayTime(), world.days));
+    constexpr float ambient_min     = 0.0f;
+    constexpr float night_sky_floor = 4.0f / 15.0f;
+    const float effect_strength = std::clamp(Settings::graphics.lighting_effect_strength, 0.0f, 1.0f);
+
     float unit_size = static_cast<float>(texture_size.x) / 80.0f;
-    
+
     for(int i = positionToChunk(camera) - 5; i <= positionToChunk(camera) + 5; i++)
     {
         Chunk& chunk = world.getChunk(i);
@@ -1762,16 +1773,42 @@ void RenderMinimap(ClientWorld& world, sf::Vector2<double> camera, sf::RenderTar
         applyBlockAnimationShader(states);
 
         render_texture.draw(mesh.vertices, states);
+
+        if(Settings::minimap.render_shadows && chunk.light.initialized)
+        {
+            sf::Texture& light_tex = ensureLightTexture(world, i);
+            if (chunk.light.texture_dirty)
+            {
+                auto pixels = packChunkLightmap(chunk.light);
+                light_tex.update(pixels.data());
+                chunk.light.texture_dirty = false;
+            }
+
+            sf::Shader& lighting_shader = AssetManager::getShader(AssetManager::ShaderID::LightingOverlay);
+            lighting_shader.setUniform("texture", sf::Shader::CurrentTexture);
+            lighting_shader.setUniform("u_day_factor",      day_factor);
+            lighting_shader.setUniform("u_ambient_min",     ambient_min);
+            lighting_shader.setUniform("u_night_sky_floor", night_sky_floor);
+            lighting_shader.setUniform("u_effect_strength", effect_strength);
+
+            sf::RenderStates overlay_states;
+            overlay_states.shader    = &lighting_shader;
+            overlay_states.texture   = &light_tex;
+            overlay_states.transform = states.transform;
+            overlay_states.blendMode = sf::BlendMultiply;
+
+            render_texture.draw(mesh.lightmap_vertices, overlay_states);
+        }
     }
 
     render_texture.display();
 
 
-    sf::RectangleShape minimap({static_cast<float>(target.getSize().x) / 10.0f, static_cast<float>(target.getSize().x) / 10.0f});
+    sf::RectangleShape minimap({minimap_pixels, minimap_pixels});
 
     minimap.setTexture(&render_texture.getTexture());
 
-    minimap.setPosition({50.0f, 50.0f});
+    minimap.setPosition({Settings::minimap.offset_x, Settings::minimap.offset_y});
 
     minimap.setOutlineThickness(5.0f);
     minimap.setOutlineColor(sf::Color(72, 72, 72));

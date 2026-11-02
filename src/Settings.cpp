@@ -76,6 +76,16 @@ void Settings::load()
                 ui.main_color.b = static_cast<std::uint8_t>(std::clamp<int>(c[2].get<int>(), 0, 255));
             }
         }
+
+        if(data.contains("minimap"))
+        {
+            const auto& m = data["minimap"];
+            minimap.enabled        = m.value("enabled",        minimap.enabled);
+            minimap.render_shadows = m.value("render_shadows", minimap.render_shadows);
+            minimap.size           = m.value("size",           minimap.size);
+            minimap.offset_x       = m.value("offset_x",       minimap.offset_x);
+            minimap.offset_y       = m.value("offset_y",       minimap.offset_y);
+        }
     }
     catch(const std::exception& e)
     {
@@ -117,6 +127,13 @@ void Settings::save()
             {"main_color", { static_cast<int>(ui.main_color.r),
                              static_cast<int>(ui.main_color.g),
                              static_cast<int>(ui.main_color.b) }}
+        };
+        data["minimap"] = {
+            {"enabled",        minimap.enabled},
+            {"render_shadows", minimap.render_shadows},
+            {"size",           minimap.size},
+            {"offset_x",       minimap.offset_x},
+            {"offset_y",       minimap.offset_y}
         };
 
         std::ofstream file(path);

@@ -84,6 +84,8 @@ namespace
         {FeatureType::DiamondOre, BlockID::Diamond_Ore, 5, 25, 2, 5},
         {FeatureType::RubyOre,    BlockID::Ruby_Ore,    5, 15, 1, 4},
         {FeatureType::Gravel,     BlockID::Gravel,      5, 120, 8, 14},
+        {FeatureType::Diorite,    BlockID::Diorite,     5, 110, 7, 20},
+        {FeatureType::Granite,    BlockID::Granite,     5, 110, 7, 20},
     };
 
     const OreDef* findOre(FeatureType type)
@@ -129,6 +131,36 @@ namespace
             case Biome::Taiga:      return {5, 2, 2, 1};
             case Biome::SnowyTaiga: return {4, 2, 2, 1};
             default:                return {4, 3, 2, 1};
+        }
+    }
+
+    struct TreeSpecies
+    {
+        BlockID log;
+        BlockID leaves;
+    };
+
+    // Species picker consumes one rng draw for the Forest oak/birch roll so
+    // every candidate column takes the same number of rolls regardless of
+    // biome — this keeps the per-tree seed deterministic across refactors.
+    TreeSpecies treeSpecies(Biome biome, SmallRng& rng)
+    {
+        const double roll = rng.unit();
+
+        switch (biome)
+        {
+            case Biome::Taiga:
+            case Biome::SnowyTaiga:
+            case Biome::GiantTaiga:
+                return {BlockID::Spruce_Log, BlockID::Spruce_Leaves};
+
+            case Biome::Forest:
+                if (roll < 0.3)
+                    return {BlockID::Birch_Log, BlockID::Birch_Leaves};
+                return {BlockID::Oak_Log, BlockID::Oak_Leaves};
+
+            default:
+                return {BlockID::Oak_Log, BlockID::Oak_Leaves};
         }
     }
 }
@@ -513,9 +545,9 @@ void NormalWorldGenerator::generateFeatures(Chunk& chunk)
 
 void NormalWorldGenerator::generateFeature(Chunk& chunk, const FeaturePlacement& feature)
 {
-    if (feature.type == FeatureType::OakTree)
+    if (feature.type == FeatureType::Tree)
     {
-        generateOakTree(chunk, feature);
+        generateTree(chunk, feature);
         return;
     }
 
@@ -552,7 +584,7 @@ std::vector<FeaturePlacement> NormalWorldGenerator::getTreePlacements(int chunk_
 
     for (int grid_x = grid_min; grid_x <= grid_max; grid_x++)
     {
-        SmallRng rng(featureSeed(grid_x, 0, FeatureType::OakTree));
+        SmallRng rng(featureSeed(grid_x, 0, FeatureType::Tree));
 
         const int world_x = grid_x * TREE_GRID + 1 + rng.range(TREE_GRID - 2);
 
@@ -583,18 +615,19 @@ std::vector<FeaturePlacement> NormalWorldGenerator::getTreePlacements(int chunk_
         if (roll > density)
             continue;
 
-        result.push_back(FeaturePlacement{FeatureType::OakTree, world_x, col.height, tree_seed});
+        result.push_back(FeaturePlacement{FeatureType::Tree, world_x, col.height, tree_seed});
     }
 
     return result;
 }
 
-void NormalWorldGenerator::generateOakTree(Chunk& chunk, const FeaturePlacement& feature)
+void NormalWorldGenerator::generateTree(Chunk& chunk, const FeaturePlacement& feature)
 {
     SmallRng rng(feature.seed);
 
     const Biome biome = getBlendedBiome(feature.x, 1);
     const TreeShape shape = treeShape(biome);
+    const TreeSpecies species = treeSpecies(biome, rng);
 
     const int height = shape.min_height + rng.range(shape.height_variation);
 
@@ -609,13 +642,13 @@ void NormalWorldGenerator::generateOakTree(Chunk& chunk, const FeaturePlacement&
             if (std::abs(dx) == shape.crown_radius && shape.crown_radius >= 2 && rng.range(4) == 0)
                 continue;
 
-            setFeatureBlock(chunk, feature.x + dx, crown_y + dy, {BlockID::Oak_Leaves, 0}, true);
+            setFeatureBlock(chunk, feature.x + dx, crown_y + dy, {species.leaves, 0}, true);
         }
     }
 
     for (int i = 0; i < height; i++)
     {
-        setFeatureBlock(chunk, feature.x, feature.y + i, {BlockID::Oak_Log, 0});
+        setFeatureBlock(chunk, feature.x, feature.y + i, {species.log, 0});
     }
 }
 
