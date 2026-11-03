@@ -101,6 +101,24 @@ void SettingsWindow::render()
     {
         ImGui::Checkbox("Reach-zoom", &Settings::render.reach_zoom_enabled);
         ImGui::SliderFloat("Reach-zoom scale", &Settings::render.reach_zoom_scale, 0.0f, 4.0f, "%.2f");
+
+        float selector_color[3] = {
+            Settings::render.selector_color.r / 255.0f,
+            Settings::render.selector_color.g / 255.0f,
+            Settings::render.selector_color.b / 255.0f
+        };
+        if(ImGui::ColorEdit3("Selector color", selector_color))
+        {
+            Settings::render.selector_color.r = static_cast<std::uint8_t>(selector_color[0] * 255.0f);
+            Settings::render.selector_color.g = static_cast<std::uint8_t>(selector_color[1] * 255.0f);
+            Settings::render.selector_color.b = static_cast<std::uint8_t>(selector_color[2] * 255.0f);
+        }
+
+        float air_fade_percent = Settings::render.selector_air_fade * 100.0f;
+        if(ImGui::SliderFloat("Selector air fade", &air_fade_percent, 0.0f, 100.0f, "%.0f%%"))
+        {
+            Settings::render.selector_air_fade = std::clamp(air_fade_percent / 100.0f, 0.0f, 1.0f);
+        }
     }
 
     if(ImGui::CollapsingHeader("Minimap", ImGuiTreeNodeFlags_DefaultOpen))

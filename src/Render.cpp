@@ -618,23 +618,34 @@ void RenderBlockOverlay(World& world, const sf::Vector2<double> camera, sf::Rend
 void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf::Vector2i block, UUID viewerEntityId, sf::RenderWindow& window)
 {
     constexpr float TRANSITION_DURATION = 0.1f;
+    constexpr float OPACITY_TRANSITION_DURATION = 0.15f;
     constexpr float INSET = 1.0f / 16.0f;
+
+    static sf::FloatRect source_rect{};
+    static sf::FloatRect target_rect{};
+    static sf::FloatRect current_rect{};
+    static float transition_elapsed = TRANSITION_DURATION;
+    static float current_opacity = 1.0f;
+    static bool initialized = false;
+    static sf::Clock clock;
+
+    const float dt = clock.restart().asSeconds();
 
     {
         if (!world.doesEntityExist(viewerEntityId)) return;
         auto& viewer = world.getEntity(viewerEntityId);
         if (!viewer.hasComponent<TransformComponent>()) return;
-        sf::Vector2i block_pos = block;
-        if (!isBlockInRange(viewer.getComponent<TransformComponent>(), block_pos, 4.0f)) return;
     }
+
+    const Block hovered_block = world.getBlock(block.x, block.y);
+    const bool is_air = hovered_block.id == BlockID::Air;
 
     auto resolveBounds = [&]() -> sf::FloatRect
     {
-        Block b = world.getBlock(block.x, block.y);
-        auto it = blockDatabase.find(b.id);
+        auto it = blockDatabase.find(hovered_block.id);
         if (it != blockDatabase.end() && it->second.render.has_value())
         {
-            sf::FloatRect r = it->second.render->render_bounds(b);
+            sf::FloatRect r = it->second.render->render_bounds(hovered_block);
             if (r.size.x > 0.0f && r.size.y > 0.0f) return r;
         }
         return {{0.0f, 0.0f}, {1.0f, 1.0f}};
@@ -647,14 +658,7 @@ void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf
         local.size
     };
 
-    static sf::FloatRect source_rect{};
-    static sf::FloatRect target_rect{};
-    static sf::FloatRect current_rect{};
-    static float transition_elapsed = TRANSITION_DURATION;
-    static bool initialized = false;
-    static sf::Clock clock;
-
-    const float dt = clock.restart().asSeconds();
+    const float target_opacity = is_air ? std::clamp(1.0f - Settings::render.selector_air_fade, 0.0f, 1.0f) : 1.0f;
 
     const bool target_changed =
         target.position.x != target_rect.position.x ||
@@ -668,6 +672,7 @@ void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf
         target_rect = target;
         current_rect = target;
         transition_elapsed = TRANSITION_DURATION;
+        current_opacity = target_opacity;
         initialized = true;
     }
     else if (target_changed)
@@ -693,6 +698,19 @@ void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf
         current_rect = target_rect;
     }
 
+    if (OPACITY_TRANSITION_DURATION > 0.0f && dt > 0.0f)
+    {
+        const float max_step = dt / OPACITY_TRANSITION_DURATION;
+        const float delta = target_opacity - current_opacity;
+        current_opacity += std::clamp(delta, -max_step, max_step);
+    }
+    else
+    {
+        current_opacity = target_opacity;
+    }
+
+    if (current_opacity <= 0.0f) return;
+
     float unit_size = static_cast<float>(window.getSize().y) / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
 
     float inset = std::min(INSET, 0.5f * std::min(current_rect.size.x, current_rect.size.y));
@@ -704,8 +722,11 @@ void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf
         }
     );
 
+    sf::Color outline_color = Settings::render.selector_color;
+    outline_color.a = static_cast<std::uint8_t>(std::round(255.0f * std::clamp(current_opacity, 0.0f, 1.0f)));
+
     shape.setFillColor(sf::Color::Transparent);
-    shape.setOutlineColor(sf::Color::Black);
+    shape.setOutlineColor(outline_color);
     shape.setOutlineThickness(inset * unit_size);
 
     shape.setPosition(

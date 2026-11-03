@@ -63,6 +63,14 @@ void Settings::load()
             const auto& r = data["render"];
             render.reach_zoom_enabled = r.value("reach_zoom_enabled", render.reach_zoom_enabled);
             render.reach_zoom_scale   = r.value("reach_zoom_scale",   render.reach_zoom_scale);
+            if(r.contains("selector_color") && r["selector_color"].is_array() && r["selector_color"].size() >= 3)
+            {
+                const auto& c = r["selector_color"];
+                render.selector_color.r = static_cast<std::uint8_t>(std::clamp<int>(c[0].get<int>(), 0, 255));
+                render.selector_color.g = static_cast<std::uint8_t>(std::clamp<int>(c[1].get<int>(), 0, 255));
+                render.selector_color.b = static_cast<std::uint8_t>(std::clamp<int>(c[2].get<int>(), 0, 255));
+            }
+            render.selector_air_fade = std::clamp(r.value("selector_air_fade", render.selector_air_fade), 0.0f, 1.0f);
         }
 
         if(data.contains("ui"))
@@ -121,7 +129,11 @@ void Settings::save()
         };
         data["render"] = {
             {"reach_zoom_enabled", render.reach_zoom_enabled},
-            {"reach_zoom_scale",   render.reach_zoom_scale}
+            {"reach_zoom_scale",   render.reach_zoom_scale},
+            {"selector_color", { static_cast<int>(render.selector_color.r),
+                                 static_cast<int>(render.selector_color.g),
+                                 static_cast<int>(render.selector_color.b) }},
+            {"selector_air_fade", render.selector_air_fade}
         };
         data["ui"] = {
             {"main_color", { static_cast<int>(ui.main_color.r),

@@ -36,9 +36,16 @@ private:
 
     sf::Texture background_texture;
 
+    sf::Texture preview_texture;
+    bool preview_has_image = false;
+    unsigned int preview_seed = 0;
+
     bool should_close = false;
 
     void createWorld();
+
+    void rerollSeed();
+    void rebuildPreview();
 
 public:
 
