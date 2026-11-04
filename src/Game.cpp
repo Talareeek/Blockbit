@@ -21,6 +21,139 @@
 #include <imgui.h>
 #include <imgui-SFML.h>
 
+#ifdef __ANDROID__
+#include <SFML/System/NativeActivity.hpp>
+#include <SFML/System/FileInputStream.hpp>
+#include <android/native_activity.h>
+#include <jni.h>
+
+// DisplayMetrics.density from the active NativeActivity. Returns 1.0 (desktop-
+// equivalent) on any JNI failure so the UI stays functional even if we can't
+// read the system value. Cached after the first successful probe — the display
+// geometry doesn't change for the lifetime of the process.
+static float androidDisplayDensity()
+{
+    static float cached = -1.0f;
+    if (cached > 0.0f) return cached;
+
+    ANativeActivity* activity = sf::getNativeActivity();
+    if (!activity) return 1.0f;
+
+    JavaVM* vm = activity->vm;
+    JNIEnv* env = nullptr;
+    bool attached = false;
+    jint status = vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6);
+    if (status == JNI_EDETACHED)
+    {
+        if (vm->AttachCurrentThread(&env, nullptr) != JNI_OK) return 1.0f;
+        attached = true;
+    }
+    else if (status != JNI_OK)
+    {
+        return 1.0f;
+    }
+
+    float density = 1.0f;
+    auto cleanup = [&]() {
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        if (attached) vm->DetachCurrentThread();
+    };
+
+    // activity.getResources().getDisplayMetrics().density
+    jclass activityClass = env->GetObjectClass(activity->clazz);
+    jmethodID getResources = env->GetMethodID(
+        activityClass, "getResources", "()Landroid/content/res/Resources;");
+    jobject resources = env->CallObjectMethod(activity->clazz, getResources);
+    env->DeleteLocalRef(activityClass);
+    if (!resources) { cleanup(); return 1.0f; }
+
+    jclass resourcesClass = env->GetObjectClass(resources);
+    jmethodID getDisplayMetrics = env->GetMethodID(
+        resourcesClass, "getDisplayMetrics", "()Landroid/util/DisplayMetrics;");
+    jobject metrics = env->CallObjectMethod(resources, getDisplayMetrics);
+    env->DeleteLocalRef(resourcesClass);
+    env->DeleteLocalRef(resources);
+    if (!metrics) { cleanup(); return 1.0f; }
+
+    jclass metricsClass = env->GetObjectClass(metrics);
+    jfieldID densityField = env->GetFieldID(metricsClass, "density", "F");
+    density = env->GetFloatField(metrics, densityField);
+    env->DeleteLocalRef(metricsClass);
+    env->DeleteLocalRef(metrics);
+
+    cleanup();
+
+    if (density <= 0.0f) density = 1.0f;
+    cached = density;
+    return density;
+}
+#endif
+
+static void installImGuiGlobalFont()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    const char* path = "resources/fonts/PressStart2P-Regular.ttf";
+
+#ifdef __ANDROID__
+    // ImGui's AddFontFromFileTTF uses stdio fopen(), which can't see assets
+    // packaged inside the APK. Pull the bytes through sf::FileInputStream
+    // (which routes to AAssetManager on Android) and hand them to ImGui via
+    // AddFontFromMemoryTTF. Scale by display density so the glyphs stay
+    // legible on high-DPI phone screens. ImGui-SFML's Init already added the
+    // default font, so clear the atlas first to avoid stacking.
+    io.Fonts->Clear();
+
+    sf::FileInputStream stream;
+    std::optional<std::size_t> size_opt;
+    if(!stream.open(path) || !(size_opt = stream.getSize()) || *size_opt == 0)
+    {
+        std::cerr << "Game: failed to open global ImGui font from assets: " << path << '\n';
+        ImFontConfig cfg;
+        cfg.SizePixels = 13.0f * androidDisplayDensity();
+        io.Fonts->AddFontDefault(&cfg);
+        if(!ImGui::SFML::UpdateFontTexture())
+            std::cerr << "Game: failed to update ImGui font texture\n";
+        return;
+    }
+
+    const std::size_t size = *size_opt;
+    void* buffer = IM_ALLOC(size);
+    auto read_opt = stream.read(buffer, size);
+    if(!read_opt || *read_opt != size)
+    {
+        std::cerr << "Game: failed to read global ImGui font from assets: " << path << '\n';
+        IM_FREE(buffer);
+        ImFontConfig cfg;
+        cfg.SizePixels = 13.0f * androidDisplayDensity();
+        io.Fonts->AddFontDefault(&cfg);
+        if(!ImGui::SFML::UpdateFontTexture())
+            std::cerr << "Game: failed to update ImGui font texture\n";
+        return;
+    }
+
+    ImFont* font = io.Fonts->AddFontFromMemoryTTF(
+        buffer, static_cast<int>(size), 13.0f * androidDisplayDensity());
+    if(!font)
+    {
+        std::cerr << "Game: failed to load global ImGui font\n";
+        return;
+    }
+    io.FontDefault = font;
+    if(!ImGui::SFML::UpdateFontTexture())
+        std::cerr << "Game: failed to update ImGui font texture\n";
+#else
+    ImFont* font = io.Fonts->AddFontFromFileTTF(path, 13.0f);
+    if(!font)
+    {
+        std::cerr << "Game: failed to load global ImGui font\n";
+        return;
+    }
+    io.FontDefault = font;
+    if(!ImGui::SFML::UpdateFontTexture())
+        std::cerr << "Game: failed to update ImGui font texture\n";
+#endif
+}
+
 Game::Game()
 {
     Settings::load();
@@ -52,6 +185,7 @@ Game::Game()
 	window.setIcon(icon);
 
     if (!ImGui::SFML::Init(window)) throw std::runtime_error("Failed initializing ImGui-SFML");
+    installImGuiGlobalFont();
 
     unit_size = window.getSize().y / 9;
 
@@ -212,8 +346,15 @@ Game::Game()
     settings_window.assignGame(this);    
 
 #ifdef __ANDROID__
+    // Scale widget geometry (padding, frame sizes, scrollbar width, …) by the
+    // same factor the font was rasterized at. Font pixel size and ScaleAllSizes
+    // both grow the UI in window-pixel space; touch coordinates arrive in that
+    // same pixel space from SFML, so hit tests stay aligned. (This is why we
+    // avoid FontGlobalScale / DisplayFramebufferScale — those would visually
+    // upscale without moving hit regions, breaking taps.)
+    const float density = androidDisplayDensity();
     ImGuiStyle& style = ImGui::GetStyle();
-    style.ScaleAllSizes(1.7f);
+    style.ScaleAllSizes(density);
 #endif
 }
 
@@ -259,13 +400,19 @@ void Game::processEvent(const sf::Event& event)
     try
     {
 #ifdef __ANDROID__
-        // Synthesize a mouse-equivalent event FIRST so ImGui + custom widgets
-        // react to taps. The real touch event continues through the normal
-        // dispatch below for anything that specifically listens for Touch
-        // (e.g. ClientGameState's TouchInputOverlay).
+        // Synthesize a mouse-equivalent event FIRST so the custom widgets
+        // (TextButton/Button) react to taps. The real touch event continues
+        // through the normal dispatch below for anything that specifically
+        // listens for Touch (e.g. ClientGameState's TouchInputOverlay) and for
+        // ImGui, which handles touches natively via sf::Touch::isDown().
+        //
+        // Do NOT feed the synth into ImGui-SFML: its ProcessEvent sets an
+        // internal mouseMoved flag on MouseMoved, which then makes Update()
+        // overwrite io.MousePos with sf::Mouse::getPosition(window) every
+        // frame — a stale/garbage value on Android. That causes ImGui buttons'
+        // hover/active state to flash on/off between touch and mouse positions.
         if (const auto synth = touchToMouse(event))
         {
-            ImGui::SFML::ProcessEvent(window, *synth);
             if (!gameStates.empty()) gameStates.back()->handleEvent(*synth);
             console.handleEvent(*synth);
         }
@@ -342,10 +489,11 @@ void Game::processEvent(const sf::Event& event)
 
 namespace
 {
-    // ANativeActivity_show/hideSoftInput is unreliable on NativeActivity-based
-    // apps (hasCode="false"): the decorView usually isn't focusable, so IMM
-    // silently no-ops on recent Android. Every mature NativeActivity engine
-    // (SDL, Godot, UE) ends up doing the JNI dance below instead.
+    // On NativeActivity apps (hasCode="false") the native surface covers the
+    // decorView, so requestFocus() silently no-ops and showSoftInput(view, 0)
+    // gets swallowed by IMM. The proven approach — used by imgui-SFML upstream
+    // and SDL's native_app_glue — is InputMethodManager.toggleSoftInput with
+    // SHOW_FORCED / HIDE_IMPLICIT_ONLY, which doesn't require a focused view.
     void androidSetSoftKeyboard(bool show)
     {
         ANativeActivity* activity = sf::getNativeActivity();
@@ -371,59 +519,26 @@ namespace
         };
 
         jclass activityClass = env->GetObjectClass(activity->clazz);
-
-        jmethodID getWindow = env->GetMethodID(activityClass, "getWindow",
-            "()Landroid/view/Window;");
-        jobject jwindow = env->CallObjectMethod(activity->clazz, getWindow);
-        jclass windowClass = env->GetObjectClass(jwindow);
-        jmethodID getDecorView = env->GetMethodID(windowClass, "getDecorView",
-            "()Landroid/view/View;");
-        jobject decorView = env->CallObjectMethod(jwindow, getDecorView);
-
-        // decorView must be focusable or showSoftInput will no-op.
-        jclass viewClass = env->GetObjectClass(decorView);
-        jmethodID setFocusable = env->GetMethodID(viewClass, "setFocusable", "(Z)V");
-        jmethodID setFocusableInTouchMode = env->GetMethodID(viewClass, "setFocusableInTouchMode", "(Z)V");
-        jmethodID requestFocus = env->GetMethodID(viewClass, "requestFocus", "()Z");
-        env->CallVoidMethod(decorView, setFocusable, JNI_TRUE);
-        env->CallVoidMethod(decorView, setFocusableInTouchMode, JNI_TRUE);
-        env->CallBooleanMethod(decorView, requestFocus);
-
         jmethodID getSystemService = env->GetMethodID(
             activityClass, "getSystemService",
             "(Ljava/lang/String;)Ljava/lang/Object;");
         jstring serviceName = env->NewStringUTF("input_method");
         jobject imm = env->CallObjectMethod(activity->clazz, getSystemService, serviceName);
         env->DeleteLocalRef(serviceName);
-        if (!imm) { cleanup(); return; }
+        if (!imm) { env->DeleteLocalRef(activityClass); cleanup(); return; }
 
         jclass immClass = env->GetObjectClass(imm);
-        if (show)
-        {
-            // flags=0 (implicit) — SHOW_FORCED pairs with HIDE_IMPLICIT_ONLY
-            // which won't dismiss on blur. Plain show is enough once the view
-            // is focusable.
-            jmethodID showSoftInput = env->GetMethodID(immClass, "showSoftInput",
-                "(Landroid/view/View;I)Z");
-            env->CallBooleanMethod(imm, showSoftInput, decorView, 0);
-        }
-        else
-        {
-            jmethodID getWindowToken = env->GetMethodID(viewClass, "getWindowToken",
-                "()Landroid/os/IBinder;");
-            jobject token = env->CallObjectMethod(decorView, getWindowToken);
-            jmethodID hideSoftInput = env->GetMethodID(immClass, "hideSoftInputFromWindow",
-                "(Landroid/os/IBinder;I)Z");
-            env->CallBooleanMethod(imm, hideSoftInput, token, 0);
-            if (token) env->DeleteLocalRef(token);
-        }
+        jmethodID toggleSoftInput = env->GetMethodID(immClass, "toggleSoftInput", "(II)V");
+
+        // Flags: SHOW_FORCED=2 forces the keyboard open regardless of focus;
+        // HIDE_IMPLICIT_ONLY=1 dismisses only if the user hasn't explicitly
+        // requested it (symmetric partner for SHOW_FORCED).
+        constexpr jint SHOW_FORCED = 2;
+        constexpr jint HIDE_IMPLICIT_ONLY = 1;
+        env->CallVoidMethod(imm, toggleSoftInput, show ? SHOW_FORCED : HIDE_IMPLICIT_ONLY, 0);
 
         env->DeleteLocalRef(immClass);
         env->DeleteLocalRef(imm);
-        env->DeleteLocalRef(viewClass);
-        env->DeleteLocalRef(decorView);
-        env->DeleteLocalRef(windowClass);
-        env->DeleteLocalRef(jwindow);
         env->DeleteLocalRef(activityClass);
 
         cleanup();
@@ -626,6 +741,7 @@ void Game::applyGraphicsSettings()
     window.setFramerateLimit(Settings::graphics.fps_limit);
 
     if(!ImGui::SFML::Init(window)) throw std::runtime_error("Failed re-initializing ImGui-SFML");
+    installImGuiGlobalFont();
 
     console.setupFont("resources/fonts/FiraCode-Regular.ttf");
 

@@ -1,4 +1,5 @@
 #include "../include/TouchInputOverlay.hpp"
+#include "../include/GameCommon.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -6,7 +7,6 @@
 namespace
 {
     constexpr float kButtonSize    = 180.0f;
-    constexpr float kButtonSpacing = 30.0f;
     constexpr float kMargin        = 60.0f;
 
     sf::Vector2f toVec2f(sf::Vector2i v)
@@ -35,20 +35,11 @@ void TouchInputOverlay::relayout(sf::Vector2u window_size)
                             h - kMargin - joystick_radius};
     joystick_knob_offset = {0.0f, 0.0f};
 
-    // Button cluster: lower-right. Vertical stack of three big buttons.
-    const float btn_x = w - kMargin - kButtonSize;
-    const float base_y = h - kMargin - kButtonSize;
-
+    // Jump: lower-right thumb reach. Attack/Use are no longer buttons — the
+    // whole play area is tap=use / hold=attack.
     auto& jump = buttons[static_cast<std::size_t>(ButtonId::Jump)];
-    jump.bounds = {{btn_x, base_y}, {kButtonSize, kButtonSize}};
-
-    auto& attack = buttons[static_cast<std::size_t>(ButtonId::Attack)];
-    attack.bounds = {{btn_x - kButtonSize - kButtonSpacing, base_y},
-                     {kButtonSize, kButtonSize}};
-
-    auto& use = buttons[static_cast<std::size_t>(ButtonId::Use)];
-    use.bounds = {{btn_x, base_y - kButtonSize - kButtonSpacing},
-                  {kButtonSize, kButtonSize}};
+    jump.bounds = {{w - kMargin - kButtonSize, h - kMargin - kButtonSize},
+                   {kButtonSize, kButtonSize}};
 
     // Inventory sits in the top-right corner, out of the thumb path.
     auto& inv = buttons[static_cast<std::size_t>(ButtonId::Inventory)];
@@ -95,9 +86,8 @@ void TouchInputOverlay::handleEvent(const sf::Event& event, const sf::RenderWind
             {
                 btn.finger_id = id;
                 btn.pressed_this_frame = true;
-                if (b == ButtonId::Attack)    pending_attack_start = true;
-                if (b == ButtonId::Use)       pending_use_start    = true;
-                if (b == ButtonId::Inventory) pending_open_inv     = true;
+                if (b == ButtonId::Inventory)
+                    pending_inputs.push_back({InputType::OPEN_INVENTORY});
             }
             return;
         }
@@ -117,8 +107,16 @@ void TouchInputOverlay::handleEvent(const sf::Event& event, const sf::RenderWind
             return;
         }
 
-        // Fell through: treat as a world tap for aiming.
-        last_world_tap_screen = pos;
+        // Fell through: this finger owns the world-touch slot. One active
+        // world finger at a time — a second finger landing in the play area
+        // is ignored so the attack/use decision stays unambiguous.
+        if (!world_finger)
+        {
+            world_finger = id;
+            world_touch_screen = pos;
+            world_touch_timer.restart();
+            world_touch_latched_attack = false;
+        }
     }
     else if (const auto* moved = event.getIf<sf::Event::TouchMoved>())
     {
@@ -135,14 +133,8 @@ void TouchInputOverlay::handleEvent(const sf::Event& event, const sf::RenderWind
             return;
         }
 
-        // If the move belongs to a finger that originally landed on the
-        // world (not a button or the joystick), update the aim position.
-        bool is_button_finger = false;
-        for (const auto& btn : buttons)
-            if (btn.finger_id && *btn.finger_id == moved->finger)
-                is_button_finger = true;
-        if (!is_button_finger && (!joystick_finger || *joystick_finger != moved->finger))
-            last_world_tap_screen = moved->position;
+        if (world_finger && *world_finger == moved->finger)
+            world_touch_screen = moved->position;
     }
     else if (const auto* ended = event.getIf<sf::Event::TouchEnded>())
     {
@@ -156,7 +148,36 @@ void TouchInputOverlay::handleEvent(const sf::Event& event, const sf::RenderWind
             if (btn.finger_id && *btn.finger_id == ended->finger)
                 btn.finger_id.reset();
         }
-        last_world_tap_screen.reset();
+
+        if (world_finger && *world_finger == ended->finger)
+        {
+            const float elapsed = world_touch_timer.getElapsedTime().asSeconds();
+            if (world_touch_latched_attack)
+            {
+                // Hold already crossed the threshold — close the attack.
+                pending_inputs.push_back({InputType::ATTACK_STOP});
+            }
+            else if (elapsed < TAP_HOLD_THRESHOLD_SECONDS)
+            {
+                // Short tap: fire a USE pulse. USE_STOP is deferred one tick
+                // so PlayerControlledSystem sees mid_usage=true for a tick
+                // before processWorldInputs flips it back — otherwise both
+                // flags land in the same InputPacket and the placement is
+                // silently cancelled.
+                pending_inputs.push_back({InputType::USE_START});
+                next_frame_inputs.push_back({InputType::USE_STOP});
+            }
+            else
+            {
+                // Edge case: finger lifted on the exact frame the threshold
+                // was reached but before collectFrameInputs latched it.
+                // Emit a full attack pulse so the server still sees it.
+                pending_inputs.push_back({InputType::ATTACK_START});
+                pending_inputs.push_back({InputType::ATTACK_STOP});
+            }
+            world_finger.reset();
+            world_touch_latched_attack = false;
+        }
     }
 }
 
@@ -181,57 +202,48 @@ std::vector<Input> TouchInputOverlay::collectFrameInputs()
     if (buttons[static_cast<std::size_t>(ButtonId::Jump)].finger_id)
         out.push_back({InputType::JUMP});
 
-    // One-shot press events dispatched by handleEvent on touch-down.
-    if (pending_attack_start)
+    // Delayed ATTACK_START: a world touch that stays down past the
+    // tap/hold threshold converts into a held attack. The matching
+    // ATTACK_STOP (or the USE pulse for a tap) is queued by handleEvent
+    // when the finger lifts.
+    if (world_finger && !world_touch_latched_attack &&
+        world_touch_timer.getElapsedTime().asSeconds() >= TAP_HOLD_THRESHOLD_SECONDS)
     {
         out.push_back({InputType::ATTACK_START});
-        pending_attack_start = false;
-    }
-    if (pending_use_start)
-    {
-        out.push_back({InputType::USE_START});
-        pending_use_start = false;
-    }
-    if (pending_open_inv)
-    {
-        out.push_back({InputType::OPEN_INVENTORY});
-        pending_open_inv = false;
+        world_touch_latched_attack = true;
     }
 
-    // Edge-triggered STOP events when the finger lifts off the button.
-    const bool attack_held_now =
-        buttons[static_cast<std::size_t>(ButtonId::Attack)].finger_id.has_value();
-    if (attack_held_prev && !attack_held_now)
-        out.push_back({InputType::ATTACK_STOP});
-    attack_held_prev = attack_held_now;
+    if (!pending_inputs.empty())
+    {
+        out.insert(out.end(),
+                   std::make_move_iterator(pending_inputs.begin()),
+                   std::make_move_iterator(pending_inputs.end()));
+        pending_inputs.clear();
+    }
 
-    const bool use_held_now =
-        buttons[static_cast<std::size_t>(ButtonId::Use)].finger_id.has_value();
-    if (use_held_prev && !use_held_now)
-        out.push_back({InputType::USE_STOP});
-    use_held_prev = use_held_now;
+    // Promote deferred inputs so the next call drains them.
+    pending_inputs = std::move(next_frame_inputs);
+    next_frame_inputs.clear();
 
     return out;
 }
 
-sf::Vector2<double> TouchInputOverlay::aimWorldPos(const sf::RenderWindow& window,
-                                                   sf::Vector2<double> camera) const
+std::optional<sf::Vector2<double>> TouchInputOverlay::currentTouchWorldPos(
+    const sf::RenderWindow& window, sf::Vector2<double> camera) const
 {
-    // The game view has its origin at camera center (ClientGameState sets
-    // this each frame). mapPixelToCoords therefore returns world coords.
-    sf::Vector2i target = last_world_tap_screen.value_or(
-        sf::Vector2i(static_cast<int>(window.getSize().x) / 2,
-                     static_cast<int>(window.getSize().y) / 2));
+    if (!world_finger) return std::nullopt;
 
-    // Nudge the default aim slightly below screen center so an empty-tap
-    // attack lands on the block the player is standing on, not the sky
-    // behind them.
-    if (!last_world_tap_screen)
-        target.y += static_cast<int>(window.getSize().y) * 0.1f;
+    // Mirror getMouseWorldPosition (src/Render.cpp): mapPixelToCoords
+    // through the current view gives scaled-pixel coords, which divide by
+    // unit_size to get world units offset from the camera center.
+    const double unit_size = static_cast<double>(window.getSize().y) /
+                             static_cast<double>(WORLD_UNIT_SIZE_FACTOR);
+    if (unit_size <= 0.0) return std::nullopt;
 
-    const sf::Vector2f world = window.mapPixelToCoords(target);
-    (void)camera;
-    return {static_cast<double>(world.x), static_cast<double>(world.y)};
+    const sf::Vector2f view_coords = window.mapPixelToCoords(world_touch_screen);
+    return camera + sf::Vector2<double>{
+        static_cast<double>(view_coords.x) / unit_size,
+        static_cast<double>(view_coords.y) / unit_size};
 }
 
 void TouchInputOverlay::render(sf::RenderWindow& window)
@@ -268,7 +280,7 @@ void TouchInputOverlay::render(sf::RenderWindow& window)
 
     // Buttons.
     const std::array<const char*, static_cast<std::size_t>(ButtonId::Count)> labels{
-        "JUMP", "ATK", "USE", "INV"
+        "JUMP", "INV"
     };
     for (std::size_t i = 0; i < buttons.size(); ++i)
     {

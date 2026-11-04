@@ -7,6 +7,7 @@
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Graphics/Text.hpp>
+#include <SFML/System/Clock.hpp>
 #include <SFML/System/Vector2.hpp>
 #include <SFML/Window/Event.hpp>
 
@@ -28,26 +29,33 @@ public:
     enum class ButtonId : std::uint8_t
     {
         Jump = 0,
-        Attack,
-        Use,
         Inventory,
 
         Count
     };
 
+    // Any touch that doesn't land on the joystick, Jump, or Inventory is a
+    // "world touch". Short world touches become USE_START + USE_STOP (place
+    // / interact); long ones become ATTACK_START on hold-threshold crossing
+    // and ATTACK_STOP on release (mine / hit).
+    static constexpr float TAP_HOLD_THRESHOLD_SECONDS = 0.15f;
+
     void handleEvent(const sf::Event& event, const sf::RenderWindow& window);
 
     // Produces per-frame inputs (MOVE while joystick is tilted past the
-    // deadzone, JUMP while that button is held). One-shot ATTACK_START /
-    // USE_START / OPEN_INVENTORY are emitted by handleEvent as touches land.
+    // deadzone, JUMP while that button is held, and the delayed ATTACK_START
+    // once a world touch crosses the hold threshold). Instant events
+    // (USE_START / USE_STOP on tap release, ATTACK_STOP on hold release,
+    // OPEN_INVENTORY) are queued by handleEvent and drained here.
     std::vector<Input> collectFrameInputs();
 
-    // Current aim target. When the player drags somewhere on the "world
-    // area" of the screen we aim at that world point; otherwise aim stays
-    // slightly below the camera center so single-tap mining lands on the
-    // block the player is standing on.
-    sf::Vector2<double> aimWorldPos(const sf::RenderWindow& window,
-                                    sf::Vector2<double> camera) const;
+    // Current touch position in world coordinates, if a world touch is
+    // active. Empty when no finger is down in the play area — the caller
+    // should fall back to the tracked entity's position in that case.
+    // Matches the camera + unit_size transform in getMouseWorldPosition so
+    // the server receives the same coord space it does for desktop clicks.
+    std::optional<sf::Vector2<double>> currentTouchWorldPos(
+        const sf::RenderWindow& window, sf::Vector2<double> camera) const;
 
     void render(sf::RenderWindow& window);
 
@@ -71,21 +79,22 @@ private:
 
     std::array<Button, static_cast<std::size_t>(ButtonId::Count)> buttons;
 
-    // World-area tap state. Last tapped position on the game surface, used
-    // as the current aim. Cleared on finger-up so aim snaps back to default.
-    std::optional<sf::Vector2i> last_world_tap_screen{};
+    // Active world-touch finger. Set on TouchBegan (outside buttons and the
+    // joystick grab region) and cleared on TouchEnded.
+    std::optional<unsigned int> world_finger{};
+    sf::Vector2i world_touch_screen{};   // current finger position
+    sf::Clock world_touch_timer{};       // elapsed since TouchBegan
+    bool world_touch_latched_attack = false;  // ATTACK_START already emitted
 
-    // Latching flags for one-shot events emitted by handleEvent and
-    // consumed via collectFrameInputs() — kept so the Input stream still
-    // flows through one place.
-    bool pending_attack_start = false;
-    bool pending_use_start    = false;
-    bool pending_open_inv     = false;
+    // One-shot inputs queued by handleEvent and collectFrameInputs; drained
+    // by the next collectFrameInputs() call so everything funnels through a
+    // single place.
+    std::vector<Input> pending_inputs;
 
-    // Attack-held state: set by attack button touch-down / cleared by up.
-    // collectFrameInputs emits ATTACK_STOP once when it flips to false.
-    bool attack_held_prev = false;
-    bool use_held_prev    = false;
+    // Inputs deferred to the call AFTER the next collectFrameInputs. Used to
+    // split USE_START and USE_STOP across two ticks so PlayerControlledSystem
+    // sees mid_usage=true for one tick before USE_STOP flips it back off.
+    std::vector<Input> next_frame_inputs;
 
     void relayout(sf::Vector2u window_size);
 

@@ -402,11 +402,14 @@ void ClientGameState::updateViewTransform()
     double scale = 1.0;
     sf::Vector2<double> shift{0.0, 0.0};
 
+#ifndef __ANDROID__
     // Zoom-out so you can see what's being pointed at past your reach: when the
     // cursor leaves the reach ring (dig/attack distance + 1) the view scales up
     // toward the cursor direction while the opposite edge stays anchored. Base
     // view center is used to compute cursor world coords so successive frames
     // don't feed shifted-camera values back into the distance calculation.
+    // Disabled on Android: the touch overlay delivers the cursor directly in
+    // world coords, so there's no "past-reach" mouse pointer to chase.
     sf::Vector2u win = game->getWindow().getSize();
     if (Settings::render.reach_zoom_enabled && !free_camera && have_player && !content_view && win.x > 0 && win.y > 0)
     {
@@ -440,6 +443,7 @@ void ClientGameState::updateViewTransform()
             shift.y = (dy * inv_dist) * (scale - 1.0) * half_h_world;
         }
     }
+#endif
 
     camera = base_center + shift;
     view_scale = static_cast<float>(scale);
@@ -770,9 +774,22 @@ void ClientGameState::update(float dt)
 
 #ifdef __ANDROID__
         // On Android there is no mouse — route the aim through the touch
-        // overlay instead. aimWorldPos returns the last tap position in the
-        // play area, or just below the camera center when nothing is tapped.
-        const sf::Vector2<double> aim = touch_overlay.aimWorldPos(game->getWindow(), camera);
+        // overlay. If a finger is currently down in the play area, that's
+        // the aim; otherwise fall back to the tracked (local player) entity
+        // so attacks/uses land on whatever the camera is following.
+        sf::Vector2<double> aim{camera.x, camera.y};
+        if (auto touch_world = touch_overlay.currentTouchWorldPos(game->getWindow(), camera))
+        {
+            aim = *touch_world;
+        }
+        else if (local_player_entity_id.has_value() &&
+                 local_world.doesEntityExist(local_player_entity_id.value()) &&
+                 local_world.getEntity(local_player_entity_id.value())
+                     .hasComponent<TransformComponent>())
+        {
+            aim = local_world.getEntity(local_player_entity_id.value())
+                      .getComponent<TransformComponent>().center();
+        }
         ClientSnapshotPacket packet = {.cursor_x = aim.x, .cursor_y = aim.y};
 #else
         ClientSnapshotPacket packet = {.cursor_x = getMouseWorldPosition(camera, game->getWindow()).x, .cursor_y = getMouseWorldPosition(camera, game->getWindow()).y};

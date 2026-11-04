@@ -86,13 +86,16 @@ void PlayerControlledSystem(World& world, float dt)
 
         if(player.mid_attack)
         {
-            if(player.mining_block == block_from_position(player.cursor_position))
+            sf::Vector2i target = block_from_position(player.cursor_position);
+            bool in_range = isBlockInRange(transform, target, 4.0f);
+
+            if(player.mining_block == target && in_range)
             {
                 player.mining_time += dt;
             }
             else
             {
-                player.mining_block = block_from_position(player.cursor_position);
+                player.mining_block = target;
                 player.mining_time = 0.0f;
             }
 
@@ -104,7 +107,7 @@ void PlayerControlledSystem(World& world, float dt)
 
             ItemStack item = inventory.inventory.slots[inventory.selectedSlot];
 
-            if(blockDatabase[block.id].mining.has_value())
+            if(in_range && blockDatabase[block.id].mining.has_value())
             {
                 auto& block_data = blockDatabase[block.id];
                 auto& item_data  = itemDatabase[item.itemID];
