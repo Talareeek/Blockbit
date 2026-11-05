@@ -445,6 +445,16 @@ void GameServer::processIncoming()
 
                     break;
                 }
+                case PacketType::AdminRequest:
+                {
+                    AdminRequestPacket request = deserializeAdminRequest(reader);
+
+                    auto client_it = clients.find(packet.clientId);
+                    if (client_it == clients.end()) break;
+
+                    handleAdminRequest(packet.clientId, client_it->second.nickname, request);
+                    break;
+                }
                 default:
                 {
                     std::cerr << "[Server] Unrecognised packet (" << std::to_string(static_cast<uint8_t>(packet.type)) << ") from client " << std::to_string(packet.clientId) << '\n';
@@ -1094,6 +1104,23 @@ bool GameServer::removeBan(const std::string& nickname)
     return false;
 }
 
+std::vector<BanEntry> GameServer::listBans() const
+{
+    std::vector<BanEntry> out;
+    out.reserve(bans.size());
+    for (const auto& [nick, entry] : bans) out.push_back(entry);
+    std::sort(out.begin(), out.end(),
+              [](const BanEntry& a, const BanEntry& b) { return a.nickname < b.nickname; });
+    return out;
+}
+
+std::vector<std::string> GameServer::listOperatorNicknames() const
+{
+    std::vector<std::string> out(operators.begin(), operators.end());
+    std::sort(out.begin(), out.end());
+    return out;
+}
+
 std::optional<uint32_t> GameServer::findClientIdByNickname(const std::string& nickname) const
 {
     for (const auto& [client_id, data] : clients)
@@ -1154,4 +1181,233 @@ uint16_t GameServer::getTickRate() const
 float GameServer::getTickStep() const
 {
     return 1.0f / static_cast<float>(tick_rate);
+}
+
+void GameServer::handleAdminRequest(uint32_t client_id, const std::string& nickname, const AdminRequestPacket& request)
+{
+    auto send_response = [&](AdminStatus status, std::vector<uint8_t> payload)
+    {
+        AdminResponsePacket response;
+        response.request_id = request.request_id;
+        response.op         = request.op;
+        response.status     = status;
+        response.payload    = std::move(payload);
+        transport->send(client_id, serializePacket(response));
+    };
+
+    if (!isOperator(nickname))
+    {
+        std::cerr << "[Server] " << nickname << " attempted admin op "
+                  << static_cast<int>(request.op) << " without operator rights\n";
+        send_response(AdminStatus::Forbidden, {});
+        return;
+    }
+
+    try
+    {
+        switch (request.op)
+        {
+            case AdminOp::ListEntities:
+            {
+                std::vector<uint8_t> payload;
+                const auto& entities = world.getEntities();
+
+                // Pre-collect so we can sort by label for a stable UI.
+                struct Entry { UUID id; std::string label; };
+                std::vector<Entry> entries;
+                entries.reserve(entities.size());
+
+                for (const auto& [id, entity] : entities)
+                {
+                    Entry entry;
+                    entry.id = id;
+                    if (entity.hasComponent<PlayerControlledComponent>())
+                    {
+                        entry.label = "Player: " + entity.getComponent<PlayerControlledComponent>().nickname;
+                    }
+                    else
+                    {
+                        entry.label = std::to_string(entity.getComponents().size()) + " comps";
+                    }
+                    entries.push_back(std::move(entry));
+                }
+
+                std::sort(entries.begin(), entries.end(),
+                          [](const Entry& a, const Entry& b) { return a.label < b.label; });
+
+                writeUInt32(payload, static_cast<uint32_t>(entries.size()));
+                for (const auto& entry : entries)
+                {
+                    payload.insert(payload.end(), entry.id.bytes.begin(), entry.id.bytes.end());
+                    writeString(payload, entry.label);
+                }
+
+                std::cout << "[Server] " << nickname << " admin list ("
+                          << entries.size() << " entities)\n";
+                send_response(AdminStatus::Ok, std::move(payload));
+                break;
+            }
+            case AdminOp::ReadEntity:
+            {
+                if (request.payload.size() < 16)
+                {
+                    send_response(AdminStatus::BadRequest, {});
+                    break;
+                }
+                UUID id;
+                std::copy_n(request.payload.begin(), id.bytes.size(), id.bytes.begin());
+
+                if (!world.doesEntityExist(id))
+                {
+                    send_response(AdminStatus::NotFound, {});
+                    break;
+                }
+
+                std::vector<uint8_t> payload;
+                world.getEntity(id).serialize().save(payload, "");
+
+                std::cout << "[Server] " << nickname << " admin read " << id.toString() << '\n';
+                send_response(AdminStatus::Ok, std::move(payload));
+                break;
+            }
+            case AdminOp::WriteEntity:
+            {
+                if (request.payload.size() < 16)
+                {
+                    send_response(AdminStatus::BadRequest, {});
+                    break;
+                }
+                UUID id;
+                std::copy_n(request.payload.begin(), id.bytes.size(), id.bytes.begin());
+
+                if (!world.doesEntityExist(id))
+                {
+                    send_response(AdminStatus::NotFound, {});
+                    break;
+                }
+
+                size_t pos = 16;
+                Tag component_compound = Tag::load(request.payload, pos);
+
+                auto& entity = world.getEntity(id);
+                entity.applyUpdate(component_compound);
+
+                if (component_compound.type() == TagType::T_COMPOUND)
+                {
+                    const TagCompound& compound = component_compound.get<TagCompound>();
+                    for (auto& [type_index, component] : entity.getComponents())
+                    {
+                        if (compound.find(component->name()) != compound.end())
+                        {
+                            component->dirty = true;
+                        }
+                    }
+                }
+
+                std::cout << "[Server] " << nickname << " admin write " << id.toString() << '\n';
+                send_response(AdminStatus::Ok, {});
+                break;
+            }
+            case AdminOp::ListBans:
+            {
+                std::vector<BanEntry> entries = listBans();
+                std::vector<uint8_t> payload;
+                writeUInt32(payload, static_cast<uint32_t>(entries.size()));
+                for (const auto& entry : entries)
+                {
+                    writeString(payload, entry.nickname);
+                    writeString(payload, entry.reason);
+                    writeString(payload, entry.banned_at);
+                }
+                std::cout << "[Server] " << nickname << " admin list bans ("
+                          << entries.size() << ")\n";
+                send_response(AdminStatus::Ok, std::move(payload));
+                break;
+            }
+            case AdminOp::ListOperators:
+            {
+                std::vector<std::string> ops = listOperatorNicknames();
+                std::vector<uint8_t> payload;
+                writeUInt32(payload, static_cast<uint32_t>(ops.size()));
+                for (const auto& op_name : ops)
+                {
+                    writeString(payload, op_name);
+                }
+                std::cout << "[Server] " << nickname << " admin list operators ("
+                          << ops.size() << ")\n";
+                send_response(AdminStatus::Ok, std::move(payload));
+                break;
+            }
+            case AdminOp::AddBan:
+            {
+                size_t pos = 0;
+                std::string target = readString(request.payload, pos);
+                std::string reason = readString(request.payload, pos);
+                if (target.empty())
+                {
+                    send_response(AdminStatus::BadRequest, {});
+                    break;
+                }
+                addBan(target, reason);
+                // Match /ban: kick if online so the ban takes effect immediately.
+                kickClient(target, std::wstring(reason.begin(), reason.end()));
+                std::cout << "[Server] " << nickname << " admin banned " << target;
+                if (!reason.empty()) std::cout << " (reason: " << reason << ")";
+                std::cout << '\n';
+                send_response(AdminStatus::Ok, {});
+                break;
+            }
+            case AdminOp::RemoveBan:
+            {
+                size_t pos = 0;
+                std::string target = readString(request.payload, pos);
+                if (target.empty())
+                {
+                    send_response(AdminStatus::BadRequest, {});
+                    break;
+                }
+                removeBan(target);
+                std::cout << "[Server] " << nickname << " admin unbanned " << target << '\n';
+                send_response(AdminStatus::Ok, {});
+                break;
+            }
+            case AdminOp::AddOperator:
+            {
+                size_t pos = 0;
+                std::string target = readString(request.payload, pos);
+                if (target.empty())
+                {
+                    send_response(AdminStatus::BadRequest, {});
+                    break;
+                }
+                addOperator(target);
+                std::cout << "[Server] " << nickname << " admin granted operator to " << target << '\n';
+                send_response(AdminStatus::Ok, {});
+                break;
+            }
+            case AdminOp::RemoveOperator:
+            {
+                size_t pos = 0;
+                std::string target = readString(request.payload, pos);
+                if (target.empty())
+                {
+                    send_response(AdminStatus::BadRequest, {});
+                    break;
+                }
+                removeOperator(target);
+                std::cout << "[Server] " << nickname << " admin revoked operator from " << target << '\n';
+                send_response(AdminStatus::Ok, {});
+                break;
+            }
+            default:
+                send_response(AdminStatus::BadRequest, {});
+                break;
+        }
+    }
+    catch (const std::exception& exception)
+    {
+        std::cerr << "[Server] Admin op " << static_cast<int>(request.op)
+                  << " from " << nickname << " threw: " << exception.what() << '\n';
+        send_response(AdminStatus::Error, {});
+    }
 }

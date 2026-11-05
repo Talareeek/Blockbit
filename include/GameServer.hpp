@@ -101,6 +101,8 @@ private:
     void dispatchPendingViewOpens();
     void updateContentViews();
 
+    void handleAdminRequest(uint32_t client_id, const std::string& nickname, const struct AdminRequestPacket& request);
+
     std::unordered_set<std::string> operators;
     std::filesystem::path operatorsFilePath() const;
     std::filesystem::path legacyOperatorsFilePath() const; // ops.txt (pre-migration)
@@ -151,6 +153,10 @@ public:
     const BanEntry* findBan(const std::string& nickname) const;
     void addBan(const std::string& nickname, const std::string& reason);
     bool removeBan(const std::string& nickname);
+
+    // Snapshots for admin tooling (panel / network admin ops). Sorted by name.
+    std::vector<BanEntry>    listBans() const;
+    std::vector<std::string> listOperatorNicknames() const;
 
     // Look up an active client's connection id by their login nickname. Returns
     // std::nullopt if nobody with that nickname is currently connected.

@@ -12,6 +12,7 @@
 #include "Chat.hpp"
 #include "ChatUI.hpp"
 #include "RCon.hpp"
+#include "ServerAdminPanel.hpp"
 #include "TouchInputOverlay.hpp"
 #include "View.hpp"
 
@@ -33,6 +34,11 @@ private:
     std::optional<GameServer> local_server;
 
     RCon rcon;
+
+    // Only constructed when local_server is present (listen/singleplayer).
+    // Guarantees the admin panel never runs against a server living in a
+    // different PID — same-PID is the current access policy.
+    std::unique_ptr<ServerAdminPanel> admin_panel;
 
     uint16_t tick_rate = 60;
 

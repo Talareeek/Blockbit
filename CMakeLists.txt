@@ -307,11 +307,13 @@ set(_CLIENT_ONLY_BASENAMES
     Label.cpp
     LobbyPlayerElement.cpp
     MenuGameState.cpp
+    NetworkAdminSession.cpp
     NetworkClientTransport.cpp
     PauseScreenState.cpp
     RCon.cpp
     Render.cpp
     RenderSystem.cpp
+    ServerAdminPanel.cpp
     ServerPreview.cpp
     SettingsWindow.cpp
     Slider.cpp

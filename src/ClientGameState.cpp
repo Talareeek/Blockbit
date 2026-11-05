@@ -27,6 +27,8 @@
 #include "../include/InventoryView.hpp"
 #include "../include/FurnaceView.hpp"
 #include "../include/CraftingView.hpp"
+#include "../include/LocalAdminSession.hpp"
+#include "../include/NetworkAdminSession.hpp"
 #include "../include/Settings.hpp"
 
 #include <iostream>
@@ -61,6 +63,8 @@ ClientGameState::ClientGameState(Game* game, std::filesystem::path world_path, u
         remote_address = "0.0.0.0:" + std::to_string(network_port);
         std::cerr << "[Server] Listening on port " << network_port << '\n';
     }
+
+    admin_panel = std::make_unique<ServerAdminPanel>(std::make_unique<LocalAdminSession>(&local_server.value()));
 
     transport = std::move(loopback_pair.clientSide);
     transport->connect("loopback", 0);
@@ -111,6 +115,8 @@ ClientGameState::ClientGameState(Game* game, std::string name, unsigned int seed
         std::cerr << "[Server] Listening on port " << network_port << '\n';
     }
 
+    admin_panel = std::make_unique<ServerAdminPanel>(std::make_unique<LocalAdminSession>(&local_server.value()));
+
     transport = std::move(loopback_pair.clientSide);
     transport->connect("loopback", 0);
     transport->send(serializePacket(LoginPacket{this->nickname}));
@@ -146,6 +152,8 @@ ClientGameState::ClientGameState(Game* game, const std::string& host, uint16_t p
     this->nickname = std::move(nickname);
 
     transport = std::make_unique<NetworkClientTransport>();
+
+    admin_panel = std::make_unique<ServerAdminPanel>(std::make_unique<NetworkAdminSession>(transport.get()));
 
     chat_ui.assignChat(&chat);
     chat_ui.setOnSend([this](std::wstring message)
@@ -355,6 +363,11 @@ void ClientGameState::processIncoming()
                     {
                         content_view->handleContentUpdate(SetContentData{set_content.target, std::move(set_content.payload)});
                     }
+                    break;
+                }
+                case PacketType::AdminResponse:
+                {
+                    if (admin_panel) admin_panel->onAdminResponsePacket(reader);
                     break;
                 }
                 case PacketType::Input:
@@ -621,6 +634,7 @@ void ClientGameState::handleEvent(const sf::Event& event)
     touch_overlay.handleEvent(event, game->getWindow());
 
     if(local_server.has_value()) rcon.handleEvent(event);
+    if(admin_panel) admin_panel->handleEvent(event);
 }
 
 void ClientGameState::update(float dt)
@@ -1013,6 +1027,7 @@ void ClientGameState::render(sf::RenderWindow& window)
     }
 
     if(local_server.has_value()) rcon.performImGui(local_server.value());
+    if(admin_panel) admin_panel->performImGui();
 }
 
 std::string ClientGameState::debugString()

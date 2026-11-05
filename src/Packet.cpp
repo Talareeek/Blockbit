@@ -658,3 +658,51 @@ ViewEventPacket deserializeViewEvent(PacketReader& r)
 
     return p;
 }
+
+std::vector<char> serializePacket(const AdminRequestPacket& p)
+{
+    PacketWriter w(PacketType::AdminRequest);
+    w.write(p.request_id);
+    w.write(p.op);
+    w.write<uint32_t>(static_cast<uint32_t>(p.payload.size()));
+    if (!p.payload.empty()) w.writeBytes(p.payload.data(), p.payload.size());
+    return w.release();
+}
+
+std::vector<char> serializePacket(const AdminResponsePacket& p)
+{
+    PacketWriter w(PacketType::AdminResponse);
+    w.write(p.request_id);
+    w.write(p.op);
+    w.write(p.status);
+    w.write<uint32_t>(static_cast<uint32_t>(p.payload.size()));
+    if (!p.payload.empty()) w.writeBytes(p.payload.data(), p.payload.size());
+    return w.release();
+}
+
+AdminRequestPacket deserializeAdminRequest(PacketReader& r)
+{
+    AdminRequestPacket p;
+    p.request_id = r.read<uint32_t>();
+    p.op         = r.read<AdminOp>();
+
+    uint32_t size = r.read<uint32_t>();
+    if (size > 16 * 1024 * 1024) throw std::runtime_error("AdminRequest: payload too large");
+    p.payload.resize(size);
+    if (size > 0) r.readBytes(p.payload.data(), size);
+    return p;
+}
+
+AdminResponsePacket deserializeAdminResponse(PacketReader& r)
+{
+    AdminResponsePacket p;
+    p.request_id = r.read<uint32_t>();
+    p.op         = r.read<AdminOp>();
+    p.status     = r.read<AdminStatus>();
+
+    uint32_t size = r.read<uint32_t>();
+    if (size > 16 * 1024 * 1024) throw std::runtime_error("AdminResponse: payload too large");
+    p.payload.resize(size);
+    if (size > 0) r.readBytes(p.payload.data(), size);
+    return p;
+}

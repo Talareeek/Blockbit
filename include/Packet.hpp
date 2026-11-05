@@ -45,7 +45,49 @@ enum class PacketType : uint8_t
     // type IDs by their declaration order (uint8_t), so inserting in the
     // middle would silently remap every subsequent packet and break
     // clients already connected or any saved/pending buffers.
-    CommandMessage
+    CommandMessage,
+
+    AdminRequest,
+    AdminResponse
+};
+
+// Admin RPC opcodes. Shared between request and response so the response
+// side knows how to decode without carrying extra state.
+enum class AdminOp : uint8_t
+{
+    ListEntities   = 0,
+    ReadEntity     = 1,
+    WriteEntity    = 2,
+    ListBans       = 3,
+    ListOperators  = 4,
+    AddBan         = 5,
+    RemoveBan      = 6,
+    AddOperator    = 7,
+    RemoveOperator = 8
+};
+
+enum class AdminStatus : uint8_t
+{
+    Ok         = 0,
+    Forbidden  = 1,
+    NotFound   = 2,
+    BadRequest = 3,
+    Error      = 4
+};
+
+struct AdminRequestPacket
+{
+    uint32_t request_id;
+    AdminOp  op;
+    std::vector<uint8_t> payload;
+};
+
+struct AdminResponsePacket
+{
+    uint32_t    request_id;
+    AdminOp     op;
+    AdminStatus status;
+    std::vector<uint8_t> payload;
 };
 
 struct InitializationPacket
@@ -257,6 +299,8 @@ std::vector<char> serializePacket(const OpenViewPacket& p);
 std::vector<char> serializePacket(const CloseViewPacket& p);
 std::vector<char> serializePacket(const SetContentPacket& p);
 std::vector<char> serializePacket(const ViewEventPacket& p);
+std::vector<char> serializePacket(const AdminRequestPacket& p);
+std::vector<char> serializePacket(const AdminResponsePacket& p);
 
 InitializationPacket deserializeInitialization(PacketReader& r);
 ChunkPacket deserializeChunk(PacketReader& r);
@@ -274,4 +318,7 @@ OpenViewPacket deserializeOpenView(PacketReader& r);
 CloseViewPacket deserializeCloseView(PacketReader& r);
 SetContentPacket deserializeSetContent(PacketReader& r);
 ViewEventPacket deserializeViewEvent(PacketReader& r);
+
+AdminRequestPacket  deserializeAdminRequest(PacketReader& r);
+AdminResponsePacket deserializeAdminResponse(PacketReader& r);
 #endif // PACKET_HPP
