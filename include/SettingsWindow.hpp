@@ -11,6 +11,7 @@ private:
 
     bool apply_graphics_requested = false;
     bool apply_audio_requested = false;
+    bool apply_pointer_requested = false;
 
     Game* game = nullptr;
 
@@ -28,6 +29,7 @@ public:
 
     bool consumeGraphicsRequest();
     bool consumeAudioRequest();
+    bool consumePointerRequest();
 };
 
 #endif // SETTINGS_WINDOW_HPP

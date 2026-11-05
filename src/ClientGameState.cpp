@@ -476,6 +476,11 @@ void ClientGameState::sendTickInputs()
         inputs.insert(inputs.end(),
                       std::make_move_iterator(touch_frame.begin()),
                       std::make_move_iterator(touch_frame.end()));
+
+        auto gamepad_frame = gamepad.collectTickInputs();
+        inputs.insert(inputs.end(),
+                      std::make_move_iterator(gamepad_frame.begin()),
+                      std::make_move_iterator(gamepad_frame.end()));
     }
 
     if (inputs.empty()) return;
@@ -730,6 +735,19 @@ void ClientGameState::update(float dt)
 
     tryInitializePlayerUI();
 
+    // Poll the gamepad every real frame (not every tick) so the right-stick
+    // cursor moves smoothly instead of stepping per tick.
+    if (acceptsPlayerInput() && !content_view)
+    {
+        gamepad.update(dt, game->getWindow());
+    }
+    else
+    {
+        // Prevents a stale "button held" edge from firing ATTACK_START the
+        // moment play resumes after chat / pause / an open content view.
+        gamepad.reset();
+    }
+
     float tick_step = 1.0f / static_cast<float>(tick_rate);
 
     if (local_server && !onTop())
@@ -806,7 +824,24 @@ void ClientGameState::update(float dt)
         }
         ClientSnapshotPacket packet = {.cursor_x = aim.x, .cursor_y = aim.y};
 #else
-        ClientSnapshotPacket packet = {.cursor_x = getMouseWorldPosition(camera, game->getWindow()).x, .cursor_y = getMouseWorldPosition(camera, game->getWindow()).y};
+        sf::Vector2<double> cursor_world;
+        if (gamepad.isCursorActive())
+        {
+            std::optional<sf::Vector2<double>> player_center;
+            if (local_player_entity_id.has_value() &&
+                local_world.doesEntityExist(local_player_entity_id.value()) &&
+                local_world.getEntity(local_player_entity_id.value()).hasComponent<TransformComponent>())
+            {
+                player_center = local_world.getEntity(local_player_entity_id.value())
+                                    .getComponent<TransformComponent>().center();
+            }
+            cursor_world = gamepad.cursorWorldPosition(camera, player_center);
+        }
+        else
+        {
+            cursor_world = getMouseWorldPosition(camera, game->getWindow());
+        }
+        ClientSnapshotPacket packet = {.cursor_x = cursor_world.x, .cursor_y = cursor_world.y};
 #endif
 
         transport->send(serializePacket(packet));
@@ -1002,6 +1037,21 @@ void ClientGameState::render(sf::RenderWindow& window)
             // ever calls render() on this object.
             touch_overlay.render(window);
 #endif
+
+            // Gamepad cursor sits above the HUD so it's never hidden by the
+            // hotbar / minimap. Only draws when the right stick is in use.
+            if (!content_view)
+            {
+                std::optional<sf::Vector2<double>> player_center;
+                if (local_player_entity_id.has_value() &&
+                    local_world.doesEntityExist(local_player_entity_id.value()) &&
+                    local_world.getEntity(local_player_entity_id.value()).hasComponent<TransformComponent>())
+                {
+                    player_center = local_world.getEntity(local_player_entity_id.value())
+                                        .getComponent<TransformComponent>().center();
+                }
+                gamepad.render(window, camera, player_center);
+            }
         }
 
         if(debug)

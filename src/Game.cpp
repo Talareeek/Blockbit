@@ -17,6 +17,7 @@
 #include "../include/Prefab.hpp"
 #include "../include/Settings.hpp"
 #include "../include/GameCommon.hpp"
+#include "../include/Item.hpp"
 
 #include <imgui.h>
 #include <imgui-SFML.h>
@@ -86,6 +87,201 @@ static float androidDisplayDensity()
     if (density <= 0.0f) density = 1.0f;
     cached = density;
     return density;
+}
+#endif
+
+#ifndef __ANDROID__
+namespace
+{
+    // Mark pixels outside the shape mask but adjacent to a filled pixel with
+    // a 1px dark outline so the cursor stays visible on any background.
+    void addOutline(sf::Image& img, const std::vector<bool>& mask)
+    {
+        const sf::Vector2u size = img.getSize();
+        const sf::Color outline(0, 0, 0, 220);
+        for(uint32_t y = 0; y < size.y; ++y)
+        for(uint32_t x = 0; x < size.x; ++x)
+        {
+            if(mask[y * size.x + x]) continue;
+            bool adj = false;
+            for(int dy = -1; dy <= 1 && !adj; ++dy)
+            for(int dx = -1; dx <= 1 && !adj; ++dx)
+            {
+                int nx = static_cast<int>(x) + dx;
+                int ny = static_cast<int>(y) + dy;
+                if(nx < 0 || ny < 0 ||
+                   nx >= static_cast<int>(size.x) || ny >= static_cast<int>(size.y)) continue;
+                if(mask[static_cast<size_t>(ny) * size.x + nx]) adj = true;
+            }
+            if(adj) img.setPixel({x, y}, outline);
+        }
+    }
+
+    // Classic pointer triangle anchored at the top-left. Hotspot returned
+    // alongside is the sharp tip.
+    void fillArrow(sf::Image& img, std::vector<bool>& mask, sf::Color color, sf::Vector2u& hotspot)
+    {
+        const sf::Vector2u size = img.getSize();
+        const float fs = static_cast<float>(size.x);
+        for(uint32_t y = 0; y < size.y; ++y)
+        for(uint32_t x = 0; x < size.x; ++x)
+        {
+            float fx = x / fs;
+            float fy = y / fs;
+            // Triangle between two rays from origin + a tail along the diagonal.
+            bool inside = (fy >= fx * 0.4f) && (fy <= fx * 2.5f + 0.05f) && (fy < 0.85f) && (fx < 0.7f);
+            if(inside)
+            {
+                img.setPixel({x, y}, color);
+                mask[y * size.x + x] = true;
+            }
+        }
+        hotspot = {1, 1};
+    }
+
+    void fillCrosshair(sf::Image& img, std::vector<bool>& mask, sf::Color color, sf::Vector2u& hotspot)
+    {
+        const sf::Vector2u size = img.getSize();
+        const int s   = static_cast<int>(size.x);
+        const int cx  = s / 2;
+        const int cy  = s / 2;
+        const int th  = std::max(1, s / 14);     // half-thickness of the arm
+        const int arm = s / 2 - 1;
+        const int gap = std::max(2, s / 8);      // empty center gap
+        auto plot = [&](int x, int y)
+        {
+            if(x < 0 || y < 0 || x >= s || y >= s) return;
+            img.setPixel({static_cast<uint32_t>(x), static_cast<uint32_t>(y)}, color);
+            mask[static_cast<size_t>(y) * size.x + x] = true;
+        };
+        for(int i = gap; i <= arm; ++i)
+        {
+            for(int t = -th; t <= th; ++t)
+            {
+                plot(cx + i, cy + t);
+                plot(cx - i, cy + t);
+                plot(cx + t, cy + i);
+                plot(cx + t, cy - i);
+            }
+        }
+        hotspot = {static_cast<uint32_t>(cx), static_cast<uint32_t>(cy)};
+    }
+
+    void fillDot(sf::Image& img, std::vector<bool>& mask, sf::Color color, sf::Vector2u& hotspot)
+    {
+        const sf::Vector2u size = img.getSize();
+        const int s  = static_cast<int>(size.x);
+        const int cx = s / 2;
+        const int cy = s / 2;
+        const int r  = s / 2 - 1;
+        const int r2 = r * r;
+        for(int y = 0; y < s; ++y)
+        for(int x = 0; x < s; ++x)
+        {
+            int dx = x - cx, dy = y - cy;
+            if(dx * dx + dy * dy <= r2)
+            {
+                img.setPixel({static_cast<uint32_t>(x), static_cast<uint32_t>(y)}, color);
+                mask[static_cast<size_t>(y) * size.x + x] = true;
+            }
+        }
+        hotspot = {static_cast<uint32_t>(cx), static_cast<uint32_t>(cy)};
+    }
+
+    void fillRing(sf::Image& img, std::vector<bool>& mask, sf::Color color, sf::Vector2u& hotspot)
+    {
+        const sf::Vector2u size = img.getSize();
+        const int s   = static_cast<int>(size.x);
+        const int cx  = s / 2;
+        const int cy  = s / 2;
+        const int ro  = s / 2 - 1;
+        const int ri  = ro - std::max(1, s / 10);
+        const int ro2 = ro * ro;
+        const int ri2 = ri * ri;
+        for(int y = 0; y < s; ++y)
+        for(int x = 0; x < s; ++x)
+        {
+            int dx = x - cx, dy = y - cy;
+            int d2 = dx * dx + dy * dy;
+            if(d2 <= ro2 && d2 >= ri2)
+            {
+                img.setPixel({static_cast<uint32_t>(x), static_cast<uint32_t>(y)}, color);
+                mask[static_cast<size_t>(y) * size.x + x] = true;
+            }
+        }
+        hotspot = {static_cast<uint32_t>(cx), static_cast<uint32_t>(cy)};
+    }
+
+    void fillDiamond(sf::Image& img, std::vector<bool>& mask, sf::Color color, sf::Vector2u& hotspot)
+    {
+        const sf::Vector2u size = img.getSize();
+        const int s  = static_cast<int>(size.x);
+        const int cx = s / 2;
+        const int cy = s / 2;
+        const int r  = s / 2 - 1;
+        for(int y = 0; y < s; ++y)
+        for(int x = 0; x < s; ++x)
+        {
+            if(std::abs(x - cx) + std::abs(y - cy) <= r)
+            {
+                img.setPixel({static_cast<uint32_t>(x), static_cast<uint32_t>(y)}, color);
+                mask[static_cast<size_t>(y) * size.x + x] = true;
+            }
+        }
+        hotspot = {static_cast<uint32_t>(cx), static_cast<uint32_t>(cy)};
+    }
+
+    std::optional<sf::Cursor> buildPointerCursor()
+    {
+        const uint32_t s = std::clamp<uint32_t>(Settings::pointer.size, 8, 128);
+
+        if(Settings::pointer.mode == Settings::Pointer::Mode::Item)
+        {
+            ItemID id = static_cast<ItemID>(Settings::pointer.item_id);
+            auto it = itemDatabase.find(id);
+            if(id != ItemID::None && it != itemDatabase.end())
+            {
+                const sf::Texture& tex = AssetManager::getGameTexture(it->second.texture);
+                sf::Image src = tex.copyToImage();
+                sf::Vector2u src_size = src.getSize();
+                if(src_size.x > 0 && src_size.y > 0)
+                {
+                    sf::Image img({s, s}, sf::Color(0, 0, 0, 0));
+                    for(uint32_t y = 0; y < s; ++y)
+                    for(uint32_t x = 0; x < s; ++x)
+                    {
+                        uint32_t sx = std::min(src_size.x - 1, x * src_size.x / s);
+                        uint32_t sy = std::min(src_size.y - 1, y * src_size.y / s);
+                        img.setPixel({x, y}, src.getPixel({sx, sy}));
+                    }
+                    sf::Vector2u hotspot{s / 2, s / 2};
+                    return sf::Cursor::createFromPixels(img.getPixelsPtr(), img.getSize(), hotspot);
+                }
+            }
+            // Fall through to the shape path when the item lookup fails so
+            // the user always has a visible cursor.
+        }
+
+        sf::Image img({s, s}, sf::Color(0, 0, 0, 0));
+        std::vector<bool> mask(static_cast<size_t>(s) * s, false);
+
+        sf::Color fill = Settings::pointer.color;
+        fill.a = 255;
+        sf::Vector2u hotspot{0, 0};
+
+        switch(Settings::pointer.shape)
+        {
+            case Settings::Pointer::Shape::Arrow:     fillArrow    (img, mask, fill, hotspot); break;
+            case Settings::Pointer::Shape::Crosshair: fillCrosshair(img, mask, fill, hotspot); break;
+            case Settings::Pointer::Shape::Dot:       fillDot      (img, mask, fill, hotspot); break;
+            case Settings::Pointer::Shape::Ring:      fillRing     (img, mask, fill, hotspot); break;
+            case Settings::Pointer::Shape::Diamond:   fillDiamond  (img, mask, fill, hotspot); break;
+        }
+
+        addOutline(img, mask);
+
+        return sf::Cursor::createFromPixels(img.getPixelsPtr(), img.getSize(), hotspot);
+    }
 }
 #endif
 
@@ -343,7 +539,9 @@ Game::Game()
     console.assignGame(this);
     console.setupFont("resources/fonts/FiraCode-Regular.ttf");
 
-    settings_window.assignGame(this);    
+    settings_window.assignGame(this);
+
+    applyPointerSettings();
 
 #ifdef __ANDROID__
     // Scale widget geometry (padding, frame sizes, scrollbar width, …) by the
@@ -639,6 +837,7 @@ void Game::run()
 
         if(settings_window.consumeAudioRequest())    applyAudioSettings();
         if(settings_window.consumeGraphicsRequest()) applyGraphicsSettings();
+        if(settings_window.consumePointerRequest())  applyPointerSettings();
     }
 
     ImGui::SFML::Shutdown();
@@ -748,6 +947,10 @@ void Game::applyGraphicsSettings()
     sf::View view(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)}));
     window.setView(view);
     window.setIcon(icon);
+
+    // Re-apply the custom pointer — the window was recreated so the previous
+    // cursor binding is gone.
+    applyPointerSettings();
 }
 
 void Game::applyAudioSettings()
@@ -755,4 +958,43 @@ void Game::applyAudioSettings()
     float master = Settings::audio.master_volume / 100.0f;
     jukebox.setMusicVolume(Settings::audio.music_volume * master);
     jukebox.setSoundsVolume(Settings::audio.sound_volume * master);
+}
+
+void Game::applyPointerSettings()
+{
+#ifndef __ANDROID__
+    // imgui-sfml resets the OS cursor every Render() via setMouseCursor(). Set
+    // NoMouseCursorChange so our custom pointer stays applied, or clear it so
+    // imgui-sfml takes over with the OS cursor when the custom pointer is off.
+    ImGuiIO& io = ImGui::GetIO();
+    if(Settings::pointer.enabled)
+    {
+        io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+
+        auto cursor = buildPointerCursor();
+        if(cursor)
+        {
+            custom_cursor = std::move(*cursor);
+            window.setMouseCursor(*custom_cursor);
+            window.setMouseCursorVisible(true);
+        }
+    }
+    else
+    {
+        io.ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange;
+        // Swap in the system arrow before dropping the drawn cursor so the
+        // window never references a destroyed sf::Cursor. imgui-sfml takes
+        // over from the next Render() and keeps the OS cursor in sync.
+        if(auto arrow = sf::Cursor::createFromSystem(sf::Cursor::Type::Arrow))
+        {
+            custom_cursor = std::move(*arrow);
+            window.setMouseCursor(*custom_cursor);
+        }
+        else
+        {
+            custom_cursor.reset();
+        }
+        window.setMouseCursorVisible(true);
+    }
+#endif
 }

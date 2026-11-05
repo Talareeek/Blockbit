@@ -2,6 +2,8 @@
 #define GAME_HPP
 
 #include <SFML/Graphics.hpp>
+#include <SFML/Window/Cursor.hpp>
+#include <optional>
 #include <vector>
 #include <queue>
 
@@ -71,6 +73,13 @@ private:
 
     void applyGraphicsSettings();
     void applyAudioSettings();
+    void applyPointerSettings();
+
+#ifndef __ANDROID__
+    // Keeps the custom cursor alive while the window uses it — destroying it
+    // while the window has it set is undefined behavior.
+    std::optional<sf::Cursor> custom_cursor;
+#endif
 
 public:
 

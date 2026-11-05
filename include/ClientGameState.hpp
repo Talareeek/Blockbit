@@ -14,6 +14,7 @@
 #include "RCon.hpp"
 #include "ServerAdminPanel.hpp"
 #include "TouchInputOverlay.hpp"
+#include "GamepadInput.hpp"
 #include "View.hpp"
 
 #include <memory>
@@ -99,6 +100,11 @@ private:
     // Virtual on-screen controls. Alive on every platform but only receives
     // sf::Event::TouchXxx events on Android; renders nothing on desktop.
     TouchInputOverlay touch_overlay;
+
+    // Gamepad polling + cursor renderer. Appends to the same inputs vector
+    // the keyboard path feeds; its cursor overrides the mouse cursor in the
+    // outgoing ClientSnapshotPacket while the right stick is in use.
+    GamepadInput gamepad;
 
     void updateViewTransform();
 
