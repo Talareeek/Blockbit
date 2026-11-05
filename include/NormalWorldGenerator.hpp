@@ -3,6 +3,7 @@
 
 #include "WorldGenerator.hpp"
 #include "PerlinNoise.hpp"
+#include "BBT.hpp"
 
 #include <algorithm>
 #include <array>
@@ -34,6 +35,9 @@ struct NormalWorldGeneratorProperties
     float frequency;
     float amplitude;
     float persistence;
+
+    Tag serialize() const;
+    void deserialize(const Tag& tag);
 };
 
 enum class FeatureType

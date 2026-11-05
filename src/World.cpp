@@ -25,6 +25,94 @@
 #include <algorithm>
 #include <any>
 
+Tag GenerationProperties::serialize() const
+{
+    TagCompound compound;
+
+    compound["type"] = Tag(static_cast<uint32_t>(type));
+    compound["spawn_item_chest_column"] = Tag(spawn_item_chest_column);
+    compound["noodle_threshold"] = Tag(noodle_threshold);
+
+    NormalWorldGeneratorProperties normal{base_height, height_scale, frequency, amplitude, persistence};
+    compound["normal_properties"] = normal.serialize();
+
+    FlatWorldProperties flat;
+    flat.layers = flat_layers;
+    compound["flat_properties"] = flat.serialize();
+
+    return Tag(compound);
+}
+
+void GenerationProperties::deserialize(const Tag& tag)
+{
+    const TagCompound& compound = tag.get<TagCompound>();
+
+    auto type_iter = compound.find("type");
+    if (type_iter != compound.end())
+    {
+        type = static_cast<GenerationType>(type_iter->second.get<uint32_t>());
+    }
+    else
+    {
+        auto flat_iter = compound.find("flat");
+        type = (flat_iter != compound.end() && flat_iter->second.get<bool>())
+             ? GenerationType::Flat : GenerationType::Normal;
+    }
+
+    auto chest_iter = compound.find("spawn_item_chest_column");
+    if (chest_iter != compound.end()) spawn_item_chest_column = chest_iter->second.get<bool>();
+
+    auto noodle_iter = compound.find("noodle_threshold");
+    if (noodle_iter != compound.end()) noodle_threshold = noodle_iter->second.get<float>();
+
+    auto normal_iter = compound.find("normal_properties");
+    if (normal_iter != compound.end())
+    {
+        NormalWorldGeneratorProperties normal{};
+        normal.deserialize(normal_iter->second);
+        base_height  = normal.base_height;
+        height_scale = normal.height_scale;
+        frequency    = normal.frequency;
+        amplitude    = normal.amplitude;
+        persistence  = normal.persistence;
+    }
+    else
+    {
+        base_height  = compound.at("base_height").get<float>();
+        height_scale = compound.at("height_scale").get<float>();
+        frequency    = compound.at("frequency").get<float>();
+        amplitude    = compound.at("amplitude").get<float>();
+        persistence  = compound.at("persistence").get<float>();
+    }
+
+    auto flat_props_iter = compound.find("flat_properties");
+    if (flat_props_iter != compound.end())
+    {
+        FlatWorldProperties flat;
+        flat.deserialize(flat_props_iter->second);
+        flat_layers = std::move(flat.layers);
+    }
+    else
+    {
+        flat_layers.clear();
+        auto layers_iter = compound.find("flat_layers");
+        if (layers_iter != compound.end())
+        {
+            const TagList& layers_list = layers_iter->second.get<TagList>();
+            flat_layers.reserve(layers_list.size());
+            for (const Tag& layer_tag : layers_list)
+            {
+                flat_layers.push_back(FlatWorldLayer::deserialize(layer_tag));
+            }
+        }
+    }
+
+    if (flat_layers.empty())
+    {
+        flat_layers = FlatWorldProperties::defaults().layers;
+    }
+}
+
 Chunk& World::getChunk(int chunk_position)
 {
     auto it = chunks.find(chunk_position);

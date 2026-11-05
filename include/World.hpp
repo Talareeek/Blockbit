@@ -7,6 +7,7 @@
 #include "Climate.hpp"
 #include "WorldGenerator.hpp"
 #include "FlatWorldGenerator.hpp"
+#include "BBT.hpp"
 
 #include <cstdint>
 #include <unordered_map>
@@ -47,6 +48,9 @@ struct GenerationProperties
     bool spawn_item_chest_column = false;
 
     float noodle_threshold = 0.55f;
+
+    Tag serialize() const;
+    void deserialize(const Tag& tag);
 };
 
 class World

@@ -1,5 +1,26 @@
 #include "../include/NormalWorldGenerator.hpp"
 
+Tag NormalWorldGeneratorProperties::serialize() const
+{
+    TagCompound compound;
+    compound["base_height"]  = Tag(base_height);
+    compound["height_scale"] = Tag(height_scale);
+    compound["frequency"]    = Tag(frequency);
+    compound["amplitude"]    = Tag(amplitude);
+    compound["persistence"]  = Tag(persistence);
+    return Tag(compound);
+}
+
+void NormalWorldGeneratorProperties::deserialize(const Tag& tag)
+{
+    const TagCompound& compound = tag.get<TagCompound>();
+    base_height  = compound.at("base_height").get<float>();
+    height_scale = compound.at("height_scale").get<float>();
+    frequency    = compound.at("frequency").get<float>();
+    amplitude    = compound.at("amplitude").get<float>();
+    persistence  = compound.at("persistence").get<float>();
+}
+
 namespace
 {
     inline uint32_t mix32(uint32_t h)

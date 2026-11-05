@@ -261,27 +261,7 @@ void ServerWorld::saveData()
 {
     BBT data("data");
 
-    data["generation_properties"] = TagCompound();
-    data["generation_properties"]["flat"] = Tag(generation_properties.type == GenerationType::Flat);
-    data["generation_properties"]["type"] = Tag(static_cast<uint32_t>(generation_properties.type));
-    data["generation_properties"]["base_height"] = Tag(generation_properties.base_height);
-    data["generation_properties"]["height_scale"] = Tag(generation_properties.height_scale);
-    data["generation_properties"]["frequency"] = Tag(generation_properties.frequency);
-    data["generation_properties"]["amplitude"] = Tag(generation_properties.amplitude);
-    data["generation_properties"]["persistence"] = Tag(generation_properties.persistence);
-    data["generation_properties"]["spawn_item_chest_column"] = Tag(generation_properties.spawn_item_chest_column);
-    data["generation_properties"]["noodle_threshold"] = Tag(generation_properties.noodle_threshold);
-
-    TagList flat_layers_list;
-    for (const FlatWorldLayer& layer : generation_properties.flat_layers)
-    {
-        TagCompound layer_compound;
-        layer_compound["block"] = Tag(static_cast<uint32_t>(layer.block));
-        layer_compound["count"] = Tag(static_cast<int32_t>(layer.count));
-
-        flat_layers_list.push_back(Tag(layer_compound));
-    }
-    data["generation_properties"]["flat_layers"] = Tag(flat_layers_list);
+    data["generation_properties"] = generation_properties.serialize();
 
     data["seed"] = Tag(seed);
 
@@ -291,7 +271,7 @@ void ServerWorld::saveData()
     auto buffer = data.save();
 
     std::ofstream file(path / "data", std::ios::out | std::ios::binary);
-    
+
     file.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
 }
 
@@ -317,63 +297,8 @@ void ServerWorld::loadData()
 
     dayTime = data["day_time"].get<float>();
     days = data["days"].get<uint64_t>();
-    
-    generation_properties =
-    {
-        .type = GenerationType::Normal,
-        .base_height = data["generation_properties"]["base_height"].get<float>(),
-        .height_scale = data["generation_properties"]["height_scale"].get<float>(),
-        .frequency = data["generation_properties"]["frequency"].get<float>(),
-        .amplitude = data["generation_properties"]["amplitude"].get<float>(),
-        .persistence = data["generation_properties"]["persistence"].get<float>()
-    };
 
-    const TagCompound& gen_props = data["generation_properties"].get<TagCompound>();
-
-    auto type_iter = gen_props.find("type");
-    if (type_iter != gen_props.end())
-    {
-        generation_properties.type = static_cast<GenerationType>(type_iter->second.get<uint32_t>());
-    }
-    else
-    {
-        generation_properties.type = data["generation_properties"]["flat"].get<bool>() ? GenerationType::Flat : GenerationType::Normal;
-    }
-
-    generation_properties.flat_layers.clear();
-
-    auto layers_iter = gen_props.find("flat_layers");
-    if (layers_iter != gen_props.end())
-    {
-        const TagList& layers_list = layers_iter->second.get<TagList>();
-        generation_properties.flat_layers.reserve(layers_list.size());
-
-        for (const Tag& layer_tag : layers_list)
-        {
-            const TagCompound& layer_compound = layer_tag.get<TagCompound>();
-            FlatWorldLayer layer;
-            layer.block = static_cast<BlockID>(layer_compound.at("block").get<uint32_t>());
-            layer.count = static_cast<int>(layer_compound.at("count").get<int32_t>());
-            generation_properties.flat_layers.push_back(layer);
-        }
-    }
-
-    if (generation_properties.flat_layers.empty())
-    {
-        generation_properties.flat_layers = FlatWorldProperties::defaults().layers;
-    }
-
-    auto chest_column_iter = gen_props.find("spawn_item_chest_column");
-    if (chest_column_iter != gen_props.end())
-    {
-        generation_properties.spawn_item_chest_column = chest_column_iter->second.get<bool>();
-    }
-
-    auto noodle_threshold_iter = gen_props.find("noodle_threshold");
-    if (noodle_threshold_iter != gen_props.end())
-    {
-        generation_properties.noodle_threshold = noodle_threshold_iter->second.get<float>();
-    }
+    generation_properties.deserialize(data["generation_properties"]);
 
     world_generator = makeWorldGenerator(seed, generation_properties);
 }

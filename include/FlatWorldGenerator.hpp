@@ -3,6 +3,7 @@
 
 #include "WorldGenerator.hpp"
 #include "Block.hpp"
+#include "BBT.hpp"
 
 #include <vector>
 
@@ -10,6 +11,9 @@ struct FlatWorldLayer
 {
     BlockID block;
     int count;
+
+    Tag serialize() const;
+    static FlatWorldLayer deserialize(const Tag& tag);
 };
 
 struct FlatWorldProperties
@@ -28,6 +32,9 @@ struct FlatWorldProperties
             }
         };
     }
+
+    Tag serialize() const;
+    void deserialize(const Tag& tag);
 };
 
 class FlatWorldGenerator : public WorldGenerator
