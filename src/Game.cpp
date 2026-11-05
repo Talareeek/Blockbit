@@ -15,6 +15,7 @@
 #include "../include/BlockAtlas.hpp"
 #include "../include/AuthorGameState.hpp"
 #include "../include/Prefab.hpp"
+#include "../include/StructureRegistry.hpp"
 #include "../include/Settings.hpp"
 #include "../include/GameCommon.hpp"
 #include "../include/Item.hpp"
@@ -408,6 +409,7 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Bucket, "resources/textures/bucket.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Water_Bucket, "resources/textures/water_bucket.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Pig, "resources/textures/pig.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Cube, "resources/textures/cube.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Lighter, "resources/textures/lighter.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Wooden_Pickaxe, "resources/textures/wooden_pickaxe.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Stone_Pickaxe, "resources/textures/stone_pickaxe.png");
@@ -479,6 +481,7 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Glass, "resources/textures/glass.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Output_Bulb, "resources/textures/output_bulb.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Ruby_Wire, "resources/textures/ruby_wire.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Coreheart_Of_Blockbit, "resources/textures/coreheart_of_blockbit.png");
 
     BlockAtlas::add(AssetManager::GameTextureID::Stone);
     BlockAtlas::add(AssetManager::GameTextureID::Grass);
@@ -522,6 +525,7 @@ Game::Game()
     BlockAtlas::add(AssetManager::GameTextureID::Glass);
     BlockAtlas::add(AssetManager::GameTextureID::Output_Bulb);
     BlockAtlas::add(AssetManager::GameTextureID::Ruby_Wire);
+    BlockAtlas::add(AssetManager::GameTextureID::Coreheart_Of_Blockbit);
     BlockAtlas::build();
 
     AssetManager::loadShader(AssetManager::ShaderID::Sun, "resources/shaders/sun.frag");
@@ -534,6 +538,7 @@ Game::Game()
     AssetManager::loadMusic(AssetManager::MusicID::Dream, "resources/sounds/music/dream.mp3");
 
     PrefabRegistry::init();
+    StructureRegistry::init();
 
 
     console.assignGame(this);

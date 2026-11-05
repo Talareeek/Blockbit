@@ -391,6 +391,12 @@ Chunk NormalWorldGenerator::generateChunk(int chunk_position)
 
     generateFeatures(chunk);
 
+    // Structures stamp AFTER features so a wall authored with Overwrite mode
+    // always wins over trees/ores that happened to roll inside its bbox.
+    // AirOnly cells still respect features (intentional — authors can carve
+    // around trees by using AirOnly for decorative overhangs).
+    generateStructures(chunk);
+
     chunk.generated = true;
     chunk.dirty = true;
     chunk.meshDirty = true;
@@ -853,5 +859,101 @@ void NormalWorldGenerator::generateOreVein(Chunk& chunk, const FeaturePlacement&
 
         x += dx;
         y += dy;
+    }
+}
+
+uint32_t NormalWorldGenerator::structureSeed(int grid_x, StructureID id) const
+{
+    uint32_t h = mix32(static_cast<uint32_t>(seed) + 0x165667B1u);
+
+    h = mix32(h ^ (static_cast<uint32_t>(grid_x) * 374761393u));
+    h = mix32(h ^ (static_cast<uint32_t>(id) * 2246822519u + 0x9E3779B9u));
+
+    return h;
+}
+
+std::vector<NormalWorldGenerator::StructurePlacement>
+NormalWorldGenerator::getStructurePlacementsInCell(int grid_x, StructureID id) const
+{
+    std::vector<StructurePlacement> result;
+
+    const StructureRule& rule = StructureRegistry::getRule(id);
+
+    if (rule.grid <= 0 || rule.spawn_chance <= 0.0f)
+        return result;
+
+    SmallRng rng(structureSeed(grid_x, id));
+
+    // Pull three deterministic draws BEFORE any filter check so the per-cell
+    // seed stays stable regardless of which filter rejects. Same trick the
+    // tree placement scan uses (species roll).
+    const int    cell_offset = rng.range(rule.grid);
+    const double roll        = rng.unit();
+    const double mirror_roll = rng.unit();
+
+    const int origin_x = grid_x * rule.grid + cell_offset;
+
+    if (static_cast<float>(roll) > rule.spawn_chance)
+        return result;
+
+    const ColumnData col = getColumn(origin_x);
+
+    if (!rule.biomes.empty())
+    {
+        bool allowed = false;
+        for (Biome b : rule.biomes)
+        {
+            if (b == col.top_biome) { allowed = true; break; }
+        }
+        if (!allowed) return result;
+    }
+
+    if (col.height < rule.min_surface_y || col.height > rule.max_surface_y)
+        return result;
+
+    int anchor_y = (rule.anchor_mode == StructureRule::Anchor::Surface)
+        ? col.height
+        : rule.target_y;
+
+    StructureRotation rotation = StructureRotation::Original;
+    if (rule.allow_mirror && mirror_roll < 0.5)
+        rotation = StructureRotation::MirrorX;
+
+    result.push_back(StructurePlacement{id, origin_x, anchor_y, rotation});
+    return result;
+}
+
+void NormalWorldGenerator::generateStructures(Chunk& chunk)
+{
+    const auto& rules = StructureRegistry::rules();
+    if (rules.empty()) return;
+
+    // Expand the scan range by ceil(max_structure_width / CHUNK_WIDTH) on each
+    // side so a structure whose origin lives in a neighbour chunk still gets
+    // stamped into this one. Same approach as ore veins (MAX_VEIN_REACH).
+    const int max_w = StructureRegistry::maxTemplateWidth();
+    const int neighbor_range = (max_w + CHUNK_WIDTH - 1) / CHUNK_WIDTH;
+
+    for (const auto& [id, rule] : rules)
+    {
+        if (rule.grid <= 0) continue;
+
+        const int chunk_min = chunk.chunk_position * CHUNK_WIDTH;
+        const int chunk_max = chunk_min + CHUNK_WIDTH - 1;
+
+        // Grid cells whose chosen origin could fall within (chunk ± neighbor_range).
+        const int search_min = chunk_min - neighbor_range * CHUNK_WIDTH;
+        const int search_max = chunk_max + neighbor_range * CHUNK_WIDTH;
+
+        const int grid_min = floorDiv(search_min, rule.grid);
+        const int grid_max = floorDiv(search_max, rule.grid);
+
+        for (int gx = grid_min; gx <= grid_max; gx++)
+        {
+            for (const StructurePlacement& p : getStructurePlacementsInCell(gx, id))
+            {
+                StructureRegistry::stamp(chunk, p.id, p.origin_x, p.anchor_y, p.rotation);
+            }
+        }
     }
 }

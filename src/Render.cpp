@@ -1790,6 +1790,8 @@ void RenderMinimap(ClientWorld& world, sf::Vector2<double> camera, sf::RenderTar
 
     float unit_size = static_cast<float>(texture_size.x) / 80.0f;
 
+    const bool flat_colors = Settings::minimap.flat_colors;
+
     for(int i = positionToChunk(camera) - 5; i <= positionToChunk(camera) + 5; i++)
     {
         Chunk& chunk = world.getChunk(i);
@@ -1800,14 +1802,58 @@ void RenderMinimap(ClientWorld& world, sf::Vector2<double> camera, sf::RenderTar
         float translate_x = static_cast<float>((static_cast<double>(i * CHUNK_WIDTH) - camera.x)) * unit_size;
         float translate_y = static_cast<float>(-camera.y) * unit_size;
 
-        sf::RenderStates states;
+        sf::Transform block_transform;
+        block_transform.translate({translate_x, translate_y});
+        block_transform.scale({unit_size, unit_size});
 
-        states.texture = &BlockAtlas::getTexture();
-        states.transform.translate({translate_x, translate_y});
-        states.transform.scale({unit_size, unit_size});
-        applyBlockAnimationShader(states);
+        if(flat_colors)
+        {
+            sf::VertexArray flat_vertices{sf::PrimitiveType::Triangles};
 
-        render_texture.draw(mesh.vertices, states);
+            for(int y = 0; y < CHUNK_HEIGHT; ++y)
+            {
+                for(int lx = 0; lx < CHUNK_WIDTH; ++lx)
+                {
+                    const Block& b = chunk.blocks[y][lx];
+                    if(b.id == BlockID::Air) continue;
+                    const auto& data = blockDatabase[b.id];
+                    if(!data.render.has_value()) continue;
+
+                    sf::Color color = BlockAtlas::getAverageColor(data.render->texture);
+                    if(color.a == 0) continue;
+                    color.a = 255;
+
+                    float x0 = translate_x + static_cast<float>(lx) * unit_size;
+                    float y0 = translate_y + static_cast<float>(y)  * unit_size;
+                    float x1 = x0 + unit_size;
+                    float y1 = y0 + unit_size;
+
+                    sf::Vertex v0; v0.position = {x0, y0}; v0.color = color;
+                    sf::Vertex v1; v1.position = {x1, y0}; v1.color = color;
+                    sf::Vertex v2; v2.position = {x1, y1}; v2.color = color;
+                    sf::Vertex v3; v3.position = {x0, y1}; v3.color = color;
+
+                    flat_vertices.append(v0);
+                    flat_vertices.append(v1);
+                    flat_vertices.append(v2);
+                    flat_vertices.append(v0);
+                    flat_vertices.append(v2);
+                    flat_vertices.append(v3);
+                }
+            }
+
+            if(flat_vertices.getVertexCount() > 0) render_texture.draw(flat_vertices);
+        }
+        else
+        {
+            sf::RenderStates states;
+
+            states.texture   = &BlockAtlas::getTexture();
+            states.transform = block_transform;
+            applyBlockAnimationShader(states);
+
+            render_texture.draw(mesh.vertices, states);
+        }
 
         if(Settings::minimap.render_shadows && chunk.light.initialized)
         {
@@ -1829,7 +1875,7 @@ void RenderMinimap(ClientWorld& world, sf::Vector2<double> camera, sf::RenderTar
             sf::RenderStates overlay_states;
             overlay_states.shader    = &lighting_shader;
             overlay_states.texture   = &light_tex;
-            overlay_states.transform = states.transform;
+            overlay_states.transform = block_transform;
             overlay_states.blendMode = sf::BlendMultiply;
 
             render_texture.draw(mesh.lightmap_vertices, overlay_states);

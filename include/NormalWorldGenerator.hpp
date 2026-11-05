@@ -4,6 +4,8 @@
 #include "WorldGenerator.hpp"
 #include "PerlinNoise.hpp"
 #include "BBT.hpp"
+#include "StructureTemplate.hpp"
+#include "StructureRegistry.hpp"
 
 #include <algorithm>
 #include <array>
@@ -97,6 +99,7 @@ private:
     ColumnData getColumn(int world_x) const;
 
     uint32_t featureSeed(int x, int y, FeatureType type) const;
+    uint32_t structureSeed(int grid_x, StructureID id) const;
 
     void setFeatureBlock(Chunk& chunk, int world_x, int y, Block block, bool only_replace_air = false);
 
@@ -115,6 +118,17 @@ private:
 
     void generateTerrain(Chunk& chunk, std::array<int, CHUNK_WIDTH>& heights);
     void generateCaves(Chunk& chunk, const std::array<int, CHUNK_WIDTH>& heights);
+
+    struct StructurePlacement
+    {
+        StructureID       id;
+        int               origin_x;
+        int               anchor_y;
+        StructureRotation rotation;
+    };
+
+    std::vector<StructurePlacement> getStructurePlacementsInCell(int grid_x, StructureID id) const;
+    void generateStructures(Chunk& chunk);
 
 public:
 

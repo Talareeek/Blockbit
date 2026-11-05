@@ -324,6 +324,7 @@ ItemID blockToItem(BlockID block)
         case BlockID::Glass: return ItemID::Glass;
         case BlockID::Output_Bulb: return ItemID::Output_Bulb;
         case BlockID::Ruby_Wire: return ItemID::Ruby_Wire;
+        case BlockID::Coreheart_Of_Blockbit: return ItemID::Coreheart_Of_Blockbit;
         default: return ItemID::None;
     }
 }
@@ -382,6 +383,7 @@ BlockID itemToBlock(ItemID item)
         case ItemID::Glass: return BlockID::Glass;
         case ItemID::Output_Bulb: return BlockID::Output_Bulb;
         case ItemID::Ruby_Wire: return BlockID::Ruby_Wire;
+        case ItemID::Coreheart_Of_Blockbit: return BlockID::Coreheart_Of_Blockbit;
         default: return BlockID::Air;
     }
 }
@@ -995,6 +997,18 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .drop = DropProperties{.always_drop = true, .drop = ItemID::Ruby_Wire},
             .light_opacity = 1,
             .lets_light = true,
+        }
+    },
+    { BlockID::Coreheart_Of_Blockbit,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = false,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = -1.0f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Coreheart_Of_Blockbit, .render_bounds = default_render_bounds, .rect = coreheart_render_rect},
+            .mining = MiningProperties{.mining_resistance = INT_MAX, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = INT_MAX}}
         }
     },
 };

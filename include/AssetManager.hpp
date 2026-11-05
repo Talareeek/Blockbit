@@ -56,6 +56,7 @@ public:
         Glass,
         Output_Bulb,
         Ruby_Wire,
+        Coreheart_Of_Blockbit,
 
 
         // ITEMS
@@ -77,6 +78,7 @@ public:
         // ENTITIES
         Player,
         Pig,
+        Cube,
 
         Wooden_Pickaxe,
         Stone_Pickaxe,

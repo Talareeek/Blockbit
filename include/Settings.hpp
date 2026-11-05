@@ -56,6 +56,7 @@ public:
     {
         bool enabled = true;
         bool render_shadows = true;
+        bool flat_colors = false; // render blocks as their average color instead of textures
         float size = 0.1f;        // fraction of window width
         float offset_x = 50.0f;   // pixels from the left edge
         float offset_y = 50.0f;   // pixels from the top edge

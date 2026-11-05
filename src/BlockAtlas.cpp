@@ -39,6 +39,25 @@ bool BlockAtlas::build()
 
         uvMap[id] = {{(int)x, 0}, {(int)size.x, (int)size.y}};
 
+        std::uint64_t ar = 0, ag = 0, ab = 0, acount = 0;
+        for (std::uint32_t py = 0; py < size.y; ++py)
+        {
+            for (std::uint32_t px = 0; px < size.x; ++px)
+            {
+                sf::Color c = img.getPixel({px, py});
+                if (c.a == 0) continue;
+                ar += c.r;
+                ag += c.g;
+                ab += c.b;
+                ++acount;
+            }
+        }
+        averageColors[id] = acount > 0
+            ? sf::Color(static_cast<std::uint8_t>(ar / acount),
+                        static_cast<std::uint8_t>(ag / acount),
+                        static_cast<std::uint8_t>(ab / acount))
+            : sf::Color::Transparent;
+
         x += size.x;
     }
 
@@ -59,4 +78,11 @@ const sf::Texture& BlockAtlas::getTexture()
 const sf::IntRect& BlockAtlas::getUV(AssetManager::GameTextureID textureID)
 {
     return uvMap.at(textureID);
+}
+
+sf::Color BlockAtlas::getAverageColor(AssetManager::GameTextureID textureID)
+{
+    auto it = averageColors.find(textureID);
+    if (it == averageColors.end()) return sf::Color::Transparent;
+    return it->second;
 }

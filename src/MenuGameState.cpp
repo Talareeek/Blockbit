@@ -4,6 +4,7 @@
 #include "../include/Client.hpp"
 #include "../include/Render.hpp"
 #include "../include/Settings.hpp"
+#include "../include/StructureEditorGameState.hpp"
 
 #include <imgui.h>
 
@@ -50,6 +51,7 @@ MenuGameState::MenuGameState(Game* game) : GameState(game), serverPreview(&statu
     if(!blockbit_logo.loadFromFile("resources/textures/blockbit_logo.png")) throw std::runtime_error("Failed loading resources/textures/blockbit_logo.png");
 
 
+    UIElement::ScreenRelative editorRelative  {{0.015f, 0.77f}, {0.17f, 0.035f}, UIElement::ScreenRelative::ScaleMode::Stretch};
     UIElement::ScreenRelative settingsRelative{{0.015f, 0.82f}, {0.17f, 0.035f}, UIElement::ScreenRelative::ScaleMode::Stretch};
     UIElement::ScreenRelative quitRelative    {{0.015f, 0.87f}, {0.17f, 0.035f}, UIElement::ScreenRelative::ScaleMode::Stretch};
 
@@ -70,6 +72,13 @@ MenuGameState::MenuGameState(Game* game) : GameState(game), serverPreview(&statu
     });
     settings.setColors(sf::Color(210, 210, 210), Settings::ui.main_color);
     settings.updateScreenRelative(game->getWindow().getSize());
+
+    structure_editor = TextButton(editorRelative, "Structure editor", [this]()
+    {
+        this->game->pushState(this, std::make_unique<StructureEditorGameState>(this->game));
+    });
+    structure_editor.setColors(sf::Color(210, 210, 210), Settings::ui.main_color);
+    structure_editor.updateScreenRelative(game->getWindow().getSize());
 
     backgroundTexture = generateBackground();
 
@@ -164,6 +173,7 @@ void MenuGameState::handleEvent(const sf::Event& event)
     worldList.handleEvent(event);
     quit.handleEvent(event);
     settings.handleEvent(event);
+    structure_editor.handleEvent(event);
     player.handleEvent(event);
 }
 
@@ -183,6 +193,8 @@ void MenuGameState::update(float dt)
     quit.updateScreenRelative(size);
     settings.updateScreenRelative(size);
     settings.setColors(sf::Color(210, 210, 210), Settings::ui.main_color);
+    structure_editor.updateScreenRelative(size);
+    structure_editor.setColors(sf::Color(210, 210, 210), Settings::ui.main_color);
     worldList.updateScreenRelative(size);
 
     worldList.position = {size.x * 0.75f, 0.0f};
@@ -191,6 +203,7 @@ void MenuGameState::update(float dt)
     worldList.update(dt);
     quit.update(dt);
     settings.update(dt);
+    structure_editor.update(dt);
 
     player.update(dt);
 
@@ -278,6 +291,7 @@ void MenuGameState::render(sf::RenderWindow& window)
     if (hasStatus && worldList.multiplayerActive()) serverPreview.render(window);
     settings.render(window);
     quit.render(window);
+    structure_editor.render(window);
     player.render(window);
 
     account.performImGui(accountSlotPosition, accountSlotSize);

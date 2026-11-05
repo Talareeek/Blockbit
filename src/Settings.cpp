@@ -90,6 +90,7 @@ void Settings::load()
             const auto& m = data["minimap"];
             minimap.enabled        = m.value("enabled",        minimap.enabled);
             minimap.render_shadows = m.value("render_shadows", minimap.render_shadows);
+            minimap.flat_colors    = m.value("flat_colors",    minimap.flat_colors);
             minimap.size           = m.value("size",           minimap.size);
             minimap.offset_x       = m.value("offset_x",       minimap.offset_x);
             minimap.offset_y       = m.value("offset_y",       minimap.offset_y);
@@ -202,6 +203,7 @@ void Settings::save()
         data["minimap"] = {
             {"enabled",        minimap.enabled},
             {"render_shadows", minimap.render_shadows},
+            {"flat_colors",    minimap.flat_colors},
             {"size",           minimap.size},
             {"offset_x",       minimap.offset_x},
             {"offset_y",       minimap.offset_y}

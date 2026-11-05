@@ -136,8 +136,9 @@ void SettingsWindow::render()
 
     if(ImGui::CollapsingHeader("Minimap", ImGuiTreeNodeFlags_DefaultOpen))
     {
-        ImGui::Checkbox("Enabled", &Settings::minimap.enabled);
+        ImGui::Checkbox("Enabled##minimap", &Settings::minimap.enabled);
         ImGui::Checkbox("Render shadows", &Settings::minimap.render_shadows);
+        ImGui::Checkbox("Flat colors", &Settings::minimap.flat_colors);
         ImGui::SliderFloat("Size",     &Settings::minimap.size,     0.02f, 0.5f, "%.3f");
         ImGui::SliderFloat("Offset X", &Settings::minimap.offset_x, 0.0f, 500.0f, "%.0f");
         ImGui::SliderFloat("Offset Y", &Settings::minimap.offset_y, 0.0f, 500.0f, "%.0f");
@@ -233,7 +234,7 @@ void SettingsWindow::render()
         sf::Joystick::update();
         const bool connected = sf::Joystick::isConnected(Settings::gamepad.joystick_id);
 
-        ImGui::Checkbox("Enabled", &Settings::gamepad.enabled);
+        ImGui::Checkbox("Enabled##gamepad", &Settings::gamepad.enabled);
 
         ImGui::TextUnformatted(connected ? "Status: connected" : "Status: not detected");
 

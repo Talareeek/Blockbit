@@ -403,7 +403,7 @@ void ClientGameState::updateViewTransform()
     {
         base_center = local_world.getEntity(local_player_entity_id.value())
                           .getComponent<TransformComponent>()
-                          .position + sf::Vector2<double>(0.5, -0.5);
+                          .center();
     }
     else
     {

@@ -17,6 +17,8 @@ private:
 
     inline static std::unordered_map<AssetManager::GameTextureID, sf::IntRect> uvMap;
 
+    inline static std::unordered_map<AssetManager::GameTextureID, sf::Color> averageColors;
+
     // optional so construction is deferred to build() — the sf::Texture ctor
     // touches SFML's GL/activity state, which on Android is only valid once
     // ANativeActivity_onCreate has run.
@@ -31,6 +33,8 @@ public:
     static const sf::Texture& getTexture();
 
     static const sf::IntRect& getUV(AssetManager::GameTextureID textureID);
+
+    static sf::Color getAverageColor(AssetManager::GameTextureID textureID);
 };
 
 #endif // BLOCK_ATLAS_HPP

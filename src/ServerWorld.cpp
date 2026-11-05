@@ -810,6 +810,8 @@ void ServerWorld::loadOrCreateChunk(int chunk_position)
         return;
     }
 
+    bool freshly_generated = false;
+
     if (hasChunkFile(chunk_position))
     {
         loadChunk(chunk_position);
@@ -822,6 +824,27 @@ void ServerWorld::loadOrCreateChunk(int chunk_position)
 
         chunks[chunk_position] =
             world_generator->generateChunk(chunk_position);
+
+        freshly_generated = true;
+    }
+
+    // Drain structure-generated entity spawns into the live world. Only runs
+    // on a fresh chunk — loaded chunks already have their entities restored
+    // from disk by loadChunkEntities. pending_spawns is never serialised, so
+    // this cannot double-spawn across reloads.
+    if (freshly_generated)
+    {
+        auto gen_it = chunks.find(chunk_position);
+        if (gen_it != chunks.end())
+        {
+            std::vector<PendingSpawn> drained;
+            drained.swap(gen_it->second.pending_spawns);
+
+            for (const PendingSpawn& ps : drained)
+            {
+                spawn(ps.prefab, ps.position);
+            }
+        }
     }
 
     // Re-light the freshly materialized chunk together with any already-lit

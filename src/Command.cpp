@@ -14,6 +14,7 @@
 #include "../include/InventoryComponent.hpp"
 #include "../include/GameServer.hpp"
 #include "../include/Item.hpp"
+#include "../include/Prefab.hpp"
 
 #ifndef HEADLESS_BUILD
 #include "../include/Game.hpp"
@@ -601,6 +602,28 @@ std::unordered_map<std::wstring, Command> commandDatabase =
             animation.frameSize = {16, 12};
 
             entity.addComponent(animation);
+
+            world->addEntity(std::move(entity));
+        }
+    }},
+
+    {L"spawn-cube", {false, true, true,
+        [](std::wstring command, CommandContext& context)
+        {
+            auto tokens = tokenize(command);
+            requireArgs(tokens, 3, "Usage: /spawn-cube <x> <y>");
+
+            World* world = context.world();
+
+            double x = parseFloat(tokens[1], "x");
+            double y = parseFloat(tokens[2], "y");
+
+            Entity entity = PrefabRegistry::get(PrefabID::Cube).cloneAs(generateUUID());
+
+            auto& transform = entity.getComponent<TransformComponent>();
+            transform.position          = {x, y};
+            transform.previous_position = {x, y};
+            transform.render_position   = {x, y};
 
             world->addEntity(std::move(entity));
         }

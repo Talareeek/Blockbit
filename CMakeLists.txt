@@ -318,6 +318,7 @@ set(_CLIENT_ONLY_BASENAMES
     SettingsWindow.cpp
     Slider.cpp
     Slot.cpp
+    StructureEditorGameState.cpp
     TextButton.cpp
     UIElement.cpp
     UILayout.cpp

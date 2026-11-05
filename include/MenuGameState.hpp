@@ -30,6 +30,7 @@ private:
     AccountWidget account;
     TextButton quit;
     TextButton settings;
+    TextButton structure_editor;
     WorldList worldList;
     LobbyPlayerElement player;
 

@@ -15,7 +15,8 @@ enum class PrefabID
     Pig,
     Dynamite,
     DroppedItem,
-    FallingBlock
+    FallingBlock,
+    Cube
 };
 
 class PrefabRegistry

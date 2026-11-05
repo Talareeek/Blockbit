@@ -1045,6 +1045,16 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         }
     },
     {
+        ItemID::Coreheart_Of_Blockbit,
+        {
+            .name = "Coreheart Of Blockbit",
+            .texture = AssetManager::GameTextureID::Coreheart_Of_Blockbit,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Mythic,
+            .category = ItemCategory::Block
+        }
+    },
+    {
         ItemID::Flint,
         {
             .name = "Flint",

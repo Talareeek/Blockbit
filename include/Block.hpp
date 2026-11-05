@@ -59,7 +59,8 @@ enum class BlockID : uint32_t
     Granite,
     Glass,
     Output_Bulb,
-    Ruby_Wire
+    Ruby_Wire,
+    Coreheart_Of_Blockbit
 };
 
 // Cardinal-neighbor IDs supplied to the per-tile rect() so a block can pick a
@@ -301,6 +302,27 @@ inline auto connected_render_rect = [](Block block_instance, const BlockNeighbor
 inline auto woodcutter_animation = [](Block) -> BlockAnimation
 {
     return {2, 400};
+};
+
+// Coreheart texture is 64x32 — only the left 32x32 is used, split into four
+// 16x16 quadrants. The quadrant is picked from neighbors only (so the group can
+// sit at any world position): the TL corner of a 2x2 is the block whose same-id
+// neighbors are exactly right+down, TR is left+down, BL is right+up, BR is
+// left+up. Anything else — lone block, line, interior of a larger cluster —
+// falls back to the top-left quadrant.
+inline auto coreheart_render_rect = [](Block block_instance, const BlockNeighbors& neighbors) -> sf::IntRect
+{
+    const bool u = (neighbors.up    == block_instance.id);
+    const bool r = (neighbors.right == block_instance.id);
+    const bool d = (neighbors.down  == block_instance.id);
+    const bool l = (neighbors.left  == block_instance.id);
+
+    if (r && d && !l && !u) return {{ 0,  0}, {16, 16}};
+    if (l && d && !r && !u) return {{16,  0}, {16, 16}};
+    if (r && u && !l && !d) return {{ 0, 16}, {16, 16}};
+    if (l && u && !r && !d) return {{16, 16}, {16, 16}};
+
+    return {{0, 0}, {16, 16}};
 };
 
 // Output_bulb texture is 32x16: frame 0 (x=0) = off, frame 1 (x=16) = on.

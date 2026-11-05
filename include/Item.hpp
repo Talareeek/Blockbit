@@ -104,7 +104,8 @@ enum class ItemID : uint32_t
     Granite,
     Glass,
     Output_Bulb,
-    Ruby_Wire
+    Ruby_Wire,
+    Coreheart_Of_Blockbit
 };
 
 enum class ItemRarity

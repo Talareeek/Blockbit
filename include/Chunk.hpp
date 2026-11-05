@@ -5,6 +5,7 @@
 #include "BlockEntity.hpp"
 #include "ChunkLightData.hpp"
 #include "Climate.hpp"
+#include "Prefab.hpp"
 #include "UUID.hpp"
 
 #include <SFML/System/Vector2.hpp>
@@ -13,9 +14,20 @@
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 constexpr int CHUNK_WIDTH = 16;
 constexpr int CHUNK_HEIGHT = 256;
+
+// Deferred entity spawn produced during chunk generation (e.g. a boss inside a
+// structure). generateChunk() returns a Chunk by value and therefore cannot
+// touch the World — the server drains this list the first time the chunk is
+// materialised via ServerWorld::loadOrCreateChunk and never saves it to disk.
+struct PendingSpawn
+{
+    PrefabID              prefab;
+    sf::Vector2<double>   position;
+};
 
 struct Chunk
 {
@@ -29,6 +41,8 @@ struct Chunk
     Biome biomes[CHUNK_WIDTH];
 
     std::unordered_map<uint16_t, std::unique_ptr<BlockEntity>> block_entities;
+
+    std::vector<PendingSpawn> pending_spawns;
 
     ChunkLightData light;
 
@@ -89,6 +103,8 @@ private:
         dirty = other.dirty;
         generated = other.generated;
         meshDirty = other.meshDirty;
+
+        pending_spawns = other.pending_spawns;
 
         block_entities.clear();
         for (const auto& [key, entity] : other.block_entities)

@@ -134,4 +134,9 @@ inline std::filesystem::path getWorldsPath()
     return getHomePath() / "Blockbit" / "saves";
 }
 
+inline std::filesystem::path getStructuresPath()
+{
+    return getHomePath() / "Blockbit" / "structures";
+}
+
 #endif // WORLD_HPP

@@ -35,6 +35,7 @@ void PrefabRegistry::init()
         entity.addComponent(HealthComponent{100, 100, true});
 
         InventoryComponent inv(36);
+        inv.inventory.slots[0] = {ItemID::Coreheart_Of_Blockbit, 64};
         entity.addComponent(std::move(inv));
 
         entity.addComponent(RenderComponent{AssetManager::GameTextureID::Player, {{0, 0}, {12, 16}}, {0.75f, 1.0f}});
@@ -95,6 +96,25 @@ void PrefabRegistry::init()
         entity.addComponent(animation);
 
         add(PrefabID::Pig, entity);
+    }
+
+    { // CUBE (boss)
+        Entity entity(generateUUID());
+
+        entity.addComponent(TransformComponent{{0.0, 0.0}, {4.0f, 4.0f}, sf::degrees(0.0f)});
+        entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
+        entity.addComponent(RenderComponent{AssetManager::GameTextureID::Cube, {{0, 0}, {64, 64}}, {4.0f, 4.0f}});
+        entity.addComponent(HealthComponent{500, 500, true});
+
+        AIComponent ai;
+        ai.personality    = AIComponent::Personality::Aggressive;
+        ai.state          = AIComponent::State::Idle;
+        ai.detectionRange = 16.0f;
+        ai.attackRange    = 3.0f;
+        ai.moveSpeed      = 25.0f;
+        entity.addComponent(ai);
+
+        add(PrefabID::Cube, entity);
     }
 
     { // DROPPED_ITEM
