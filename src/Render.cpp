@@ -12,6 +12,9 @@
 #include "../include/PerlinNoise.hpp"
 #include "../include/NormalWorldGenerator.hpp"
 #include "../include/DungeonShooterWorldGenerator.hpp"
+#include "../include/SkygridWorldGenerator.hpp"
+#include "../include/RandomizerWorldGenerator.hpp"
+#include "../include/NoodleWorldGenerator.hpp"
 #include "../include/WorldLightView.hpp"
 #include "../include/LightingSystem.hpp"
 #include "../include/Settings.hpp"
@@ -1221,6 +1224,17 @@ sf::Texture generateBackground()
             break;
         case GenerationType::DungeonShooter:
             generator = std::make_unique<DungeonShooterWorldGenerator>(seed);
+            break;
+        case GenerationType::Skygrid:
+            generator = std::make_unique<SkygridWorldGenerator>(seed);
+            break;
+        case GenerationType::Randomizer:
+            generator = std::make_unique<RandomizerWorldGenerator>(seed);
+            break;
+        case GenerationType::Noodle:
+            generator = std::make_unique<NoodleWorldGenerator>(seed, NormalWorldGeneratorProperties{
+                props.base_height, props.height_scale, props.frequency, props.amplitude, props.persistence
+            }, static_cast<double>(props.noodle_threshold));
             break;
         case GenerationType::Normal:
         default:

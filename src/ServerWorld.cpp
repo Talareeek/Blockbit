@@ -2,6 +2,9 @@
 #include "../include/NormalWorldGenerator.hpp"
 #include "../include/FlatWorldGenerator.hpp"
 #include "../include/DungeonShooterWorldGenerator.hpp"
+#include "../include/SkygridWorldGenerator.hpp"
+#include "../include/RandomizerWorldGenerator.hpp"
+#include "../include/NoodleWorldGenerator.hpp"
 #include "../include/PlayerControlledComponent.hpp"
 #include "../include/TransformComponent.hpp"
 #include "../include/AIComponent.hpp"
@@ -41,6 +44,30 @@ static std::unique_ptr<WorldGenerator> makeWorldGenerator(unsigned int seed, con
         case GenerationType::DungeonShooter:
         {
             return std::make_unique<DungeonShooterWorldGenerator>(seed);
+        }
+
+        case GenerationType::Skygrid:
+        {
+            return std::make_unique<SkygridWorldGenerator>(seed);
+        }
+
+        case GenerationType::Randomizer:
+        {
+            return std::make_unique<RandomizerWorldGenerator>(seed);
+        }
+
+        case GenerationType::Noodle:
+        {
+            NormalWorldGeneratorProperties properties
+            {
+                .base_height = generation_properties.base_height,
+                .height_scale = generation_properties.height_scale,
+                .frequency = generation_properties.frequency,
+                .amplitude = generation_properties.amplitude,
+                .persistence = generation_properties.persistence
+            };
+
+            return std::make_unique<NoodleWorldGenerator>(seed, properties, generation_properties.noodle_threshold);
         }
 
         case GenerationType::Normal:
@@ -243,6 +270,7 @@ void ServerWorld::saveData()
     data["generation_properties"]["amplitude"] = Tag(generation_properties.amplitude);
     data["generation_properties"]["persistence"] = Tag(generation_properties.persistence);
     data["generation_properties"]["spawn_item_chest_column"] = Tag(generation_properties.spawn_item_chest_column);
+    data["generation_properties"]["noodle_threshold"] = Tag(generation_properties.noodle_threshold);
 
     TagList flat_layers_list;
     for (const FlatWorldLayer& layer : generation_properties.flat_layers)
@@ -339,6 +367,12 @@ void ServerWorld::loadData()
     if (chest_column_iter != gen_props.end())
     {
         generation_properties.spawn_item_chest_column = chest_column_iter->second.get<bool>();
+    }
+
+    auto noodle_threshold_iter = gen_props.find("noodle_threshold");
+    if (noodle_threshold_iter != gen_props.end())
+    {
+        generation_properties.noodle_threshold = noodle_threshold_iter->second.get<float>();
     }
 
     world_generator = makeWorldGenerator(seed, generation_properties);

@@ -13,6 +13,9 @@
 #include "../include/Settings.hpp"
 #include "../include/NormalWorldGenerator.hpp"
 #include "../include/DungeonShooterWorldGenerator.hpp"
+#include "../include/SkygridWorldGenerator.hpp"
+#include "../include/RandomizerWorldGenerator.hpp"
+#include "../include/NoodleWorldGenerator.hpp"
 
 #include <SFML/Graphics/Image.hpp>
 #include <SFML/Graphics/RenderTexture.hpp>
@@ -150,6 +153,20 @@ void CreateWorldState::rebuildPreview()
         case Mode::DungeonShooter:
             gen = std::make_unique<DungeonShooterWorldGenerator>(seed_value);
             break;
+        case Mode::Skygrid:
+            gen = std::make_unique<SkygridWorldGenerator>(seed_value);
+            break;
+        case Mode::Randomizer:
+            gen = std::make_unique<RandomizerWorldGenerator>(seed_value);
+            break;
+        case Mode::Noodle:
+        {
+            NormalWorldGeneratorProperties np{
+                base_height, height_scale, frequency, amplitude, persistence
+            };
+            gen = std::make_unique<NoodleWorldGenerator>(seed_value, np, static_cast<double>(noodle_threshold));
+            break;
+        }
         case Mode::Normal:
         default:
         {
@@ -264,6 +281,9 @@ void CreateWorldState::createWorld()
     {
         case Mode::Flat:           properties.type = GenerationType::Flat;           break;
         case Mode::DungeonShooter: properties.type = GenerationType::DungeonShooter; break;
+        case Mode::Skygrid:        properties.type = GenerationType::Skygrid;        break;
+        case Mode::Randomizer:     properties.type = GenerationType::Randomizer;     break;
+        case Mode::Noodle:         properties.type = GenerationType::Noodle;         break;
         case Mode::Normal:
         default:                   properties.type = GenerationType::Normal;         break;
     }
@@ -274,6 +294,7 @@ void CreateWorldState::createWorld()
     properties.persistence = persistence;
     properties.flat_layers = flat_layers;
     properties.spawn_item_chest_column = (mode == Mode::Normal) && spawn_item_chest_column;
+    properties.noodle_threshold = noodle_threshold;
 
     this->game->popState(this);
     this->game->pushState(this, std::make_unique<ClientGameState>(this->game, world_name, seed_value, properties, 0, Account::username));
@@ -340,6 +361,12 @@ void CreateWorldState::update(float dt)
         ImGui::RadioButton("Flat", &mode_int, static_cast<int>(Mode::Flat));
         ImGui::SameLine();
         ImGui::RadioButton("Dungeon Shooter", &mode_int, static_cast<int>(Mode::DungeonShooter));
+        ImGui::SameLine();
+        ImGui::RadioButton("Skygrid", &mode_int, static_cast<int>(Mode::Skygrid));
+        ImGui::SameLine();
+        ImGui::RadioButton("Randomizer", &mode_int, static_cast<int>(Mode::Randomizer));
+        ImGui::SameLine();
+        ImGui::RadioButton("Noodle", &mode_int, static_cast<int>(Mode::Noodle));
         mode = static_cast<Mode>(mode_int);
         if (mode_int != previous_mode_int) rebuildPreview();
 
@@ -364,6 +391,21 @@ void CreateWorldState::update(float dt)
         else if (mode == Mode::DungeonShooter)
         {
             ImGui::TextUnformatted("Infinite cobblestone dungeon generated from the world seed.");
+        }
+        else if (mode == Mode::Skygrid)
+        {
+            ImGui::TextUnformatted("Random blocks on a 2x2 grid, air everywhere else.");
+        }
+        else if (mode == Mode::Randomizer)
+        {
+            ImGui::TextUnformatted("Every cell is a random block.");
+        }
+        else if (mode == Mode::Noodle)
+        {
+            ImGui::TextUnformatted("Thin winding strands of terrain; biome surface blocks preserved.");
+            ImGui::SliderFloat("Threshold", &noodle_threshold, 0.0f, 1.0f, "%.3f");
+            if (ImGui::IsItemDeactivatedAfterEdit()) rebuildPreview();
+            ImGui::TextDisabled("Higher = thinner strands, lower = fatter / more filled.");
         }
         else
         {

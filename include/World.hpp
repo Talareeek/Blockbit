@@ -27,7 +27,10 @@ enum class GenerationType : uint32_t
 {
     Normal         = 0,
     Flat           = 1,
-    DungeonShooter = 2
+    DungeonShooter = 2,
+    Skygrid        = 3,
+    Randomizer     = 4,
+    Noodle         = 5
 };
 
 struct GenerationProperties
@@ -42,6 +45,8 @@ struct GenerationProperties
     std::vector<FlatWorldLayer> flat_layers = FlatWorldProperties::defaults().layers;
 
     bool spawn_item_chest_column = false;
+
+    float noodle_threshold = 0.55f;
 };
 
 class World

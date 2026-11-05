@@ -261,7 +261,7 @@ namespace
             "Flags (override prompts under --init; ignored otherwise):\n"
             "  --world-name <name>\n"
             "  --seed <n>\n"
-            "  --flat | --normal\n"
+            "  --flat | --normal | --dungeon-shooter | --skygrid | --randomizer | --noodle\n"
             "  --port <n>             UDP listen port (default: " << GameServer::DEFAULT_PORT << ")\n"
             "  --tick-rate <n>        Server tick rate in Hz (default: 120)\n"
             "  --max-players <n>\n"
@@ -301,6 +301,10 @@ namespace
             }
             else if (arg == "--flat")                           { out.gen_type = GenerationType::Flat; }
             else if (arg == "--normal")                         { out.gen_type = GenerationType::Normal; }
+            else if (arg == "--dungeon-shooter")                { out.gen_type = GenerationType::DungeonShooter; }
+            else if (arg == "--skygrid")                        { out.gen_type = GenerationType::Skygrid; }
+            else if (arg == "--randomizer")                     { out.gen_type = GenerationType::Randomizer; }
+            else if (arg == "--noodle")                         { out.gen_type = GenerationType::Noodle; }
             else if (arg == "--port")
             {
                 auto v = require("--port"); if (!v) return false;
@@ -365,6 +369,9 @@ namespace
         {
             case GenerationType::Flat:           return "flat";
             case GenerationType::DungeonShooter: return "dungeon_shooter";
+            case GenerationType::Skygrid:        return "skygrid";
+            case GenerationType::Randomizer:     return "randomizer";
+            case GenerationType::Noodle:         return "noodle";
             case GenerationType::Normal:
             default:                             return "normal";
         }
@@ -853,16 +860,19 @@ namespace
 
         int mode_idx = promptChoice(
             "generation mode",
-            {"normal", "flat", "dungeon shooter"},
+            {"normal", "flat", "dungeon shooter", "skygrid", "randomizer", "noodle"},
             0);
 
         GenerationProperties props = defaultGenerationProperties(GenerationType::Normal);
 
         if (mode_idx == 1) props.type = GenerationType::Flat;
         else if (mode_idx == 2) props.type = GenerationType::DungeonShooter;
+        else if (mode_idx == 3) props.type = GenerationType::Skygrid;
+        else if (mode_idx == 4) props.type = GenerationType::Randomizer;
+        else if (mode_idx == 5) props.type = GenerationType::Noodle;
         else props.type = GenerationType::Normal;
 
-        if (props.type == GenerationType::Normal)
+        if (props.type == GenerationType::Normal || props.type == GenerationType::Noodle)
         {
             auto parseFloat = [](const std::string& s, float def) -> float
             {
@@ -883,7 +893,7 @@ namespace
         }
         else
         {
-            std::cout << c::dim() << "  (dungeon shooter uses only the seed)" << c::reset() << '\n';
+            std::cout << c::dim() << "  (" << generationTypeLabel(props.type) << " uses only the seed)" << c::reset() << '\n';
         }
 
         std::cout << '\n' << c::dim() << "  generating..." << c::reset() << '\n';

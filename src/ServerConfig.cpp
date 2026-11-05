@@ -18,6 +18,9 @@ namespace
         {
             case GenerationType::Flat:           return "flat";
             case GenerationType::DungeonShooter: return "dungeon_shooter";
+            case GenerationType::Skygrid:        return "skygrid";
+            case GenerationType::Randomizer:     return "randomizer";
+            case GenerationType::Noodle:         return "noodle";
             case GenerationType::Normal:
             default:                             return "normal";
         }
@@ -27,6 +30,9 @@ namespace
     {
         if (s == "flat")            return GenerationType::Flat;
         if (s == "dungeon_shooter") return GenerationType::DungeonShooter;
+        if (s == "skygrid")         return GenerationType::Skygrid;
+        if (s == "randomizer")      return GenerationType::Randomizer;
+        if (s == "noodle")          return GenerationType::Noodle;
         return GenerationType::Normal;
     }
 }

@@ -16,7 +16,10 @@ private:
     {
         Normal         = 0,
         Flat           = 1,
-        DungeonShooter = 2
+        DungeonShooter = 2,
+        Skygrid        = 3,
+        Randomizer     = 4,
+        Noodle         = 5
     };
 
     Mode mode = Mode::Normal;
@@ -29,6 +32,8 @@ private:
     float frequency    = 0.035f;
     float amplitude    = 1.0f;
     float persistence  = 0.55f;
+
+    float noodle_threshold = 0.55f;
 
     bool spawn_item_chest_column = false;
 
