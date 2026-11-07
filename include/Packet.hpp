@@ -48,7 +48,9 @@ enum class PacketType : uint8_t
     CommandMessage,
 
     AdminRequest,
-    AdminResponse
+    AdminResponse,
+
+    ParticleBurst
 };
 
 // Admin RPC opcodes. Shared between request and response so the response
@@ -194,6 +196,18 @@ struct ViewEventPacket
     std::vector<uint8_t> payload;
 };
 
+// One-shot visual effect broadcast. effect/arg are kept opaque at the protocol
+// layer; the client maps `effect` to ParticleEffect (ParticleManager.hpp) and
+// uses `arg` per-effect (e.g. BlockID for BlockDust).
+struct ParticleBurstPacket
+{
+    sf::Vector2f position;
+    uint16_t     effect;
+    uint16_t     count;
+    float        spread;
+    uint32_t     arg;
+};
+
 class PacketWriter
 {
 private:
@@ -301,6 +315,7 @@ std::vector<char> serializePacket(const SetContentPacket& p);
 std::vector<char> serializePacket(const ViewEventPacket& p);
 std::vector<char> serializePacket(const AdminRequestPacket& p);
 std::vector<char> serializePacket(const AdminResponsePacket& p);
+std::vector<char> serializePacket(const ParticleBurstPacket& p);
 
 InitializationPacket deserializeInitialization(PacketReader& r);
 ChunkPacket deserializeChunk(PacketReader& r);
@@ -321,4 +336,6 @@ ViewEventPacket deserializeViewEvent(PacketReader& r);
 
 AdminRequestPacket  deserializeAdminRequest(PacketReader& r);
 AdminResponsePacket deserializeAdminResponse(PacketReader& r);
+
+ParticleBurstPacket deserializeParticleBurst(PacketReader& r);
 #endif // PACKET_HPP

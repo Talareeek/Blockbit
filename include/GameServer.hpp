@@ -95,6 +95,7 @@ private:
     void processIncoming();
     void broadcastBlockUpdates();
     void broadcastSnapshot();
+    void broadcastParticleBursts();
 
     void updatePlayerEntityConnections();
 

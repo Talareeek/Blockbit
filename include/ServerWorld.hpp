@@ -5,6 +5,7 @@
 #include "Prefab.hpp"
 #include "BlockUpdate.hpp"
 #include "BlockUpdatePipeline.hpp"
+#include "Packet.hpp"
 
 #include <unordered_set>
 
@@ -51,6 +52,10 @@ public:
     static constexpr int LAZY_DISTANCE = SIMULATION_DISTANCE + 1;
 
     std::vector<sf::Vector2i> pending_block_updates;
+
+    // One-shot particle events queued this tick. GameServer drains this into
+    // ParticleBurstPacket broadcasts right after broadcastSnapshot and clears.
+    std::vector<ParticleBurstPacket> pending_particle_bursts;
 
     // Drained by BlockUpdatePipeline each tick. Separate from pending_block_updates
     // (which is just a positions list for client broadcast) because propagation

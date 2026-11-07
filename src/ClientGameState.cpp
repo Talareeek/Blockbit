@@ -297,7 +297,41 @@ void ClientGameState::processIncoming()
                 case PacketType::BlockUpdate:
                 {
                     auto block_update = deserializeBlockUpdate(reader);
+                    Block old_block = local_world.getBlock(block_update.position.x, block_update.position.y);
                     local_world.setBlock(block_update.position, block_update.block);
+
+                    // Client-predicted block-change effects — no extra wire cost,
+                    // the BlockUpdate packet is already in flight. Break (solid→Air)
+                    // spawns a fragment burst of the broken block's texture; a
+                    // small Air→solid puff hints at placement.
+                    if (old_block.id != block_update.block.id)
+                    {
+                        sf::Vector2f world_pos{
+                            static_cast<float>(block_update.position.x) + 0.5f,
+                            static_cast<float>(block_update.position.y) + 0.5f
+                        };
+
+                        if (block_update.block.id == BlockID::Air && old_block.id != BlockID::Air)
+                        {
+                            ParticleSpawnParams params;
+                            params.effect   = ParticleEffect::BlockDust;
+                            params.position = world_pos;
+                            params.count    = 10;
+                            params.spread   = 2.0f;
+                            params.block_id = old_block.id;
+                            particles.spawn(params);
+                        }
+                        else if (old_block.id == BlockID::Air && block_update.block.id != BlockID::Air)
+                        {
+                            ParticleSpawnParams params;
+                            params.effect   = ParticleEffect::BlockDust;
+                            params.position = world_pos;
+                            params.count    = 4;
+                            params.spread   = 1.0f;
+                            params.block_id = block_update.block.id;
+                            particles.spawn(params);
+                        }
+                    }
                     break;
                 }
                 case PacketType::Track:
@@ -368,6 +402,18 @@ void ClientGameState::processIncoming()
                 case PacketType::AdminResponse:
                 {
                     if (admin_panel) admin_panel->onAdminResponsePacket(reader);
+                    break;
+                }
+                case PacketType::ParticleBurst:
+                {
+                    auto burst = deserializeParticleBurst(reader);
+                    ParticleSpawnParams params;
+                    params.effect   = static_cast<ParticleEffect>(burst.effect);
+                    params.position = burst.position;
+                    params.count    = burst.count;
+                    params.spread   = burst.spread;
+                    params.block_id = static_cast<BlockID>(burst.arg);
+                    particles.spawn(params);
                     break;
                 }
                 case PacketType::Input:
@@ -853,6 +899,8 @@ void ClientGameState::update(float dt)
 
     PhysicsSystem(local_world, dt);
 
+    observeDamageParticles();
+
     for (auto& [id, entity] : local_world.getEntities())
     {
         if (!entity.hasComponent<HealthComponent>()) continue;
@@ -864,6 +912,9 @@ void ClientGameState::update(float dt)
     }
 
     AnimationSystem(local_world, dt);
+
+    updateAmbientParticles(dt);
+    particles.tick(dt, local_world);
 
     furnace_animation_timer += dt;
     if (furnace_animation_timer >= 1.0f)
@@ -989,6 +1040,10 @@ void ClientGameState::render(sf::RenderWindow& window)
 
     // WORLD
     RenderWorld(local_world, camera, window);
+
+    // PARTICLES — draw after world so they appear on top of blocks and
+    // entities. Pure visual layer, no snapshot dependency.
+    particles.render(window, camera);
 
     // WORLD BORDER (impassable wall at World::BORDER_X)
     RenderBorder(camera, view_scale, window);
@@ -1161,4 +1216,154 @@ void ClientGameState::saveScreenshot(sf::RenderWindow& window)
 bool ClientGameState::alwaysUpdated() const
 {
     return true;
+}
+
+void ClientGameState::observeDamageParticles()
+{
+    // A damage event is a drop in since_last_damaged that the client could not
+    // have produced itself (the client only ticks the field upward). Watching
+    // the delta lets us emit a burst without any dedicated packet.
+    std::unordered_map<UUID, float> current;
+    current.reserve(local_world.getEntities().size());
+
+    for (auto& [id, entity] : local_world.getEntities())
+    {
+        if (!entity.hasComponent<HealthComponent>() || !entity.hasComponent<TransformComponent>()) continue;
+        auto& health = entity.getComponent<HealthComponent>();
+        current[id] = health.since_last_damaged;
+
+        auto it = prev_damage_flash.find(id);
+        if (it != prev_damage_flash.end())
+        {
+            if (health.since_last_damaged + 0.05f < it->second &&
+                health.since_last_damaged < 0.1f)
+            {
+                auto& transform = entity.getComponent<TransformComponent>();
+                ParticleSpawnParams params;
+                params.effect   = ParticleEffect::Damage;
+                params.position = sf::Vector2f(
+                    static_cast<float>(transform.center().x),
+                    static_cast<float>(transform.center().y));
+                params.count    = 8;
+                params.spread   = 3.0f;
+                particles.spawn(params);
+            }
+        }
+    }
+
+    prev_damage_flash = std::move(current);
+}
+
+void ClientGameState::updateAmbientParticles(float dt)
+{
+    ambient_particle_timer += dt;
+    if (ambient_particle_timer < AMBIENT_PARTICLE_INTERVAL) return;
+    ambient_particle_timer = 0.0f;
+
+    // Only scan the on-screen block rectangle — zero effect outside the view
+    // is the whole point of this being client-local.
+    auto win_size = game->getWindow().getSize();
+    if (win_size.x == 0 || win_size.y == 0) return;
+
+    double half_w_blocks = (static_cast<double>(win_size.x) / static_cast<double>(win_size.y)) *
+                           static_cast<double>(WORLD_UNIT_SIZE_FACTOR) * 0.5 * static_cast<double>(view_scale);
+    double half_h_blocks = static_cast<double>(WORLD_UNIT_SIZE_FACTOR) * 0.5 * static_cast<double>(view_scale);
+
+    int min_x = static_cast<int>(std::floor(camera.x - half_w_blocks)) - 1;
+    int max_x = static_cast<int>(std::ceil (camera.x + half_w_blocks)) + 1;
+    int min_y = static_cast<int>(std::floor(camera.y - half_h_blocks)) - 1;
+    int max_y = static_cast<int>(std::ceil (camera.y + half_h_blocks)) + 1;
+
+    static thread_local std::mt19937 ambient_rng(std::random_device{}());
+    std::uniform_real_distribution<float> unit(0.0f, 1.0f);
+
+    for (int by = min_y; by <= max_y; ++by)
+    {
+        for (int bx = min_x; bx <= max_x; ++bx)
+        {
+            Block block = local_world.getBlock(bx, by);
+            sf::Vector2f pos{static_cast<float>(bx) + 0.5f, static_cast<float>(by) + 0.9f};
+
+            switch (block.id)
+            {
+                case BlockID::Fire:
+                    if (unit(ambient_rng) < 0.5f)
+                    {
+                        ParticleSpawnParams p;
+                        p.effect = ParticleEffect::Flame;
+                        p.position = pos;
+                        p.count = 1;
+                        p.spread = 0.3f;
+                        p.base_velocity = {0.0f, 1.2f};
+                        particles.spawn(p);
+                    }
+                    if (unit(ambient_rng) < 0.25f)
+                    {
+                        ParticleSpawnParams p;
+                        p.effect = ParticleEffect::Smoke;
+                        p.position = {pos.x, pos.y + 0.1f};
+                        p.count = 1;
+                        p.spread = 0.3f;
+                        p.base_velocity = {0.0f, 1.0f};
+                        particles.spawn(p);
+                    }
+                    break;
+                case BlockID::Furnace:
+                {
+                    auto state = FurnaceState::unpack(block.metadata);
+                    if (state.lit && unit(ambient_rng) < 0.35f)
+                    {
+                        ParticleSpawnParams p;
+                        p.effect = ParticleEffect::Smoke;
+                        p.position = {pos.x, static_cast<float>(by) + 1.1f};
+                        p.count = 1;
+                        p.spread = 0.2f;
+                        p.base_velocity = {0.0f, 0.8f};
+                        particles.spawn(p);
+                        if (unit(ambient_rng) < 0.3f)
+                        {
+                            ParticleSpawnParams ember;
+                            ember.effect = ParticleEffect::Spark;
+                            ember.position = {pos.x, static_cast<float>(by) + 0.5f};
+                            ember.count = 1;
+                            ember.spread = 1.0f;
+                            particles.spawn(ember);
+                        }
+                    }
+                    break;
+                }
+                case BlockID::Lava:
+                    if (unit(ambient_rng) < 0.04f)
+                    {
+                        ParticleSpawnParams p;
+                        p.effect = ParticleEffect::Ember;
+                        p.position = pos;
+                        p.count = 1;
+                        p.spread = 1.5f;
+                        p.base_velocity = {0.0f, 1.5f};
+                        particles.spawn(p);
+                    }
+                    break;
+                case BlockID::Water:
+                    // Bubble only at surface air cells — cheap heuristic
+                    if (unit(ambient_rng) < 0.02f)
+                    {
+                        Block above = local_world.getBlock(bx, by + 1);
+                        if (above.id == BlockID::Air)
+                        {
+                            ParticleSpawnParams p;
+                            p.effect = ParticleEffect::Bubble;
+                            p.position = pos;
+                            p.count = 1;
+                            p.spread = 0.2f;
+                            p.base_velocity = {0.0f, 0.5f};
+                            particles.spawn(p);
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
 }

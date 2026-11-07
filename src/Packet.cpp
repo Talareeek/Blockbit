@@ -706,3 +706,25 @@ AdminResponsePacket deserializeAdminResponse(PacketReader& r)
     if (size > 0) r.readBytes(p.payload.data(), size);
     return p;
 }
+
+std::vector<char> serializePacket(const ParticleBurstPacket& p)
+{
+    PacketWriter w(PacketType::ParticleBurst);
+    w.write(p.position);
+    w.write(p.effect);
+    w.write(p.count);
+    w.write(p.spread);
+    w.write(p.arg);
+    return w.release();
+}
+
+ParticleBurstPacket deserializeParticleBurst(PacketReader& r)
+{
+    ParticleBurstPacket p;
+    p.position = r.read<sf::Vector2f>();
+    p.effect   = r.read<uint16_t>();
+    p.count    = r.read<uint16_t>();
+    p.spread   = r.read<float>();
+    p.arg      = r.read<uint32_t>();
+    return p;
+}

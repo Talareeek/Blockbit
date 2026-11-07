@@ -4,6 +4,8 @@
 #include "GameState.hpp"
 #include "StructureTemplate.hpp"
 
+#include <cstdint>
+
 #include <SFML/Graphics/RenderTexture.hpp>
 #include <SFML/Graphics/Texture.hpp>
 
@@ -50,6 +52,7 @@ private:
     int                     palette_index = 0; // index into BLOCK_OPTIONS
     StructurePlacementMode  paint_mode    = StructurePlacementMode::Overwrite;
     Tool                    tool          = Tool::Paint;
+    uint16_t                paint_metadata = 0; // stamped on painted cells
 
     // Block entity / spawn pickers for AddBlockEntity / AddSpawn tools.
     int                     block_entity_kind_index = 0; // into BE_OPTIONS

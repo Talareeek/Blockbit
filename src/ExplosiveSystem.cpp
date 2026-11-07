@@ -4,6 +4,7 @@
 #include "../include/TransformComponent.hpp"
 #include "../include/HealthComponent.hpp"
 #include "../include/Prefab.hpp"
+#include "../include/Packet.hpp"
 
 #include <vector>
 #include <random>
@@ -55,6 +56,16 @@ void ExplosiveSystem(ServerWorld& world, float dt)
 
         const sf::Vector2<double> center = entity.getComponent<TransformComponent>().center();
         const float force = explosive.force;
+
+        // Visual burst for all clients. count/spread scale with yield so a
+        // tiny firework doesn't produce the same cloud as a big TNT.
+        ParticleBurstPacket burst;
+        burst.position = sf::Vector2f(static_cast<float>(center.x), static_cast<float>(center.y));
+        burst.effect   = 1; // ParticleEffect::Explosion
+        burst.count    = static_cast<uint16_t>(std::clamp<int>(static_cast<int>(force * 12.0f), 12, 80));
+        burst.spread   = force * 2.0f;
+        burst.arg      = 0;
+        world.pending_particle_bursts.push_back(burst);
 
         if(explosive.damageEntities)
         {

@@ -4,6 +4,7 @@
 #include "../include/AssetManager.hpp"
 #include "../include/BlockAtlas.hpp"
 #include "../include/Block.hpp"
+#include "../include/BlockStates.hpp"
 #include "../include/Item.hpp"
 #include "../include/BBT.hpp"
 #include "../include/World.hpp"
@@ -385,16 +386,51 @@ void StructureEditorGameState::drawCellIntoCanvas(sf::RenderTexture& rt, int tx,
             auto db_it = blockDatabase.find(cell.block.id);
             if (db_it != blockDatabase.end() && db_it->second.render.has_value())
             {
-                const sf::IntRect& uv = BlockAtlas::getUV(db_it->second.render->texture);
-                sf::Sprite sprite(BlockAtlas::getTexture());
-                sprite.setTextureRect(uv);
-                sprite.setPosition(pos);
-                const auto uv_size = uv.size;
-                if (uv_size.x > 0 && uv_size.y > 0)
+                const RenderProperties& render = *db_it->second.render;
+
+                // Mirror the game's neighbor-aware sampling so connected
+                // textures (smooth stone, coreheart) and state-driven sprites
+                // (water level, chest open) preview exactly as placed. Cells
+                // outside the template read as Air — same rule chunk borders
+                // use in the live mesh builder.
+                auto id_at = [&](int ox, int oy) -> BlockID
                 {
+                    if (!inBounds(ox, oy)) return BlockID::Air;
+                    return tmpl.cellAt(ox, oy).block.id;
+                };
+                const BlockNeighbors neighbors{
+                    id_at(tx,     ty + 1),
+                    id_at(tx + 1, ty),
+                    id_at(tx,     ty - 1),
+                    id_at(tx - 1, ty),
+                };
+
+                const sf::IntRect atlas_uv  = BlockAtlas::getUV(render.texture);
+                const sf::IntRect block_rect = render.rect(cell.block, neighbors);
+                const sf::IntRect final_uv{
+                    atlas_uv.position + block_rect.position,
+                    block_rect.size
+                };
+
+                const sf::FloatRect bounds = render.render_bounds(cell.block);
+
+                // Game uses Y-up world coords with a Y-flipped view; the editor
+                // canvas is plain Y-down. Convert bounds.y=0 ("bottom of cell"
+                // in-world) to screen-bottom here so partial-height blocks like
+                // water sit at the floor of the cell, not the ceiling.
+                const float draw_x = px + bounds.position.x * cell_pixels;
+                const float draw_y = py + (1.0f - bounds.position.y - bounds.size.y) * cell_pixels;
+                const float draw_w = bounds.size.x * cell_pixels;
+                const float draw_h = bounds.size.y * cell_pixels;
+
+                if (final_uv.size.x > 0 && final_uv.size.y > 0 && draw_w > 0.0f && draw_h > 0.0f)
+                {
+                    sf::Sprite sprite(BlockAtlas::getTexture());
+                    sprite.setTextureRect(final_uv);
+                    sprite.setPosition({draw_x, draw_y});
                     sprite.setScale({
-                        sz.x / static_cast<float>(uv_size.x),
-                        sz.y / static_cast<float>(uv_size.y),
+                        draw_w / static_cast<float>(final_uv.size.x),
+                        draw_h / static_cast<float>(final_uv.size.y),
                     });
                     rt.draw(sprite);
                 }
@@ -554,7 +590,7 @@ void StructureEditorGameState::handleCanvasClick(int tx, int ty, bool /*shift_do
         case Tool::Paint:
         {
             StructureCell& cell = tmpl.cells[ty * tmpl.width + tx];
-            cell.block = Block{BLOCK_OPTIONS[palette_index], 0};
+            cell.block = Block{BLOCK_OPTIONS[palette_index], paint_metadata};
             cell.mode  = paint_mode;
             dirty = true;
             break;
@@ -564,6 +600,12 @@ void StructureEditorGameState::handleCanvasClick(int tx, int ty, bool /*shift_do
             StructureCell& cell = tmpl.cells[ty * tmpl.width + tx];
             cell.block = Block{BlockID::Air, 0};
             cell.mode  = StructurePlacementMode::Skip;
+            auto be_end = std::remove_if(tmpl.block_entities.begin(), tmpl.block_entities.end(),
+                [&](const StructureBlockEntity& be) { return be.rx == tx && be.ry == ty; });
+            tmpl.block_entities.erase(be_end, tmpl.block_entities.end());
+            auto sp_end = std::remove_if(tmpl.spawns.begin(), tmpl.spawns.end(),
+                [&](const StructureSpawn& sp) { return sp.rx == tx && sp.ry == ty; });
+            tmpl.spawns.erase(sp_end, tmpl.spawns.end());
             dirty = true;
             break;
         }
@@ -571,6 +613,7 @@ void StructureEditorGameState::handleCanvasClick(int tx, int ty, bool /*shift_do
         {
             const StructureCell& cell = tmpl.cellAt(tx, ty);
             palette_index = paletteIndexOf(cell.block.id);
+            paint_metadata = cell.block.metadata;
             if (cell.mode != StructurePlacementMode::Skip)
                 paint_mode = cell.mode;
             break;
@@ -640,7 +683,7 @@ void StructureEditorGameState::handleFillRelease(int ax, int ay, int bx, int by)
         for (int x = x0; x <= x1; x++)
         {
             StructureCell& cell = tmpl.cells[y * tmpl.width + x];
-            cell.block = Block{BLOCK_OPTIONS[palette_index], 0};
+            cell.block = Block{BLOCK_OPTIONS[palette_index], paint_metadata};
             cell.mode  = paint_mode;
         }
     }
@@ -724,10 +767,66 @@ void StructureEditorGameState::drawLeftPanel()
         {
             const bool is_selected = (i == palette_index);
             if (ImGui::Selectable(blockName(BLOCK_OPTIONS[i]), is_selected))
+            {
                 palette_index = i;
+                paint_metadata = 0;
+            }
             if (is_selected) ImGui::SetItemDefaultFocus();
         }
         ImGui::EndCombo();
+    }
+
+    // Metadata editor — fields depend on the selected block. Sliders use the
+    // same packed layout as BlockStates so the preview in drawCellIntoCanvas
+    // matches what the live chunk mesh produces from the same metadata byte.
+    const BlockID selected_id = BLOCK_OPTIONS[palette_index];
+    switch (selected_id)
+    {
+        case BlockID::Water:
+        {
+            int level = WaterState::unpack(paint_metadata).level;
+            if (ImGui::SliderInt("Water level", &level, 0, WaterState::SOURCE))
+                paint_metadata = WaterState{static_cast<uint8_t>(level)}.pack();
+            ImGui::TextDisabled("%d = source, %d = full flow", WaterState::SOURCE, WaterState::FULL);
+            break;
+        }
+        case BlockID::Lava:
+        {
+            int level = LavaState::unpack(paint_metadata).level;
+            if (ImGui::SliderInt("Lava level", &level, 0, LavaState::SOURCE))
+                paint_metadata = LavaState{static_cast<uint8_t>(level)}.pack();
+            ImGui::TextDisabled("%d = source, %d = full flow", LavaState::SOURCE, LavaState::FULL);
+            break;
+        }
+        case BlockID::Chest:
+        {
+            bool open = ChestState::unpack(paint_metadata).open;
+            if (ImGui::Checkbox("Open", &open))
+                paint_metadata = ChestState{open}.pack();
+            break;
+        }
+        case BlockID::Furnace:
+        {
+            bool lit = FurnaceState::unpack(paint_metadata).lit;
+            if (ImGui::Checkbox("Lit", &lit))
+                paint_metadata = FurnaceState{lit}.pack();
+            break;
+        }
+        case BlockID::Cactus:
+        {
+            bool is_top = CactusState::unpack(paint_metadata).is_top;
+            if (ImGui::Checkbox("Top segment", &is_top))
+                paint_metadata = CactusState{is_top}.pack();
+            break;
+        }
+        default:
+        {
+            int raw = static_cast<int>(paint_metadata);
+            ImGui::SetNextItemWidth(100.0f);
+            if (ImGui::InputInt("Metadata", &raw))
+                paint_metadata = static_cast<uint16_t>(std::clamp(raw, 0, 0xFFFF));
+            break;
+        }
     }
 
     int mode_int = static_cast<int>(paint_mode);
@@ -875,7 +974,10 @@ void StructureEditorGameState::drawRightPanel()
 
 void StructureEditorGameState::drawCanvasPanel()
 {
-    ImGui::BeginChild("##canvas", ImVec2(0.0f, 0.0f), true);
+    // Negative width reserves space on the right for drawRightPanel's child
+    // (which is 260 px wide). Using (0,0) here eats the entire remaining
+    // region and pushes the right panel off-screen, hiding the resize inputs.
+    ImGui::BeginChild("##canvas", ImVec2(-270.0f, 0.0f), true);
 
     const ImVec2 avail = ImGui::GetContentRegionAvail();
     canvas_display_size = {avail.x, avail.y - 24.0f};
@@ -961,10 +1063,19 @@ void StructureEditorGameState::drawCanvasPanel()
             if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
             {
                 // Right click is always erase, regardless of tool — matches the
-                // mental model from in-game building.
+                // mental model from in-game building. Clears any block entity
+                // or spawn attached to the cell too, so the cell is fully blank.
                 StructureCell& cell = tmpl.cells[hover_ty * tmpl.width + hover_tx];
                 cell.block = Block{BlockID::Air, 0};
                 cell.mode  = StructurePlacementMode::Skip;
+                const int rx = hover_tx;
+                const int ry = hover_ty;
+                auto be_end = std::remove_if(tmpl.block_entities.begin(), tmpl.block_entities.end(),
+                    [&](const StructureBlockEntity& be) { return be.rx == rx && be.ry == ry; });
+                tmpl.block_entities.erase(be_end, tmpl.block_entities.end());
+                auto sp_end = std::remove_if(tmpl.spawns.begin(), tmpl.spawns.end(),
+                    [&](const StructureSpawn& sp) { return sp.rx == rx && sp.ry == ry; });
+                tmpl.spawns.erase(sp_end, tmpl.spawns.end());
                 dirty = true;
             }
         }

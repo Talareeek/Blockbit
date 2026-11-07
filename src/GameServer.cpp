@@ -482,6 +482,17 @@ void GameServer::broadcastBlockUpdates()
     world.pending_block_updates.clear();
 }
 
+void GameServer::broadcastParticleBursts()
+{
+    if (world.pending_particle_bursts.empty()) return;
+
+    for (const ParticleBurstPacket& burst : world.pending_particle_bursts)
+    {
+        transport->broadcast(serializePacket(burst));
+    }
+    world.pending_particle_bursts.clear();
+}
+
 void GameServer::broadcastSnapshot()
 {
     if (clients.empty())
@@ -743,6 +754,7 @@ void GameServer::update(float dt)
         streamChunksToClients();
         broadcastBlockUpdates();
         broadcastSnapshot();
+        broadcastParticleBursts();
 
         update_clock.stop();
 

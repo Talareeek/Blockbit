@@ -16,6 +16,7 @@
 #include "TouchInputOverlay.hpp"
 #include "GamepadInput.hpp"
 #include "View.hpp"
+#include "ParticleManager.hpp"
 
 #include <memory>
 #include "ClientWorld.hpp"
@@ -97,6 +98,20 @@ private:
     sf::Vector2<double> camera;
     float view_scale = 1.0f;
 
+    // Pure visual effects layer. Not an entity, not snapshotted — driven by
+    // server bursts (explosions, damage) and client-only events (block break,
+    // ambient torch/furnace/lava).
+    ParticleManager particles;
+
+    // Rolling sample of HealthComponent.since_last_damaged per entity so the
+    // client can spot a fresh damage event when the server resets the field.
+    std::unordered_map<UUID, float> prev_damage_flash;
+
+    // Ambient-particle scan runs on a slow cadence; hitting every frame would
+    // be wasteful and would pile up flames/smoke faster than they fade.
+    float ambient_particle_timer = 0.0f;
+    static constexpr float AMBIENT_PARTICLE_INTERVAL = 0.1f;
+
     // Virtual on-screen controls. Alive on every platform but only receives
     // sf::Event::TouchXxx events on Android; renders nothing on desktop.
     TouchInputOverlay touch_overlay;
@@ -115,6 +130,9 @@ private:
     void sendTickInputs();
     void applySnapshot(const SnapshotPacket& snapshot);
     void saveScreenshot(sf::RenderWindow& window);
+
+    void updateAmbientParticles(float dt);
+    void observeDamageParticles();
 
     void onTick(float tick_step);
 
