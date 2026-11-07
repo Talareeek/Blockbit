@@ -21,11 +21,13 @@
 #include "../include/World.hpp"
 #include "../include/GameCommon.hpp"
 #include "../include/Prefab.hpp"
+#include "../include/EffectRegistry.hpp"
 #include "../include/StructureRegistry.hpp"
 #include "../include/ServerConfig.hpp"
 #include "../include/ServerWorld.hpp"
 #include "../include/Block.hpp"
 #include "../include/Item.hpp"
+#include "../include/ItemDataComponent.hpp"
 #include "../include/FlatWorldGenerator.hpp"
 
 #include <array>
@@ -1052,6 +1054,7 @@ namespace
 int main(int argc, char* argv[])
 {
     detectAnsiSupport();
+    registerBuiltinItemDataComponents();
 
     std::cout << c::dim() << "[Blockbit Dedicated Server " << __DATE__ << " " << __TIME__ << " build]"
               << c::reset() << '\n';
@@ -1106,6 +1109,7 @@ int main(int argc, char* argv[])
     }
 
     PrefabRegistry::init();
+    EffectRegistry::init();
     StructureRegistry::init();
 
     MenuContext ctx{args.server_dir, std::move(config)};

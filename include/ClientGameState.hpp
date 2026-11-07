@@ -112,6 +112,30 @@ private:
     float ambient_particle_timer = 0.0f;
     static constexpr float AMBIENT_PARTICLE_INTERVAL = 0.1f;
 
+    // Smoothed precipitation intensities, driven toward 0/1 based on the
+    // authoritative WeatherState in local_world.weather. The fade is purely a
+    // client-side feel thing — the server flips the enum instantly, the
+    // renderer eases it over WEATHER_FADE_SECONDS so rain doesn't pop in.
+    float rain_intensity = 0.0f;
+    float thunder_intensity = 0.0f;
+    static constexpr float WEATHER_FADE_SECONDS = 4.0f;
+
+    // Decays over LIGHTNING_FLASH_DURATION whenever a new LightningBolt entity
+    // is seen in an incoming snapshot. Drives renderLightningFlash. Not
+    // snapshotted — purely a client-side reaction to the first time we see
+    // each strike.
+    float lightning_flash = 0.0f;
+    static constexpr float LIGHTNING_FLASH_DURATION = 0.4f;
+
+    void updateWeatherIntensity(float dt);
+
+    // Horizontal distance (in blocks) walked by the local player since the
+    // last footstep puff. We emit a burst every FOOTSTEP_STRIDE blocks so
+    // the cadence scales with speed, not frame time.
+    double footstep_distance = 0.0;
+    std::optional<double> footstep_last_x;
+    static constexpr double FOOTSTEP_STRIDE = 0.8;
+
     // Virtual on-screen controls. Alive on every platform but only receives
     // sf::Event::TouchXxx events on Android; renders nothing on desktop.
     TouchInputOverlay touch_overlay;
@@ -132,6 +156,7 @@ private:
     void saveScreenshot(sf::RenderWindow& window);
 
     void updateAmbientParticles(float dt);
+    void updateFootstepParticles(float dt);
     void observeDamageParticles();
 
     void onTick(float tick_step);

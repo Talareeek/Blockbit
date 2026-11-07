@@ -9,6 +9,7 @@
 #include "../include/AIComponent.hpp"
 #include "../include/ItemComponent.hpp"
 #include "../include/FallingBlockComponent.hpp"
+#include "../include/EffectsComponent.hpp"
 #include "../include/World.hpp"
 
 #include <random>
@@ -51,6 +52,8 @@ void PrefabRegistry::init()
         animation.frameSize = {12, 16};
 
         entity.addComponent(animation);
+
+        entity.addComponent(EffectsComponent{});
 
         add(PrefabID::Player, entity);
     }
@@ -95,6 +98,8 @@ void PrefabRegistry::init()
 
         entity.addComponent(animation);
 
+        entity.addComponent(EffectsComponent{});
+
         add(PrefabID::Pig, entity);
     }
 
@@ -113,6 +118,8 @@ void PrefabRegistry::init()
         ai.attackRange    = 3.0f;
         ai.moveSpeed      = 25.0f;
         entity.addComponent(ai);
+
+        entity.addComponent(EffectsComponent{});
 
         add(PrefabID::Cube, entity);
     }

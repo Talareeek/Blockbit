@@ -7,12 +7,12 @@
 #include "../include/PhysicsComponent.hpp"
 #include "../include/RenderComponent.hpp"
 #include "../include/ItemComponent.hpp"
+#include "../include/ItemUtils.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/Render.hpp"
 #include "../include/Prefab.hpp"
 
 #include <algorithm>
-#include <cstring>
 
 namespace
 {
@@ -30,17 +30,16 @@ namespace
 
     bool decodeStack(const std::vector<uint8_t>& payload, ItemStack& out)
     {
-        if (payload.size() != sizeof(ItemStack)) return false;
-        std::memcpy(&out, payload.data(), sizeof(ItemStack));
+        auto parsed = stackFromBytes(payload, /*write_instance_data=*/true);
+        if (!parsed) return false;
+        out = *parsed;
         return true;
     }
 #endif
 
     std::vector<uint8_t> encodeStack(const ItemStack& stack)
     {
-        std::vector<uint8_t> buffer(sizeof(ItemStack));
-        std::memcpy(buffer.data(), &stack, sizeof(ItemStack));
-        return buffer;
+        return stackToBytes(stack);
     }
 
     ChestBlockEntity* getChest(World& world, sf::Vector2i position)
@@ -335,6 +334,11 @@ std::deque<SetContentData> ServerChestView::drainPendingContentUpdates()
     return drained;
 }
 
+void ServerChestView::collectLiveInstanceIDs(std::unordered_set<UUID>& out) const
+{
+    if (cursor_stack.instanceID.has_value()) out.insert(*cursor_stack.instanceID);
+}
+
 #ifndef HEADLESS_BUILD
 // ---------- ClientChestView ----------
 
@@ -348,10 +352,7 @@ ClientChestView::ClientChestView()
 
 void ClientChestView::pushClick(uint16_t slot, ChestViewAction action, const ItemStack& stack)
 {
-    std::vector<uint8_t> payload(sizeof(ItemStack));
-    std::memcpy(payload.data(), &stack, sizeof(ItemStack));
-
-    pending.push_back(ViewEventData{slot, static_cast<uint8_t>(action), std::move(payload)});
+    pending.push_back(ViewEventData{slot, static_cast<uint8_t>(action), stackToBytes(stack)});
 }
 
 void ClientChestView::handleEvent(const sf::Event& event)

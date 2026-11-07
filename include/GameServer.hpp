@@ -75,6 +75,15 @@ private:
     float block_update_accumulator = 0.0f;
     uint64_t block_update_tick = 0;
 
+    // Periodic sweep over the global itemInstances map so UUIDs attached to
+    // destroyed stacks (eaten food, burned tools, overfull drops that got
+    // yeeted) stop bloating memory. Cursor stacks of open views are kept
+    // alive by polling each ServerView::collectLiveInstanceIDs. Interval is
+    // intentionally long — 30 s — so the cost is negligible per-tick.
+    static constexpr float ITEM_INSTANCE_GC_INTERVAL = 30.0f;
+    float item_instance_gc_accumulator = 0.0f;
+    void runItemInstanceGC();
+
     uint32_t consecutive_tick_exceptions = 0;
     bool unrecoverable = false;
 

@@ -30,7 +30,31 @@ extern sf::Texture generateBackground();
 
 extern std::pair<sf::Color, sf::Color> getSkyGradient(float t);
 
+// Same curve as getSkyGradient but tinted toward a stormy gray by
+// rain_intensity, and darker still by thunder_intensity. Both are 0..1 and are
+// smoothed on the client — a flat flag->color mapping would pop.
+extern std::pair<sf::Color, sf::Color> getSkyGradientWeathered(float t, float rain_intensity, float thunder_intensity);
+
 extern void renderSky(sf::RenderTarget& target, sf::Color top, sf::Color bottom);
+
+// Draws batched rain/snow quads inside a cylinder around the camera. Reads
+// chunks straight from world (via getBlock) to find the top opaque block per
+// column so drops clip at roofs instead of falling through them. Biome of the
+// column decides between rain and snow. intensity scalars gate both the drop
+// count and alpha, so a 0 intensity costs almost nothing.
+extern void renderPrecipitation(ClientWorld& world, sf::Vector2<double> camera,
+                                float rain_intensity, float thunder_intensity,
+                                sf::RenderWindow& window);
+
+// Scans the world for entities carrying LightningBoltComponent and draws a
+// procedural zigzag per strike. Alpha follows each bolt's remaining lifetime
+// so it fades out before the server deletes the entity.
+extern void renderLightningEntities(World& world, sf::Vector2<double> camera, sf::RenderWindow& window);
+
+// Fullscreen white overlay used for a lightning strike flash. intensity is
+// 0..1; decayed on the client. Called once per frame when the flash timer is
+// above zero.
+extern void renderLightningFlash(float intensity, sf::RenderTarget& target);
 
 // phase is a normalized sun phase in [0, 1): 0=midnight, 0.25=sunrise,
 // 0.5=noon, 0.75=sunset. Compute with GameCommon::solarPhase so sunrise /

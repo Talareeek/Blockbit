@@ -156,6 +156,7 @@ void PlayerControlledSystem(World& world, float dt)
         }
 
         player.since_last_use += dt;
+        player.since_last_attack += dt;
         player.dirty = true;
 
         if(player.mid_usage && player.since_last_use >= 0.2f)

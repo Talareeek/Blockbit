@@ -261,6 +261,7 @@ std::vector<char> serializePacket(const SnapshotPacket& p)
     w.write(p.tick);
     w.write(p.dayTime);
     w.write(p.days);
+    w.write(p.weather);
 
     w.write<uint32_t>(static_cast<uint32_t>(p.new_entities.size()));
     for (const auto& [id, tag] : p.new_entities)
@@ -513,6 +514,7 @@ SnapshotPacket deserializeSnapshot(PacketReader& r)
     p.tick = r.read<uint64_t>();
     p.dayTime = r.read<float>();
     p.days = r.read<uint64_t>();
+    p.weather = r.read<WeatherState>();
 
     uint32_t new_count = r.read<uint32_t>();
     if (new_count > 100000) throw std::runtime_error("Snapshot: new entity count too large");

@@ -175,6 +175,12 @@ struct ItemData
 
     std::optional<uint32_t> maxDurability;
 
+    // Per-item attack behaviour. If `damage` is unset, hits roll a random
+    // 4..5. `attack_delay` is the minimum seconds between consecutive hits by
+    // this item and is used by Input.cpp ATTACK_START.
+    std::optional<uint32_t> damage;
+    float attack_delay = 0.25f;
+
     std::function<bool(World& world, sf::Vector2<double> mouse, UUID user)> onUse = [](World&, sf::Vector2<double>, UUID) -> bool {return false;};
 };
 

@@ -22,6 +22,7 @@ struct PlayerControlledComponent : public Component
     bool mid_usage = false;
 
     float since_last_use = 0.0f;
+    float since_last_attack = 0.0f;
 
     bool drops = false;
     bool drops_full_stack = false;
@@ -100,6 +101,7 @@ struct PlayerControlledComponent : public Component
         out->mid_attack        = mid_attack;
         out->mid_usage         = mid_usage;
         out->since_last_use    = since_last_use;
+        out->since_last_attack = since_last_attack;
         out->drops             = drops;
         out->drops_full_stack  = drops_full_stack;
         out->mining_block      = mining_block;

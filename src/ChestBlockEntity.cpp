@@ -1,4 +1,5 @@
 #include "../include/ChestBlockEntity.hpp"
+#include "../include/ItemUtils.hpp"
 
 ChestBlockEntity::ChestBlockEntity(sf::Vector2i position) : BlockEntity(position)
 {
@@ -18,14 +19,7 @@ Tag ChestBlockEntity::serialize() const
 
     for (const auto& stack : stacks)
     {
-        TagCompound slot;
-        slot["item_id"] = Tag(static_cast<uint32_t>(stack.itemID));
-        slot["quantity"] = Tag(stack.quantity);
-        if (stack.instanceID.has_value())
-        {
-            slot["instance_id"] = Tag(stack.instanceID->toString());
-        }
-        slot_list.push_back(Tag(slot));
+        slot_list.push_back(stackToTag(stack));
     }
 
     compound["stacks"] = Tag(slot_list);
@@ -47,20 +41,7 @@ void ChestBlockEntity::deserialize(const Tag& tag)
 
     for (size_t i = 0; i < count; ++i)
     {
-        const auto& slot = slot_list[i].get<TagCompound>();
-
-        auto id_it = slot.find("item_id");
-        auto qty_it = slot.find("quantity");
-        if (id_it == slot.end() || qty_it == slot.end()) continue;
-
-        stacks[i].itemID = static_cast<ItemID>(id_it->second.get<uint32_t>());
-        stacks[i].quantity = qty_it->second.get<uint32_t>();
-
-        stacks[i].instanceID.reset();
-        if (auto iid = slot.find("instance_id"); iid != slot.end())
-        {
-            stacks[i].instanceID = uuidFromString(iid->second.get<std::string>());
-        }
+        stacks[i] = stackFromTag(slot_list[i], /*write_instance_data=*/true);
     }
 }
 

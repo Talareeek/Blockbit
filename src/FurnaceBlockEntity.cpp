@@ -1,6 +1,7 @@
 #include "../include/FurnaceBlockEntity.hpp"
 #include "../include/World.hpp"
 #include "../include/Block.hpp"
+#include "../include/ItemUtils.hpp"
 
 namespace
 {
@@ -122,21 +123,9 @@ Tag FurnaceBlockEntity::serialize() const
 {
     TagCompound compound;
 
-    auto encodeStack = [](const ItemStack& stack) -> Tag
-    {
-        TagCompound slot;
-        slot["item_id"]  = Tag(static_cast<uint32_t>(stack.itemID));
-        slot["quantity"] = Tag(stack.quantity);
-        if (stack.instanceID.has_value())
-        {
-            slot["instance_id"] = Tag(stack.instanceID->toString());
-        }
-        return Tag(slot);
-    };
-
-    compound["fuel"]   = encodeStack(fuel);
-    compound["input"]  = encodeStack(input);
-    compound["output"] = encodeStack(output);
+    compound["fuel"]   = stackToTag(fuel);
+    compound["input"]  = stackToTag(input);
+    compound["output"] = stackToTag(output);
 
     compound["burn_time_remaining"] = Tag(burn_time_remaining);
     compound["burn_time_total"]     = Tag(burn_time_total);
@@ -155,21 +144,7 @@ void FurnaceBlockEntity::deserialize(const Tag& tag)
     {
         auto it = compound.find(key);
         if (it == compound.end()) return {ItemID::None, 0};
-        const auto& slot = it->second.get<TagCompound>();
-
-        ItemStack stack{ItemID::None, 0};
-        auto id_it  = slot.find("item_id");
-        auto qty_it = slot.find("quantity");
-        if (id_it == slot.end() || qty_it == slot.end()) return stack;
-
-        stack.itemID   = static_cast<ItemID>(id_it->second.get<uint32_t>());
-        stack.quantity = qty_it->second.get<uint32_t>();
-
-        if (auto iid = slot.find("instance_id"); iid != slot.end())
-        {
-            stack.instanceID = uuidFromString(iid->second.get<std::string>());
-        }
-        return stack;
+        return stackFromTag(it->second, /*write_instance_data=*/true);
     };
 
     fuel   = decodeStack(compound, "fuel");

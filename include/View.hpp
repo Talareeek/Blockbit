@@ -2,9 +2,11 @@
 #define VIEW_HPP
 
 #include "UIElement.hpp"
+#include "UUID.hpp"
 
 #include <cstdint>
 #include <deque>
+#include <unordered_set>
 #include <vector>
 
 class World;
@@ -61,6 +63,13 @@ public:
     virtual bool shouldClose(World& world) const { (void)world; return false; }
 
     virtual std::deque<SetContentData> drainPendingContentUpdates() = 0;
+
+    // Push the UUIDs of any ItemInstance that is currently held only by
+    // transient view state (cursor stack, recipe-result preview, etc.). The
+    // itemInstances GC walks inventories and block entities on its own; this
+    // hook is the view's chance to say "my cursor_stack also references X,
+    // please don't drop it from the global map while I'm open".
+    virtual void collectLiveInstanceIDs(std::unordered_set<UUID>& /*out*/) const {}
 
     virtual ~ServerView() = default;
 };

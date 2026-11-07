@@ -5,6 +5,7 @@
 #include "Entity.hpp"
 #include "PerlinNoise.hpp"
 #include "Climate.hpp"
+#include "Weather.hpp"
 #include "WorldGenerator.hpp"
 #include "FlatWorldGenerator.hpp"
 #include "BBT.hpp"
@@ -107,6 +108,19 @@ public:
     float dayTime{0.0f};
 
     uint64_t days{0};
+
+    // Global weather state. Server mutates via WeatherSystem; client reads it
+    // from the Snapshot each tick and renders accordingly. Clear is the
+    // default, and biome-local reinterpretation (rain vs snow vs nothing) is
+    // done at render time by Weather::precipitationFor so we don't ship a
+    // per-column flag.
+    WeatherState weather{WeatherState::Clear};
+
+    // Seconds until the next weather transition. Only the server ticks this.
+    // Rolled into a fresh range after each flip (see WeatherSystem). Persisted
+    // in the world save alongside weather so long storms don't collapse on
+    // reload.
+    float weatherTimer{0.0f};
 
     static constexpr float DAY_CYCLE_DURATION = 1200.0f;
     static constexpr int SEA_LEVEL  = 75;

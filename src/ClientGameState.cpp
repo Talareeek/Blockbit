@@ -19,10 +19,12 @@
 #include "../include/LoopbackServerTransport.hpp"
 #include "../include/CompositeServerTransport.hpp"
 #include "../include/PhysicsSystem.hpp"
+#include "../include/PhysicsComponent.hpp"
 #include "../include/AnnouncementState.hpp"
 #include "../include/World.hpp"
 #include "../include/Climate.hpp"
 #include "../include/NetworkInterpolationComponent.hpp"
+#include "../include/LightningBoltComponent.hpp"
 #include "../include/ChestView.hpp"
 #include "../include/InventoryView.hpp"
 #include "../include/FurnaceView.hpp"
@@ -202,6 +204,7 @@ void ClientGameState::applySnapshot(const SnapshotPacket& snapshot)
 
     local_world.dayTime = snapshot.dayTime;
     local_world.days = snapshot.days;
+    local_world.weather = snapshot.weather;
 
     for (const auto& [id, tag] : snapshot.new_entities)
     {
@@ -210,6 +213,13 @@ void ClientGameState::applySnapshot(const SnapshotPacket& snapshot)
         Entity entity(id);
         Tag payload = tag;
         entity.deserialize(payload);
+
+        // Trigger a screen flash the first time we see each lightning entity.
+        // Not gated on viewer position — storms light up the whole sky.
+        if (entity.hasComponent<LightningBoltComponent>())
+        {
+            lightning_flash = LIGHTNING_FLASH_DURATION;
+        }
 
         local_world.addEntity(std::move(entity));
 
@@ -914,6 +924,8 @@ void ClientGameState::update(float dt)
     AnimationSystem(local_world, dt);
 
     updateAmbientParticles(dt);
+    updateFootstepParticles(dt);
+    updateWeatherIntensity(dt);
     particles.tick(dt, local_world);
 
     furnace_animation_timer += dt;
@@ -997,7 +1009,7 @@ void ClientGameState::render(sf::RenderWindow& window)
 
     if (!isLocalSession() && !initialized)
     {
-        auto [sky_top, sky_bottom] = getSkyGradient(solarPhase(local_world.getDayTime(), local_world.days));
+        auto [sky_top, sky_bottom] = getSkyGradientWeathered(solarPhase(local_world.getDayTime(), local_world.days), rain_intensity, thunder_intensity);
         renderSky(window, sky_top, sky_bottom);
 
         sf::Text waiting(AssetManager::getFont(AssetManager::FontID::PressStart2P), "Connecting to " + remote_address + "...", 28);
@@ -1027,7 +1039,7 @@ void ClientGameState::render(sf::RenderWindow& window)
 
     // SKY
     const float sun_phase = solarPhase(local_world.getDayTime(), local_world.days);
-    auto [sky_top, sky_bottom] = getSkyGradient(sun_phase);
+    auto [sky_top, sky_bottom] = getSkyGradientWeathered(sun_phase, rain_intensity, thunder_intensity);
     renderSky(window, sky_top, sky_bottom);
 
     renderStars(sun_phase, window);
@@ -1040,6 +1052,14 @@ void ClientGameState::render(sf::RenderWindow& window)
 
     // WORLD
     RenderWorld(local_world, camera, window);
+
+    // PRECIPITATION — drawn after world blocks so drops occlude terrain,
+    // before particles so block-break puffs sit on top. Clipped against the
+    // top opaque block per column, so it doesn't leak into roofed areas.
+    renderPrecipitation(local_world, camera, rain_intensity, thunder_intensity, window);
+
+    // LIGHTNING ZIGZAGS — procedural, additive blend, in world space.
+    renderLightningEntities(local_world, camera, window);
 
     // PARTICLES — draw after world so they appear on top of blocks and
     // entities. Pure visual layer, no snapshot dependency.
@@ -1123,6 +1143,14 @@ void ClientGameState::render(sf::RenderWindow& window)
     }
 
     window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));
+
+    // LIGHTNING FLASH — fullscreen white overlay, under chat/UI so chat
+    // remains readable during a strike.
+    if (lightning_flash > 0.0f)
+    {
+        renderLightningFlash(lightning_flash / LIGHTNING_FLASH_DURATION, window);
+    }
+
     chat_ui.render(window);
 
     if (pending_screenshot)
@@ -1366,4 +1394,90 @@ void ClientGameState::updateAmbientParticles(float dt)
             }
         }
     }
+}
+
+void ClientGameState::updateWeatherIntensity(float dt)
+{
+    const bool is_raining   = local_world.weather != WeatherState::Clear;
+    const bool is_thundering = local_world.weather == WeatherState::Thunder;
+
+    const float step = dt / WEATHER_FADE_SECONDS;
+
+    const float rain_target    = is_raining    ? 1.0f : 0.0f;
+    const float thunder_target = is_thundering ? 1.0f : 0.0f;
+
+    if (rain_intensity < rain_target)
+        rain_intensity = std::min(rain_intensity + step, rain_target);
+    else if (rain_intensity > rain_target)
+        rain_intensity = std::max(rain_intensity - step, rain_target);
+
+    if (thunder_intensity < thunder_target)
+        thunder_intensity = std::min(thunder_intensity + step, thunder_target);
+    else if (thunder_intensity > thunder_target)
+        thunder_intensity = std::max(thunder_intensity - step, thunder_target);
+
+    if (lightning_flash > 0.0f) lightning_flash = std::max(0.0f, lightning_flash - dt);
+}
+
+void ClientGameState::updateFootstepParticles(float /*dt*/)
+{
+    if (!local_player_entity_id.has_value()) return;
+    if (!local_world.doesEntityExist(local_player_entity_id.value())) return;
+
+    auto& entity = local_world.getEntity(local_player_entity_id.value());
+    if (!entity.hasComponent<TransformComponent>() || !entity.hasComponent<PhysicsComponent>()) return;
+
+    const auto& transform = entity.getComponent<TransformComponent>();
+    const auto& physics   = entity.getComponent<PhysicsComponent>();
+
+    double current_x = transform.position.x;
+
+    if (!footstep_last_x.has_value())
+    {
+        footstep_last_x = current_x;
+        return;
+    }
+
+    double signed_delta = current_x - footstep_last_x.value();
+    double delta = std::abs(signed_delta);
+    footstep_last_x = current_x;
+
+    // Only count travel while actually walking on solid ground. Airborne drift
+    // (jumps, knockback) shouldn't kick up dust, and when stationary we also
+    // drain the accumulator so the next burst requires a fresh stride.
+    if (!physics.onGround || delta < 1e-6)
+    {
+        footstep_distance = 0.0;
+        return;
+    }
+
+    footstep_distance += delta;
+    if (footstep_distance < FOOTSTEP_STRIDE) return;
+    footstep_distance = 0.0;
+
+    // Sample the block directly under the player's bottom center. When
+    // onGround is true, position.y rests on top of that block, so the block
+    // index is one below.
+    int feet_bx = static_cast<int>(std::floor(transform.position.x + transform.size.x * 0.5));
+    int feet_by = static_cast<int>(std::floor(transform.position.y)) - 1;
+    Block under = local_world.getBlock(feet_bx, feet_by);
+
+    auto it = blockDatabase.find(under.id);
+    if (it == blockDatabase.end()) return;
+    const BlockData& data = it->second;
+    if (!data.solid || !data.render.has_value()) return;
+
+    ParticleSpawnParams params;
+    params.effect   = ParticleEffect::BlockDust;
+    params.position = sf::Vector2f(
+        static_cast<float>(transform.position.x + transform.size.x * 0.5),
+        static_cast<float>(transform.position.y) + 0.05f);
+    params.count    = 3;
+    params.spread   = 1.2f;
+    // Push particles opposite the direction of motion so they trail behind
+    // the walker, and give a slight upward kick so they settle visibly.
+    float dir = (signed_delta >= 0.0) ? -1.0f : 1.0f;
+    params.base_velocity = {dir * 1.2f, 1.5f};
+    params.block_id = under.id;
+    particles.spawn(params);
 }

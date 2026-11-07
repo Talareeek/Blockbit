@@ -22,6 +22,7 @@
 #include <iostream>
 #include <cmath>
 #include <limits>
+#include <random>
 
 
 std::vector<Input> getInputs(const World& world, sf::Vector2<double> camera, const sf::RenderWindow& window)
@@ -170,6 +171,7 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
     auto& transform = entity.getComponent<TransformComponent>();
     auto& player = entity.getComponent<PlayerControlledComponent>();
     auto& animation = entity.getComponent<AnimationComponent>();
+    auto& inventory = entity.getComponent<InventoryComponent>();
 
     for(const auto& input : inputs)
     {
@@ -224,6 +226,11 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
                 player.mid_attack = true;
                 player.dirty = true;
 
+                const auto& held = inventory.inventory.slots[inventory.selectedSlot];
+                const ItemData& held_data = itemDatabase[held.itemID];
+
+                if(player.since_last_attack < held_data.attack_delay) break;
+
                 const sf::Vector2<double> cursor = player.cursor_position;
 
                 UUID best_id{};
@@ -261,14 +268,28 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
                     }
                 }
 
+                player.since_last_attack = 0.0f;
+
                 if(has_best)
                 {
                     auto& target_entity = world.getEntity(best_id);
                     auto& target_health = target_entity.getComponent<HealthComponent>();
                     auto& target_transform = target_entity.getComponent<TransformComponent>();
 
-                    target_health.health = (target_health.health > PLAYER_HIT_DAMAGE)
-                                           ? target_health.health - PLAYER_HIT_DAMAGE
+                    uint32_t hit_damage;
+                    if(held_data.damage.has_value())
+                    {
+                        hit_damage = *held_data.damage;
+                    }
+                    else
+                    {
+                        static thread_local std::mt19937 rng{std::random_device{}()};
+                        std::uniform_int_distribution<uint32_t> dist(4, 5);
+                        hit_damage = dist(rng);
+                    }
+
+                    target_health.health = (target_health.health > hit_damage)
+                                           ? target_health.health - hit_damage
                                            : 0;
                     target_health.since_last_damaged = 0.0f;
                     target_health.dirty = true;

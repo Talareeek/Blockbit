@@ -60,6 +60,7 @@ public:
     void onClose(World& world) override;
 
     std::deque<SetContentData> drainPendingContentUpdates() override;
+    void collectLiveInstanceIDs(std::unordered_set<UUID>& out) const override;
 };
 
 class ClientInventoryView : public ClientView

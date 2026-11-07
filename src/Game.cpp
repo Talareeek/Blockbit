@@ -15,6 +15,7 @@
 #include "../include/BlockAtlas.hpp"
 #include "../include/AuthorGameState.hpp"
 #include "../include/Prefab.hpp"
+#include "../include/EffectRegistry.hpp"
 #include "../include/StructureRegistry.hpp"
 #include "../include/Settings.hpp"
 #include "../include/GameCommon.hpp"
@@ -538,6 +539,7 @@ Game::Game()
     AssetManager::loadMusic(AssetManager::MusicID::Dream, "resources/sounds/music/dream.mp3");
 
     PrefabRegistry::init();
+    EffectRegistry::init();
     StructureRegistry::init();
 
 

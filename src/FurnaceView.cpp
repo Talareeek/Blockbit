@@ -7,6 +7,7 @@
 #include "../include/PhysicsComponent.hpp"
 #include "../include/RenderComponent.hpp"
 #include "../include/ItemComponent.hpp"
+#include "../include/ItemUtils.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/Render.hpp"
 #include "../include/Prefab.hpp"
@@ -33,8 +34,9 @@ namespace
 
     bool decodeStack(const std::vector<uint8_t>& payload, ItemStack& out)
     {
-        if (payload.size() != sizeof(ItemStack)) return false;
-        std::memcpy(&out, payload.data(), sizeof(ItemStack));
+        auto parsed = stackFromBytes(payload, /*write_instance_data=*/true);
+        if (!parsed) return false;
+        out = *parsed;
         return true;
     }
 
@@ -49,9 +51,7 @@ namespace
 
     std::vector<uint8_t> encodeStack(const ItemStack& stack)
     {
-        std::vector<uint8_t> buffer(sizeof(ItemStack));
-        std::memcpy(buffer.data(), &stack, sizeof(ItemStack));
-        return buffer;
+        return stackToBytes(stack);
     }
 
     std::vector<uint8_t> encodeProgress(float remaining, float total)
@@ -360,6 +360,11 @@ std::deque<SetContentData> ServerFurnaceView::drainPendingContentUpdates()
     return drained;
 }
 
+void ServerFurnaceView::collectLiveInstanceIDs(std::unordered_set<UUID>& out) const
+{
+    if (cursor_stack.instanceID.has_value()) out.insert(*cursor_stack.instanceID);
+}
+
 #ifndef HEADLESS_BUILD
 // ---------- ClientFurnaceView ----------
 
@@ -373,10 +378,7 @@ ClientFurnaceView::ClientFurnaceView()
 
 void ClientFurnaceView::pushClick(uint16_t slot, FurnaceViewAction action, const ItemStack& stack)
 {
-    std::vector<uint8_t> payload(sizeof(ItemStack));
-    std::memcpy(payload.data(), &stack, sizeof(ItemStack));
-
-    pending.push_back(ViewEventData{slot, static_cast<uint8_t>(action), std::move(payload)});
+    pending.push_back(ViewEventData{slot, static_cast<uint8_t>(action), stackToBytes(stack)});
 }
 
 void ClientFurnaceView::handleEvent(const sf::Event& event)

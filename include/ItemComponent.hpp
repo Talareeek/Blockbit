@@ -4,6 +4,7 @@
 #include "Component.hpp"
 
 #include "Item.hpp"
+#include "ItemUtils.hpp"
 
 struct ItemComponent : public Component
 {
@@ -14,28 +15,6 @@ struct ItemComponent : public Component
     {
     }
 
-    std::string serialize()
-    {
-        std::string output;
-
-        output += std::to_string(static_cast<uint32_t>(item.itemID)) + ' ';
-        output += std::to_string(item.quantity) + '\n';
-
-        return output;
-    }
-
-    void deserialize(const std::string& data)
-    {
-        std::istringstream iss(data);
-        uint32_t itemIDInt;
-        uint32_t quantity;
-
-        iss >> itemIDInt >> quantity;
-
-        item.itemID = static_cast<ItemID>(itemIDInt);
-        item.quantity = quantity;
-    }
-
     std::string name() const override
     {
         return "ItemComponent";
@@ -43,30 +22,12 @@ struct ItemComponent : public Component
 
     Tag serialize() const override
     {
-        TagCompound compound;
-
-        compound["item_id"] = Tag(static_cast<uint32_t>(item.itemID));
-        compound["quantity"] = Tag(item.quantity);
-
-        if (item.instanceID.has_value())
-        {
-            compound["instance_id"] = Tag(item.instanceID->toString());
-        }
-
-        return Tag(compound);
+        return stackToTag(item);
     }
 
     void deserialize(const Tag& tag) override
     {
-        item.itemID = static_cast<ItemID>(tag["item_id"].get<uint32_t>());
-        item.quantity = tag["quantity"].get<uint32_t>();
-
-        item.instanceID.reset();
-        const auto& compound = tag.get<TagCompound>();
-        if (auto iid = compound.find("instance_id"); iid != compound.end())
-        {
-            item.instanceID = uuidFromString(iid->second.get<std::string>());
-        }
+        item = stackFromTag(tag, /*write_instance_data=*/true);
     }
 
     std::unique_ptr<Component> clone() const override

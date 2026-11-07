@@ -100,6 +100,17 @@ public:
     void saveItemInstances();
     void loadItemInstances();
 
+    // Mark-and-sweep over the global itemInstances map. Roots:
+    //   - every ItemStack referenced by an InventoryComponent on a live entity
+    //   - every ItemStack on a dropped-item ItemComponent
+    //   - every ItemStack inside a ChestBlockEntity or FurnaceBlockEntity, across
+    //     every loaded chunk
+    //   - every UUID in extra_live_ids (contributed by active ServerView
+    //     cursor stacks; GameServer collects these before calling)
+    // Anything in itemInstances not covered is erased. Safe to call any time;
+    // GameServer calls it periodically and right before save().
+    void garbageCollectItemInstances(const std::unordered_set<UUID>& extra_live_ids);
+
     // CHUNK
     void saveChunk(int chunk_position);
     void saveChunkEnvironment(int chunk_position);

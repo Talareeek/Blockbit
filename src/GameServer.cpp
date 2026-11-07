@@ -15,11 +15,13 @@
 #include "../include/TransformSystem.hpp"
 #include "../include/ExplosiveSystem.hpp"
 #include "../include/HealthSystem.hpp"
+#include "../include/EffectsSystem.hpp"
 #include "../include/PhysicsSystem.hpp"
 #include "../include/InventorySystem.hpp"
 #include "../include/ChunkLoadSystem.hpp"
 #include "../include/ChunkUnloadSystem.hpp"
 #include "../include/DaycycleSystem.hpp"
+#include "../include/WeatherSystem.hpp"
 #include "../include/FallingBlockSystem.hpp"
 #include "../include/AnimationComponent.hpp"
 #include "../include/AnimationSystem.hpp"
@@ -511,6 +513,7 @@ void GameServer::broadcastSnapshot()
         snapshot.tick = tick;
         snapshot.dayTime = world.getDayTime();
         snapshot.days = world.days;
+        snapshot.weather = world.weather;
 
         for (const auto& [id, entity] : entities)
         {
@@ -668,6 +671,7 @@ void GameServer::update(float dt)
         ChunkLoadSystem(world, dt);
         AISystem(world, dt);
         ExplosiveSystem(world, dt);
+        EffectsSystem(world, dt);
         HealthSystem(world, dt);
         PhysicsSystem(world, dt);
         FallingBlockSystem(world);
@@ -675,6 +679,7 @@ void GameServer::update(float dt)
         InventorySystem(world);
         ChunkUnloadSystem(world);
         DaycycleSystem(world, dt);
+        WeatherSystem(world, dt);
         AnimationSystem(world, dt);
 
         TransformSystem(world);
@@ -755,6 +760,13 @@ void GameServer::update(float dt)
         broadcastBlockUpdates();
         broadcastSnapshot();
         broadcastParticleBursts();
+
+        item_instance_gc_accumulator += dt;
+        if (item_instance_gc_accumulator >= ITEM_INSTANCE_GC_INTERVAL)
+        {
+            item_instance_gc_accumulator = 0.0f;
+            runItemInstanceGC();
+        }
 
         update_clock.stop();
 
@@ -882,12 +894,26 @@ GameServer::~GameServer()
 
     if (save_on_destruct)
     {
-        try { world.save(); }
+        try
+        {
+            runItemInstanceGC();
+            world.save();
+        }
         catch (const std::exception& exception)
         {
             std::cerr << "[Server] world.save() failed: " << exception.what() << '\n';
         }
     }
+}
+
+void GameServer::runItemInstanceGC()
+{
+    std::unordered_set<UUID> live;
+    for (const auto& [client_id, data] : clients)
+    {
+        if (data.content_view) data.content_view->collectLiveInstanceIDs(live);
+    }
+    world.garbageCollectItemInstances(live);
 }
 
 bool isNicknameAllowed(std::string nickname)

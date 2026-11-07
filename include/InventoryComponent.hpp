@@ -4,6 +4,7 @@
 #include "Component.hpp"
 
 #include "Item.hpp"
+#include "ItemUtils.hpp"
 
 #include <cstdint>
 #include <string>
@@ -72,22 +73,13 @@ struct InventoryComponent : public Component
 
         compound["selected_slot"] = Tag(selectedSlot);
 
-        compound["slots"] = TagList();
-
-
-        for(const auto& slot : inventory.slots)
+        TagList slots;
+        slots.reserve(inventory.slots.size());
+        for (const auto& slot : inventory.slots)
         {
-            TagCompound slot_compound;
-            slot_compound["item_id"] = Tag(static_cast<uint32_t>(slot.itemID));
-            slot_compound["quantity"] = Tag(slot.quantity);
-
-            if (slot.instanceID.has_value())
-            {
-                slot_compound["instance_id"] = Tag(slot.instanceID->toString());
-            }
-
-            compound["slots"].get<TagList>().push_back(Tag(slot_compound));
+            slots.push_back(stackToTag(slot));
         }
+        compound["slots"] = Tag(slots);
 
         return Tag(compound);
     }
@@ -105,16 +97,7 @@ struct InventoryComponent : public Component
 
         for (size_t i = 0; i < slots.size(); ++i)
         {
-            const auto& slot = slots[i].get<TagCompound>();
-
-            inventory.slots[i].itemID = static_cast<ItemID>(slot.at("item_id").get<uint32_t>());
-            inventory.slots[i].quantity = slot.at("quantity").get<uint32_t>();
-
-            inventory.slots[i].instanceID.reset();
-            if (auto iid = slot.find("instance_id"); iid != slot.end())
-            {
-                inventory.slots[i].instanceID = uuidFromString(iid->second.get<std::string>());
-            }
+            inventory.slots[i] = stackFromTag(slots[i], /*write_instance_data=*/true);
         }
     }
 

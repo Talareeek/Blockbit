@@ -884,12 +884,13 @@ NormalWorldGenerator::getStructurePlacementsInCell(int grid_x, StructureID id) c
 
     SmallRng rng(structureSeed(grid_x, id));
 
-    // Pull three deterministic draws BEFORE any filter check so the per-cell
+    // Pull four deterministic draws BEFORE any filter check so the per-cell
     // seed stays stable regardless of which filter rejects. Same trick the
     // tree placement scan uses (species roll).
     const int    cell_offset = rng.range(rule.grid);
     const double roll        = rng.unit();
     const double mirror_roll = rng.unit();
+    const double depth_roll  = rng.unit();
 
     const int origin_x = grid_x * rule.grid + cell_offset;
 
@@ -911,9 +912,31 @@ NormalWorldGenerator::getStructurePlacementsInCell(int grid_x, StructureID id) c
     if (col.height < rule.min_surface_y || col.height > rule.max_surface_y)
         return result;
 
-    int anchor_y = (rule.anchor_mode == StructureRule::Anchor::Surface)
-        ? col.height
-        : rule.target_y;
+    int anchor_y = 0;
+    switch (rule.anchor_mode)
+    {
+        case StructureRule::Anchor::Surface:
+            anchor_y = col.height;
+            break;
+        case StructureRule::Anchor::Fixed:
+            anchor_y = rule.target_y;
+            break;
+        case StructureRule::Anchor::BelowSurface:
+        {
+            const StructureTemplate& tmpl = StructureRegistry::getTemplate(id);
+
+            // Keep the entire bbox strictly below the surface and above
+            // bedrock (y=0). Anchor y range is derived from the template's
+            // own anchor row within the bbox.
+            const int min_anchor = tmpl.anchor_y + 1;
+            const int max_anchor = col.height - 1 - (tmpl.height - 1 - tmpl.anchor_y);
+            if (max_anchor < min_anchor) return result;
+
+            const int span = max_anchor - min_anchor + 1;
+            anchor_y = min_anchor + static_cast<int>(depth_roll * span);
+            break;
+        }
+    }
 
     StructureRotation rotation = StructureRotation::Original;
     if (rule.allow_mirror && mirror_roll < 0.5)

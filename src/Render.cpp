@@ -18,11 +18,18 @@
 #include "../include/WorldLightView.hpp"
 #include "../include/LightingSystem.hpp"
 #include "../include/Settings.hpp"
+#include "../include/ItemUtils.hpp"
+#include "../include/ItemInstance.hpp"
+#include "../include/ItemDataComponents.hpp"
+#include "../include/Weather.hpp"
+#include "../include/ClientWorld.hpp"
+#include "../include/LightningBoltComponent.hpp"
 
 #include <memory>
 #include <random>
 #include <numbers>
 #include <unordered_map>
+#include <chrono>
 
 namespace
 {
@@ -357,6 +364,31 @@ std::pair<sf::Color, sf::Color> getSkyGradient(float t)
     return {top, bottom};
 }
 
+std::pair<sf::Color, sf::Color> getSkyGradientWeathered(float t, float rain_intensity, float thunder_intensity)
+{
+    auto [top, bottom] = getSkyGradient(t);
+
+    if (rain_intensity <= 0.0f && thunder_intensity <= 0.0f) return {top, bottom};
+
+    // Clamp so an overshoot from the fade curve can't push colors out of range.
+    const float rain_k    = std::clamp(rain_intensity,    0.0f, 1.0f);
+    const float thunder_k = std::clamp(thunder_intensity, 0.0f, 1.0f);
+
+    constexpr sf::Color rain_tint    {80, 85, 95};
+    constexpr sf::Color thunder_tint {30, 32, 38};
+
+    sf::Color storm_top    = lerpColor(rain_tint,    thunder_tint, thunder_k);
+    sf::Color storm_bottom = lerpColor(rain_tint,    thunder_tint, thunder_k);
+
+    // Rain intensity drives most of the shift; thunder deepens it further.
+    const float blend = std::clamp(rain_k * 0.75f + thunder_k * 0.20f, 0.0f, 0.95f);
+
+    top    = lerpColor(top,    storm_top,    blend);
+    bottom = lerpColor(bottom, storm_bottom, blend);
+
+    return {top, bottom};
+}
+
 void renderSky(sf::RenderTarget& target, sf::Color top, sf::Color bottom)
 {
     const float width = static_cast<float>(target.getSize().x);
@@ -377,6 +409,299 @@ void renderSky(sf::RenderTarget& target, sf::Color top, sf::Color bottom)
     sf::View previous = target.getView();
     target.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {width, height})));
     target.draw(sky);
+    target.setView(previous);
+}
+
+namespace
+{
+    // Horizontal radius around the camera, in blocks, inside which we draw
+    // precipitation. Keep it modest — most rain beyond that is hidden by
+    // screen edges at 1x view scale anyway, and this is per-frame work.
+    constexpr int PRECIP_RADIUS = 24;
+
+    // Vertical span over which a drop lives above the top opaque block it
+    // targets. Big enough to always start off-screen for a normal view height,
+    // small enough that we don't scan the whole chunk column for a roof.
+    constexpr float PRECIP_FALL_RANGE = 24.0f;
+
+    // Hash a column x to a stable float in [0,1). Phase offsets per column
+    // scatter drops so they don't move in sync.
+    float columnPhase(int wx, int seed)
+    {
+        uint32_t h = static_cast<uint32_t>(wx * 73856093) ^ static_cast<uint32_t>(seed * 19349663);
+        h ^= h >> 13;
+        h *= 0x5bd1e995u;
+        h ^= h >> 15;
+        return (h & 0xFFFFFF) / static_cast<float>(0x1000000);
+    }
+
+    // Walk straight down from the chunk top until we hit a non-Air block. Not
+    // the same as the lighting heightmap, but close enough for drop clipping
+    // and keeps the renderer free of lighting internals.
+    int topOpaqueY(ClientWorld& world, int wx, int y_ceiling)
+    {
+        const int y_start = std::min(y_ceiling, CHUNK_HEIGHT - 1);
+        for (int y = y_start; y >= 0; --y)
+        {
+            if (world.getBlock(wx, y).id != BlockID::Air) return y;
+        }
+        return -1;
+    }
+}
+
+void renderPrecipitation(ClientWorld& world, sf::Vector2<double> camera,
+                         float rain_intensity, float thunder_intensity,
+                         sf::RenderWindow& window)
+{
+    const float intensity = std::clamp(rain_intensity, 0.0f, 1.0f);
+    if (intensity <= 0.001f) return;
+
+    // Shared wall-clock timer so rain speed is independent of the simulation
+    // tick. SFML's own clock would also work, but a chrono one survives any
+    // target-rate changes without resetting drop positions.
+    static auto time_origin = std::chrono::steady_clock::now();
+    const float t = std::chrono::duration<float>(std::chrono::steady_clock::now() - time_origin).count();
+
+    const float unit_size = window.getSize().y / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
+
+    // Screen half-height in blocks under the current view. Drops outside this
+    // band are rejected cheaply instead of being drawn offscreen.
+    const sf::View view = window.getView();
+    const float screen_half_h_blocks = std::abs(view.getSize().y) * 0.5f / unit_size;
+    const float screen_half_w_blocks = view.getSize().x * 0.5f / unit_size;
+
+    const int min_x = static_cast<int>(std::floor(camera.x - std::max<float>(PRECIP_RADIUS, screen_half_w_blocks + 2.0f)));
+    const int max_x = static_cast<int>(std::ceil (camera.x + std::max<float>(PRECIP_RADIUS, screen_half_w_blocks + 2.0f)));
+
+    const int y_ceiling = static_cast<int>(std::ceil(camera.y + screen_half_h_blocks + PRECIP_FALL_RANGE));
+
+    // Thunder darkens rain, stormy sky makes bright drops read better.
+    const int rain_alpha = static_cast<int>(std::round(160.0f * intensity));
+    const int snow_alpha = static_cast<int>(std::round(200.0f * intensity));
+    const sf::Color rain_color(170 - static_cast<int>(40 * thunder_intensity),
+                               190 - static_cast<int>(40 * thunder_intensity),
+                               255,
+                               static_cast<uint8_t>(std::clamp(rain_alpha, 0, 255)));
+    const sf::Color snow_color(240, 245, 255, static_cast<uint8_t>(std::clamp(snow_alpha, 0, 255)));
+
+    constexpr float RAIN_FALL_SPEED = 22.0f;   // blocks per second
+    constexpr float SNOW_FALL_SPEED = 2.5f;
+
+    // Drop count per column scales with intensity so rain doesn't appear and
+    // disappear discretely during the fade.
+    const int rain_drops_per_col = std::max(1, static_cast<int>(std::round(3.0f * intensity)));
+    const int snow_drops_per_col = std::max(1, static_cast<int>(std::round(2.0f * intensity)));
+
+    sf::VertexArray vertices(sf::PrimitiveType::Triangles);
+    vertices.resize(0);
+
+    auto& chunks = world.getChunks();
+
+    for (int wx = min_x; wx <= max_x; ++wx)
+    {
+        const int chunk_position = (wx >= 0) ? wx / CHUNK_WIDTH : (wx - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
+        auto chunk_it = chunks.find(chunk_position);
+        if (chunk_it == chunks.end() || !chunk_it->second.generated) continue;
+
+        const int local_x = wx - chunk_position * CHUNK_WIDTH;
+        const Biome biome = chunk_it->second.biomes[local_x];
+        const Precipitation precip = precipitationFor(WeatherState::Rain, biome);
+        if (precip == Precipitation::None) continue;
+
+        const int top_y = topOpaqueY(world, wx, y_ceiling);
+        if (top_y < 0) continue;
+
+        const float spawn_bottom = static_cast<float>(top_y + 1);
+        const float spawn_top    = spawn_bottom + PRECIP_FALL_RANGE;
+
+        // Column entirely above or below the visible band -> nothing to draw.
+        const float view_top    = static_cast<float>(camera.y + screen_half_h_blocks);
+        const float view_bottom = static_cast<float>(camera.y - screen_half_h_blocks);
+        if (spawn_bottom > view_top)   continue;
+        if (spawn_top    < view_bottom) continue;
+
+        const bool is_snow = (precip == Precipitation::Snow);
+        const sf::Color color = is_snow ? snow_color : rain_color;
+        const float speed = is_snow ? SNOW_FALL_SPEED : RAIN_FALL_SPEED;
+        const int drops = is_snow ? snow_drops_per_col : rain_drops_per_col;
+        const float drop_length = is_snow ? 0.16f : 0.55f;
+        const float drop_width  = is_snow ? 0.14f : 0.05f;
+
+        for (int d = 0; d < drops; ++d)
+        {
+            const float seed = columnPhase(wx, d * 131 + (is_snow ? 7 : 3));
+
+            float phase = seed + t * speed / PRECIP_FALL_RANGE;
+            phase = phase - std::floor(phase);  // wrap to [0,1)
+
+            const float drop_y = spawn_top - phase * PRECIP_FALL_RANGE;
+
+            if (drop_y + drop_length < view_bottom) continue;
+            if (drop_y > view_top) continue;
+
+            // Jitter within the 1-block column; snow sways sideways with time.
+            float jitter_x = seed;
+            if (is_snow)
+            {
+                jitter_x = 0.5f + 0.35f * std::sin(t * 0.8f + seed * 6.283f);
+            }
+
+            const float px0 = static_cast<float>(wx) + jitter_x - drop_width * 0.5f;
+            const float px1 = px0 + drop_width;
+            const float py_top = drop_y;
+            const float py_bot = drop_y - drop_length;
+
+            sf::Vertex v0, v1, v2, v3;
+            v0.position = {px0, py_top}; v0.color = color;
+            v1.position = {px1, py_top}; v1.color = color;
+            v2.position = {px1, py_bot}; v2.color = color;
+            v3.position = {px0, py_bot}; v3.color = color;
+
+            vertices.append(v0);
+            vertices.append(v1);
+            vertices.append(v2);
+            vertices.append(v0);
+            vertices.append(v2);
+            vertices.append(v3);
+        }
+    }
+
+    if (vertices.getVertexCount() == 0) return;
+
+    // Vertices are in world coordinates, so apply the same camera->screen
+    // transform BuildChunkMesh uses for terrain.
+    sf::RenderStates states;
+    states.transform.translate({static_cast<float>(-camera.x) * unit_size, static_cast<float>(-camera.y) * unit_size});
+    states.transform.scale({unit_size, unit_size});
+
+    window.draw(vertices, states);
+}
+
+namespace
+{
+    uint32_t hash32(uint32_t x)
+    {
+        x ^= x >> 16;
+        x *= 0x7feb352du;
+        x ^= x >> 15;
+        x *= 0x846ca68bu;
+        x ^= x >> 16;
+        return x;
+    }
+}
+
+void renderLightningEntities(World& world, sf::Vector2<double> camera, sf::RenderWindow& window)
+{
+    const auto& entities = world.getEntities();
+
+    // Cheap early-out — the common case is no lightning anywhere.
+    bool any = false;
+    for (const auto& [id, entity] : entities)
+    {
+        if (entity.hasComponent<LightningBoltComponent>()) { any = true; break; }
+    }
+    if (!any) return;
+
+    const float unit_size = window.getSize().y / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
+
+    sf::VertexArray tris(sf::PrimitiveType::Triangles);
+
+    for (const auto& [id, entity] : entities)
+    {
+        if (!entity.hasComponent<LightningBoltComponent>()) continue;
+        if (!entity.hasComponent<TransformComponent>())     continue;
+
+        const auto& transform = entity.getComponent<TransformComponent>();
+        const auto& bolt      = entity.getComponent<LightningBoltComponent>();
+
+        // Fade out as the lifetime depletes. Server starts it at 0.5s and
+        // ticks it down to zero before despawn.
+        const float fade = std::clamp(bolt.lifetime_remaining / 0.5f, 0.0f, 1.0f);
+        const uint8_t alpha = static_cast<uint8_t>(std::round(230.0f * fade));
+        const sf::Color core_color(240, 240, 255, alpha);
+        const sf::Color halo_color(180, 210, 255, static_cast<uint8_t>(alpha / 3));
+
+        const float base_x = static_cast<float>(transform.position.x) + static_cast<float>(transform.size.x) * 0.5f;
+        const float base_y = static_cast<float>(transform.position.y);
+
+        // Procedural zigzag: walk from the top of the bolt down to the base,
+        // kinking left/right by a hashed amount per segment. Seed-stable so
+        // every client draws the same shape for the same strike.
+        constexpr int SEGMENTS = 14;
+        const float dy = bolt.height / static_cast<float>(SEGMENTS);
+
+        float prev_x = base_x;
+        float prev_y = base_y + bolt.height;
+
+        for (int i = 0; i < SEGMENTS; ++i)
+        {
+            const float ny = prev_y - dy;
+            const uint32_t h = hash32(bolt.seed + static_cast<uint32_t>(i));
+            // Normalize hash to [-1, 1], then shrink kinks as we approach the
+            // ground so the bolt ends on-target instead of drifting away.
+            float jitter = ((h & 0xFFFF) / 32768.0f) - 1.0f;
+            const float progress = static_cast<float>(i) / SEGMENTS;
+            jitter *= (1.0f - progress) * 0.9f + 0.1f;
+
+            float nx = (i == SEGMENTS - 1) ? base_x : (base_x + jitter);
+
+            // Two quads per segment: a thick halo and a thin bright core. Both
+            // are axis-aligned rects along the segment — the diagonal isn't
+            // perfectly perpendicular to the segment, but it's close enough
+            // for a zigzag that draws for <0.5s.
+            auto appendSegment = [&](sf::Color color, float thickness)
+            {
+                const float half = thickness * 0.5f;
+
+                sf::Vertex v0, v1, v2, v3;
+                v0.position = {prev_x - half, prev_y}; v0.color = color;
+                v1.position = {prev_x + half, prev_y}; v1.color = color;
+                v2.position = {nx    + half, ny};      v2.color = color;
+                v3.position = {nx    - half, ny};      v3.color = color;
+
+                tris.append(v0); tris.append(v1); tris.append(v2);
+                tris.append(v0); tris.append(v2); tris.append(v3);
+            };
+
+            appendSegment(halo_color, 0.55f);
+            appendSegment(core_color, 0.15f);
+
+            prev_x = nx;
+            prev_y = ny;
+        }
+    }
+
+    if (tris.getVertexCount() == 0) return;
+
+    sf::RenderStates states;
+    states.transform.translate({static_cast<float>(-camera.x) * unit_size, static_cast<float>(-camera.y) * unit_size});
+    states.transform.scale({unit_size, unit_size});
+    states.blendMode = sf::BlendAdd;
+
+    window.draw(tris, states);
+}
+
+void renderLightningFlash(float intensity, sf::RenderTarget& target)
+{
+    const float k = std::clamp(intensity, 0.0f, 1.0f);
+    if (k <= 0.0f) return;
+
+    const float width  = static_cast<float>(target.getSize().x);
+    const float height = static_cast<float>(target.getSize().y);
+
+    const uint8_t alpha = static_cast<uint8_t>(std::round(180.0f * k));
+    const sf::Color flash_color(255, 255, 255, alpha);
+
+    sf::VertexArray quad(sf::PrimitiveType::TriangleStrip, 4);
+    quad[0].position = {0.0f, 0.0f};
+    quad[1].position = {width, 0.0f};
+    quad[2].position = {0.0f, height};
+    quad[3].position = {width, height};
+    for (int i = 0; i < 4; ++i) quad[i].color = flash_color;
+
+    sf::View previous = target.getView();
+    target.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {width, height})));
+    target.draw(quad);
     target.setView(previous);
 }
 
@@ -1576,42 +1901,123 @@ sf::Color getRarityColor(ItemRarity rarity)
 
 constexpr int TEXT_SIZE = 20;
 
+namespace
+{
+    std::string enchantName(EnchantID id)
+    {
+        switch (id)
+        {
+        case EnchantID::Sharpness:  return "Sharpness";
+        case EnchantID::Efficiency: return "Efficiency";
+        case EnchantID::Unbreaking: return "Unbreaking";
+        case EnchantID::Fortune:    return "Fortune";
+        case EnchantID::None:       break;
+        }
+        return "Unknown";
+    }
+
+    std::string romanNumeral(uint8_t level)
+    {
+        static const char* table[] = {
+            "", "I", "II", "III", "IV", "V",
+            "VI", "VII", "VIII", "IX", "X"
+        };
+        if (level < sizeof(table) / sizeof(table[0]))
+            return table[level];
+        return std::to_string(level);
+    }
+}
+
 void renderItemInfo(sf::Vector2f position, const ItemStack& item, sf::RenderTarget& target)
 {
     const auto& item_data = itemDatabase[item.itemID];
 
-    auto font = AssetManager::getFont(AssetManager::FontID::PressStart2P);
+    struct Line
+    {
+        std::string text;
+        sf::Color   color;
+    };
 
-    std::string name_str = item_data.name;
-    std::string id_str = "ID: " + std::to_string(static_cast<uint32_t>(item.itemID));
+    std::vector<Line> lines;
+    lines.push_back({getDisplayName(item), getRarityColor(item_data.rarity)});
 
-    sf::Text nameText(AssetManager::getFont(AssetManager::FontID::PressStart2P), name_str, TEXT_SIZE);
-    sf::Text idText(AssetManager::getFont(AssetManager::FontID::PressStart2P), id_str, TEXT_SIZE);
+    if (item_data.maxDurability.has_value())
+    {
+        uint32_t max_dur = *item_data.maxDurability;
+        uint32_t cur_dur = getCurrentDurability(item);
 
-    nameText.setFillColor(getRarityColor(item_data.rarity));
-    idText.setFillColor(sf::Color::White);
+        float ratio = max_dur == 0 ? 1.0f :
+            static_cast<float>(cur_dur) / static_cast<float>(max_dur);
 
-    float padding = static_cast<float>(TEXT_SIZE) * 0.4f;
+        sf::Color bar_color = sf::Color::Green;
+        if (ratio < 0.33f)      bar_color = sf::Color::Red;
+        else if (ratio < 0.66f) bar_color = sf::Color(255, 165, 0);
+
+        lines.push_back({
+            "Durability: " + std::to_string(cur_dur) + " / " + std::to_string(max_dur),
+            bar_color
+        });
+    }
+
+    if (item.instanceID.has_value())
+    {
+        if (const ItemInstanceData* data = findInstance(*item.instanceID))
+        {
+            if (const EnchantmentsItemComponent* ench = data->get<EnchantmentsItemComponent>())
+            {
+                for (const Enchantment& e : ench->entries)
+                {
+                    if (e.id == EnchantID::None) continue;
+                    lines.push_back({
+                        enchantName(e.id) + " " + romanNumeral(e.level),
+                        sf::Color(170, 170, 255)
+                    });
+                }
+            }
+        }
+    }
+
+    lines.push_back({
+        "ID: " + std::to_string(static_cast<uint32_t>(item.itemID)),
+        sf::Color(160, 160, 160)
+    });
+
+    auto& font = AssetManager::getFont(AssetManager::FontID::PressStart2P);
+
+    std::vector<sf::Text> texts;
+    texts.reserve(lines.size());
+    for (const Line& l : lines)
+    {
+        sf::Text t(font, l.text, TEXT_SIZE);
+        t.setFillColor(l.color);
+        texts.push_back(std::move(t));
+    }
+
+    float padding     = static_cast<float>(TEXT_SIZE) * 0.4f;
     float lineSpacing = static_cast<float>(TEXT_SIZE) * 0.3f;
 
-    sf::FloatRect nameBounds = nameText.getLocalBounds();
-    sf::FloatRect idBounds = idText.getLocalBounds();
+    float max_width = 0.0f;
+    float total_height = 0.0f;
+    std::vector<float> line_heights;
+    line_heights.reserve(texts.size());
 
-    float frameWidth = std::max(nameBounds.size.x, idBounds.size.x) + padding * 2.0f;
-    float frameHeight = nameBounds.size.y + idBounds.size.y + lineSpacing + padding * 2.0f;
+    for (const sf::Text& t : texts)
+    {
+        sf::FloatRect b = t.getLocalBounds();
+        max_width = std::max(max_width, b.size.x);
+        line_heights.push_back(b.size.y);
+        total_height += b.size.y;
+    }
+    total_height += lineSpacing * static_cast<float>(texts.size() > 0 ? texts.size() - 1 : 0);
+
+    float frameWidth  = max_width + padding * 2.0f;
+    float frameHeight = total_height + padding * 2.0f;
 
     sf::Vector2f framePos = position + sf::Vector2f(15.0f, 15.0f);
-
     sf::Vector2u windowSize = target.getSize();
 
-    if(framePos.x + frameWidth > windowSize.x)
-    {
-        framePos.x = windowSize.x - frameWidth;
-    }
-    if(framePos.y + frameHeight > windowSize.y)
-    {
-        framePos.y = windowSize.y - frameHeight;
-    }
+    if (framePos.x + frameWidth > windowSize.x)  framePos.x = windowSize.x - frameWidth;
+    if (framePos.y + frameHeight > windowSize.y) framePos.y = windowSize.y - frameHeight;
 
     sf::RectangleShape frame({frameWidth, frameHeight});
     frame.setPosition(framePos);
@@ -1620,12 +2026,13 @@ void renderItemInfo(sf::Vector2f position, const ItemStack& item, sf::RenderTarg
     frame.setOutlineThickness(1.0f);
     target.draw(frame);
 
-    nameText.setPosition(framePos + sf::Vector2f(padding, padding));
-    idText.setPosition(framePos + sf::Vector2f(padding, padding + nameBounds.size.y + lineSpacing));
-
-    target.draw(nameText);
-    target.draw(idText);
-
+    float y_cursor = framePos.y + padding;
+    for (size_t i = 0; i < texts.size(); ++i)
+    {
+        texts[i].setPosition({framePos.x + padding, y_cursor});
+        target.draw(texts[i]);
+        y_cursor += line_heights[i] + lineSpacing;
+    }
 }
 
 void renderBar(int max, int value, sf::Color primary_color, sf::Color secondary_color, sf::FloatRect bounds, sf::RenderTarget& target)

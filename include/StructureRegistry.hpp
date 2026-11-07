@@ -16,7 +16,7 @@
 enum class StructureID : uint32_t
 {
     None = 0,
-    // ... user-defined structures go here (e.g. Village_House, Dungeon_Small, …)
+    Buried_Template = 1,
 };
 
 // Placement rule set attached to a template. Controls where the structure may
@@ -49,6 +49,10 @@ struct StructureRule
         // placement.anchor_y = constant target_y — use together with
         // min/max_surface_y to e.g. bury a dungeon at fixed depth.
         Fixed   = 1,
+        // placement.anchor_y is drawn uniformly so the whole template bbox
+        // sits strictly below the surface column (and above bedrock). Use for
+        // buried structures that can appear at any depth.
+        BelowSurface = 2,
     };
     Anchor anchor_mode = Anchor::Surface;
     int    target_y    = 0;

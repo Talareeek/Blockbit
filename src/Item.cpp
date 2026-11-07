@@ -731,7 +731,9 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
             .tool = ToolProperties{ToolType::Axe, 1},
-            .maxDurability = 59
+            .maxDurability = 59,
+            .damage = 6,
+            .attack_delay = 0.7f
         }
     },
     {
@@ -743,7 +745,9 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
             .tool = ToolProperties{ToolType::Axe, 2},
-            .maxDurability = 131
+            .maxDurability = 131,
+            .damage = 7,
+            .attack_delay = 0.8f
         }
     },
     {
@@ -755,7 +759,9 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
             .tool = ToolProperties{ToolType::Axe, 3},
-            .maxDurability = 32
+            .maxDurability = 32,
+            .damage = 7,
+            .attack_delay = 0.6f
         }
     },
     {
@@ -767,7 +773,9 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
             .tool = ToolProperties{ToolType::Axe, 4},
-            .maxDurability = 250
+            .maxDurability = 250,
+            .damage = 9,
+            .attack_delay = 0.8f
         }
     },
     {
@@ -779,7 +787,9 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Tool,
             .tool = ToolProperties{ToolType::Axe, 5},
-            .maxDurability = 1561
+            .maxDurability = 1561,
+            .damage = 11,
+            .attack_delay = 0.9f
         }
     },
     {
@@ -791,7 +801,9 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .rarity = ItemRarity::Epic,
             .category = ItemCategory::Tool,
             .tool = ToolProperties{ToolType::Axe, 6},
-            .maxDurability = 2048
+            .maxDurability = 2048,
+            .damage = 13,
+            .attack_delay = 0.9f
         }
     },
 

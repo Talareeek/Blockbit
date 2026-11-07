@@ -369,6 +369,7 @@ BlockID itemToBlock(ItemID item)
         case ItemID::Spruce_Leaves: return BlockID::Spruce_Leaves;
         case ItemID::Woodcutter: return BlockID::Woodcutter;
         case ItemID::Sand: return BlockID::Sand;
+        case ItemID::Coarse_Dirt: return BlockID::Coarse_Dirt;
         case ItemID::Snow: return BlockID::Snow;
         case ItemID::Chest: return BlockID::Chest;
         case ItemID::Bricks: return BlockID::Bricks;

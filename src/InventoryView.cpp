@@ -7,6 +7,7 @@
 #include "../include/PhysicsComponent.hpp"
 #include "../include/RenderComponent.hpp"
 #include "../include/ItemComponent.hpp"
+#include "../include/ItemUtils.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/InputManager.hpp"
 #include "../include/Render.hpp"
@@ -20,9 +21,7 @@ namespace
 {
     std::vector<uint8_t> encodeStack(const ItemStack& stack)
     {
-        std::vector<uint8_t> buffer(sizeof(ItemStack));
-        std::memcpy(buffer.data(), &stack, sizeof(ItemStack));
-        return buffer;
+        return stackToBytes(stack);
     }
 }
 
@@ -34,8 +33,9 @@ ServerInventoryView::ServerInventoryView(UUID owner) : owner{owner}
 
 bool ServerInventoryView::decodeStack(const std::vector<uint8_t>& payload, ItemStack& out)
 {
-    if (payload.size() != sizeof(ItemStack)) return false;
-    std::memcpy(&out, payload.data(), sizeof(ItemStack));
+    auto parsed = stackFromBytes(payload, /*write_instance_data=*/false);
+    if (!parsed) return false;
+    out = *parsed;
     return true;
 }
 
@@ -322,6 +322,11 @@ std::deque<SetContentData> ServerInventoryView::drainPendingContentUpdates()
     return drained;
 }
 
+void ServerInventoryView::collectLiveInstanceIDs(std::unordered_set<UUID>& out) const
+{
+    if (cursor_stack.instanceID.has_value()) out.insert(*cursor_stack.instanceID);
+}
+
 #ifndef HEADLESS_BUILD
 // ---------- ClientInventoryView ----------
 
@@ -372,17 +377,12 @@ void ClientInventoryView::sendCraftRequest(InventoryViewAction action)
     if (!recipes.contains(selected_recipe)) return;
     if (!hasIngredients(slot_stacks, INVENTORY_VIEW_SLOT_COUNT, recipes[selected_recipe])) return;
 
-    std::vector<uint8_t> payload(sizeof(ItemStack));
-    std::memcpy(payload.data(), &selected_recipe, sizeof(ItemStack));
-    pending.push_back(ViewEventData{0, static_cast<uint8_t>(action), std::move(payload)});
+    pending.push_back(ViewEventData{0, static_cast<uint8_t>(action), stackToBytes(selected_recipe)});
 }
 
 void ClientInventoryView::pushClick(uint16_t slot, InventoryViewAction action, const ItemStack& stack)
 {
-    std::vector<uint8_t> payload(sizeof(ItemStack));
-    std::memcpy(payload.data(), &stack, sizeof(ItemStack));
-
-    pending.push_back(ViewEventData{slot, static_cast<uint8_t>(action), std::move(payload)});
+    pending.push_back(ViewEventData{slot, static_cast<uint8_t>(action), stackToBytes(stack)});
 }
 
 void ClientInventoryView::handleEvent(const sf::Event& event)
@@ -741,10 +741,10 @@ void ClientInventoryView::renderCursor(sf::RenderWindow& window)
 
 void ClientInventoryView::handleContentUpdate(const SetContentData& set_content_data)
 {
-    if (set_content_data.payload.size() != sizeof(ItemStack)) return;
+    auto parsed = stackFromBytes(set_content_data.payload, /*write_instance_data=*/true);
+    if (!parsed) return;
 
-    ItemStack stack{ItemID::None, 0};
-    std::memcpy(&stack, set_content_data.payload.data(), sizeof(ItemStack));
+    ItemStack stack = *parsed;
 
     if (set_content_data.target == INVENTORY_VIEW_CURSOR_SLOT)
     {

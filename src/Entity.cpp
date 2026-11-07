@@ -12,6 +12,7 @@
 #include "../include/HealthComponent.hpp"
 #include "../include/TransformComponent.hpp"
 #include "../include/FallingBlockComponent.hpp"
+#include "../include/LightningBoltComponent.hpp"
 
 Entity::Entity(UUID id) : id{id}
 {
@@ -162,6 +163,12 @@ void Entity::deserialize(Tag& tag)
             FallingBlockComponent c;
             c.deserialize(payload);
             addComponent<FallingBlockComponent>(c);
+        }
+        else if (name == "LightningBoltComponent")
+        {
+            LightningBoltComponent c;
+            c.deserialize(payload);
+            addComponent<LightningBoltComponent>(c);
         }
     }
 }

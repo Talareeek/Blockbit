@@ -27,6 +27,8 @@
 
 #include "../include/GameCommon.hpp"
 
+#include "../include/ItemDataComponent.hpp"
+
 #include <thread>
 
 #include <string>
@@ -38,6 +40,7 @@
 int main(int argc, char* argv[])
 {
     ConsoleSink::installRedirects();
+    registerBuiltinItemDataComponents();
 
     std::cout << "\033[34m[Blockbit " << __DATE__ << " " << __TIME__ << " build]\033[0m" << std::endl;
 

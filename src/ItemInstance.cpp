@@ -2,37 +2,38 @@
 
 std::unordered_map<UUID, ItemInstanceData> itemInstances;
 
-bool ItemInstanceData::isEmpty() const
+ItemInstanceData ItemInstanceData::clone() const
 {
-    return !durability.has_value()
-        && !customName.has_value()
-        && enchantments.empty();
+    ItemInstanceData out;
+    out.components.reserve(components.size());
+    for (const auto& [type, comp] : components)
+    {
+        out.components.emplace(type, comp->clone());
+    }
+    return out;
+}
+
+bool ItemInstanceData::operator==(const ItemInstanceData& other) const
+{
+    if (components.size() != other.components.size()) return false;
+
+    for (const auto& [type, comp] : components)
+    {
+        auto it = other.components.find(type);
+        if (it == other.components.end()) return false;
+        if (!comp->equals(*it->second)) return false;
+    }
+    return true;
 }
 
 Tag ItemInstanceData::serialize() const
 {
     TagCompound compound;
 
-    if (durability.has_value())
+    for (const auto& [type, comp] : components)
     {
-        compound["durability"] = Tag(*durability);
+        compound[itemComponentTypeKey(type)] = comp->serialize();
     }
-
-    if (customName.has_value())
-    {
-        compound["custom_name"] = Tag(*customName);
-    }
-
-    TagList enchant_list;
-    enchant_list.reserve(enchantments.size());
-    for (const Enchantment& e : enchantments)
-    {
-        TagCompound entry;
-        entry["id"] = Tag(static_cast<uint32_t>(e.id));
-        entry["level"] = Tag(e.level);
-        enchant_list.push_back(Tag(entry));
-    }
-    compound["enchantments"] = Tag(enchant_list);
 
     return Tag(compound);
 }
@@ -43,32 +44,16 @@ ItemInstanceData ItemInstanceData::deserialize(const Tag& tag)
 
     const auto& compound = tag.get<TagCompound>();
 
-    if (auto it = compound.find("durability"); it != compound.end())
+    for (const auto& [key, sub_tag] : compound)
     {
-        out.durability = it->second.get<uint32_t>();
-    }
+        auto type = itemComponentTypeFromKey(key);
+        if (!type) continue;
 
-    if (auto it = compound.find("custom_name"); it != compound.end())
-    {
-        out.customName = it->second.get<std::string>();
-    }
+        auto comp = makeItemDataComponent(*type);
+        if (!comp) continue;
 
-    if (auto it = compound.find("enchantments"); it != compound.end())
-    {
-        const auto& list = it->second.get<TagList>();
-        out.enchantments.reserve(list.size());
-        for (const Tag& entry_tag : list)
-        {
-            const auto& entry = entry_tag.get<TagCompound>();
-            auto id_it = entry.find("id");
-            auto lvl_it = entry.find("level");
-            if (id_it == entry.end() || lvl_it == entry.end()) continue;
-
-            Enchantment e;
-            e.id = static_cast<EnchantID>(id_it->second.get<uint32_t>());
-            e.level = lvl_it->second.get<uint8_t>();
-            out.enchantments.push_back(e);
-        }
+        comp->deserialize(sub_tag);
+        out.components[*type] = std::move(comp);
     }
 
     return out;
@@ -80,6 +65,13 @@ ItemInstanceData& getOrCreateInstance(UUID id)
 }
 
 const ItemInstanceData* findInstance(UUID id)
+{
+    auto it = itemInstances.find(id);
+    if (it == itemInstances.end()) return nullptr;
+    return &it->second;
+}
+
+ItemInstanceData* findInstanceMutable(UUID id)
 {
     auto it = itemInstances.find(id);
     if (it == itemInstances.end()) return nullptr;

@@ -115,6 +115,8 @@ struct SnapshotPacket
     float dayTime;
     uint64_t days;
 
+    WeatherState weather{WeatherState::Clear};
+
     std::unordered_map<UUID, Tag> new_entities;
     std::unordered_map<UUID, Tag> updated_entities;
     std::unordered_set<UUID> removed_entities;

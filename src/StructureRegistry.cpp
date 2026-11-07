@@ -1,5 +1,10 @@
 #include "../include/StructureRegistry.hpp"
 #include "../include/Chunk.hpp"
+#include "../include/World.hpp"
+
+#include <fstream>
+#include <iterator>
+#include <vector>
 
 std::unordered_map<StructureID, StructureTemplate> StructureRegistry::templates;
 std::unordered_map<StructureID, StructureRule>     StructureRegistry::rule_map;
@@ -68,6 +73,8 @@ void StructureRegistry::stamp(Chunk& chunk,
                 chunk.blocks[wy][local_x].id != BlockID::Air)
                 continue;
 
+            if (chunk.blocks[wy][local_x].id == BlockID::Bedrock) continue;
+
             chunk.blocks[wy][local_x] = cell.block;
         }
     }
@@ -109,28 +116,36 @@ void StructureRegistry::stamp(Chunk& chunk,
     }
 }
 
+static StructureTemplate loadTemplateFile(const std::string& filename)
+{
+    StructureTemplate tmpl;
+
+    std::ifstream in(getStructuresPath() / filename, std::ios::binary);
+    if (!in) return tmpl;
+
+    std::vector<uint8_t> bytes(
+        (std::istreambuf_iterator<char>(in)),
+        std::istreambuf_iterator<char>());
+
+    BBT bbt = BBT::load(bytes);
+    tmpl.deserialize(bbt.root().at("template"));
+    return tmpl;
+}
+
 void StructureRegistry::init()
 {
-    // User-defined structures register here. Editor saves land in
-    // getStructuresPath() (~/Blockbit/structures on Linux). Typical load:
-    //
-    // #include "World.hpp"        // getStructuresPath
-    // #include "BBT.hpp"
-    // #include <fstream>
-    //
-    // std::ifstream in(getStructuresPath() / "village_house.bbt", std::ios::binary);
-    // std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(in)), {});
-    //
-    // BBT bbt = BBT::load(bytes);
-    // StructureTemplate tmpl;
-    // tmpl.deserialize(bbt.root().at("template"));
-    //
-    // StructureRule rule;
-    // rule.grid          = 64;
-    // rule.spawn_chance  = 0.25f;
-    // rule.min_surface_y = 76;
-    // rule.max_surface_y = 180;
-    // rule.biomes        = {Biome::Plains, Biome::Forest};
-    //
-    // StructureRegistry::add(StructureID::Village_House, std::move(tmpl), rule);
+    { // BURIED_TEMPLATE
+        StructureTemplate tmpl = loadTemplateFile("template.bbt");
+        if (tmpl.width == 0 || tmpl.height == 0) return;
+
+        StructureRule rule;
+        rule.grid          = 1;
+        rule.spawn_chance  = 1.0f / 5000.0f;
+        rule.anchor_mode   = StructureRule::Anchor::BelowSurface;
+        rule.min_surface_y = 0;
+        rule.max_surface_y = 255;
+        rule.allow_mirror  = true;
+
+        add(StructureID::Buried_Template, std::move(tmpl), rule);
+    }
 }

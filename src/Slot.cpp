@@ -1,9 +1,46 @@
 #include "../include/Slot.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/Render.hpp"
+#include "../include/ItemUtils.hpp"
 
+#include <cstdint>
 #include <string>
 #include <algorithm>
+
+namespace
+{
+    void drawDurabilityBar(const ItemStack& stack, sf::Vector2f slot_position, sf::Vector2f slot_size, sf::RenderTarget& target)
+    {
+        const uint32_t max_durability = getMaxDurability(stack.itemID);
+        if (max_durability == 0) return;
+
+        const uint32_t cur_durability = getCurrentDurability(stack);
+        if (cur_durability >= max_durability) return;
+
+        const float factor = static_cast<float>(cur_durability) / static_cast<float>(max_durability);
+
+        const float bar_width  = slot_size.x * 0.8f;
+        const float bar_height = std::max(2.0f, slot_size.y * 0.08f);
+        const sf::Vector2f bar_pos = slot_position + sf::Vector2f(slot_size.x * 0.1f, slot_size.y * 0.8f);
+
+        sf::RectangleShape bg({bar_width, bar_height});
+        bg.setPosition(bar_pos);
+        bg.setFillColor(sf::Color(0, 0, 0, 200));
+        target.draw(bg);
+
+        const sf::Color fill_color(
+            static_cast<std::uint8_t>((1.0f - factor) * 255.0f),
+            static_cast<std::uint8_t>(factor * 255.0f),
+            0,
+            255
+        );
+
+        sf::RectangleShape fill({bar_width * factor, bar_height});
+        fill.setPosition(bar_pos);
+        fill.setFillColor(fill_color);
+        target.draw(fill);
+    }
+}
 
 Slot::Slot() : UIElement(sf::Vector2f(0.0f, 0.0f), sf::Vector2f(20.0f, 20.0f))
 {
@@ -74,6 +111,8 @@ void Slot::render(sf::RenderWindow& window)
 
     window.draw(text);
 
+    drawDurabilityBar(item_stack, position, size, window);
+
     if(hovered && show_item_info)
     {
         renderItemInfo(window.mapPixelToCoords(sf::Mouse::getPosition(window)), item_stack, window);
@@ -108,6 +147,8 @@ void Slot::render(sf::RenderTarget& window)
     text.setFillColor(sf::Color::White);
 
     window.draw(text);
+
+    drawDurabilityBar(item_stack, position, size, window);
 
     if(hovered && show_item_info)
     {

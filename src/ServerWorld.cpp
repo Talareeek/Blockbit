@@ -13,6 +13,7 @@
 #include "../include/FurnaceBlockEntity.hpp"
 #include "../include/PhysicsComponent.hpp"
 #include "../include/ItemComponent.hpp"
+#include "../include/InventoryComponent.hpp"
 #include "../include/ItemInstance.hpp"
 #include "../include/Item.hpp"
 #include "../include/RenderComponent.hpp"
@@ -268,6 +269,9 @@ void ServerWorld::saveData()
     data["day_time"] = Tag(getDayTime());
     data["days"] = Tag(days);
 
+    data["weather"] = Tag(static_cast<uint8_t>(weather));
+    data["weather_timer"] = Tag(weatherTimer);
+
     auto buffer = data.save();
 
     std::ofstream file(path / "data", std::ios::out | std::ios::binary);
@@ -298,6 +302,13 @@ void ServerWorld::loadData()
     dayTime = data["day_time"].get<float>();
     days = data["days"].get<uint64_t>();
 
+    // Weather fields were added after the initial save format, so tolerate
+    // older world files that don't have them. Missing entries just leave the
+    // defaults (Clear, timer=0) and WeatherSystem will roll a fresh state on
+    // the next tick.
+    if (data.root().count("weather"))        weather       = static_cast<WeatherState>(data["weather"].get<uint8_t>());
+    if (data.root().count("weather_timer"))  weatherTimer  = data["weather_timer"].get<float>();
+
     generation_properties.deserialize(data["generation_properties"]);
 
     world_generator = makeWorldGenerator(seed, generation_properties);
@@ -314,6 +325,61 @@ void ServerWorld::saveItemInstances()
 
     std::vector<uint8_t> buffer = root.save();
     file.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+}
+
+void ServerWorld::garbageCollectItemInstances(const std::unordered_set<UUID>& extra_live_ids)
+{
+    std::unordered_set<UUID> live = extra_live_ids;
+
+    auto visitStack = [&](const ItemStack& stack)
+    {
+        if (stack.instanceID.has_value()) live.insert(*stack.instanceID);
+    };
+
+    for (const auto& [entity_id, entity] : entities)
+    {
+        if (entity.hasComponent<InventoryComponent>())
+        {
+            for (const auto& slot : entity.getComponent<InventoryComponent>().inventory.slots)
+            {
+                visitStack(slot);
+            }
+        }
+
+        if (entity.hasComponent<ItemComponent>())
+        {
+            visitStack(entity.getComponent<ItemComponent>().item);
+        }
+    }
+
+    for (const auto& [chunk_position, chunk] : chunks)
+    {
+        for (const auto& [key, block_entity] : chunk.block_entities)
+        {
+            if (auto* chest = dynamic_cast<ChestBlockEntity*>(block_entity.get()))
+            {
+                for (const auto& slot : chest->stacks) visitStack(slot);
+            }
+            else if (auto* furnace = dynamic_cast<FurnaceBlockEntity*>(block_entity.get()))
+            {
+                visitStack(furnace->fuel);
+                visitStack(furnace->input);
+                visitStack(furnace->output);
+            }
+        }
+    }
+
+    for (auto it = itemInstances.begin(); it != itemInstances.end();)
+    {
+        if (live.find(it->first) == live.end())
+        {
+            it = itemInstances.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
 }
 
 void ServerWorld::loadItemInstances()

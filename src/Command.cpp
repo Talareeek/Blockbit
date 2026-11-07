@@ -365,6 +365,43 @@ std::unordered_map<std::wstring, Command> commandDatabase =
         }
     }},
 
+    {L"weather", {false, true, true,
+        [](std::wstring command, CommandContext& context)
+        {
+            auto tokens = tokenize(command);
+            requireArgs(tokens, 2, "Usage: /weather <clear|rain|thunder> [duration_seconds]");
+
+            World& world = *context.world();
+
+            const std::wstring& state_token = tokens[1];
+
+            WeatherState new_state;
+            if      (state_token == L"clear")   new_state = WeatherState::Clear;
+            else if (state_token == L"rain")    new_state = WeatherState::Rain;
+            else if (state_token == L"thunder") new_state = WeatherState::Thunder;
+            else throw CommandException{"Usage: /weather <clear|rain|thunder> [duration_seconds]"};
+
+            // Default duration: long enough to actually use the weather for
+            // something, short enough that /weather doesn't silently freeze
+            // the forecast for an hour.
+            constexpr float DEFAULT_DURATION_SECONDS = 600.0f;
+
+            float duration = DEFAULT_DURATION_SECONDS;
+            if (tokens.size() >= 3)
+            {
+                duration = parseFloat(tokens[2], "duration_seconds");
+                if (duration <= 0.0f) throw CommandException{"duration_seconds must be > 0."};
+            }
+
+            world.weather      = new_state;
+            world.weatherTimer = duration;
+
+            std::wostringstream msg;
+            msg << L"Weather set to " << state_token << L" for " << duration << L"s.";
+            context.reply(msg.str());
+        }
+    }},
+
     {L"time", {false, true, true,
         [](std::wstring command, CommandContext& context)
         {

@@ -67,6 +67,7 @@ public:
     bool shouldClose(World& world) const override;
 
     std::deque<SetContentData> drainPendingContentUpdates() override;
+    void collectLiveInstanceIDs(std::unordered_set<UUID>& out) const override;
 };
 
 class ClientChestView : public BaseChestView, public ClientView
