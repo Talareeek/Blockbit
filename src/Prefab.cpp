@@ -5,6 +5,7 @@
 #include "../include/RenderComponent.hpp"
 #include "../include/AnimationComponent.hpp"
 #include "../include/HealthComponent.hpp"
+#include "../include/StaminaComponent.hpp"
 #include "../include/ExplosiveComponent.hpp"
 #include "../include/AIComponent.hpp"
 #include "../include/ItemComponent.hpp"
@@ -34,6 +35,7 @@ void PrefabRegistry::init()
         entity.addComponent(TransformComponent{{0.0f, 0.0f}, {0.75f, 1.0f}, sf::degrees(0.0f)});
         entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
         entity.addComponent(HealthComponent{100, 100, true});
+        entity.addComponent(StaminaComponent{StaminaComponent::DEFAULT_MAX, StaminaComponent::DEFAULT_MAX});
 
         InventoryComponent inv(36);
         inv.inventory.slots[0] = {ItemID::Coreheart_Of_Blockbit, 64};
@@ -167,7 +169,7 @@ UUID spawnDroppedItem(World& world, sf::Vector2<double> position, const ItemStac
     transform.previous_position = position;
     transform.render_position = position;
 
-    entity.getComponent<PhysicsComponent>().force = force;
+    entity.getComponent<PhysicsComponent>().force = sf::Vector2<double>(force.x, force.y);
     entity.getComponent<ItemComponent>().item = stack;
     entity.getComponent<RenderComponent>().textureID = itemDatabase[stack.itemID].texture;
 

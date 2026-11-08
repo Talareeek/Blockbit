@@ -9,11 +9,14 @@
 
 struct Particle
 {
-    sf::Vector2f position;        // world coords (block units)
-    sf::Vector2f velocity;        // blocks / second
-    float        lifetime;        // seconds remaining
-    float        max_lifetime;    // original lifetime, for fade ratio
-    float        scale;           // sprite size in blocks
+    sf::Vector2<double> position;  // world coords (block units) — must be
+                                   // double so particles far from origin
+                                   // (close to BORDER_X) still animate at
+                                   // sub-block precision
+    sf::Vector2<double> velocity;  // blocks / second
+    float        lifetime;         // seconds remaining
+    float        max_lifetime;     // original lifetime, for fade ratio
+    float        scale;            // sprite size in blocks
 
     sf::Color    color;
 
@@ -32,6 +35,11 @@ struct Particle
         Fades    = 1 << 2,
         Rises    = 1 << 3,
         Flicker  = 1 << 4,
+        // Particle is subject to world lighting — its RGB is multiplied by
+        // the local block/sky light at render time. Leave off for self-
+        // illuminating effects (flame, spark, ember, explosion) so they
+        // stay bright at night.
+        Lit      = 1 << 5,
     };
 };
 

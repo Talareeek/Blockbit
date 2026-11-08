@@ -330,6 +330,13 @@ float dayLength(Date date)
     return dayLightFraction(date) * World::DAY_CYCLE_DURATION;
 }
 
+float computeDayFactor(float phase)
+{
+    constexpr float TAU = 6.2831853f;
+    float raw = -std::cos(phase * TAU) * 0.5f + 0.5f;
+    return std::clamp(raw, 0.0f, 1.0f);
+}
+
 float solarPhase(float dayTime, uint64_t days)
 {
     const Date  date = daysToDate(days);

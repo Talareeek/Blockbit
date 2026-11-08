@@ -5,6 +5,7 @@
 #include "../include/TransformComponent.hpp"
 #include "../include/PhysicsComponent.hpp"
 #include "../include/RenderComponent.hpp"
+#include "../include/EffectsComponent.hpp"
 #include "../include/Prefab.hpp"
 
 #include <algorithm>
@@ -37,6 +38,45 @@ void HealthSystem(ServerWorld& world, float dt)
                 health.since_last_damaged = HealthComponent::DAMAGE_FLASH_DURATION;
             }
             health.dirty = true;
+        }
+
+        if(health.maxHealth > health.baseMaxHealth)
+        {
+            health.baseMaxHealth = health.maxHealth;
+            health.dirty = true;
+        }
+
+        if(health.maxHealth < health.baseMaxHealth)
+        {
+            bool distorting = false;
+            if(entity.hasComponent<EffectsComponent>())
+            {
+                for(const auto& e : entity.getComponent<EffectsComponent>().effects)
+                {
+                    if(e.id == EffectID::BoundaryDistortion) { distorting = true; break; }
+                }
+            }
+
+            if(!distorting)
+            {
+                constexpr float RESTORE_INTERVAL = 2.0f;
+                health.since_last_restore += dt;
+                while(health.since_last_restore >= RESTORE_INTERVAL && health.maxHealth < health.baseMaxHealth)
+                {
+                    health.maxHealth += 1;
+                    health.since_last_restore -= RESTORE_INTERVAL;
+                    health.dirty = true;
+                }
+                if(health.maxHealth >= health.baseMaxHealth) health.since_last_restore = 0.0f;
+            }
+            else
+            {
+                health.since_last_restore = 0.0f;
+            }
+        }
+        else
+        {
+            health.since_last_restore = 0.0f;
         }
 
         if(health.health <= 0)

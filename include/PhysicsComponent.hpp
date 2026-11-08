@@ -9,17 +9,17 @@
 
 struct PhysicsComponent : public Component
 {
-    sf::Vector2f velocity;
-    sf::Vector2f force;
-    sf::Vector2f acceleration;
+    sf::Vector2<double> velocity;
+    sf::Vector2<double> force;
+    sf::Vector2<double> acceleration;
     float mass = 1.0f;
     bool onGround = false;
-    
+
     bool isSolid = true;
     bool isStatic = false;
     bool isGravityActive = true;
 
-    PhysicsComponent(sf::Vector2f velocity = {}, sf::Vector2f force = {}, sf::Vector2f acceleration = {}, float mass = 1.0f, bool onGround = false, bool isSolid = true, bool isStatic = false, bool isGravityActive = true)
+    PhysicsComponent(sf::Vector2<double> velocity = {}, sf::Vector2<double> force = {}, sf::Vector2<double> acceleration = {}, float mass = 1.0f, bool onGround = false, bool isSolid = true, bool isStatic = false, bool isGravityActive = true)
         : velocity(velocity),
         force(force),
         acceleration(acceleration),
@@ -29,7 +29,7 @@ struct PhysicsComponent : public Component
         isStatic(isStatic),
         isGravityActive(isGravityActive)
     {
-        
+
     }
 
     std::string serialize()
@@ -83,8 +83,8 @@ struct PhysicsComponent : public Component
 
     void deserialize(const Tag& tag) override
     {
-        velocity = tag["velocity"].get<sf::Vector2f>();
-        force = tag["force"].get<sf::Vector2f>();
+        velocity = tag["velocity"].get<sf::Vector2<double>>();
+        force = tag["force"].get<sf::Vector2<double>>();
         mass = tag["mass"].get<float>();
         onGround = tag["on_ground"].get<bool>();
         isSolid = tag["is_solid"].get<bool>();
@@ -92,11 +92,11 @@ struct PhysicsComponent : public Component
         isGravityActive = tag["is_gravity_active"].get<bool>();
     }
 
-    constexpr static sf::Vector2f damping{6.0f, 0.2f};
+    constexpr static sf::Vector2<double> damping{6.0, 0.2};
 
-    constexpr static float SAFE_FALL_VELOCITY{18.0f};
-    constexpr static float FALL_DAMAGE_MULTIPLIER{1.75f};
-    constexpr static float TERMINAL_VELOCITY{60.0f};
+    constexpr static double SAFE_FALL_VELOCITY{18.0};
+    constexpr static double FALL_DAMAGE_MULTIPLIER{1.75};
+    constexpr static double TERMINAL_VELOCITY{60.0};
 
     std::unique_ptr<Component> clone() const override
     {

@@ -58,6 +58,23 @@ void EffectRegistry::init()
             damageEntity(entity, instance.magnitude);
         }
     };
+
+    definitions[EffectID::BoundaryDistortion] = EffectDefinition
+    {
+        .tick = [](World&, Entity& entity, EffectInstance& instance, float)
+        {
+            if (!entity.hasComponent<HealthComponent>()) return;
+            auto& health = entity.getComponent<HealthComponent>();
+
+            const uint32_t floor = 1;
+            const uint32_t drop  = instance.magnitude;
+            health.maxHealth = (drop >= health.maxHealth || health.maxHealth - drop < floor)
+                ? floor
+                : health.maxHealth - drop;
+            if (health.health > health.maxHealth) health.health = health.maxHealth;
+            health.dirty = true;
+        }
+    };
 }
 
 bool EffectRegistry::contains(EffectID id)

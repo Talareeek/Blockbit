@@ -146,9 +146,9 @@ namespace
         return best;
     }
 
-    constexpr float AI_JUMP_VELOCITY       = 10.0f;
-    constexpr float AI_KNOCKBACK_X         = 7.0f;
-    constexpr float AI_KNOCKBACK_Y         = 6.0f;
+    constexpr double AI_JUMP_VELOCITY      = 10.0;
+    constexpr double AI_KNOCKBACK_X        = 7.0;
+    constexpr double AI_KNOCKBACK_Y        = 6.0;
     constexpr float AI_LOSE_SIGHT_TIME     = 5.0f;
     constexpr float AI_MAX_CHASE_RANGE_MUL = 2.0f;
 }
@@ -305,7 +305,7 @@ void AISystem(ServerWorld& world, float dt)
                             hp.dirty = true;
 
                             auto& tp = te->getComponent<PhysicsComponent>();
-                            tp.velocity.x += static_cast<float>(dir) * AI_KNOCKBACK_X;
+                            tp.velocity.x += static_cast<double>(dir) * AI_KNOCKBACK_X;
                             tp.velocity.y  = std::max(tp.velocity.y, AI_KNOCKBACK_Y);
                             tp.dirty = true;
                         }

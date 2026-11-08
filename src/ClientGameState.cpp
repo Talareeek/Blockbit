@@ -6,6 +6,7 @@
 #include "../include/TransformComponent.hpp"
 #include "../include/RenderComponent.hpp"
 #include "../include/HealthComponent.hpp"
+#include "../include/StaminaComponent.hpp"
 #include "../include/InventoryComponent.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/Chunk.hpp"
@@ -316,9 +317,9 @@ void ClientGameState::processIncoming()
                     // small Air→solid puff hints at placement.
                     if (old_block.id != block_update.block.id)
                     {
-                        sf::Vector2f world_pos{
-                            static_cast<float>(block_update.position.x) + 0.5f,
-                            static_cast<float>(block_update.position.y) + 0.5f
+                        sf::Vector2<double> world_pos{
+                            static_cast<double>(block_update.position.x) + 0.5,
+                            static_cast<double>(block_update.position.y) + 0.5
                         };
 
                         if (block_update.block.id == BlockID::Air && old_block.id != BlockID::Air)
@@ -1063,7 +1064,7 @@ void ClientGameState::render(sf::RenderWindow& window)
 
     // PARTICLES — draw after world so they appear on top of blocks and
     // entities. Pure visual layer, no snapshot dependency.
-    particles.render(window, camera);
+    particles.render(window, camera, local_world);
 
     // WORLD BORDER (impassable wall at World::BORDER_X)
     RenderBorder(camera, view_scale, window);
@@ -1088,8 +1089,9 @@ void ClientGameState::render(sf::RenderWindow& window)
     {
         if(hasPlayerEntity())
         {
-            auto& health = local_world.getEntity(local_player_entity_id.value()).getComponent<HealthComponent>();
-            auto& inventory = local_world.getEntity(local_player_entity_id.value()).getComponent<InventoryComponent>();
+            auto& player_entity = local_world.getEntity(local_player_entity_id.value());
+            auto& health = player_entity.getComponent<HealthComponent>();
+            auto& inventory = player_entity.getComponent<InventoryComponent>();
 
             sf::FloatRect bounds
             {
@@ -1098,6 +1100,23 @@ void ClientGameState::render(sf::RenderWindow& window)
             };
 
             renderBar(static_cast<int>(health.maxHealth), static_cast<int>(health.health), sf::Color::Red, sf::Color(166, 28, 46), bounds, window);
+
+            if (player_entity.hasComponent<StaminaComponent>())
+            {
+                auto& stamina = player_entity.getComponent<StaminaComponent>();
+
+                sf::FloatRect stamina_bounds
+                {
+                    {bounds.position.x + bounds.size.x + bounds.size.y * 0.5f, bounds.position.y},
+                    bounds.size
+                };
+
+                renderBar(static_cast<int>(stamina.maxStamina),
+                          static_cast<int>(stamina.stamina),
+                          sf::Color(96, 220, 96),
+                          sf::Color(32, 128, 48),
+                          stamina_bounds, window);
+            }
             std::array<ItemStack, 9> array;
             std::copy_n(inventory.inventory.slots.begin(), array.size(), array.begin());
             renderHotbar(array, inventory.selectedSlot, window);
@@ -1269,9 +1288,7 @@ void ClientGameState::observeDamageParticles()
                 auto& transform = entity.getComponent<TransformComponent>();
                 ParticleSpawnParams params;
                 params.effect   = ParticleEffect::Damage;
-                params.position = sf::Vector2f(
-                    static_cast<float>(transform.center().x),
-                    static_cast<float>(transform.center().y));
+                params.position = transform.center();
                 params.count    = 8;
                 params.spread   = 3.0f;
                 particles.spawn(params);
@@ -1310,7 +1327,7 @@ void ClientGameState::updateAmbientParticles(float dt)
         for (int bx = min_x; bx <= max_x; ++bx)
         {
             Block block = local_world.getBlock(bx, by);
-            sf::Vector2f pos{static_cast<float>(bx) + 0.5f, static_cast<float>(by) + 0.9f};
+            sf::Vector2<double> pos{static_cast<double>(bx) + 0.5, static_cast<double>(by) + 0.9};
 
             switch (block.id)
             {
@@ -1322,17 +1339,17 @@ void ClientGameState::updateAmbientParticles(float dt)
                         p.position = pos;
                         p.count = 1;
                         p.spread = 0.3f;
-                        p.base_velocity = {0.0f, 1.2f};
+                        p.base_velocity = {0.0, 1.2};
                         particles.spawn(p);
                     }
                     if (unit(ambient_rng) < 0.25f)
                     {
                         ParticleSpawnParams p;
                         p.effect = ParticleEffect::Smoke;
-                        p.position = {pos.x, pos.y + 0.1f};
+                        p.position = {pos.x, pos.y + 0.1};
                         p.count = 1;
                         p.spread = 0.3f;
-                        p.base_velocity = {0.0f, 1.0f};
+                        p.base_velocity = {0.0, 1.0};
                         particles.spawn(p);
                     }
                     break;
@@ -1343,16 +1360,16 @@ void ClientGameState::updateAmbientParticles(float dt)
                     {
                         ParticleSpawnParams p;
                         p.effect = ParticleEffect::Smoke;
-                        p.position = {pos.x, static_cast<float>(by) + 1.1f};
+                        p.position = {pos.x, static_cast<double>(by) + 1.1};
                         p.count = 1;
                         p.spread = 0.2f;
-                        p.base_velocity = {0.0f, 0.8f};
+                        p.base_velocity = {0.0, 0.8};
                         particles.spawn(p);
                         if (unit(ambient_rng) < 0.3f)
                         {
                             ParticleSpawnParams ember;
                             ember.effect = ParticleEffect::Spark;
-                            ember.position = {pos.x, static_cast<float>(by) + 0.5f};
+                            ember.position = {pos.x, static_cast<double>(by) + 0.5};
                             ember.count = 1;
                             ember.spread = 1.0f;
                             particles.spawn(ember);
@@ -1368,7 +1385,7 @@ void ClientGameState::updateAmbientParticles(float dt)
                         p.position = pos;
                         p.count = 1;
                         p.spread = 1.5f;
-                        p.base_velocity = {0.0f, 1.5f};
+                        p.base_velocity = {0.0, 1.5};
                         particles.spawn(p);
                     }
                     break;
@@ -1384,7 +1401,7 @@ void ClientGameState::updateAmbientParticles(float dt)
                             p.position = pos;
                             p.count = 1;
                             p.spread = 0.2f;
-                            p.base_velocity = {0.0f, 0.5f};
+                            p.base_velocity = {0.0, 0.5};
                             particles.spawn(p);
                         }
                     }
@@ -1469,15 +1486,16 @@ void ClientGameState::updateFootstepParticles(float /*dt*/)
 
     ParticleSpawnParams params;
     params.effect   = ParticleEffect::BlockDust;
-    params.position = sf::Vector2f(
-        static_cast<float>(transform.position.x + transform.size.x * 0.5),
-        static_cast<float>(transform.position.y) + 0.05f);
+    params.position = {
+        transform.position.x + transform.size.x * 0.5,
+        transform.position.y + 0.05
+    };
     params.count    = 3;
     params.spread   = 1.2f;
     // Push particles opposite the direction of motion so they trail behind
     // the walker, and give a slight upward kick so they settle visibly.
-    float dir = (signed_delta >= 0.0) ? -1.0f : 1.0f;
-    params.base_velocity = {dir * 1.2f, 1.5f};
+    double dir = (signed_delta >= 0.0) ? -1.0 : 1.0;
+    params.base_velocity = {dir * 1.2, 1.5};
     params.block_id = under.id;
     particles.spawn(params);
 }

@@ -7,6 +7,7 @@
 #include "../include/ItemComponent.hpp"
 #include "../include/InventoryComponent.hpp"
 #include "../include/AnimationComponent.hpp"
+#include "../include/EffectsComponent.hpp"
 #include "../include/ChestView.hpp"
 #include "../include/CraftingView.hpp"
 #include "../include/FurnaceView.hpp"
@@ -26,6 +27,37 @@ void PlayerControlledSystem(World& world, float dt)
         auto& player = entity.getComponent<PlayerControlledComponent>();
         auto& transform = entity.getComponent<TransformComponent>();
         auto& inventory = entity.getComponent<InventoryComponent>();
+
+        if (entity.hasComponent<EffectsComponent>())
+        {
+            const double cx = transform.center().x;
+            const bool outside = (cx >= static_cast<double>(World::BORDER_X))
+                              || (cx <  static_cast<double>(-World::BORDER_X));
+            if (outside)
+            {
+                auto& effects = entity.getComponent<EffectsComponent>();
+                EffectInstance* existing = nullptr;
+                for (auto& e : effects.effects)
+                {
+                    if (e.id == EffectID::BoundaryDistortion) { existing = &e; break; }
+                }
+                if (!existing)
+                {
+                    EffectInstance e;
+                    e.id                 = EffectID::BoundaryDistortion;
+                    e.interval           = 2.0f;
+                    e.since_last_tick    = 0.0f;
+                    e.remaining_duration = 180.0f;
+                    e.magnitude          = 1;
+                    effects.effects.push_back(e);
+                }
+                else
+                {
+                    existing->remaining_duration = 180.0f;
+                }
+                effects.dirty = true;
+            }
+        }
 
         if(player.noclip && entity.hasComponent<PhysicsComponent>())
         {
@@ -52,8 +84,8 @@ void PlayerControlledSystem(World& world, float dt)
                 player.dirty = true;
             }
 
-            physics.velocity = {0.0f, 0.0f};
-            physics.force = {0.0f, 0.0f};
+            physics.velocity = {0.0, 0.0};
+            physics.force = {0.0, 0.0};
         }
 
         if (entity.hasComponent<AnimationComponent>() && entity.hasComponent<PhysicsComponent>())
@@ -61,7 +93,7 @@ void PlayerControlledSystem(World& world, float dt)
             auto& animation = entity.getComponent<AnimationComponent>();
             const auto& physics = entity.getComponent<PhysicsComponent>();
 
-            AnimationState desired = std::abs(physics.velocity.x) > 0.5f ? AnimationState::Walking : AnimationState::Idle;
+            AnimationState desired = std::abs(physics.velocity.x) > 0.5 ? AnimationState::Walking : AnimationState::Idle;
 
             if (animation.currentState != desired)
             {

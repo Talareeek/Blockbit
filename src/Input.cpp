@@ -13,6 +13,7 @@
 #include "../include/PhysicsSystem.hpp"
 #include "../include/PlayerControlledComponent.hpp"
 #include "../include/HealthComponent.hpp"
+#include "../include/StaminaComponent.hpp"
 #include "../include/AnimationComponent.hpp"
 #include "../include/InventoryView.hpp"
 
@@ -29,14 +30,17 @@ std::vector<Input> getInputs(const World& world, sf::Vector2<double> camera, con
 {
     std::vector<Input> inputs;
 
+    const bool sprint = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl)
+                     || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl);
+
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
     {
-        inputs.push_back({InputType::MOVE, sf::Vector2<double>{-1.0, 0.0}});
+        inputs.push_back({InputType::MOVE, MoveData{{-1.0, 0.0}, sprint}});
     }
 
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D))
     {
-        inputs.push_back({InputType::MOVE, sf::Vector2<double>{1.0, 0.0}});
+        inputs.push_back({InputType::MOVE, MoveData{{1.0, 0.0}, sprint}});
     }
 
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space))
@@ -130,14 +134,21 @@ void applyLocalPlayerInputPrediction(World& world, const std::vector<Input>& inp
         {
             case InputType::MOVE:
             {
-                auto direction = std::get<sf::Vector2<double>>(input.value);
+                auto move = std::get<MoveData>(input.value);
+
+                float multiplier = 0.75f;
+                if(move.sprint && entity.hasComponent<StaminaComponent>()
+                   && entity.getComponent<StaminaComponent>().stamina > 0.0f)
+                {
+                    multiplier = 1.25f;
+                }
 
                 int block_x = (int)std::floor(transform.position.x + transform.size.x / 2.0f);
                 int block_y = (int)std::floor(transform.position.y);
-                physics.force.x += 45.0f * direction.x / blockDatabase[world.getBlock(block_x, block_y).id].drag;
+                physics.force.x += 45.0f * move.direction.x * multiplier / blockDatabase[world.getBlock(block_x, block_y).id].drag;
 
-                if(direction.x < 0.0f) animation.direction = AnimationComponent::Direction::Left;
-                else if(direction.x > 0.0f) animation.direction = AnimationComponent::Direction::Right;
+                if(move.direction.x < 0.0f) animation.direction = AnimationComponent::Direction::Left;
+                else if(move.direction.x > 0.0f) animation.direction = AnimationComponent::Direction::Right;
 
                 break;
             }
@@ -179,19 +190,34 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
         {
             case InputType::MOVE:
             {
-                auto direction = std::get<sf::Vector2<double>>(input.value);
+                auto move = std::get<MoveData>(input.value);
+
+                float multiplier = 0.75f;
+                if(move.sprint && std::abs(move.direction.x) > 0.01
+                   && entity.hasComponent<StaminaComponent>())
+                {
+                    auto& stamina = entity.getComponent<StaminaComponent>();
+                    const float gate = (stamina.since_last_drain <= 0.0f)
+                                       ? 0.0f
+                                       : StaminaComponent::MIN_TO_START_SPRINT;
+                    if(stamina.stamina > gate)
+                    {
+                        multiplier = 1.25f;
+                        stamina.sprint_requested = true;
+                    }
+                }
 
                 int block_x = (int)std::floor(transform.position.x + transform.size.x / 2.0f);
                 int block_y = (int)std::floor(transform.position.y);
-                physics.force.x += 45.0f * direction.x / blockDatabase[world.getBlock(block_x, block_y).id].drag;
+                physics.force.x += 45.0f * move.direction.x * multiplier / blockDatabase[world.getBlock(block_x, block_y).id].drag;
                 physics.dirty = true;
 
-                if(direction.x < 0.0f)
+                if(move.direction.x < 0.0f)
                 {
                     animation.direction = AnimationComponent::Direction::Left;
                     animation.dirty = true;
                 }
-                else if(direction.x > 0.0f)
+                else if(move.direction.x > 0.0f)
                 {
                     animation.direction = AnimationComponent::Direction::Right;
                     animation.dirty = true;
@@ -314,9 +340,9 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
                             direction = {1.0, 0.0};
                         }
 
-                        const float strength = (MAX_HIT_DISTANCE - best_distance) * HIT_KNOCKBACK_SCALE;
+                        const double strength = static_cast<double>((MAX_HIT_DISTANCE - best_distance) * HIT_KNOCKBACK_SCALE);
 
-                        target_physics.velocity.x += static_cast<float>(direction.x) * strength;
+                        target_physics.velocity.x += direction.x * strength;
                         target_physics.velocity.y += HIT_KNOCKBACK_VERTICAL;
                         target_physics.dirty = true;
                     }

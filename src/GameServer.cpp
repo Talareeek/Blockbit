@@ -15,6 +15,7 @@
 #include "../include/TransformSystem.hpp"
 #include "../include/ExplosiveSystem.hpp"
 #include "../include/HealthSystem.hpp"
+#include "../include/StaminaSystem.hpp"
 #include "../include/EffectsSystem.hpp"
 #include "../include/PhysicsSystem.hpp"
 #include "../include/InventorySystem.hpp"
@@ -673,6 +674,7 @@ void GameServer::update(float dt)
         ExplosiveSystem(world, dt);
         EffectsSystem(world, dt);
         HealthSystem(world, dt);
+        StaminaSystem(world, dt);
         PhysicsSystem(world, dt);
         FallingBlockSystem(world);
         PlayerControlledSystem(world, dt);

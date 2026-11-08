@@ -192,9 +192,9 @@ std::vector<Input> TouchInputOverlay::collectFrameInputs()
     {
         const float dead_px = joystick_radius * joystick_deadzone_frac;
         if (joystick_knob_offset.x < -dead_px)
-            out.push_back({InputType::MOVE, sf::Vector2<double>{-1.0, 0.0}});
+            out.push_back({InputType::MOVE, MoveData{{-1.0, 0.0}, false}});
         else if (joystick_knob_offset.x > dead_px)
-            out.push_back({InputType::MOVE, sf::Vector2<double>{ 1.0, 0.0}});
+            out.push_back({InputType::MOVE, MoveData{{ 1.0, 0.0}, false}});
     }
 
     // Held JUMP while the Jump button is pressed — same cadence as

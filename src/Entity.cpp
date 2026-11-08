@@ -10,9 +10,11 @@
 #include "../include/PhysicsComponent.hpp"
 #include "../include/RenderComponent.hpp"
 #include "../include/HealthComponent.hpp"
+#include "../include/StaminaComponent.hpp"
 #include "../include/TransformComponent.hpp"
 #include "../include/FallingBlockComponent.hpp"
 #include "../include/LightningBoltComponent.hpp"
+#include "../include/EffectsComponent.hpp"
 
 Entity::Entity(UUID id) : id{id}
 {
@@ -128,6 +130,12 @@ void Entity::deserialize(Tag& tag)
             c.deserialize(payload);
             addComponent<HealthComponent>(c);
         }
+        else if (name == "StaminaComponent")
+        {
+            StaminaComponent c;
+            c.deserialize(payload);
+            addComponent<StaminaComponent>(c);
+        }
         else if (name == "ItemComponent")
         {
             ItemComponent c;
@@ -169,6 +177,12 @@ void Entity::deserialize(Tag& tag)
             LightningBoltComponent c;
             c.deserialize(payload);
             addComponent<LightningBoltComponent>(c);
+        }
+        else if (name == "EffectsComponent")
+        {
+            EffectsComponent c;
+            c.deserialize(payload);
+            addComponent<EffectsComponent>(c);
         }
     }
 }

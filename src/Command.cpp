@@ -600,7 +600,7 @@ std::unordered_map<std::wstring, Command> commandDatabase =
             if (!entity.hasComponent<PhysicsComponent>())
                 throw CommandException{"Entity has no PhysicsComponent."};
 
-            entity.getComponent<PhysicsComponent>().velocity += sf::Vector2f(x, y);
+            entity.getComponent<PhysicsComponent>().velocity += sf::Vector2<double>(x, y);
             entity.getComponent<PhysicsComponent>().dirty = true;
         }
     }},

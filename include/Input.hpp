@@ -35,11 +35,17 @@ struct ChangeSlotData
     int8_t value;
 };
 
+struct MoveData
+{
+    sf::Vector2<double> direction;
+    bool sprint = false;
+};
+
 struct Input
 {
     InputType type;
 
-    std::variant<std::monostate, sf::Vector2<double>, uint8_t, bool, ChangeSlotData> value;
+    std::variant<std::monostate, sf::Vector2<double>, uint8_t, bool, ChangeSlotData, MoveData> value;
 };
 
 std::vector<Input> getInputs(const World& world, sf::Vector2<double> camera, const sf::RenderWindow& window);

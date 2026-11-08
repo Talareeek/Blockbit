@@ -3,6 +3,7 @@
 #include "../include/ClientWorld.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/GameCommon.hpp"
+#include "../include/Settings.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -10,8 +11,8 @@
 
 namespace
 {
-    constexpr float GRAVITY = 18.0f;        // blocks/s^2
-    constexpr float DRAG    = 0.92f;        // per-second multiplier
+    constexpr double GRAVITY = 18.0;        // blocks/s^2
+    constexpr double DRAG    = 0.92;        // per-second multiplier
 
     struct Profile
     {
@@ -36,7 +37,7 @@ namespace
                 return {0.45f, 0.75f, 0.14f, 0.22f,
                         sf::Color(255, 255, 255, 255),
                         sf::Color(255, 255, 255, 255),
-                        static_cast<uint8_t>(F::Gravity | F::Collides | F::Fades)};
+                        static_cast<uint8_t>(F::Gravity | F::Collides | F::Fades | F::Lit)};
             case ParticleEffect::Explosion:
                 return {0.5f, 0.9f, 0.25f, 0.55f,
                         sf::Color(255, 200, 80, 220),
@@ -46,7 +47,7 @@ namespace
                 return {0.7f, 1.4f, 0.18f, 0.35f,
                         sf::Color(90,  90,  90, 200),
                         sf::Color(50,  50,  50, 160),
-                        static_cast<uint8_t>(F::Fades | F::Rises)};
+                        static_cast<uint8_t>(F::Fades | F::Rises | F::Lit)};
             case ParticleEffect::Flame:
                 return {0.3f, 0.6f, 0.08f, 0.18f,
                         sf::Color(255, 220, 90, 230),
@@ -61,7 +62,7 @@ namespace
                 return {0.3f, 0.6f, 0.06f, 0.12f,
                         sf::Color(140, 200, 255, 220),
                         sf::Color( 60, 140, 220, 200),
-                        static_cast<uint8_t>(F::Gravity | F::Fades)};
+                        static_cast<uint8_t>(F::Gravity | F::Fades | F::Lit)};
             case ParticleEffect::Ember:
                 return {0.4f, 0.9f, 0.05f, 0.10f,
                         sf::Color(255, 180,  80, 230),
@@ -71,12 +72,12 @@ namespace
                 return {0.3f, 0.5f, 0.08f, 0.14f,
                         sf::Color(200,  30,  30, 220),
                         sf::Color(140,  10,  10, 200),
-                        static_cast<uint8_t>(F::Gravity | F::Fades)};
+                        static_cast<uint8_t>(F::Gravity | F::Fades | F::Lit)};
             case ParticleEffect::Bubble:
                 return {0.6f, 1.2f, 0.05f, 0.09f,
                         sf::Color(200, 230, 255, 180),
                         sf::Color(150, 200, 240, 140),
-                        static_cast<uint8_t>(F::Rises | F::Fades)};
+                        static_cast<uint8_t>(F::Rises | F::Fades | F::Lit)};
         }
         return {0.5f, 1.0f, 0.1f, 0.2f,
                 sf::Color::White, sf::Color::White,
@@ -113,13 +114,13 @@ void ParticleManager::emitOne(const ParticleSpawnParams& params)
 
     Particle p;
 
-    float angle = unit(rng) * 6.2831853f;
-    float speed = unit(rng) * params.spread;
+    double angle = static_cast<double>(unit(rng)) * 6.283185307179586;
+    double speed = static_cast<double>(unit(rng) * params.spread);
     p.velocity.x = params.base_velocity.x + std::cos(angle) * speed;
     p.velocity.y = params.base_velocity.y + std::sin(angle) * speed;
 
-    p.position.x = params.position.x + signed_unit(rng) * 0.1f;
-    p.position.y = params.position.y + signed_unit(rng) * 0.1f;
+    p.position.x = params.position.x + static_cast<double>(signed_unit(rng)) * 0.1;
+    p.position.y = params.position.y + static_cast<double>(signed_unit(rng)) * 0.1;
 
     p.max_lifetime = profile.lifetime_min + unit(rng) * (profile.lifetime_max - profile.lifetime_min);
     p.lifetime     = p.max_lifetime;
@@ -167,7 +168,8 @@ void ParticleManager::tick(float dt, ClientWorld& world)
 {
     if (dt <= 0.0f) return;
 
-    float drag_factor = std::pow(DRAG, dt);
+    const double ddt = static_cast<double>(dt);
+    const double drag_factor = std::pow(DRAG, ddt);
 
     std::uniform_real_distribution<float> signed_unit(-1.0f, 1.0f);
 
@@ -183,14 +185,14 @@ void ParticleManager::tick(float dt, ClientWorld& world)
             continue;
         }
 
-        if (p.flags & Particle::Gravity) p.velocity.y -= GRAVITY * dt;
-        if (p.flags & Particle::Rises)   p.velocity.y += 2.0f * dt;
-        if (p.flags & Particle::Flicker) p.velocity.x += signed_unit(rng) * 2.0f * dt;
+        if (p.flags & Particle::Gravity) p.velocity.y -= GRAVITY * ddt;
+        if (p.flags & Particle::Rises)   p.velocity.y += 2.0 * ddt;
+        if (p.flags & Particle::Flicker) p.velocity.x += static_cast<double>(signed_unit(rng)) * 2.0 * ddt;
 
         p.velocity.x *= drag_factor;
         p.velocity.y *= drag_factor;
 
-        sf::Vector2f next = p.position + p.velocity * dt;
+        sf::Vector2<double> next = p.position + p.velocity * ddt;
 
         if (p.flags & Particle::Collides)
         {
@@ -205,10 +207,10 @@ void ParticleManager::tick(float dt, ClientWorld& world)
                 // particle settles instead of bouncing forever.
                 int cx = static_cast<int>(std::floor(p.position.x));
                 int cy = static_cast<int>(std::floor(p.position.y));
-                if (cx != bx) p.velocity.x = -p.velocity.x * 0.2f;
-                if (cy != by) p.velocity.y = -p.velocity.y * 0.2f;
+                if (cx != bx) p.velocity.x = -p.velocity.x * 0.2;
+                if (cy != by) p.velocity.y = -p.velocity.y * 0.2;
                 p.lifetime = std::min(p.lifetime, 0.15f);
-                next = p.position + p.velocity * dt;
+                next = p.position + p.velocity * ddt;
             }
         }
 
@@ -217,11 +219,19 @@ void ParticleManager::tick(float dt, ClientWorld& world)
     }
 }
 
-void ParticleManager::render(sf::RenderWindow& window, sf::Vector2<double> camera)
+void ParticleManager::render(sf::RenderWindow& window, sf::Vector2<double> camera, const ClientWorld& world)
 {
     if (particles.empty()) return;
 
     unsigned int unit_size = window.getSize().y / WORLD_UNIT_SIZE_FACTOR;
+
+    // Match the lighting_overlay.frag constants so Lit particles shade the
+    // same way as the terrain underneath them.
+    const bool  lighting_on    = Settings::graphics.lighting_effect;
+    const float effect_strength = std::clamp(Settings::graphics.lighting_effect_strength, 0.0f, 1.0f);
+    const float day_factor      = computeDayFactor(solarPhase(world.getDayTime(), world.days));
+    constexpr float night_sky_floor = 4.0f / 15.0f;
+    const float sky_scale = night_sky_floor + (1.0f - night_sky_floor) * day_factor;
 
     // Batch per-texture (nullptr groups together). Each particle is 2 tris = 6
     // verts. One draw call per bucket keeps this cheap even with the hard cap.
@@ -237,6 +247,20 @@ void ParticleManager::render(sf::RenderWindow& window, sf::Vector2<double> camer
 
         sf::Color color = p.color;
         color.a = static_cast<uint8_t>(std::round(color.a * fade));
+
+        if (lighting_on && (p.flags & Particle::Lit))
+        {
+            int bx = static_cast<int>(std::floor(p.position.x));
+            int by = static_cast<int>(std::floor(p.position.y));
+            float block_light = world.getBlockLight(bx, by) / 15.0f;
+            float sky_light   = world.getSkyLight(bx, by)   / 15.0f * sky_scale;
+            float lit         = std::max(block_light, sky_light);
+            float final_lit   = 1.0f + (lit - 1.0f) * effect_strength;
+            final_lit = std::clamp(final_lit, 0.0f, 1.0f);
+            color.r = static_cast<uint8_t>(std::round(color.r * final_lit));
+            color.g = static_cast<uint8_t>(std::round(color.g * final_lit));
+            color.b = static_cast<uint8_t>(std::round(color.b * final_lit));
+        }
 
         sf::Vector2f screen = {
             static_cast<float>(p.position.x - static_cast<float>(camera.x)),

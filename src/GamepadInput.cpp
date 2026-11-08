@@ -222,7 +222,7 @@ std::vector<Input> GamepadInput::collectTickInputs()
     const float lx = normalizeAxis(lx_raw, deadzone);
     if(lx != 0.0f)
     {
-        out.push_back({InputType::MOVE, sf::Vector2<double>{static_cast<double>(lx), 0.0}});
+        out.push_back({InputType::MOVE, MoveData{{static_cast<double>(lx), 0.0}, false}});
     }
 
     // Button edge detection.

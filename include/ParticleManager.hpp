@@ -29,15 +29,15 @@ enum class ParticleEffect : uint16_t
 
 struct ParticleSpawnParams
 {
-    ParticleEffect effect = ParticleEffect::Smoke;
-    sf::Vector2f   position{};
+    ParticleEffect      effect = ParticleEffect::Smoke;
+    sf::Vector2<double> position{};
 
-    uint16_t       count   = 1;
-    float          spread  = 1.0f;  // velocity jitter magnitude (blocks/s)
-    sf::Vector2f   base_velocity{}; // bias applied on top of jitter
+    uint16_t            count   = 1;
+    float               spread  = 1.0f;  // velocity jitter magnitude (blocks/s)
+    sf::Vector2<double> base_velocity{}; // bias applied on top of jitter
 
     // For BlockDust: source block supplies the sprite. Ignored otherwise.
-    BlockID        block_id = BlockID::Air;
+    BlockID             block_id = BlockID::Air;
 };
 
 class ParticleManager
@@ -46,7 +46,7 @@ public:
 
     void spawn(const ParticleSpawnParams& params);
     void tick(float dt, ClientWorld& world);
-    void render(sf::RenderWindow& window, sf::Vector2<double> camera);
+    void render(sf::RenderWindow& window, sf::Vector2<double> camera, const ClientWorld& world);
 
     void clear() { particles.clear(); }
     std::size_t size() const { return particles.size(); }

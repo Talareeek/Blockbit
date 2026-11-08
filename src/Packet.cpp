@@ -327,7 +327,9 @@ static void writeInput(PacketWriter& w, const Input& in)
         }
         case InputType::MOVE:
         {
-            w.write(std::get<sf::Vector2<double>>(in.value));
+            auto move = std::get<MoveData>(in.value);
+            w.write(move.direction);
+            w.write<bool>(move.sprint);
             break;
         }
     }
@@ -341,8 +343,13 @@ static Input readInput(PacketReader& r)
     switch (in.type)
     {
         case InputType::MOVE:
-            in.value = r.read<sf::Vector2<double>>();
+        {
+            MoveData move;
+            move.direction = r.read<sf::Vector2<double>>();
+            move.sprint = r.read<bool>();
+            in.value = move;
             break;
+        }
         case InputType::CHANGE_SLOT:
         {
             ChangeSlotData data;
@@ -723,7 +730,7 @@ std::vector<char> serializePacket(const ParticleBurstPacket& p)
 ParticleBurstPacket deserializeParticleBurst(PacketReader& r)
 {
     ParticleBurstPacket p;
-    p.position = r.read<sf::Vector2f>();
+    p.position = r.read<sf::Vector2<double>>();
     p.effect   = r.read<uint16_t>();
     p.count    = r.read<uint16_t>();
     p.spread   = r.read<float>();

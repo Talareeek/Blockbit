@@ -203,11 +203,11 @@ struct ViewEventPacket
 // uses `arg` per-effect (e.g. BlockID for BlockDust).
 struct ParticleBurstPacket
 {
-    sf::Vector2f position;
-    uint16_t     effect;
-    uint16_t     count;
-    float        spread;
-    uint32_t     arg;
+    sf::Vector2<double> position;
+    uint16_t            effect;
+    uint16_t            count;
+    float               spread;
+    uint32_t            arg;
 };
 
 class PacketWriter

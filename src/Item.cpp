@@ -122,7 +122,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
 
                 explosiveEntity.addComponent(
                     PhysicsComponent{
-                        sf::Vector2f((mouse - playerPos) * 3.0),
+                        (mouse - playerPos) * 3.0,
                         {0.0f, 0.0f},
                         {0.0f, 0.0f},
                         1.0f,

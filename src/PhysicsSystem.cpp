@@ -37,8 +37,8 @@ void PhysicsSystem(World& world, float deltaTime)
     const double dt = static_cast<double>(deltaTime);
     if(dt <= 0.0) return;
 
-    const double damping_x_mult = std::exp(-static_cast<double>(PhysicsComponent::damping.x) * dt);
-    const double damping_y_base = -static_cast<double>(PhysicsComponent::damping.y) * dt;
+    const double damping_x_mult = std::exp(-PhysicsComponent::damping.x * dt);
+    const double damping_y_base = -PhysicsComponent::damping.y * dt;
 
     for(auto& [id, entity] : world.getEntities())
     {
@@ -64,14 +64,14 @@ void PhysicsSystem(World& world, float deltaTime)
         {
             double g = -GRAVITY * c.mass * (inLiquid ? LIQUID_GRAVITY_K : 1.0);
             if(inLiquid) g += LIQUID_BUOYANCY * c.mass;
-            c.force.y += static_cast<float>(g);
+            c.force.y += g;
         }
 
         const double inv_mass = 1.0 / static_cast<double>(c.mass);
-        double vx = static_cast<double>(c.velocity.x) + static_cast<double>(c.force.x) * inv_mass * dt;
-        double vy = static_cast<double>(c.velocity.y) + static_cast<double>(c.force.y) * inv_mass * dt;
+        double vx = c.velocity.x + c.force.x * inv_mass * dt;
+        double vy = c.velocity.y + c.force.y * inv_mass * dt;
 
-        const double fallLimit = inLiquid ? LIQUID_FALL_LIMIT : static_cast<double>(PhysicsComponent::TERMINAL_VELOCITY);
+        const double fallLimit = inLiquid ? LIQUID_FALL_LIMIT : PhysicsComponent::TERMINAL_VELOCITY;
         if(vy < -fallLimit) vy = -fallLimit;
         if(inLiquid && vy > LIQUID_RISE_LIMIT) vy = LIQUID_RISE_LIMIT;
 
@@ -119,13 +119,10 @@ void PhysicsSystem(World& world, float deltaTime)
                     const double prev_right = prev_x + size_x;
                     if(prev_right <= static_cast<double>(tx))
                     {
-                        bool blocked = (tx >= World::BORDER_X) || (tx < -World::BORDER_X);
-                        if(!blocked)
+                        bool blocked = false;
+                        for(int y = y0; y <= y1; ++y)
                         {
-                            for(int y = y0; y <= y1; ++y)
-                            {
-                                if(blockDatabase[world.getBlock(tx, y).id].solid) { blocked = true; break; }
-                            }
+                            if(blockDatabase[world.getBlock(tx, y).id].solid) { blocked = true; break; }
                         }
                         if(blocked)
                         {
@@ -142,13 +139,10 @@ void PhysicsSystem(World& world, float deltaTime)
                     const double prev_left = prev_x;
                     if(prev_left >= static_cast<double>(tx + 1))
                     {
-                        bool blocked = (tx >= World::BORDER_X) || (tx < -World::BORDER_X);
-                        if(!blocked)
+                        bool blocked = false;
+                        for(int y = y0; y <= y1; ++y)
                         {
-                            for(int y = y0; y <= y1; ++y)
-                            {
-                                if(blockDatabase[world.getBlock(tx, y).id].solid) { blocked = true; break; }
-                            }
+                            if(blockDatabase[world.getBlock(tx, y).id].solid) { blocked = true; break; }
                         }
                         if(blocked)
                         {
@@ -228,9 +222,9 @@ void PhysicsSystem(World& world, float deltaTime)
             health.dirty = true;
         }
 
-        c.velocity.x = static_cast<float>(vx);
-        c.velocity.y = static_cast<float>(vy);
-        c.force = {0.0f, 0.0f};
+        c.velocity.x = vx;
+        c.velocity.y = vy;
+        c.force = {0.0, 0.0};
         t.render_position = t.position;
         c.dirty = true;
         t.dirty = true;

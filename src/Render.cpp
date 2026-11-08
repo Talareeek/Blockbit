@@ -227,20 +227,6 @@ namespace
         return it->second;
     }
 
-    // Sky-light brightness tracks the sun's elevation. The curve is
-    // intentionally flat around noon and midnight so transitions don't feel
-    // abrupt; the shader clamps against u_ambient_min below so caves never go
-    // pitch black regardless of day_factor.
-    //
-    // phase is a seasonal-remapped time where noon is always at 0.5 and
-    // midnight at 0, so this stays correct year-round even as the daylight
-    // span shrinks or stretches.
-    float computeDayFactor(float phase)
-    {
-        constexpr float TAU = 6.2831853f;
-        float raw = -std::cos(phase * TAU) * 0.5f + 0.5f;
-        return std::clamp(raw, 0.0f, 1.0f);
-    }
 }
 
 void BuildChunkMesh(ClientWorld& world, int chunk_position)
@@ -949,9 +935,9 @@ void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf
     constexpr float OPACITY_TRANSITION_DURATION = 0.15f;
     constexpr float INSET = 1.0f / 16.0f;
 
-    static sf::FloatRect source_rect{};
-    static sf::FloatRect target_rect{};
-    static sf::FloatRect current_rect{};
+    static sf::Rect<double> source_rect{};
+    static sf::Rect<double> target_rect{};
+    static sf::Rect<double> current_rect{};
     static float transition_elapsed = TRANSITION_DURATION;
     static float current_opacity = 1.0f;
     static bool initialized = false;
@@ -980,10 +966,11 @@ void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf
     };
 
     sf::FloatRect local = resolveBounds();
-    sf::FloatRect target
+    sf::Rect<double> target
     {
-        {static_cast<float>(block.x) + local.position.x, static_cast<float>(block.y) + local.position.y},
-        local.size
+        {static_cast<double>(block.x) + static_cast<double>(local.position.x),
+         static_cast<double>(block.y) + static_cast<double>(local.position.y)},
+        {static_cast<double>(local.size.x), static_cast<double>(local.size.y)}
     };
 
     const float target_opacity = is_air ? std::clamp(1.0f - Settings::render.selector_air_fade, 0.0f, 1.0f) : 1.0f;
@@ -1013,8 +1000,8 @@ void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf
     if (transition_elapsed < TRANSITION_DURATION)
     {
         transition_elapsed = std::min(transition_elapsed + dt, TRANSITION_DURATION);
-        float t = transition_elapsed / TRANSITION_DURATION;
-        t = t * t * (3.0f - 2.0f * t);
+        double t = static_cast<double>(transition_elapsed / TRANSITION_DURATION);
+        t = t * t * (3.0 - 2.0 * t);
 
         current_rect.position.x = source_rect.position.x + (target_rect.position.x - source_rect.position.x) * t;
         current_rect.position.y = source_rect.position.y + (target_rect.position.y - source_rect.position.y) * t;
@@ -1041,12 +1028,12 @@ void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf
 
     float unit_size = static_cast<float>(window.getSize().y) / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
 
-    float inset = std::min(INSET, 0.5f * std::min(current_rect.size.x, current_rect.size.y));
+    double inset = std::min(static_cast<double>(INSET), 0.5 * std::min(current_rect.size.x, current_rect.size.y));
 
     sf::RectangleShape shape(
         {
-            (current_rect.size.x - 2.0f * inset) * unit_size,
-            (current_rect.size.y - 2.0f * inset) * unit_size
+            static_cast<float>((current_rect.size.x - 2.0 * inset) * unit_size),
+            static_cast<float>((current_rect.size.y - 2.0 * inset) * unit_size)
         }
     );
 
@@ -1055,12 +1042,12 @@ void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf
 
     shape.setFillColor(sf::Color::Transparent);
     shape.setOutlineColor(outline_color);
-    shape.setOutlineThickness(inset * unit_size);
+    shape.setOutlineThickness(static_cast<float>(inset * unit_size));
 
     shape.setPosition(
         {
-            (static_cast<float>(static_cast<double>(current_rect.position.x) - camera.x) + inset) * unit_size,
-            (static_cast<float>(static_cast<double>(current_rect.position.y) - camera.y) + inset) * unit_size
+            static_cast<float>((current_rect.position.x - camera.x + inset) * unit_size),
+            static_cast<float>((current_rect.position.y - camera.y + inset) * unit_size)
         }
     );
 
@@ -1138,7 +1125,7 @@ void RenderBorder(const sf::Vector2<double> camera, float view_scale, sf::Render
         br.position = {x_right, y_bottom};  br.texCoords = {u_right, v_max};
         tr.position = {x_right, y_top};     tr.texCoords = {u_right, 0.0f};
         tl.position = {x_left,  y_top};     tl.texCoords = {u_left,  0.0f};
-        bl.color = br.color = tr.color = tl.color = sf::Color::White;
+        bl.color = br.color = tr.color = tl.color = sf::Color(255, 255, 255, 60);
 
         quad[0] = bl; quad[1] = br; quad[2] = tr;
         quad[3] = bl; quad[4] = tr; quad[5] = tl;

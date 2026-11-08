@@ -60,7 +60,7 @@ void ExplosiveSystem(ServerWorld& world, float dt)
         // Visual burst for all clients. count/spread scale with yield so a
         // tiny firework doesn't produce the same cloud as a big TNT.
         ParticleBurstPacket burst;
-        burst.position = sf::Vector2f(static_cast<float>(center.x), static_cast<float>(center.y));
+        burst.position = center;
         burst.effect   = 1; // ParticleEffect::Explosion
         burst.count    = static_cast<uint16_t>(std::clamp<int>(static_cast<int>(force * 12.0f), 12, 80));
         burst.spread   = force * 2.0f;
@@ -96,10 +96,10 @@ void ExplosiveSystem(ServerWorld& world, float dt)
 
                 if(other.hasComponent<PhysicsComponent>())
                 {
-                    float impulse = std::sqrt(static_cast<float>(factor)) * (2.0f + force * 0.5f);
-                    impulse *= 0.85f + unit_dist(rng) * 0.3f;
+                    double impulse = std::sqrt(factor) * (2.0 + force * 0.5);
+                    impulse *= 0.85 + unit_dist(rng) * 0.3;
                     auto& other_physics = other.getComponent<PhysicsComponent>();
-                    other_physics.velocity += sf::Vector2f(dir.x, dir.y - 0.6f) * impulse;
+                    other_physics.velocity += sf::Vector2<double>(dir.x, dir.y - 0.6) * impulse;
                     other_physics.dirty = true;
                 }
             }

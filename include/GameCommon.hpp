@@ -111,6 +111,11 @@ float dayLength(Date date);
 // sunrise and sunset shift with the season but noon/midnight stay anchored.
 float solarPhase(float dayTime, uint64_t days);
 
+// Maps a solarPhase in [0, 1) to a 0..1 brightness scalar that peaks at
+// noon and bottoms out at midnight. The curve is intentionally flat near
+// both poles so transitions don't pop.
+float computeDayFactor(float phase);
+
 bool isDaylight(float dayTime, uint64_t days);
 
 #endif // GAME_COMMON_HPP

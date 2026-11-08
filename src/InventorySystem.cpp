@@ -4,8 +4,6 @@
 #include "../include/InventoryComponent.hpp"
 #include "../include/TransformComponent.hpp"
 
-#include <SFML/Graphics.hpp>
-
 #include <algorithm>
 #include <vector>
 
@@ -89,10 +87,7 @@ void InventorySystem(ServerWorld& world)
 
             if(!world.isChunkLoaded(inventoryTransform.chunkPosition())) continue;
             
-            sf::FloatRect itemRect(sf::Vector2f(itemTransform.position), sf::Vector2f(itemTransform.size));
-            sf::FloatRect inventoryRect(sf::Vector2f(inventoryTransform.position), sf::Vector2f(inventoryTransform.size));
-
-            if(itemRect.findIntersection(inventoryRect))
+            if(itemTransform.intersects(inventoryTransform.position, inventoryTransform.size))
             {
                 item.item = inventory.inventory.addItemWithLeftover(item.item.itemID, item.item.quantity);
                 item.dirty = true;

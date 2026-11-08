@@ -9,11 +9,12 @@
 
 enum class EffectID : uint32_t
 {
-    None         = 0,
-    Regeneration = 1,
-    Poison       = 2,
-    Burning      = 3,
-    Starving     = 4
+    None               = 0,
+    Regeneration       = 1,
+    Poison             = 2,
+    Burning            = 3,
+    Starving           = 4,
+    BoundaryDistortion = 5
 };
 
 struct EffectInstance
