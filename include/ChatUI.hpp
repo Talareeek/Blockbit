@@ -14,13 +14,16 @@ class ChatUI : public UIElement
 {
 public:
 
-    struct ColoredSegment
+    struct StyledSegment
     {
         std::string text;
         ImVec4 color;
+        bool bold = false;
+        bool rainbow = false;
+        bool secret = false;
     };
 
-    static std::vector<ColoredSegment> parseBBCodeColors(const std::string& utf8, const ImVec4& defaultColor);
+    static std::vector<StyledSegment> parseBBCode(const std::string& utf8, const ImVec4& defaultColor);
 
 private:
 

@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <cstring>
 #include <utility>
 
@@ -36,20 +37,59 @@ namespace
         out = ImVec4(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
         return true;
     }
+
+    std::size_t utf8CharLen(unsigned char lead)
+    {
+        if((lead & 0x80) == 0x00) return 1;
+        if((lead & 0xE0) == 0xC0) return 2;
+        if((lead & 0xF0) == 0xE0) return 3;
+        if((lead & 0xF8) == 0xF0) return 4;
+        return 1;
+    }
+
+    ImVec4 rainbowColor(std::size_t idx, float alpha)
+    {
+        float hue = static_cast<float>((idx * 25) % 360) / 360.0f;
+        float r = 0.0f, g = 0.0f, b = 0.0f;
+        ImGui::ColorConvertHSVtoRGB(hue, 1.0f, 1.0f, r, g, b);
+        return ImVec4(r, g, b, alpha);
+    }
+
+    char secretGlyph(std::size_t idx, int bucket)
+    {
+        static const char charset[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*?";
+        constexpr std::size_t charsetSize = sizeof(charset) - 1;
+
+        std::uint32_t h = static_cast<std::uint32_t>(idx) * 2654435761u;
+        h ^= static_cast<std::uint32_t>(bucket) * 0x9E3779B1u;
+        h = (h ^ (h >> 16)) * 0x85EBCA6Bu;
+        h = (h ^ (h >> 13)) * 0xC2B2AE35u;
+        h ^= h >> 16;
+        return charset[h % charsetSize];
+    }
 }
 
-std::vector<ChatUI::ColoredSegment> ChatUI::parseBBCodeColors(const std::string& utf8, const ImVec4& defaultColor)
+std::vector<ChatUI::StyledSegment> ChatUI::parseBBCode(const std::string& utf8, const ImVec4& defaultColor)
 {
-    std::vector<ColoredSegment> out;
+    struct Style
+    {
+        ImVec4 color;
+        bool bold = false;
+        bool rainbow = false;
+        bool secret = false;
+    };
 
-    std::vector<ImVec4> stack;
-    stack.push_back(defaultColor);
+    std::vector<StyledSegment> out;
+
+    std::vector<Style> stack;
+    stack.push_back({defaultColor, false, false, false});
 
     std::string current;
     auto flush = [&]()
     {
         if(current.empty()) return;
-        out.push_back({std::move(current), stack.back()});
+        const Style& s = stack.back();
+        out.push_back({std::move(current), s.color, s.bold, s.rainbow, s.secret});
         current.clear();
     };
 
@@ -74,28 +114,44 @@ std::vector<ChatUI::ColoredSegment> ChatUI::parseBBCodeColors(const std::string&
         }
 
         std::string tag = utf8.substr(i + 1, close - i - 1);
+        bool consumed = false;
 
         if(tag.size() >= 7 && tag.compare(0, 7, "color=#") == 0)
         {
-            std::string hex = tag.substr(7);
             ImVec4 col;
-            if(parseHexColor(hex, col))
+            if(parseHexColor(tag.substr(7), col))
             {
                 flush();
-                stack.push_back(col);
-                i = close + 1;
-                continue;
+                Style s = stack.back();
+                s.color = col;
+                stack.push_back(s);
+                consumed = true;
             }
         }
-        else if(tag == "/color")
+        else if(tag == "bold" || tag == "rainbow" || tag == "secret")
+        {
+            flush();
+            Style s = stack.back();
+            if(tag == "bold")    s.bold = true;
+            if(tag == "rainbow") s.rainbow = true;
+            if(tag == "secret")  s.secret = true;
+            stack.push_back(s);
+            consumed = true;
+        }
+        else if(tag == "/color" || tag == "/bold" || tag == "/rainbow" || tag == "/secret")
         {
             if(stack.size() > 1)
             {
                 flush();
                 stack.pop_back();
-                i = close + 1;
-                continue;
+                consumed = true;
             }
+        }
+
+        if(consumed)
+        {
+            i = close + 1;
+            continue;
         }
 
         current.append(utf8, i, close - i + 1);
@@ -202,54 +258,125 @@ void ChatUI::render(sf::RenderWindow& window)
     ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight));
     ImGui::SetNextWindowBgAlpha(active ? 0.78f : 0.4f * alpha);
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 4.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, active ? 1.0f : 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, 8.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_GrabRounding, 0.0f);
 
     if(!ImGui::Begin("##Chat", nullptr, windowFlags))
     {
         ImGui::End();
-        ImGui::PopStyleVar(3);
+        ImGui::PopStyleVar(5);
         return;
     }
 
     const float listHeight = active ? ImGui::GetContentRegionAvail().y - inputHeight : ImGui::GetContentRegionAvail().y;
 
     ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-    ImGui::BeginChild("##ChatMessages", ImVec2(0.0f, listHeight), false, ImGuiWindowFlags_HorizontalScrollbar);
+    ImGuiWindowFlags childFlags = active ? ImGuiWindowFlags_HorizontalScrollbar : ImGuiWindowFlags_NoScrollbar;
+    ImGui::BeginChild("##ChatMessages", ImVec2(0.0f, listHeight), false, childFlags);
 
     const ImVec4 defaultColor = ImVec4(1.0f, 1.0f, 1.0f, active ? 1.0f : alpha);
 
     const float wrapWidth = ImGui::GetContentRegionAvail().x;
 
+    const int secretBucket = static_cast<int>(ImGui::GetTime() * 15.0);
+
     for(auto it = messages.rbegin(); it != messages.rend(); ++it)
     {
         std::string line = wstringToString(*it);
 
-        auto segments = parseBBCodeColors(line, defaultColor);
+        auto segments = parseBBCode(line, defaultColor);
         if(segments.empty()) continue;
 
         const float startX = ImGui::GetCursorPosX();
         float cursorX = startX;
         bool firstOnLine = true;
+        std::size_t rainbowIdx = 0;
+        std::size_t secretIdx = 0;
+
+        auto drawChunk = [&](const char* begin, const char* end, const ImVec4& col, bool bold)
+        {
+            if(!firstOnLine) ImGui::SameLine(0.0f, 0.0f);
+
+            ImGui::PushStyleColor(ImGuiCol_Text, col);
+            ImGui::TextUnformatted(begin, end);
+            ImGui::PopStyleColor();
+
+            if(bold)
+            {
+                ImVec2 rmin = ImGui::GetItemRectMin();
+                ImGui::GetWindowDrawList()->AddText(ImVec2(rmin.x + 1.0f, rmin.y), ImGui::GetColorU32(col), begin, end);
+            }
+
+            ImVec2 size = ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, 0.0f, begin, end);
+            cursorX += size.x;
+            firstOnLine = false;
+        };
 
         for(const auto& seg : segments)
         {
             if(seg.text.empty()) continue;
 
-            ImVec4 col = seg.color;
-            if(!active) col.w *= alpha;
+            ImVec4 baseCol = seg.color;
+            if(!active) baseCol.w *= alpha;
 
             std::size_t pos = 0;
             while(pos < seg.text.size())
             {
                 std::size_t nl = seg.text.find('\n', pos);
-                std::string part = seg.text.substr(pos, nl == std::string::npos ? std::string::npos : nl - pos);
+                std::size_t partEnd = (nl == std::string::npos) ? seg.text.size() : nl;
 
-                if(!part.empty())
+                if(seg.rainbow || seg.secret)
                 {
-                    const char* strBegin = part.c_str();
-                    const char* strEnd = strBegin + part.size();
+                    std::size_t p = pos;
+                    while(p < partEnd)
+                    {
+                        std::size_t clen = utf8CharLen(static_cast<unsigned char>(seg.text[p]));
+                        if(p + clen > partEnd) clen = partEnd - p;
+
+                        char buf[8];
+                        const char* begin;
+                        const char* end;
+
+                        if(seg.secret)
+                        {
+                            buf[0] = secretGlyph(secretIdx, secretBucket);
+                            begin = buf;
+                            end = buf + 1;
+                        }
+                        else
+                        {
+                            begin = seg.text.data() + p;
+                            end = begin + clen;
+                        }
+
+                        ImVec4 col = seg.rainbow ? rainbowColor(rainbowIdx, baseCol.w) : baseCol;
+
+                        ImVec2 size = ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, 0.0f, begin, end);
+                        float avail = wrapWidth - (cursorX - startX);
+                        if(size.x > avail && !firstOnLine)
+                        {
+                            ImGui::NewLine();
+                            cursorX = startX;
+                            firstOnLine = true;
+                        }
+
+                        if(seg.text[p] != ' ' || !firstOnLine)
+                        {
+                            drawChunk(begin, end, col, seg.bold);
+                        }
+
+                        ++rainbowIdx;
+                        ++secretIdx;
+                        p += clen > 0 ? clen : 1;
+                    }
+                }
+                else if(partEnd > pos)
+                {
+                    const char* strBegin = seg.text.data() + pos;
+                    const char* strEnd = seg.text.data() + partEnd;
 
                     while(strBegin < strEnd)
                     {
@@ -275,15 +402,7 @@ void ChatUI::render(sf::RenderWindow& window)
                             chunkEnd = strEnd;
                         }
 
-                        if(!firstOnLine) ImGui::SameLine(0.0f, 0.0f);
-
-                        ImGui::PushStyleColor(ImGuiCol_Text, col);
-                        ImGui::TextUnformatted(strBegin, chunkEnd);
-                        ImGui::PopStyleColor();
-
-                        ImVec2 size = ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, 0.0f, strBegin, chunkEnd);
-                        cursorX += size.x;
-                        firstOnLine = false;
+                        drawChunk(strBegin, chunkEnd, baseCol, seg.bold);
 
                         strBegin = chunkEnd;
                         while(strBegin < strEnd && *strBegin == ' ') ++strBegin;
@@ -302,7 +421,7 @@ void ChatUI::render(sf::RenderWindow& window)
         if(!firstOnLine) ImGui::NewLine();
     }
 
-    if(ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 1.0f) ImGui::SetScrollHereY(1.0f);
+    ImGui::SetScrollHereY(1.0f);
 
     ImGui::EndChild();
     ImGui::PopStyleColor();
@@ -333,5 +452,5 @@ void ChatUI::render(sf::RenderWindow& window)
     }
 
     ImGui::End();
-    ImGui::PopStyleVar(3);
+    ImGui::PopStyleVar(5);
 }
