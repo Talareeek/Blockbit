@@ -21,6 +21,7 @@
 #include "../include/ItemUtils.hpp"
 #include "../include/ItemInstance.hpp"
 #include "../include/ItemDataComponents.hpp"
+#include "../include/EffectRegistry.hpp"
 #include "../include/Weather.hpp"
 #include "../include/ClientWorld.hpp"
 #include "../include/LightningBoltComponent.hpp"
@@ -365,6 +366,15 @@ std::pair<sf::Color, sf::Color> getSkyGradientWeathered(float t, float rain_inte
 
     sf::Color storm_top    = lerpColor(rain_tint,    thunder_tint, thunder_k);
     sf::Color storm_bottom = lerpColor(rain_tint,    thunder_tint, thunder_k);
+
+    // Clamp per channel so weather can only darken the sky — otherwise rain
+    // at night would lerp towards the brighter tint and lift sky luminance.
+    storm_top.r    = std::min(storm_top.r,    top.r);
+    storm_top.g    = std::min(storm_top.g,    top.g);
+    storm_top.b    = std::min(storm_top.b,    top.b);
+    storm_bottom.r = std::min(storm_bottom.r, bottom.r);
+    storm_bottom.g = std::min(storm_bottom.g, bottom.g);
+    storm_bottom.b = std::min(storm_bottom.b, bottom.b);
 
     // Rain intensity drives most of the shift; thunder deepens it further.
     const float blend = std::clamp(rain_k * 0.75f + thunder_k * 0.20f, 0.0f, 0.95f);
@@ -1958,6 +1968,30 @@ void renderItemInfo(sf::Vector2f position, const ItemStack& item, sf::RenderTarg
                     lines.push_back({
                         enchantName(e.id) + " " + romanNumeral(e.level),
                         sf::Color(170, 170, 255)
+                    });
+                }
+            }
+
+            if (const MagicEffectItemComponent* bottle = data->get<MagicEffectItemComponent>())
+            {
+                if (bottle->effect != EffectID::None && EffectRegistry::contains(bottle->effect))
+                {
+                    const auto& def = EffectRegistry::get(bottle->effect);
+
+                    std::string effect_line = def.display_name.empty()
+                        ? std::string("Effect ") + std::to_string(static_cast<uint32_t>(bottle->effect))
+                        : def.display_name;
+                    if (bottle->magnitude > 1)
+                    {
+                        effect_line += " ";
+                        effect_line += romanNumeral(static_cast<uint8_t>(bottle->magnitude));
+                    }
+                    lines.push_back({effect_line, def.liquid_color});
+
+                    int seconds = static_cast<int>(bottle->duration + 0.5f);
+                    lines.push_back({
+                        std::to_string(seconds) + "s",
+                        sf::Color(200, 200, 200)
                     });
                 }
             }

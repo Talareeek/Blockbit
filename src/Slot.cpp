@@ -2,10 +2,29 @@
 #include "../include/AssetManager.hpp"
 #include "../include/Render.hpp"
 #include "../include/ItemUtils.hpp"
+#include "../include/ItemInstance.hpp"
+#include "../include/ItemDataComponents.hpp"
+#include "../include/EffectRegistry.hpp"
 
 #include <cstdint>
 #include <string>
 #include <algorithm>
+
+namespace
+{
+    // Reads the bottle's effect off the stack's instance data and returns the
+    // registry's liquid colour. No MagicEffectItemComponent → white (blank
+    // bottle), which still looks fine with the frame overlay on top.
+    sf::Color bottleLiquidColor(const ItemStack& stack)
+    {
+        if (!stack.instanceID.has_value()) return sf::Color::White;
+        const ItemInstanceData* data = findInstance(*stack.instanceID);
+        if (!data) return sf::Color::White;
+        const MagicEffectItemComponent* bottle = data->get<MagicEffectItemComponent>();
+        if (!bottle || !EffectRegistry::contains(bottle->effect)) return sf::Color::White;
+        return EffectRegistry::get(bottle->effect).liquid_color;
+    }
+}
 
 namespace
 {
@@ -96,11 +115,29 @@ void Slot::render(sf::RenderWindow& window)
         return;
     }
 
-    sf::Sprite sprite(AssetManager::getGameTexture(itemDatabase[item_stack.itemID].texture));
+    const auto& data = itemDatabase[item_stack.itemID];
+    sf::Sprite sprite(AssetManager::getGameTexture(data.texture));
     sprite.setTextureRect({{0, 0}, {16, 16}});
     sprite.setPosition(position + sf::Vector2f(size.x / 10.0f, size.y / 10.0f));
     sprite.setScale({size.x * 0.8f / sprite.getLocalBounds().size.x, size.y * 0.8f / sprite.getLocalBounds().size.y});
-    window.draw(sprite);
+
+    if(data.is_bottle)
+    {
+        // Two-pass bottle render: tinted liquid (x=16..32) first, then opaque
+        // frame (x=0..16) on top. Colour comes from the stack's instance
+        // data so one bottle.png + one ItemID covers every potion variant.
+        sprite.setTextureRect({{16, 0}, {16, 16}});
+        sprite.setColor(bottleLiquidColor(item_stack));
+        window.draw(sprite);
+
+        sprite.setTextureRect({{0, 0}, {16, 16}});
+        sprite.setColor(sf::Color::White);
+        window.draw(sprite);
+    }
+    else
+    {
+        window.draw(sprite);
+    }
 
 
     sf::Text text(AssetManager::getFont(AssetManager::FontID::PressStart2P), std::to_string(item_stack.quantity), static_cast<unsigned int>(size.x / 3.0f));
@@ -133,11 +170,29 @@ void Slot::render(sf::RenderTarget& window)
         return;
     }
 
-    sf::Sprite sprite(AssetManager::getGameTexture(itemDatabase[item_stack.itemID].texture));
+    const auto& data = itemDatabase[item_stack.itemID];
+    sf::Sprite sprite(AssetManager::getGameTexture(data.texture));
     sprite.setTextureRect({{0, 0}, {16, 16}});
     sprite.setPosition(position + sf::Vector2f(size.x / 10.0f, size.y / 10.0f));
     sprite.setScale({size.x * 0.8f / sprite.getLocalBounds().size.x, size.y * 0.8f / sprite.getLocalBounds().size.y});
-    window.draw(sprite);
+
+    if(data.is_bottle)
+    {
+        // Two-pass bottle render: tinted liquid (x=16..32) first, then opaque
+        // frame (x=0..16) on top. Colour comes from the stack's instance
+        // data so one bottle.png + one ItemID covers every potion variant.
+        sprite.setTextureRect({{16, 0}, {16, 16}});
+        sprite.setColor(bottleLiquidColor(item_stack));
+        window.draw(sprite);
+
+        sprite.setTextureRect({{0, 0}, {16, 16}});
+        sprite.setColor(sf::Color::White);
+        window.draw(sprite);
+    }
+    else
+    {
+        window.draw(sprite);
+    }
 
 
     sf::Text text(AssetManager::getFont(AssetManager::FontID::PressStart2P), std::to_string(item_stack.quantity), static_cast<unsigned int>(size.x / 3.0f));

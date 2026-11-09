@@ -14,6 +14,8 @@
 #include "../include/InventoryComponent.hpp"
 #include "../include/GameServer.hpp"
 #include "../include/Item.hpp"
+#include "../include/ItemInstance.hpp"
+#include "../include/ItemDataComponents.hpp"
 #include "../include/Prefab.hpp"
 
 #ifndef HEADLESS_BUILD
@@ -361,6 +363,81 @@ std::unordered_map<std::wstring, Command> commandDatabase =
             msg << L"Gave " << quantity << L"x " << utf8tow(itemDatabase[*item_id].name)
                 << L" to " << utf8tow(target_nick);
             if (!fully_added) msg << L" (inventory full — some items dropped)";
+            context.reply(msg.str());
+        }
+    }},
+
+    {L"magicbottle", {false, true, true,
+        [](std::wstring command, CommandContext& context)
+        {
+            auto tokens = tokenize(command);
+            requireArgs(tokens, 3, "Usage: /magicbottle <nickname> <effect> [duration_seconds=30] [magnitude=1] [count=1]");
+
+            GameServer& server = requireServer(context);
+            World& world = *context.world();
+
+            std::string target_nick = wtoutf8(tokens[1]);
+            auto target_entity = server.findEntityByNickname(target_nick);
+            if (!target_entity.has_value())
+                throw CommandException{"Player not online: " + target_nick};
+
+            Entity& target = world.getEntity(*target_entity);
+            if (!target.hasComponent<InventoryComponent>())
+                throw CommandException{"Target has no inventory."};
+
+            const std::wstring& effect_name = tokens[2];
+            EffectID effect = EffectID::None;
+            if      (effect_name == L"speed")                effect = EffectID::Speed;
+            else if (effect_name == L"jump_boost")           effect = EffectID::JumpBoost;
+            else if (effect_name == L"regeneration")         effect = EffectID::Regeneration;
+            else if (effect_name == L"poison")               effect = EffectID::Poison;
+            else if (effect_name == L"burning")              effect = EffectID::Burning;
+            else if (effect_name == L"starving")             effect = EffectID::Starving;
+            else if (effect_name == L"boundary_distortion") effect = EffectID::BoundaryDistortion;
+            else throw CommandException{"Unknown effect. Supported: speed, jump_boost, regeneration, poison, burning, starving, boundary_distortion."};
+
+            float duration = 30.0f;
+            if (tokens.size() >= 4) duration = static_cast<float>(parseUInt(tokens[3], "duration_seconds"));
+            if (duration <= 0.0f) throw CommandException{"Duration must be positive."};
+
+            uint32_t magnitude = 1;
+            if (tokens.size() >= 5) magnitude = parseUInt(tokens[4], "magnitude");
+            if (magnitude == 0) throw CommandException{"Magnitude must be at least 1."};
+
+            uint32_t count = 1;
+            if (tokens.size() >= 6) count = parseUInt(tokens[5], "count");
+            if (count == 0) throw CommandException{"Count must be at least 1."};
+
+            auto& inv_component = target.getComponent<InventoryComponent>();
+
+            uint32_t given = 0;
+            for (uint32_t i = 0; i < count; ++i)
+            {
+                ItemStack stack{ItemID::Magic_Bottle, 1};
+                stack.instanceID = generateUUID();
+                auto& data = getOrCreateInstance(*stack.instanceID);
+                auto& bottle = data.ensure<MagicEffectItemComponent>();
+                bottle.effect    = effect;
+                bottle.duration  = duration;
+                bottle.magnitude = magnitude;
+
+                ItemStack leftover = inv_component.inventory.addStackWithLeftover(stack);
+                if (!leftover.empty())
+                {
+                    // No empty slot — discard the instance we just created so
+                    // itemInstances doesn't leak the orphaned UUID.
+                    if (leftover.instanceID.has_value()) removeInstance(*leftover.instanceID);
+                    break;
+                }
+                ++given;
+            }
+            inv_component.dirty = true;
+
+            std::wostringstream msg;
+            msg << L"Gave " << given << L"x Magic Bottle (" << effect_name
+                << L", " << static_cast<int>(duration) << L"s, lvl " << magnitude
+                << L") to " << utf8tow(target_nick);
+            if (given < count) msg << L" (inventory full)";
             context.reply(msg.str());
         }
     }},

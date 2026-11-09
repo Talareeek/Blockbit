@@ -14,7 +14,9 @@ enum class EffectID : uint32_t
     Poison             = 2,
     Burning            = 3,
     Starving           = 4,
-    BoundaryDistortion = 5
+    BoundaryDistortion = 5,
+    Speed              = 6,
+    JumpBoost          = 7
 };
 
 struct EffectInstance
@@ -46,7 +48,10 @@ struct EffectsComponent : public Component
 
     ComponentSide side() const override
     {
-        return ComponentSide::Server;
+        // Synced to the client so local input prediction (Speed/JumpBoost
+        // multipliers in Input.cpp) stays in lockstep with the server's
+        // authoritative physics.
+        return ComponentSide::Both;
     }
 
     Tag serialize() const override

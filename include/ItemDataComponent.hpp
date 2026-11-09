@@ -23,6 +23,7 @@ enum class ItemComponentType : uint16_t
     Damage       = 1,
     CustomName   = 2,
     Enchantments = 3,
+    MagicEffect  = 4,
 };
 
 struct ItemDataComponent

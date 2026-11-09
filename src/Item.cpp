@@ -10,6 +10,9 @@
 #include "../include/PhysicsComponent.hpp"
 #include "../include/Chunk.hpp"
 #include "../include/FurnaceBlockEntity.hpp"
+#include "../include/EffectsComponent.hpp"
+#include "../include/ItemInstance.hpp"
+#include "../include/ItemDataComponents.hpp"
 
 std::unordered_map<ItemID, ItemData> itemDatabase =
 {
@@ -90,7 +93,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 16,
             .rarity = ItemRarity::Rare,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user) -> bool
+            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user, const ItemStack&) -> bool
             {
                 Entity& player = world.getEntity(user);
 
@@ -147,7 +150,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 16,
             .rarity = ItemRarity::Epic,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user) -> bool
+            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user, const ItemStack&) -> bool
             {
                 (void)user;
 
@@ -203,7 +206,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 16,
             .rarity = ItemRarity::Mythic,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user) -> bool
+            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user, const ItemStack&) -> bool
             {
                 (void)user;
 
@@ -459,7 +462,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Rare,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user) -> bool
+            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user, const ItemStack&) -> bool
             {
                 Entity& player = world.getEntity(user);
 
@@ -502,7 +505,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Rare,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user)
+            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user, const ItemStack&)
             {
                 Entity& player = world.getEntity(user);
 
@@ -561,7 +564,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Rare,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user) -> bool
+            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user, const ItemStack&) -> bool
             {
                 (void)user;
                 sf::Vector2i position = {
@@ -1067,6 +1070,54 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         }
     },
     {
+        ItemID::Magic_Bottle,
+        {
+            .name = "Magic Bottle",
+            .texture = AssetManager::GameTextureID::Bottle,
+            // Bottles never merge: each one carries its own instance data
+            // (effect/duration/magnitude) so stack size stays at 1.
+            .maxStackSize = 1,
+            .rarity = ItemRarity::Rare,
+            .category = ItemCategory::Consumable,
+            .is_bottle = true,
+            .onUse = [](World& world, sf::Vector2<double>, UUID user, const ItemStack& stack) -> bool
+            {
+                if(!stack.instanceID.has_value()) return false;
+                const ItemInstanceData* data = findInstance(*stack.instanceID);
+                if(!data) return false;
+                const MagicEffectItemComponent* bottle = data->get<MagicEffectItemComponent>();
+                if(!bottle || bottle->effect == EffectID::None || bottle->duration <= 0.0f) return false;
+
+                Entity& player = world.getEntity(user);
+                if(!player.hasComponent<EffectsComponent>()) return false;
+
+                auto& effects = player.getComponent<EffectsComponent>();
+                EffectInstance* existing = nullptr;
+                for(auto& e : effects.effects)
+                {
+                    if(e.id == bottle->effect) { existing = &e; break; }
+                }
+
+                if(existing)
+                {
+                    existing->remaining_duration = std::max(existing->remaining_duration, bottle->duration);
+                    existing->magnitude = std::max(existing->magnitude, bottle->magnitude);
+                }
+                else
+                {
+                    EffectInstance e;
+                    e.id = bottle->effect;
+                    e.interval = 999.0f;
+                    e.remaining_duration = bottle->duration;
+                    e.magnitude = bottle->magnitude;
+                    effects.effects.push_back(e);
+                }
+                effects.dirty = true;
+                return true;
+            }
+        }
+    },
+    {
         ItemID::Flint,
         {
             .name = "Flint",
@@ -1074,7 +1125,7 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 64,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user) -> bool
+            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user, const ItemStack&) -> bool
             {
                 (void)user;
                 sf::Vector2i position = {

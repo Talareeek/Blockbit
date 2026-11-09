@@ -412,6 +412,7 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Pig, "resources/textures/pig.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Cube, "resources/textures/cube.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Lighter, "resources/textures/lighter.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Bottle, "resources/textures/bottle.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Wooden_Pickaxe, "resources/textures/wooden_pickaxe.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Stone_Pickaxe, "resources/textures/stone_pickaxe.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Gold_Pickaxe, "resources/textures/gold_pickaxe.png");

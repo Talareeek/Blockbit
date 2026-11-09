@@ -27,6 +27,7 @@ std::string itemComponentTypeKey(ItemComponentType type)
         case ItemComponentType::Damage:       return "damage";
         case ItemComponentType::CustomName:   return "custom_name";
         case ItemComponentType::Enchantments: return "enchantments";
+        case ItemComponentType::MagicEffect:  return "magic_effect";
         case ItemComponentType::None:         return "none";
     }
     return "none";
@@ -37,6 +38,7 @@ std::optional<ItemComponentType> itemComponentTypeFromKey(const std::string& key
     if (key == "damage")       return ItemComponentType::Damage;
     if (key == "custom_name")  return ItemComponentType::CustomName;
     if (key == "enchantments") return ItemComponentType::Enchantments;
+    if (key == "magic_effect") return ItemComponentType::MagicEffect;
     return std::nullopt;
 }
 
@@ -48,4 +50,6 @@ void registerBuiltinItemDataComponents()
         []() { return std::make_unique<CustomNameItemComponent>(); });
     registerItemDataComponent(EnchantmentsItemComponent::STATIC_TYPE,
         []() { return std::make_unique<EnchantmentsItemComponent>(); });
+    registerItemDataComponent(MagicEffectItemComponent::STATIC_TYPE,
+        []() { return std::make_unique<MagicEffectItemComponent>(); });
 }

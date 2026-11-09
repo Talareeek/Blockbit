@@ -157,16 +157,17 @@ namespace
 
 void WeatherSystem(ServerWorld& world, float dt)
 {
-    // Lazy-seed the timer on first tick of a fresh world; load() may have left
-    // it at the persisted value, in which case we keep that.
+    // Distinguish "timer legitimately expired" from "timer was never seeded"
+    // (fresh world or old save without the field). Only the former should
+    // advance weather state — otherwise a brand-new world would jump from
+    // Clear straight into Rain on its first tick.
+    const bool timer_was_running = world.weatherTimer > 0.0f;
+    world.weatherTimer -= dt;
+
     if (world.weatherTimer <= 0.0f)
     {
-        world.weather = nextStateAfter(world.weather);
+        if (timer_was_running) world.weather = nextStateAfter(world.weather);
         world.weatherTimer = rollDurationFor(world.weather);
-    }
-    else
-    {
-        world.weatherTimer -= dt;
     }
 
     if (world.weather == WeatherState::Thunder) trySpawnLightning(world, dt);

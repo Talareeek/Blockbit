@@ -64,6 +64,7 @@ public:
         Bucket,
         Water_Bucket,
         Lighter,
+        Bottle,
         Coal,
         Raw_Iron,
         Raw_Gold,

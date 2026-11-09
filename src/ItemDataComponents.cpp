@@ -109,3 +109,37 @@ bool EnchantmentsItemComponent::equals(const ItemDataComponent& other) const
     if (other.type() != STATIC_TYPE) return false;
     return static_cast<const EnchantmentsItemComponent&>(other).entries == entries;
 }
+
+// ---- MagicEffectItemComponent ----
+
+Tag MagicEffectItemComponent::serialize() const
+{
+    TagCompound compound;
+    compound["effect"]    = Tag(static_cast<uint32_t>(effect));
+    compound["duration"]  = Tag(duration);
+    compound["magnitude"] = Tag(magnitude);
+    return Tag(compound);
+}
+
+void MagicEffectItemComponent::deserialize(const Tag& tag)
+{
+    const auto& compound = tag.get<TagCompound>();
+    auto eff_it = compound.find("effect");
+    auto dur_it = compound.find("duration");
+    auto mag_it = compound.find("magnitude");
+    effect    = (eff_it != compound.end()) ? static_cast<EffectID>(eff_it->second.get<uint32_t>()) : EffectID::None;
+    duration  = (dur_it != compound.end()) ? dur_it->second.get<float>()    : 0.0f;
+    magnitude = (mag_it != compound.end()) ? mag_it->second.get<uint32_t>() : 1u;
+}
+
+std::unique_ptr<ItemDataComponent> MagicEffectItemComponent::clone() const
+{
+    return std::make_unique<MagicEffectItemComponent>(*this);
+}
+
+bool MagicEffectItemComponent::equals(const ItemDataComponent& other) const
+{
+    if (other.type() != STATIC_TYPE) return false;
+    const auto& o = static_cast<const MagicEffectItemComponent&>(other);
+    return o.effect == effect && o.duration == duration && o.magnitude == magnitude;
+}

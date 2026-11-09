@@ -16,6 +16,7 @@
 #include "../include/StaminaComponent.hpp"
 #include "../include/AnimationComponent.hpp"
 #include "../include/InventoryView.hpp"
+#include "../include/EffectsComponent.hpp"
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Window/Event.hpp>
@@ -25,6 +26,24 @@
 #include <limits>
 #include <random>
 
+
+namespace
+{
+    // Returns the magnitude of the given effect on the entity, or 0 if the
+    // effect isn't currently active. Looked up each input tick so Magic
+    // Bottle buffs apply/retract seamlessly as the effect expires.
+    uint32_t effectMagnitude(const Entity& entity, EffectID id)
+    {
+        if (!entity.hasComponent<EffectsComponent>()) return 0;
+
+        const auto& effects = entity.getComponent<EffectsComponent>();
+        for (const auto& e : effects.effects)
+        {
+            if (e.id == id) return e.magnitude;
+        }
+        return 0;
+    }
+}
 
 std::vector<Input> getInputs(const World& world, sf::Vector2<double> camera, const sf::RenderWindow& window)
 {
@@ -143,6 +162,8 @@ void applyLocalPlayerInputPrediction(World& world, const std::vector<Input>& inp
                     multiplier = 1.25f;
                 }
 
+                multiplier *= 1.0f + 0.25f * static_cast<float>(effectMagnitude(entity, EffectID::Speed));
+
                 int block_x = (int)std::floor(transform.position.x + transform.size.x / 2.0f);
                 int block_y = (int)std::floor(transform.position.y);
                 physics.force.x += 45.0f * move.direction.x * multiplier / blockDatabase[world.getBlock(block_x, block_y).id].drag;
@@ -154,14 +175,16 @@ void applyLocalPlayerInputPrediction(World& world, const std::vector<Input>& inp
             }
             case InputType::JUMP:
             {
+                const float jump_mul = 1.0f + 0.30f * static_cast<float>(effectMagnitude(entity, EffectID::JumpBoost));
+
                 if(physics.onGround)
                 {
-                    physics.velocity.y += 10.0f;
+                    physics.velocity.y += 10.0f * jump_mul;
                     physics.onGround = false;
                 }
                 else if(isSubmerged(world, transform))
                 {
-                    physics.force.y += 60.0f;
+                    physics.force.y += 60.0f * jump_mul;
                 }
 
                 break;
@@ -207,6 +230,8 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
                     }
                 }
 
+                multiplier *= 1.0f + 0.25f * static_cast<float>(effectMagnitude(entity, EffectID::Speed));
+
                 int block_x = (int)std::floor(transform.position.x + transform.size.x / 2.0f);
                 int block_y = (int)std::floor(transform.position.y);
                 physics.force.x += 45.0f * move.direction.x * multiplier / blockDatabase[world.getBlock(block_x, block_y).id].drag;
@@ -234,14 +259,16 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
                     break;
                 }
 
+                const float jump_mul = 1.0f + 0.30f * static_cast<float>(effectMagnitude(entity, EffectID::JumpBoost));
+
                 if(physics.onGround)
                 {
-                    physics.velocity.y += 10.0f;
+                    physics.velocity.y += 10.0f * jump_mul;
                     physics.onGround = false;
                 }
                 else if(isSubmerged(world, transform))
                 {
-                    physics.force.y += 60.0f;
+                    physics.force.y += 60.0f * jump_mul;
                 }
                 physics.dirty = true;
 

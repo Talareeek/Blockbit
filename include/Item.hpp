@@ -11,12 +11,14 @@
 #include "UUID.hpp"
 
 #include <SFML/System/Vector2.hpp>
+#include <SFML/Graphics/Color.hpp>
 
 #include "../include/Entity.hpp"
 
 #include "AssetManager.hpp"
 
 class World;
+struct ItemStack;
 
 enum class ItemID : uint32_t
 {
@@ -105,7 +107,12 @@ enum class ItemID : uint32_t
     Glass,
     Output_Bulb,
     Ruby_Wire,
-    Coreheart_Of_Blockbit
+    Coreheart_Of_Blockbit,
+
+    // Single ItemID for every potion. The actual effect, duration, and
+    // magnitude live in a MagicEffectItemComponent on the stack's instance
+    // data, so stacks never auto-merge and each bottle is unique.
+    Magic_Bottle
 };
 
 enum class ItemRarity
@@ -181,7 +188,18 @@ struct ItemData
     std::optional<uint32_t> damage;
     float attack_delay = 0.25f;
 
-    std::function<bool(World& world, sf::Vector2<double> mouse, UUID user)> onUse = [](World&, sf::Vector2<double>, UUID) -> bool {return false;};
+    // Opt-in to bottle rendering. The texture is treated as a 32x16 strip
+    // (frame at x=0..16, white liquid at x=16..32); Slot.cpp draws the liquid
+    // half tinted by the stack's MagicEffectItemComponent (via EffectRegistry
+    // colour), then the frame half on top — so one bottle.png produces any
+    // potion colour without a separate ItemID per effect.
+    bool is_bottle = false;
+
+    // `stack` is the exact stack being consumed — pass it in so onUse can
+    // read per-instance data (MagicEffectItemComponent, enchantments, etc.)
+    // without the lambda needing to hunt for the slot by itemID.
+    std::function<bool(World& world, sf::Vector2<double> mouse, UUID user, const ItemStack& stack)> onUse =
+        [](World&, sf::Vector2<double>, UUID, const ItemStack&) -> bool { return false; };
 };
 
 extern std::unordered_map<ItemID, ItemData> itemDatabase;

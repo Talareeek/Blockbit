@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "ItemDataComponent.hpp"
+#include "EffectsComponent.hpp"
 
 enum class EnchantID : uint32_t
 {
@@ -61,6 +62,24 @@ struct EnchantmentsItemComponent : public ItemDataComponent
     static constexpr ItemComponentType STATIC_TYPE = ItemComponentType::Enchantments;
 
     std::vector<Enchantment> entries;
+
+    ItemComponentType type() const override { return STATIC_TYPE; }
+    Tag serialize() const override;
+    void deserialize(const Tag& tag) override;
+    std::unique_ptr<ItemDataComponent> clone() const override;
+    bool equals(const ItemDataComponent& other) const override;
+};
+
+// Payload for a single Magic Bottle. Multiple bottles share one ItemID
+// (Magic_Bottle); the effect, duration and strength live here so a stack with
+// this component is uniquely identified by its instance UUID.
+struct MagicEffectItemComponent : public ItemDataComponent
+{
+    static constexpr ItemComponentType STATIC_TYPE = ItemComponentType::MagicEffect;
+
+    EffectID effect     = EffectID::None;
+    float    duration   = 0.0f;
+    uint32_t magnitude  = 1;
 
     ItemComponentType type() const override { return STATIC_TYPE; }
     Tag serialize() const override;

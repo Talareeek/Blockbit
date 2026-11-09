@@ -29,6 +29,8 @@ void EffectRegistry::init()
 {
     definitions[EffectID::Regeneration] = EffectDefinition
     {
+        .display_name = "Regeneration",
+        .liquid_color = sf::Color(255, 120, 200),
         .tick = [](World&, Entity& entity, EffectInstance& instance, float)
         {
             healEntity(entity, instance.magnitude);
@@ -37,6 +39,8 @@ void EffectRegistry::init()
 
     definitions[EffectID::Poison] = EffectDefinition
     {
+        .display_name = "Poison",
+        .liquid_color = sf::Color(110, 220, 70),
         .tick = [](World&, Entity& entity, EffectInstance& instance, float)
         {
             damageEntity(entity, instance.magnitude);
@@ -45,6 +49,8 @@ void EffectRegistry::init()
 
     definitions[EffectID::Burning] = EffectDefinition
     {
+        .display_name = "Burning",
+        .liquid_color = sf::Color(255, 120, 40),
         .tick = [](World&, Entity& entity, EffectInstance& instance, float)
         {
             damageEntity(entity, instance.magnitude);
@@ -53,6 +59,8 @@ void EffectRegistry::init()
 
     definitions[EffectID::Starving] = EffectDefinition
     {
+        .display_name = "Starving",
+        .liquid_color = sf::Color(170, 120, 60),
         .tick = [](World&, Entity& entity, EffectInstance& instance, float)
         {
             damageEntity(entity, instance.magnitude);
@@ -61,6 +69,8 @@ void EffectRegistry::init()
 
     definitions[EffectID::BoundaryDistortion] = EffectDefinition
     {
+        .display_name = "Boundary Distortion",
+        .liquid_color = sf::Color(200, 80, 220),
         .tick = [](World&, Entity& entity, EffectInstance& instance, float)
         {
             if (!entity.hasComponent<HealthComponent>()) return;
@@ -74,6 +84,23 @@ void EffectRegistry::init()
             if (health.health > health.maxHealth) health.health = health.maxHealth;
             health.dirty = true;
         }
+    };
+
+    // Speed and JumpBoost don't tick — their effect is applied as a
+    // per-frame multiplier in Input.cpp by looking up the EffectsComponent.
+    // A definition is still registered so EffectRegistry::contains() returns
+    // true and the duration-sweep logic in EffectsSystem runs.
+    definitions[EffectID::Speed] = EffectDefinition
+    {
+        .display_name = "Speed",
+        .liquid_color = sf::Color(80, 220, 255),
+        .tick = [](World&, Entity&, EffectInstance&, float){}
+    };
+    definitions[EffectID::JumpBoost] = EffectDefinition
+    {
+        .display_name = "Jump Boost",
+        .liquid_color = sf::Color(255, 180, 80),
+        .tick = [](World&, Entity&, EffectInstance&, float){}
     };
 }
 
