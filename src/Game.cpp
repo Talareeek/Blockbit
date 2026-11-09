@@ -400,6 +400,7 @@ Game::Game()
     AssetManager::loadUITexture(AssetManager::UITextureID::Chest, "resources/textures/chest_view.png");
     AssetManager::loadUITexture(AssetManager::UITextureID::Furnace, "resources/textures/furnace_view.png");
     AssetManager::loadUITexture(AssetManager::UITextureID::Crafting, "resources/textures/crafting_view.png");
+    AssetManager::loadUITexture(AssetManager::UITextureID::Upgrade, "resources/textures/upgrade_view.png");
     AssetManager::loadUITexture(AssetManager::UITextureID::Border, "resources/textures/border.png");
     AssetManager::getUITexture(AssetManager::UITextureID::Border).setRepeated(true);
 
@@ -484,6 +485,7 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Output_Bulb, "resources/textures/output_bulb.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Ruby_Wire, "resources/textures/ruby_wire.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Coreheart_Of_Blockbit, "resources/textures/coreheart_of_blockbit.png");
+    AssetManager::loadGameTexture(AssetManager::GameTextureID::Upgrade_Table, "resources/textures/upgrade_table.png");
 
     BlockAtlas::add(AssetManager::GameTextureID::Stone);
     BlockAtlas::add(AssetManager::GameTextureID::Grass);
@@ -528,6 +530,7 @@ Game::Game()
     BlockAtlas::add(AssetManager::GameTextureID::Output_Bulb);
     BlockAtlas::add(AssetManager::GameTextureID::Ruby_Wire);
     BlockAtlas::add(AssetManager::GameTextureID::Coreheart_Of_Blockbit);
+    BlockAtlas::add(AssetManager::GameTextureID::Upgrade_Table);
     BlockAtlas::build();
 
     AssetManager::loadShader(AssetManager::ShaderID::Sun, "resources/shaders/sun.frag");

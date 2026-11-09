@@ -30,6 +30,7 @@
 #include "../include/InventoryView.hpp"
 #include "../include/FurnaceView.hpp"
 #include "../include/CraftingView.hpp"
+#include "../include/UpgradeView.hpp"
 #include "../include/LocalAdminSession.hpp"
 #include "../include/NetworkAdminSession.hpp"
 #include "../include/Settings.hpp"
@@ -390,6 +391,9 @@ void ClientGameState::processIncoming()
                             break;
                         case ViewType::Crafting:
                             content_view = std::make_unique<ClientCraftingView>();
+                            break;
+                        case ViewType::Upgrade:
+                            content_view = std::make_unique<ClientUpgradeView>();
                             break;
                     }
 

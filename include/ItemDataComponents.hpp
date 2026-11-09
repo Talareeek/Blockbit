@@ -70,6 +70,27 @@ struct EnchantmentsItemComponent : public ItemDataComponent
     bool equals(const ItemDataComponent& other) const override;
 };
 
+// Rubyness: ruby-item attunement with 24 levels, one per Greek letter
+// (alpha..omega). Baseline is Alpha; a stack at Omega gets the full 10x boost.
+// The component is only materialised on a stack when its level diverges from
+// Alpha, so unupgraded ruby stacks still merge like any other block/material.
+inline constexpr uint8_t RUBYNESS_MIN_LEVEL = 1;   // alpha
+inline constexpr uint8_t RUBYNESS_MAX_LEVEL = 24;  // omega
+inline constexpr float   RUBYNESS_OMEGA_MULTIPLIER = 10.0f;
+
+struct RubynessItemComponent : public ItemDataComponent
+{
+    static constexpr ItemComponentType STATIC_TYPE = ItemComponentType::Rubyness;
+
+    uint8_t level = RUBYNESS_MIN_LEVEL;
+
+    ItemComponentType type() const override { return STATIC_TYPE; }
+    Tag serialize() const override;
+    void deserialize(const Tag& tag) override;
+    std::unique_ptr<ItemDataComponent> clone() const override;
+    bool equals(const ItemDataComponent& other) const override;
+};
+
 // Payload for a single Magic Bottle. Multiple bottles share one ItemID
 // (Magic_Bottle); the effect, duration and strength live here so a stack with
 // this component is uniquely identified by its instance UUID.

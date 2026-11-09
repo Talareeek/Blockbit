@@ -11,6 +11,7 @@
 #include "../include/ChestView.hpp"
 #include "../include/CraftingView.hpp"
 #include "../include/FurnaceView.hpp"
+#include "../include/UpgradeView.hpp"
 #include "../include/Prefab.hpp"
 #include "../include/ItemUtils.hpp"
 
@@ -149,6 +150,12 @@ void PlayerControlledSystem(World& world, float dt)
                 bool proper_tool = correct_type && item_data.tool->level >= block_data.mining->desired_tool.level;
 
                 float speed = level_based_speed[tool_level];
+                // Ruby tools gain extra bite from their Rubyness attunement.
+                // Alpha (default) is 1x; Omega is 10x.
+                if (uint8_t ruby_level = getRubynessLevel(item); ruby_level >= RUBYNESS_MIN_LEVEL)
+                {
+                    speed *= rubynessMultiplier(ruby_level);
+                }
                 // Using the wrong tool type adds a time penalty on top of the hand-speed baseline,
                 // so a correct-but-low-level tool is always better than a wrong tool.
                 float wrong_tool_penalty = correct_type ? 1.0f : 1.5f;
@@ -207,6 +214,15 @@ void PlayerControlledSystem(World& world, float dt)
             if(world.getBlock(block_position.x, block_position.y).id == BlockID::Workbench && isBlockInRange(transform, block_position, 4.0f))
             {
                 player.pending_view_opens.push_back(std::make_unique<ServerCraftingView>(block_position, id));
+                player.mid_usage = false;
+                player.since_last_use = 0.0f;
+                player.dirty = true;
+                continue;
+            }
+
+            if(world.getBlock(block_position.x, block_position.y).id == BlockID::Upgrade_Table && isBlockInRange(transform, block_position, 4.0f))
+            {
+                player.pending_view_opens.push_back(std::make_unique<ServerUpgradeView>(block_position, id));
                 player.mid_usage = false;
                 player.since_last_use = 0.0f;
                 player.dirty = true;

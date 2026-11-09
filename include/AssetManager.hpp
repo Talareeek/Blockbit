@@ -57,6 +57,7 @@ public:
         Output_Bulb,
         Ruby_Wire,
         Coreheart_Of_Blockbit,
+        Upgrade_Table,
 
 
         // ITEMS
@@ -114,6 +115,7 @@ public:
         Chest,
         Furnace,
         Crafting,
+        Upgrade,
         Border
     };
 

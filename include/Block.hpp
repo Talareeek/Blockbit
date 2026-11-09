@@ -60,7 +60,8 @@ enum class BlockID : uint32_t
     Glass,
     Output_Bulb,
     Ruby_Wire,
-    Coreheart_Of_Blockbit
+    Coreheart_Of_Blockbit,
+    Upgrade_Table
 };
 
 // Cardinal-neighbor IDs supplied to the per-tile rect() so a block can pick a

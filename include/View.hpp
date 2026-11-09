@@ -16,7 +16,8 @@ enum class ViewType : uint8_t
     Chest,
     Inventory,
     Furnace,
-    Crafting
+    Crafting,
+    Upgrade
 };
 
 // SetContentData flows server -> client. It describes a single content slot

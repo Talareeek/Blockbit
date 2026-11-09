@@ -325,6 +325,7 @@ ItemID blockToItem(BlockID block)
         case BlockID::Output_Bulb: return ItemID::Output_Bulb;
         case BlockID::Ruby_Wire: return ItemID::Ruby_Wire;
         case BlockID::Coreheart_Of_Blockbit: return ItemID::Coreheart_Of_Blockbit;
+        case BlockID::Upgrade_Table: return ItemID::Upgrade_Table;
         default: return ItemID::None;
     }
 }
@@ -385,6 +386,7 @@ BlockID itemToBlock(ItemID item)
         case ItemID::Output_Bulb: return BlockID::Output_Bulb;
         case ItemID::Ruby_Wire: return BlockID::Ruby_Wire;
         case ItemID::Coreheart_Of_Blockbit: return BlockID::Coreheart_Of_Blockbit;
+        case ItemID::Upgrade_Table: return BlockID::Upgrade_Table;
         default: return BlockID::Air;
     }
 }
@@ -1010,6 +1012,19 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .hardness = -1.0f,
             .render = RenderProperties{.texture = AssetManager::GameTextureID::Coreheart_Of_Blockbit, .render_bounds = default_render_bounds, .rect = coreheart_render_rect},
             .mining = MiningProperties{.mining_resistance = INT_MAX, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = INT_MAX}}
+        }
+    },
+    { BlockID::Upgrade_Table,
+        {
+            .solid = true,
+            .transparent = false,
+            .breakable = true,
+            .liquid = false,
+            .drag = 1.0f,
+            .hardness = 3.5f,
+            .render = RenderProperties{.texture = AssetManager::GameTextureID::Upgrade_Table, .render_bounds = default_render_bounds, .rect = default_render_rect},
+            .mining = MiningProperties{.mining_resistance = 6, .desired_tool = {.tool_type = ToolType::Pickaxe, .level = 2}},
+            .drop = DropProperties{.always_drop = true, .drop = ItemID::Upgrade_Table}
         }
     },
 };

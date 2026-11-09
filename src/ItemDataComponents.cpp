@@ -143,3 +143,32 @@ bool MagicEffectItemComponent::equals(const ItemDataComponent& other) const
     const auto& o = static_cast<const MagicEffectItemComponent&>(other);
     return o.effect == effect && o.duration == duration && o.magnitude == magnitude;
 }
+
+// ---- RubynessItemComponent ----
+
+Tag RubynessItemComponent::serialize() const
+{
+    TagCompound compound;
+    compound["level"] = Tag(level);
+    return Tag(compound);
+}
+
+void RubynessItemComponent::deserialize(const Tag& tag)
+{
+    const auto& compound = tag.get<TagCompound>();
+    auto it = compound.find("level");
+    level = (it != compound.end()) ? it->second.get<uint8_t>() : RUBYNESS_MIN_LEVEL;
+    if (level < RUBYNESS_MIN_LEVEL) level = RUBYNESS_MIN_LEVEL;
+    if (level > RUBYNESS_MAX_LEVEL) level = RUBYNESS_MAX_LEVEL;
+}
+
+std::unique_ptr<ItemDataComponent> RubynessItemComponent::clone() const
+{
+    return std::make_unique<RubynessItemComponent>(*this);
+}
+
+bool RubynessItemComponent::equals(const ItemDataComponent& other) const
+{
+    if (other.type() != STATIC_TYPE) return false;
+    return static_cast<const RubynessItemComponent&>(other).level == level;
+}

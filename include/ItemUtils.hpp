@@ -18,6 +18,20 @@ bool damageItem(ItemStack& stack, uint32_t amount);
 void setCustomName(ItemStack& stack, const std::string& name);
 void addEnchantment(ItemStack& stack, Enchantment enchantment);
 
+// ---- Rubyness ----
+//
+// Ruby tools carry a conceptual Rubyness attunement with 24 levels, one per
+// Greek letter (alpha..omega). Baseline is Alpha (1x); Omega is 10x. A ruby
+// tool without a RubynessItemComponent is treated as Alpha so baseline
+// stacks still merge; the component is only materialised once the stack
+// diverges upward. Non-tool ruby items (ore, block, wire, raw ruby) have no
+// Rubyness.
+bool     isRubyTool(ItemID id);
+uint8_t  getRubynessLevel(const ItemStack& stack);
+void     setRubynessLevel(ItemStack& stack, uint8_t level);
+float    rubynessMultiplier(uint8_t level);
+std::string greekLetterName(uint8_t level);
+
 // ---- Stack serialization ----
 //
 // One place that decides what goes over the wire / to disk for an ItemStack,

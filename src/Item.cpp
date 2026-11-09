@@ -1070,6 +1070,16 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
         }
     },
     {
+        ItemID::Upgrade_Table,
+        {
+            .name = "Upgrade Table",
+            .texture = AssetManager::GameTextureID::Upgrade_Table,
+            .maxStackSize = 64,
+            .rarity = ItemRarity::Rare,
+            .category = ItemCategory::Block
+        }
+    },
+    {
         ItemID::Magic_Bottle,
         {
             .name = "Magic Bottle",

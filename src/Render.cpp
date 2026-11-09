@@ -2071,6 +2071,20 @@ void renderItemInfo(sf::Vector2f position, const ItemStack& item, sf::RenderTarg
         }
     }
 
+    if (isRubyTool(item.itemID))
+    {
+        uint8_t level = getRubynessLevel(item);
+        std::string letter = greekLetterName(level);
+        if (!letter.empty())
+        {
+            letter[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(letter[0])));
+        }
+        lines.push_back({
+            "Rubyness: " + letter,
+            sf::Color(220, 60, 90)
+        });
+    }
+
     lines.push_back({
         "ID: " + std::to_string(static_cast<uint32_t>(item.itemID)),
         sf::Color(160, 160, 160)

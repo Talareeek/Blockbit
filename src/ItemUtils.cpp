@@ -113,6 +113,86 @@ void addEnchantment(ItemStack& stack, Enchantment enchantment)
     ench.entries.push_back(enchantment);
 }
 
+// ---- Rubyness ----
+
+bool isRubyTool(ItemID id)
+{
+    switch (id)
+    {
+        case ItemID::Ruby_Pickaxe:
+        case ItemID::Ruby_Axe:
+        case ItemID::Ruby_Shovel:
+            return true;
+        default:
+            return false;
+    }
+}
+
+uint8_t getRubynessLevel(const ItemStack& stack)
+{
+    if (!isRubyTool(stack.itemID)) return 0;
+
+    if (stack.instanceID.has_value())
+    {
+        if (const ItemInstanceData* data = findInstance(*stack.instanceID))
+        {
+            if (const RubynessItemComponent* r = data->get<RubynessItemComponent>())
+            {
+                return r->level;
+            }
+        }
+    }
+    return RUBYNESS_MIN_LEVEL;
+}
+
+void setRubynessLevel(ItemStack& stack, uint8_t level)
+{
+    if (!isRubyTool(stack.itemID)) return;
+    if (level < RUBYNESS_MIN_LEVEL) level = RUBYNESS_MIN_LEVEL;
+    if (level > RUBYNESS_MAX_LEVEL) level = RUBYNESS_MAX_LEVEL;
+
+    // Baseline (Alpha) is the implicit default — drop the component so the
+    // stack can still merge with other baseline ruby stacks.
+    if (level == RUBYNESS_MIN_LEVEL && stack.instanceID.has_value())
+    {
+        if (ItemInstanceData* data = findInstanceMutable(*stack.instanceID))
+        {
+            data->remove<RubynessItemComponent>();
+            if (data->isEmpty())
+            {
+                removeInstance(*stack.instanceID);
+                stack.instanceID.reset();
+            }
+        }
+        return;
+    }
+
+    if (level == RUBYNESS_MIN_LEVEL) return;
+
+    ItemInstanceData& data = ensureInstance(stack);
+    data.ensure<RubynessItemComponent>().level = level;
+}
+
+float rubynessMultiplier(uint8_t level)
+{
+    if (level < RUBYNESS_MIN_LEVEL) return 1.0f;
+    if (level > RUBYNESS_MAX_LEVEL) level = RUBYNESS_MAX_LEVEL;
+    const float span = static_cast<float>(RUBYNESS_MAX_LEVEL - RUBYNESS_MIN_LEVEL);
+    return 1.0f + static_cast<float>(level - RUBYNESS_MIN_LEVEL) * (RUBYNESS_OMEGA_MULTIPLIER - 1.0f) / span;
+}
+
+std::string greekLetterName(uint8_t level)
+{
+    static const char* names[RUBYNESS_MAX_LEVEL] = {
+        "alpha", "beta", "gamma", "delta", "epsilon", "zeta",
+        "eta", "theta", "iota", "kappa", "lambda", "mu",
+        "nu", "xi", "omicron", "pi", "rho", "sigma",
+        "tau", "upsilon", "phi", "chi", "psi", "omega"
+    };
+    if (level < RUBYNESS_MIN_LEVEL || level > RUBYNESS_MAX_LEVEL) return {};
+    return names[level - 1];
+}
+
 // ---- Stack serialization ----
 
 Tag stackToTag(const ItemStack& stack)

@@ -108,6 +108,7 @@ enum class ItemID : uint32_t
     Output_Bulb,
     Ruby_Wire,
     Coreheart_Of_Blockbit,
+    Upgrade_Table,
 
     // Single ItemID for every potion. The actual effect, duration, and
     // magnitude live in a MagicEffectItemComponent on the stack's instance
