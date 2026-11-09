@@ -161,6 +161,33 @@ namespace
         vertex_array.append(v3);
     }
 
+    // Flat-shaded quad used by the sky occluder pass. Texture coords are
+    // left at zero (no texture is bound when drawing). Vertex color is a
+    // placeholder — RenderSkyOccluder rewrites it every frame with the
+    // live sky bottom color.
+    void appendSkyOccluderQuad(sf::VertexArray& vertex_array, const sf::FloatRect& bounds)
+    {
+        sf::Vertex v0, v1, v2, v3;
+        const float x0 = bounds.position.x;
+        const float y0 = bounds.position.y;
+        const float x1 = bounds.position.x + bounds.size.x;
+        const float y1 = bounds.position.y + bounds.size.y;
+
+        v0.position = {x0, y0};
+        v1.position = {x1, y0};
+        v2.position = {x1, y1};
+        v3.position = {x0, y1};
+        v0.color = v1.color = v2.color = v3.color = sf::Color::White;
+
+        vertex_array.append(v0);
+        vertex_array.append(v1);
+        vertex_array.append(v2);
+
+        vertex_array.append(v0);
+        vertex_array.append(v2);
+        vertex_array.append(v3);
+    }
+
     // Shared across RenderWorld and RenderMinimap so animations stay in sync
     // between the main view and the minimap mesh.
     sf::Clock& blockAnimationClock()
@@ -237,6 +264,7 @@ void BuildChunkMesh(ClientWorld& world, int chunk_position)
 
     mesh.vertices.clear();
     mesh.lightmap_vertices.clear();
+    mesh.sky_occluder_vertices.clear();
 
     // Per-column highest y that holds a sky-blocking cell. -1 if the column
     // has nothing but lets_light cells. Lets_light cells above this line are
@@ -271,7 +299,10 @@ void BuildChunkMesh(ClientWorld& world, int chunk_position)
             const bool sky_exposed_lets_light =
                 block_data.lets_light && y > highest_blocker[x];
             if (!sky_exposed_lets_light)
+            {
                 appendLightmapQuad(mesh.lightmap_vertices, {position, {1.0f, 1.0f}});
+                appendSkyOccluderQuad(mesh.sky_occluder_vertices, {position, {1.0f, 1.0f}});
+            }
 
             if (!block_data.render.has_value()) continue;
 
@@ -777,6 +808,48 @@ sf::Vector2f getSunWorldPosition(const World& world, sf::Vector2f cameraCenter)
         cameraCenter.x - std::cos(angle) * SUN_DISTANCE,
         cameraCenter.y + std::sin(angle) * SUN_DISTANCE
     };
+}
+
+void RenderSkyOccluder(ClientWorld& world, const sf::Vector2<double> camera, sf::RenderWindow& window, sf::Color color)
+{
+    // Paints the sky bottom color over every non-sky-exposed cell in world
+    // space, before the chunk mesh is drawn. The screen-space sky/stars pass
+    // below is then only visible through the "hole" above the terrain —
+    // caves and roofed air no longer leak starlight through to the camera.
+    // The lightmap multiply in RenderWorld later darkens the painted area
+    // down to near-black wherever sky_light drops to zero.
+    float unit_size = window.getSize().y / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
+
+    int centerChunk = static_cast<int>(std::floor(camera.x / static_cast<double>(CHUNK_WIDTH)));
+
+    for (int i = centerChunk - 2; i <= centerChunk + 2; ++i)
+    {
+        Chunk& chunk = world.getChunk(i);
+        if (!chunk.generated) continue;
+
+        ChunkMesh& mesh = world.getChunkMeshes()[i];
+        if (chunk.meshDirty || !mesh.built)
+        {
+            BuildChunkMesh(world, i);
+        }
+
+        const std::size_t vertex_count = mesh.sky_occluder_vertices.getVertexCount();
+        if (vertex_count == 0) continue;
+
+        for (std::size_t v = 0; v < vertex_count; ++v)
+        {
+            mesh.sky_occluder_vertices[v].color = color;
+        }
+
+        float translate_x = static_cast<float>(static_cast<double>(i * CHUNK_WIDTH) - camera.x) * unit_size;
+        float translate_y = static_cast<float>(-camera.y) * unit_size;
+
+        sf::RenderStates states;
+        states.transform.translate({translate_x, translate_y});
+        states.transform.scale({unit_size, unit_size});
+
+        window.draw(mesh.sky_occluder_vertices, states);
+    }
 }
 
 void RenderWorld(ClientWorld& world, const sf::Vector2<double> camera, sf::RenderWindow& window)

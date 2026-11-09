@@ -1048,6 +1048,14 @@ void ClientGameState::render(sf::RenderWindow& window)
     // SUN AND MOON
     renderSunAndMoon(sun_phase, window);
 
+    // SKY OCCLUDER — paints the sky bottom color over every world cell that
+    // is not sky-exposed, so the screen-space sky/stars above only show
+    // through the gap over the terrain. The lightmap multiply in
+    // RenderWorld then darkens the painted area down to near-black wherever
+    // sky_light drops to zero. Placed before entities so entities still
+    // draw on top of the occluder.
+    RenderSkyOccluder(local_world, camera, window, sky_bottom);
+
     // ENTITIES
     RenderEntities(local_world, camera, window);
 

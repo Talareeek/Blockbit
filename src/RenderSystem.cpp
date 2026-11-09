@@ -6,8 +6,10 @@
 #include "../include/HealthComponent.hpp"
 #include "../include/GameCommon.hpp"
 #include "../include/PlayerControlledComponent.hpp"
+#include "../include/Settings.hpp"
 #include "../include/World.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 float worldToScreenY(float worldY, float unit_size, float windowHeight)
@@ -23,6 +25,18 @@ float screenToWorldY(float screenY, float unit_size, float windowHeight)
 void RenderEntities(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window)
 {
     unsigned int unit_size = window.getSize().y / WORLD_UNIT_SIZE_FACTOR;
+
+    // Precompute day/night scaling so each entity does just a cheap per-cell
+    // lightmap sample. Mirrors lighting_overlay.frag so sprites match the
+    // brightness of the blocks they stand next to.
+    const bool  lighting_enabled = Settings::graphics.lighting_effect;
+    const float effect_strength  = std::clamp(Settings::graphics.lighting_effect_strength, 0.0f, 1.0f);
+    const float day_factor       = computeDayFactor(solarPhase(world.getDayTime(), world.days));
+    constexpr float ambient_min     = 0.0f;
+    constexpr float night_sky_floor = 4.0f / 15.0f;
+    const float sky_scale = std::lerp(night_sky_floor, 1.0f, day_factor);
+
+    auto& chunks_for_light = world.getChunks();
 
     for(auto& [id, entity] : world.getEntities())
     {
@@ -58,6 +72,39 @@ void RenderEntities(World& world, const sf::Vector2<double> camera, sf::RenderWi
                 const uint8_t fade = static_cast<uint8_t>(std::round(255.0f * (1.0f - intensity)));
 
                 color = sf::Color(255, fade, fade, 255);
+            }
+        }
+
+        // Entity lighting — sample the world lightmap at the sprite's center
+        // and multiply the vertex color by the same factor the chunk shader
+        // uses. The health flash is applied first so a red flash still dims
+        // at night / underground.
+        if(lighting_enabled && component.affected_by_lighting)
+        {
+            const float center_x = static_cast<float>(transform.render_position.x) + component.size.x * 0.5f;
+            const float center_y = static_cast<float>(transform.render_position.y) + component.size.y * 0.5f;
+            const int sample_wx = static_cast<int>(std::floor(center_x));
+            const int sample_wy = static_cast<int>(std::floor(center_y));
+
+            // Chunk lighting is initialized lazily on the client when
+            // RenderWorld first touches the chunk. Entities render before
+            // RenderWorld, so on the very first frame of visibility the
+            // lightmap would read as all zero and flash entities to black.
+            // Skip the multiply until the chunk is initialized.
+            const int sample_cp = (sample_wx >= 0)
+                ? sample_wx / CHUNK_WIDTH
+                : (sample_wx - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
+            auto chunk_it = chunks_for_light.find(sample_cp);
+            if(chunk_it != chunks_for_light.end() && chunk_it->second.light.initialized)
+            {
+                const float block_light = world.getBlockLight(sample_wx, sample_wy) / 15.0f;
+                const float sky_light   = world.getSkyLight(sample_wx, sample_wy) / 15.0f * sky_scale;
+                const float lit         = std::max({block_light, sky_light, ambient_min});
+                const float final_lit   = std::lerp(1.0f, lit, effect_strength);
+
+                color.r = static_cast<uint8_t>(std::round(color.r * final_lit));
+                color.g = static_cast<uint8_t>(std::round(color.g * final_lit));
+                color.b = static_cast<uint8_t>(std::round(color.b * final_lit));
             }
         }
 

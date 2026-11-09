@@ -15,14 +15,23 @@ struct RenderComponent : public Component
     sf::IntRect uv;
     sf::Vector2f size;
 
+    // When true the entity sprite is multiplied by the world lightmap at its
+    // center cell (same formula as the chunk lighting shader: block_light /
+    // sky_light * day scaling). Set false for things that must stay at full
+    // brightness regardless of time of day — e.g. lightning bolts, UI-ish
+    // entities, glowing orbs.
+    bool affected_by_lighting = true;
+
     RenderComponent(
         AssetManager::GameTextureID textureID = static_cast<AssetManager::GameTextureID>(0),
         sf::IntRect uv = {},
-        sf::Vector2f size = {}
+        sf::Vector2f size = {},
+        bool affected_by_lighting = true
     )
         : textureID(textureID),
         uv(uv),
-        size(size)
+        size(size),
+        affected_by_lighting(affected_by_lighting)
     {
     }
 
@@ -49,6 +58,8 @@ struct RenderComponent : public Component
             {"y", Tag(size.y)}
         }));
 
+        compound["affected_by_lighting"] = Tag(affected_by_lighting);
+
         return Tag(compound);
     }
 
@@ -67,6 +78,12 @@ struct RenderComponent : public Component
 
         size.x = sizeTag.at("x").get<float>();
         size.y = sizeTag.at("y").get<float>();
+
+        // Backwards-compat: older saves and pre-flag snapshots don't carry
+        // this field. Default to lit so existing entities render as before.
+        const auto& root = tag.get<TagCompound>();
+        auto it = root.find("affected_by_lighting");
+        affected_by_lighting = (it != root.end()) ? it->second.get<bool>() : true;
     }
 
     std::unique_ptr<Component> clone() const override

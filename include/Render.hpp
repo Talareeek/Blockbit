@@ -10,6 +10,13 @@ extern void BuildChunkMesh(ClientWorld& world, int chunk_position);
 
 extern void RenderWorld(ClientWorld& world, const sf::Vector2<double> camera, sf::RenderWindow& window);
 
+// Draws a solid-color quad over every world cell that is NOT sky-exposed
+// (opaque blocks and roofed lets_light tiles), so the screen-space sky and
+// stars pass drawn before it is clipped to the "hole" above the terrain.
+// Call between renderSunAndMoon and RenderEntities; pass the current sky
+// bottom color so the horizon transition stays seamless.
+extern void RenderSkyOccluder(ClientWorld& world, const sf::Vector2<double> camera, sf::RenderWindow& window, sf::Color color);
+
 [[deprecated]] extern void RenderBlockOverlay(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window, UUID viewerEntityId);
 
 extern void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf::Vector2i block, UUID viewerEntityId, sf::RenderWindow& window);
