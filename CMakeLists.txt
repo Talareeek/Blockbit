@@ -28,6 +28,15 @@ endif()
 # no debug info. Driven by build-headless.sh (sets BLOCKBIT_HEADLESS_STRIP=ON).
 option(BLOCKBIT_HEADLESS_STRIP "Build BlockbitServer with release flags stripped of debug info" OFF)
 
+# Optional alternate network transport using ValveSoftware/GameNetworkingSockets
+# (open-source, no Steam account required). When ON we find_package(GameNetworkingSockets)
+# and compile src/Gns*Transport.cpp into the core libs. Selected at runtime
+# with --transport gns (desktop) or env BB_TRANSPORT=gns.
+option(BLOCKBIT_WITH_GNS "Build with GameNetworkingSockets transport" OFF)
+if(DEFINED ENV{BLOCKBIT_WITH_GNS})
+    set(BLOCKBIT_WITH_GNS $ENV{BLOCKBIT_WITH_GNS} CACHE BOOL "" FORCE)
+endif()
+
 # -----------------------------------------------------------------------------
 # Android: minimal scaffold. Phase 3 ships a green-window stub (src/android_main.cpp)
 # packaged as libBlockbit.so for a NativeActivity. Later phases will progressively
@@ -195,6 +204,54 @@ endif()
 find_package(SFML REQUIRED COMPONENTS Graphics Window System Audio)
 find_package(Threads REQUIRED)
 
+if(BLOCKBIT_WITH_GNS)
+    # Standalone GameNetworkingSockets — same ISteamNetworkingSockets API that
+    # the Steam SDK's SDR transport plugs into later, so callsites don't move.
+    # Built from source via FetchContent; needs system OpenSSL + Protobuf
+    # (protoc is pulled from the Protobuf package). Static link so no extra
+    # .so has to ship beside the binary.
+    find_package(OpenSSL)
+    find_package(Protobuf CONFIG QUIET)
+    if(NOT Protobuf_FOUND)
+        find_package(Protobuf)
+    endif()
+    if(NOT OpenSSL_FOUND OR NOT Protobuf_FOUND)
+        message(FATAL_ERROR
+            "BLOCKBIT_WITH_GNS=ON requires OpenSSL and Protobuf on the system.\n"
+            "  Arch:   sudo pacman -S openssl protobuf\n"
+            "  Debian: sudo apt install libssl-dev libprotobuf-dev protobuf-compiler\n"
+            "Re-run cmake after installing, or configure with -DBLOCKBIT_WITH_GNS=OFF.")
+    endif()
+
+    include(FetchContent)
+    # GNS's own CMake honours these via option() — set them before
+    # MakeAvailable so they take effect for the sub-build.
+    set(BUILD_SHARED_LIB  OFF    CACHE BOOL   "" FORCE)
+    set(BUILD_EXAMPLES    OFF    CACHE BOOL   "" FORCE)
+    set(BUILD_TESTS       OFF    CACHE BOOL   "" FORCE)
+    set(BUILD_TOOLS       OFF    CACHE BOOL   "" FORCE)
+    set(USE_CRYPTO        OpenSSL CACHE STRING "" FORCE)
+    FetchContent_Declare(GameNetworkingSockets
+        GIT_REPOSITORY https://github.com/ValveSoftware/GameNetworkingSockets.git
+        GIT_TAG        v1.6.1
+        GIT_SHALLOW    ON
+        EXCLUDE_FROM_ALL
+        SYSTEM
+    )
+    FetchContent_MakeAvailable(GameNetworkingSockets)
+
+    # GNS produces either GameNetworkingSockets_s (static, the mode we want)
+    # or GameNetworkingSockets (shared). Pick whichever the sub-build actually
+    # defined — the default moved between release tags.
+    if(TARGET GameNetworkingSockets_s)
+        set(GNS_TARGET GameNetworkingSockets_s)
+    elseif(TARGET GameNetworkingSockets)
+        set(GNS_TARGET GameNetworkingSockets)
+    else()
+        message(FATAL_ERROR "FetchContent pulled GameNetworkingSockets but no expected target was defined.")
+    endif()
+endif()
+
 # zstd
 find_package(zstd CONFIG QUIET)
 if(TARGET zstd::libzstd_shared)
@@ -309,6 +366,7 @@ set(_CLIENT_ONLY_BASENAMES
     MenuGameState.cpp
     NetworkAdminSession.cpp
     NetworkClientTransport.cpp
+    GnsClientTransport.cpp
     PauseScreenState.cpp
     RCon.cpp
     Render.cpp
@@ -352,6 +410,14 @@ foreach(_src ${_ALL_SOURCES})
     endif()
 endforeach()
 
+# GNS sources are only compiled when BLOCKBIT_WITH_GNS is ON. Factory TU stays
+# in regardless and guards GNS references with #ifdef so the build is clean
+# either way.
+if(NOT BLOCKBIT_WITH_GNS)
+    list(FILTER BLOCKBIT_CLIENT_ONLY_SOURCES EXCLUDE REGEX ".*/GnsClientTransport\\.cpp$")
+    list(FILTER BLOCKBIT_CORE_SOURCES       EXCLUDE REGEX ".*/GnsServerTransport\\.cpp$")
+endif()
+
 # Interface target that factors out the common include dirs, defines, and
 # transitive link deps the two bb_core variants share. Avoids repeating the
 # find_package targets on both OBJECT libraries.
@@ -376,6 +442,11 @@ target_link_libraries(bb_core_deps INTERFACE
     nlohmann_json::nlohmann_json
     ${ZSTD_TARGET}
 )
+
+if(BLOCKBIT_WITH_GNS)
+    target_compile_definitions(bb_core_deps INTERFACE BLOCKBIT_WITH_GNS=1)
+    target_link_libraries(bb_core_deps INTERFACE ${GNS_TARGET})
+endif()
 
 # -----------------------------------------------------------------------------
 # bb_core_client: shared core compiled WITHOUT HEADLESS_BUILD.

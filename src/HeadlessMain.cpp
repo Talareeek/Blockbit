@@ -17,6 +17,7 @@
 
 #include "../include/GameServer.hpp"
 #include "../include/NetworkServerTransport.hpp"
+#include "../include/TransportFactory.hpp"
 #include "../include/Command.hpp"
 #include "../include/World.hpp"
 #include "../include/GameCommon.hpp"
@@ -1059,6 +1060,13 @@ int main(int argc, char* argv[])
     std::cout << c::dim() << "[Blockbit Dedicated Server " << __DATE__ << " " << __TIME__ << " build]"
               << c::reset() << '\n';
 
+    if (const char* envTransport = std::getenv("BB_TRANSPORT"))
+    {
+        TransportKind parsed;
+        if (parseTransportKind(envTransport, parsed)) setDefaultTransportKind(parsed);
+        else std::cerr << "[Server] ignoring BB_TRANSPORT=" << envTransport << " (expected tcp|gns)\n";
+    }
+
     CliArgs args;
     if (!parseArgs(argc, argv, args))
     {
@@ -1135,7 +1143,7 @@ int main(int argc, char* argv[])
             auto world_path = args.server_dir / "worlds" / config.world_name;
             bool world_exists = std::filesystem::exists(world_path);
 
-            auto transport = std::make_unique<NetworkServerTransport>(config.port);
+            auto transport = makeServerTransport(config.port);
 
             if (world_exists)
             {

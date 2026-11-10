@@ -29,6 +29,8 @@
 
 #include "../include/ItemDataComponent.hpp"
 
+#include "../include/TransportFactory.hpp"
+
 #include <thread>
 
 #include <string>
@@ -36,6 +38,8 @@
 #include <filesystem>
 
 #include <iostream>
+
+#include <cstdlib>
 
 int main(int argc, char* argv[])
 {
@@ -48,6 +52,15 @@ int main(int argc, char* argv[])
     std::string joinAddress;
     std::string hostWorld;
     std::string nickname;
+
+    // Env var is the low-friction way to opt into GNS without touching CLI.
+    // --transport beats BB_TRANSPORT when both are present.
+    if (const char* envTransport = std::getenv("BB_TRANSPORT"))
+    {
+        TransportKind parsed;
+        if (parseTransportKind(envTransport, parsed)) setDefaultTransportKind(parsed);
+        else std::cerr << "[main] ignoring BB_TRANSPORT=" << envTransport << " (expected tcp|gns)\n";
+    }
 
     for (int i = 1; i < argc; i++)
     {
@@ -67,6 +80,12 @@ int main(int argc, char* argv[])
         {
             hostWorld = argv[++i];
             nickname = argv[++i];
+        }
+        else if (arg == "--transport" && i + 1 < argc)
+        {
+            TransportKind parsed;
+            if (parseTransportKind(argv[++i], parsed)) setDefaultTransportKind(parsed);
+            else std::cerr << "[main] ignoring --transport value (expected tcp|gns)\n";
         }
     }
 

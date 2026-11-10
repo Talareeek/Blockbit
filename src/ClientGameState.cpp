@@ -19,6 +19,7 @@
 #include "../include/NetworkServerTransport.hpp"
 #include "../include/LoopbackServerTransport.hpp"
 #include "../include/CompositeServerTransport.hpp"
+#include "../include/TransportFactory.hpp"
 #include "../include/PhysicsSystem.hpp"
 #include "../include/PhysicsComponent.hpp"
 #include "../include/AnnouncementState.hpp"
@@ -61,7 +62,7 @@ ClientGameState::ClientGameState(Game* game, std::filesystem::path world_path, u
     {
         auto composite = std::make_unique<CompositeServerTransport>();
         composite->add(std::move(loopback_pair.serverSide));
-        composite->add(std::make_unique<NetworkServerTransport>(network_port));
+        composite->add(makeServerTransport(network_port));
 
         local_server.emplace(world_path, std::move(composite));
         remote_address = "0.0.0.0:" + std::to_string(network_port);
@@ -112,7 +113,7 @@ ClientGameState::ClientGameState(Game* game, std::string name, unsigned int seed
     {
         auto composite = std::make_unique<CompositeServerTransport>();
         composite->add(std::move(loopback_pair.serverSide));
-        composite->add(std::make_unique<NetworkServerTransport>(network_port));
+        composite->add(makeServerTransport(network_port));
 
         local_server.emplace(name, seed, generation_properties, std::move(composite));
         remote_address = "0.0.0.0:" + std::to_string(network_port);
@@ -155,7 +156,7 @@ ClientGameState::ClientGameState(Game* game, const std::string& host, uint16_t p
     remote_address = host + ":" + std::to_string(port);
     this->nickname = std::move(nickname);
 
-    transport = std::make_unique<NetworkClientTransport>();
+    transport = makeClientTransport();
 
     admin_panel = std::make_unique<ServerAdminPanel>(std::make_unique<NetworkAdminSession>(transport.get()));
 
