@@ -203,7 +203,14 @@ void ClientGameState::tryInitializePlayerUI()
 void ClientGameState::applySnapshot(const SnapshotPacket& snapshot)
 {
     latest_tick = snapshot.tick;
-    time_since_last_snapshot = 0.0f;
+
+    // Anchor the render clock the first time we actually know the server's
+    // tick number. Subsequent frames advance it by wall-clock dt.
+    if (!render_tick_anchored)
+    {
+        render_tick_clock = static_cast<double>(latest_tick) - INTERPOLATION_DELAY_TICKS;
+        render_tick_anchored = true;
+    }
 
     local_world.dayTime = snapshot.dayTime;
     local_world.days = snapshot.days;
@@ -553,7 +560,8 @@ void ClientGameState::sendTickInputs()
     // one round-trip for a snapshot.
     if (local_player_entity_id.has_value())
     {
-        applyLocalPlayerInputPrediction(local_world, inputs, local_player_entity_id.value());
+        applyLocalPlayerInputPrediction(local_world, inputs, local_player_entity_id.value(),
+                                        1.0f / static_cast<float>(tick_rate));
     }
 
     InputPacket packet;
@@ -961,15 +969,27 @@ void ClientGameState::update(float dt)
         }
     }
 
-    // Advance the fractional render tick with real time so interpolation
-    // keeps producing fresh positions between server snapshots.
-    time_since_last_snapshot += dt;
-    const double tick_step_d = static_cast<double>(getTickStep(tick_rate));
-    const double render_tick = static_cast<double>(latest_tick)
-                             + static_cast<double>(time_since_last_snapshot) / tick_step_d
-                             - INTERPOLATION_DELAY_TICKS;
+    // Advance the wall-clock render clock. Doing it here (not resetting it
+    // per snapshot) is what gives the interpolator a non-integer render_tick
+    // so it actually lerps BETWEEN two history samples instead of landing on
+    // sample ticks every frame (and visually teleporting).
+    if (render_tick_anchored)
+    {
+        const double tick_step_d = static_cast<double>(getTickStep(tick_rate));
+        render_tick_clock += static_cast<double>(dt) / tick_step_d;
 
-    NetworkInterpolationSystem(local_world, render_tick);
+        // Clamp to the viable interpolation window. If we drifted too far
+        // behind latest_tick (e.g. long stall), skip forward to the target
+        // offset; if we somehow ran past latest_tick we'd start extrapolating,
+        // so hold at latest_tick which is the newest sample we have.
+        const double target_offset = static_cast<double>(latest_tick) - INTERPOLATION_DELAY_TICKS;
+        if (render_tick_clock < target_offset - RENDER_CLOCK_MAX_LAG)
+            render_tick_clock = target_offset;
+        if (render_tick_clock > static_cast<double>(latest_tick))
+            render_tick_clock = static_cast<double>(latest_tick);
+    }
+
+    NetworkInterpolationSystem(local_world, render_tick_clock);
 
     game->getConsole().assignWorld(local_server.has_value() ? &local_server->getWorld() : &local_world);
 

@@ -57,6 +57,8 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id);
 // (MOVE, JUMP) to the local player's physics so motion feels instant;
 // server stays authoritative for attack / use / drop / inventory and will
 // correct position via the next snapshot.
-void applyLocalPlayerInputPrediction(World& world, const std::vector<Input>& inputs, UUID id);
+// dt is the tick step: used to mirror the server-side StaminaSystem so the
+// sprint-latch gate (via since_last_drain) stays in sync between snapshots.
+void applyLocalPlayerInputPrediction(World& world, const std::vector<Input>& inputs, UUID id, float dt);
 
 #endif // INPUT_HPP

@@ -45,12 +45,21 @@ private:
     uint16_t tick_rate = 60;
 
     uint64_t latest_tick = 0;
-    float time_since_last_snapshot = 0.0f;
+    // Monotonic wall-clock render clock, in server-tick units. Advances by
+    // dt/tick_step each frame so interpolation reads fractional sample
+    // positions (alpha != 0) instead of snapping to integer ticks every
+    // snapshot. Re-anchored lazily on the first snapshot and clamped each
+    // frame so it stays INTERPOLATION_DELAY_TICKS behind latest_tick.
+    double render_tick_clock = 0.0;
+    bool   render_tick_anchored = false;
     // Fractional ticks that remote entities are rendered behind latest_tick.
     // At 120 Hz this is ~33 ms — buffers one or two late/dropped snapshots
     // across a jittery internet link before the interpolator has to start
     // extrapolating. Small enough that remote players still feel current.
     static constexpr double INTERPOLATION_DELAY_TICKS = 4.0;
+    // Soft cap on how far behind latest_tick the render clock is allowed
+    // to drift before snapping forward (e.g. after a long network stall).
+    static constexpr double RENDER_CLOCK_MAX_LAG = 24.0;
 
     std::optional<UUID> local_player_entity_id;
     UUID my_entity_id;

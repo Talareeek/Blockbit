@@ -134,7 +134,7 @@ std::vector<Input> getInputsFromEvent(const sf::Event& event, sf::Vector2<double
     return inputs;
 }
 
-void applyLocalPlayerInputPrediction(World& world, const std::vector<Input>& inputs, UUID id)
+void applyLocalPlayerInputPrediction(World& world, const std::vector<Input>& inputs, UUID id, float dt)
 {
     if(!world.doesEntityExist(id)) return;
     auto& entity = world.getEntity(id);
@@ -146,6 +146,13 @@ void applyLocalPlayerInputPrediction(World& world, const std::vector<Input>& inp
     auto& physics = entity.getComponent<PhysicsComponent>();
     auto& transform = entity.getComponent<TransformComponent>();
     auto& animation = entity.getComponent<AnimationComponent>();
+
+    // Latch-style sprint flag for this tick's prediction, matching how the
+    // server's processWorldInputs + StaminaSystem interact: if the gate
+    // passes we both predict the 1.25x multiplier AND locally zero
+    // since_last_drain so the next input in the same batch (and every tick
+    // until stamina depletes) keeps clearing the gate.
+    bool predicted_sprint_this_tick = false;
 
     for(const auto& input : inputs)
     {
@@ -163,7 +170,11 @@ void applyLocalPlayerInputPrediction(World& world, const std::vector<Input>& inp
                     const float gate = (stamina.since_last_drain <= 0.0f)
                                        ? 0.0f
                                        : StaminaComponent::MIN_TO_START_SPRINT;
-                    if(stamina.stamina > gate) multiplier = 1.25f;
+                    if(stamina.stamina > gate)
+                    {
+                        multiplier = 1.25f;
+                        predicted_sprint_this_tick = true;
+                    }
                 }
 
                 multiplier *= 1.0f + 0.25f * static_cast<float>(effectMagnitude(entity, EffectID::Speed));
@@ -195,6 +206,25 @@ void applyLocalPlayerInputPrediction(World& world, const std::vector<Input>& inp
             }
             default:
                 break;
+        }
+    }
+
+    // Mirror server StaminaSystem one tick. Without this, the client reads
+    // a stale since_last_drain (only updated via snapshots) and the gate
+    // flips back to MIN_TO_START_SPRINT in the middle of an active sprint
+    // whenever stamina drops below 10 — predicting a walk while the server
+    // is still sprinting, which the user sees as a snap-forward correction.
+    if(entity.hasComponent<StaminaComponent>())
+    {
+        auto& stamina = entity.getComponent<StaminaComponent>();
+        if(predicted_sprint_this_tick && stamina.stamina > 0.0f)
+        {
+            stamina.stamina = std::max(0.0f, stamina.stamina - StaminaComponent::DRAIN_RATE * dt);
+            stamina.since_last_drain = 0.0f;
+        }
+        else if(stamina.since_last_drain < StaminaComponent::REGEN_DELAY)
+        {
+            stamina.since_last_drain += dt;
         }
     }
 }
