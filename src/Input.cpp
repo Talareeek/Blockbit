@@ -156,10 +156,14 @@ void applyLocalPlayerInputPrediction(World& world, const std::vector<Input>& inp
                 auto move = std::get<MoveData>(input.value);
 
                 float multiplier = 0.75f;
-                if(move.sprint && entity.hasComponent<StaminaComponent>()
-                   && entity.getComponent<StaminaComponent>().stamina > 0.0f)
+                if(move.sprint && std::abs(move.direction.x) > 0.01f
+                   && entity.hasComponent<StaminaComponent>())
                 {
-                    multiplier = 1.25f;
+                    const auto& stamina = entity.getComponent<StaminaComponent>();
+                    const float gate = (stamina.since_last_drain <= 0.0f)
+                                       ? 0.0f
+                                       : StaminaComponent::MIN_TO_START_SPRINT;
+                    if(stamina.stamina > gate) multiplier = 1.25f;
                 }
 
                 multiplier *= 1.0f + 0.25f * static_cast<float>(effectMagnitude(entity, EffectID::Speed));

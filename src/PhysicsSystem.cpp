@@ -3,6 +3,7 @@
 #include "../include/World.hpp"
 #include "../include/HealthComponent.hpp"
 #include "../include/TransformComponent.hpp"
+#include "../include/NetworkInterpolationComponent.hpp"
 
 #include <cmath>
 #include <algorithm>
@@ -43,6 +44,15 @@ void PhysicsSystem(World& world, float deltaTime)
     for(auto& [id, entity] : world.getEntities())
     {
         if(!entity.hasComponent<PhysicsComponent>() || !entity.hasComponent<TransformComponent>()) continue;
+
+        // NetworkInterpolationComponent only exists on remote-driven entities
+        // on the client (added in ClientGameState::applySnapshot for anything
+        // that isn't the local player). Running client-side physics on them
+        // drifts `position` away from the authoritative snapshot and makes
+        // `render_position` (written at the bottom of this loop) fight with
+        // NetworkInterpolationSystem's output. Headless/server has no such
+        // components, so this branch is a no-op there.
+        if(entity.hasComponent<NetworkInterpolationComponent>()) continue;
 
         auto& c = entity.getComponent<PhysicsComponent>();
         if(c.isStatic) continue;

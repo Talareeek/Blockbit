@@ -1,10 +1,10 @@
 #include "../include/MenuGameState.hpp"
 #include "../include/Game.hpp"
 #include "../include/AssetManager.hpp"
-#include "../include/Client.hpp"
 #include "../include/Render.hpp"
 #include "../include/Settings.hpp"
 #include "../include/StructureEditorGameState.hpp"
+#include "../include/TransportFactory.hpp"
 
 #include <imgui.h>
 
@@ -120,21 +120,38 @@ void MenuGameState::beginProbe(const std::string& text)
     {
         try
         {
-            Client client;
+            // Routes through the global transport selection so --transport gns
+            // probes also go via GNS; the asio Client was pinning to TCP and
+            // hence timing out against a GNS listen server.
+            auto client = makeClientTransport();
 
-            if (!client.connect(host, port, PROBE_CONNECT_TIMEOUT) || state->cancelled)
+            auto connect_deadline = std::chrono::steady_clock::now() + PROBE_CONNECT_TIMEOUT;
+            if (!client->connect(host, port))
             {
-                client.disconnect();
+                state->done = true;
+                return;
+            }
+            while (!state->cancelled && !client->isConnected()
+                   && std::chrono::steady_clock::now() < connect_deadline)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(15));
+                // Drain any buffered messages/callbacks so the connection state
+                // actually progresses while we wait (GNS pumps state via poll).
+                client->poll();
+            }
+            if (state->cancelled || !client->isConnected())
+            {
+                client->disconnect();
                 state->done = true;
                 return;
             }
 
-            client.send(serializePlainPacket(PacketType::StatusRequest));
+            client->send(serializePlainPacket(PacketType::StatusRequest));
 
             auto deadline = std::chrono::steady_clock::now() + PROBE_RESPONSE_TIMEOUT;
-            while (!state->cancelled && client.isConnected() && std::chrono::steady_clock::now() < deadline)
+            while (!state->cancelled && client->isConnected() && std::chrono::steady_clock::now() < deadline)
             {
-                auto packets = client.poll();
+                auto packets = client->poll();
                 for (auto& received : packets)
                 {
                     if (received.type != PacketType::StatusResponse) continue;
@@ -148,13 +165,13 @@ void MenuGameState::beginProbe(const std::string& text)
                     }
                     state->success = true;
                     state->done = true;
-                    client.disconnect();
+                    client->disconnect();
                     return;
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(25));
             }
 
-            client.disconnect();
+            client->disconnect();
         }
         catch (const std::exception& e)
         {

@@ -240,7 +240,7 @@ void GnsServerTransport::send(uint32_t clientId, std::vector<char> buf)
         conn = it->second;
     }
     SteamNetworkingSockets()->SendMessageToConnection(conn, buf.data(), static_cast<uint32_t>(buf.size()),
-                                                      k_nSteamNetworkingSend_Reliable, nullptr);
+                                                      k_nSteamNetworkingSend_Reliable | k_nSteamNetworkingSend_NoNagle, nullptr);
 }
 
 void GnsServerTransport::broadcast(const std::vector<char>& buf)
@@ -253,7 +253,7 @@ void GnsServerTransport::broadcast(const std::vector<char>& buf)
     }
     for (auto c : conns)
         SteamNetworkingSockets()->SendMessageToConnection(c, buf.data(), static_cast<uint32_t>(buf.size()),
-                                                          k_nSteamNetworkingSend_Reliable, nullptr);
+                                                          k_nSteamNetworkingSend_Reliable | k_nSteamNetworkingSend_NoNagle, nullptr);
 }
 
 void GnsServerTransport::broadcastExcept(uint32_t clientId, const std::vector<char>& buf)
@@ -267,7 +267,7 @@ void GnsServerTransport::broadcastExcept(uint32_t clientId, const std::vector<ch
     }
     for (auto c : conns)
         SteamNetworkingSockets()->SendMessageToConnection(c, buf.data(), static_cast<uint32_t>(buf.size()),
-                                                          k_nSteamNetworkingSend_Reliable, nullptr);
+                                                          k_nSteamNetworkingSend_Reliable | k_nSteamNetworkingSend_NoNagle, nullptr);
 }
 
 void GnsServerTransport::disconnect(uint32_t clientId)

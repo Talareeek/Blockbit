@@ -757,7 +757,7 @@ void ClientGameState::update(float dt)
                     return;
                 }
                 was_connected = true;
-                std::cerr << "[Client] connected to " << remote_address << '\n';
+                std::cerr << "[Client] connect initiated to " << remote_address << '\n';
             }
 
             if (was_connected && !login_sent && transport->isConnected())
@@ -767,7 +767,11 @@ void ClientGameState::update(float dt)
                 std::cerr << "[Client] Sent Login as \"" << nickname << "\"\n";
             }
 
-            if (!connection_failed && was_connected && !transport->isConnected())
+            // isConnecting() carves out the async-handshake window for GNS;
+            // the sync transports (TCP, loopback) keep returning false here
+            // so their failure behaviour is unchanged.
+            if (!connection_failed && was_connected
+                && !transport->isConnected() && !transport->isConnecting())
             {
                 connection_failed = true;
                 if (error_message.empty())

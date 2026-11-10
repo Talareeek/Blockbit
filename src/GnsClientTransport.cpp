@@ -7,7 +7,6 @@
 #include <cstring>
 #include <iostream>
 #include <mutex>
-#include <thread>
 
 namespace
 {
@@ -61,7 +60,8 @@ void GnsClientTransport::onConnectionStatusChanged(SteamNetConnectionStatusChang
             if (info->m_hConn == connection)
             {
                 last_error = info->m_info.m_szEndDebug;
-                connected = false;
+                connected  = false;
+                connecting = false;
                 SteamNetworkingSockets()->CloseConnection(connection, 0, nullptr, false);
                 connection = k_HSteamNetConnection_Invalid;
             }
@@ -72,7 +72,8 @@ void GnsClientTransport::onConnectionStatusChanged(SteamNetConnectionStatusChang
             break;
 
         case k_ESteamNetworkingConnectionState_Connected:
-            connected = true;
+            connected  = true;
+            connecting = false;
             break;
 
         default:
@@ -117,22 +118,13 @@ bool GnsClientTransport::connect(const std::string& host, uint16_t port)
         return false;
     }
 
-    // Spin the callback pump until we see Connected or an error. Match the
-    // old Client::connect's ~5s default budget so callers that time out on
-    // the same wall-clock still behave the same.
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
-    while (std::chrono::steady_clock::now() < deadline)
-    {
-        SteamNetworkingSockets()->RunCallbacks();
-        if (connected) return true;
-        if (connection == k_HSteamNetConnection_Invalid) return false;
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    }
-
-    last_error = "Connection timed out";
-    SteamNetworkingSockets()->CloseConnection(connection, 0, "timeout", false);
-    connection = k_HSteamNetConnection_Invalid;
-    return false;
+    // Non-blocking: return immediately after kicking off the handshake. The
+    // callback (fired from poll()'s RunCallbacks) will flip `connected` once
+    // the state reaches Connected. Blocking here froze the game loop for the
+    // full RTT * handshake-roundtrips budget on remote joins.
+    connecting = true;
+    connect_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    return true;
 }
 
 void GnsClientTransport::disconnect()
@@ -142,7 +134,8 @@ void GnsClientTransport::disconnect()
         SteamNetworkingSockets()->CloseConnection(connection, 0, "client quit", true);
         connection = k_HSteamNetConnection_Invalid;
     }
-    connected = false;
+    connected  = false;
+    connecting = false;
     if (g_client_instance == this) g_client_instance = nullptr;
 }
 
@@ -151,7 +144,7 @@ void GnsClientTransport::send(std::vector<char> buf)
     if (!connected || connection == k_HSteamNetConnection_Invalid) return;
     SteamNetworkingSockets()->SendMessageToConnection(connection, buf.data(),
                                                       static_cast<uint32_t>(buf.size()),
-                                                      k_nSteamNetworkingSend_Reliable, nullptr);
+                                                      k_nSteamNetworkingSend_Reliable | k_nSteamNetworkingSend_NoNagle, nullptr);
 }
 
 std::vector<ReceivedPacket> GnsClientTransport::poll()
@@ -160,6 +153,17 @@ std::vector<ReceivedPacket> GnsClientTransport::poll()
     if (connection == k_HSteamNetConnection_Invalid) return out;
 
     SteamNetworkingSockets()->RunCallbacks();
+
+    // Self-timeout: if the handshake takes too long, mark as failed so the
+    // caller's !isConnected() && !isConnecting() check trips.
+    if (connecting && std::chrono::steady_clock::now() > connect_deadline)
+    {
+        last_error = "Connection timed out";
+        connecting = false;
+        SteamNetworkingSockets()->CloseConnection(connection, 0, "timeout", false);
+        connection = k_HSteamNetConnection_Invalid;
+        return out;
+    }
 
     constexpr int BATCH = 32;
     ISteamNetworkingMessage* msgs[BATCH];
@@ -190,6 +194,11 @@ std::vector<ReceivedPacket> GnsClientTransport::poll()
 bool GnsClientTransport::isConnected() const
 {
     return connected;
+}
+
+bool GnsClientTransport::isConnecting() const
+{
+    return connecting;
 }
 
 const std::string& GnsClientTransport::getLastError() const
