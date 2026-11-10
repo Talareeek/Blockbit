@@ -23,6 +23,7 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include <deque>
 #include <cstdint>
 
 class ClientGameState : public GameState
@@ -53,13 +54,18 @@ private:
     double render_tick_clock = 0.0;
     bool   render_tick_anchored = false;
     // Fractional ticks that remote entities are rendered behind latest_tick.
-    // At 120 Hz this is ~33 ms — buffers one or two late/dropped snapshots
-    // across a jittery internet link before the interpolator has to start
-    // extrapolating. Small enough that remote players still feel current.
-    static constexpr double INTERPOLATION_DELAY_TICKS = 4.0;
+    // At 120 Hz this is ~67 ms — big enough to absorb typical residential
+    // jitter (~30 ms) and the occasional retransmit without forcing the
+    // interpolator into the dead-reckoning branch.
+    static constexpr double INTERPOLATION_DELAY_TICKS = 8.0;
     // Soft cap on how far behind latest_tick the render clock is allowed
-    // to drift before snapping forward (e.g. after a long network stall).
+    // to drift before being nudged forward (e.g. after a long network stall).
+    // Expressed in ticks — at 120 Hz, 24 ticks is 200 ms.
     static constexpr double RENDER_CLOCK_MAX_LAG = 24.0;
+    // Maximum wall-clock dt (seconds) that may advance the render clock in
+    // one frame. Caps spikes from alt-tab/stall/GC so render_tick_clock
+    // doesn't lurch forward and force a teleport correction.
+    static constexpr float MAX_FRAME_DT = 1.0f / 15.0f;
 
     std::optional<UUID> local_player_entity_id;
     UUID my_entity_id;
@@ -94,6 +100,33 @@ private:
     float since_last_tick = 0.0f;
 
     std::vector<Input> inputs;
+
+    // Monotonic sequence number for outgoing InputPackets. 0 is reserved as
+    // "no input yet", so counting starts at 1. Paired with
+    // pending_inputs/last_input_seq_applied so applySnapshot can drop
+    // acknowledged batches and replay the rest on top of the authoritative
+    // snapshot — this is the whole point of input reconciliation.
+    uint64_t next_input_seq = 1;
+
+    struct PendingInputBatch
+    {
+        uint64_t seq;
+        std::vector<Input> inputs;
+    };
+    // Unacknowledged input batches, oldest-first. Each entry is a copy of
+    // what we sent in that tick's InputPacket. applySnapshot drops entries
+    // with seq <= snapshot.last_input_seq and replays what's left.
+    std::deque<PendingInputBatch> pending_inputs;
+
+    // Highest seq the server has told us it applied. Mirrors
+    // ClientData::last_input_seq_applied on the server. Non-decreasing.
+    uint64_t last_input_seq_applied = 0;
+
+    // Replays `pending_inputs` on top of the current (freshly applied) state
+    // of the local player entity. Called at the end of applySnapshot once
+    // the authoritative TransformComponent/PhysicsComponent have been
+    // deserialized onto the local player.
+    void reconcileLocalPlayer();
 
     bool pending_screenshot = false;
 

@@ -112,6 +112,12 @@ struct SnapshotPacket
 {
     uint64_t tick;
 
+    // Highest InputPacket.seq that the server had already applied before
+    // producing this snapshot. 0 = none yet. The client uses this to drop
+    // acknowledged pending inputs and to replay the rest on top of the
+    // authoritative state (reconciliation).
+    uint64_t last_input_seq = 0;
+
     float dayTime;
     uint64_t days;
 
@@ -130,6 +136,12 @@ struct TrackPacket
 struct InputPacket
 {
     UUID id;
+
+    // Client-local monotonic sequence number for this batch. 0 means
+    // "unversioned" (never emitted by the current client, only tolerated by
+    // legacy deserialize for forward compatibility). Server reads and echoes
+    // the max applied value back in SnapshotPacket.last_input_seq.
+    uint64_t seq = 0;
 
     std::vector<Input> inputs;
 };

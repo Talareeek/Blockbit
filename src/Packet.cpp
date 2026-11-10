@@ -259,6 +259,7 @@ std::vector<char> serializePacket(const SnapshotPacket& p)
     PacketWriter w(PacketType::Snapshot);
 
     w.write(p.tick);
+    w.write(p.last_input_seq);
     w.write(p.dayTime);
     w.write(p.days);
     w.write(p.weather);
@@ -385,6 +386,7 @@ std::vector<char> serializePacket(const InputPacket& p)
 {
     PacketWriter w(PacketType::Input);
     w.write(p.id);
+    w.write(p.seq);
 
     uint32_t count = static_cast<uint32_t>(p.inputs.size());
     w.write(count);
@@ -519,6 +521,7 @@ SnapshotPacket deserializeSnapshot(PacketReader& r)
     SnapshotPacket p;
 
     p.tick = r.read<uint64_t>();
+    p.last_input_seq = r.read<uint64_t>();
     p.dayTime = r.read<float>();
     p.days = r.read<uint64_t>();
     p.weather = r.read<WeatherState>();
@@ -560,6 +563,7 @@ InputPacket deserializeInput(PacketReader& r)
 {
     InputPacket p;
     p.id = r.read<UUID>();
+    p.seq = r.read<uint64_t>();
 
     uint32_t count = r.read<uint32_t>();
     if (count > 1024) throw std::runtime_error("InputPacket: input batch too large");

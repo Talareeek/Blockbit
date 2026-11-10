@@ -1877,6 +1877,14 @@ void renderStars(float phase, sf::RenderWindow& window)
 
 void NetworkInterpolationSystem(World& world, double render_tick)
 {
+    // Limits how far past history.back().tick we're willing to extrapolate.
+    // Expressed in ticks. Beyond this we hold the last sample — the alternative
+    // is a hard overshoot whenever an entity decelerates while samples are in
+    // flight. One full interpolation window's worth of ticks is enough to
+    // cover a single dropped-then-retransmitted snapshot without a visible
+    // freeze and without flying off.
+    constexpr double MAX_EXTRAPOLATION_TICKS = 6.0;
+
     for (auto& [id, entity] : world.getEntities())
     {
         if (!entity.hasComponent<NetworkInterpolationComponent>() || !entity.hasComponent<TransformComponent>()) continue;
@@ -1900,14 +1908,17 @@ void NetworkInterpolationSystem(World& world, double render_tick)
 
         if (render_tick >= static_cast<double>(history.back().tick))
         {
-            // No sample newer than render_tick yet — extrapolate briefly from the
-            // last two samples so the entity keeps moving instead of freezing.
+            // No sample newer than render_tick yet — extrapolate briefly from
+            // the last two samples so the entity keeps moving instead of
+            // freezing. Bounded by MAX_EXTRAPOLATION_TICKS; past that we hold
+            // the last sample rather than flying off.
             const auto& a = history[history.size() - 2];
             const auto& b = history.back();
             const double span = static_cast<double>(b.tick) - static_cast<double>(a.tick);
             if (span > 0.0)
             {
-                const double overshoot = std::min(render_tick - static_cast<double>(b.tick), span);
+                const double raw_overshoot = render_tick - static_cast<double>(b.tick);
+                const double overshoot = std::min(raw_overshoot, MAX_EXTRAPOLATION_TICKS);
                 const double alpha = 1.0 + overshoot / span;
                 transform.render_position = a.position + (b.position - a.position) * alpha;
             }

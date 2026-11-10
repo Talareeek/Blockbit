@@ -24,42 +24,18 @@ namespace
         int i = static_cast<int>(v);
         return (v < static_cast<double>(i)) ? i - 1 : i;
     }
-}
 
-bool isSubmerged(World& world, const TransformComponent& transform)
-{
-    int cx = ifloor(transform.position.x + transform.size.x * 0.5);
-    int cy = ifloor(transform.position.y + transform.size.y * 0.5);
-    return blockDatabase[world.getBlock(cx, cy).id].liquid;
-}
-
-void PhysicsSystem(World& world, float deltaTime)
-{
-    const double dt = static_cast<double>(deltaTime);
-    if(dt <= 0.0) return;
-
-    const double damping_x_mult = std::exp(-PhysicsComponent::damping.x * dt);
-    const double damping_y_base = -PhysicsComponent::damping.y * dt;
-
-    for(auto& [id, entity] : world.getEntities())
+    void stepOne(Entity& entity, World& world, double dt)
     {
-        if(!entity.hasComponent<PhysicsComponent>() || !entity.hasComponent<TransformComponent>()) continue;
-
-        // NetworkInterpolationComponent only exists on remote-driven entities
-        // on the client (added in ClientGameState::applySnapshot for anything
-        // that isn't the local player). Running client-side physics on them
-        // drifts `position` away from the authoritative snapshot and makes
-        // `render_position` (written at the bottom of this loop) fight with
-        // NetworkInterpolationSystem's output. Headless/server has no such
-        // components, so this branch is a no-op there.
-        if(entity.hasComponent<NetworkInterpolationComponent>()) continue;
-
         auto& c = entity.getComponent<PhysicsComponent>();
-        if(c.isStatic) continue;
+        if(c.isStatic) return;
 
         auto& t = entity.getComponent<TransformComponent>();
 
-        if(!world.isChunkLoaded(t.chunkPosition())) continue;
+        if(!world.isChunkLoaded(t.chunkPosition())) return;
+
+        const double damping_x_mult = std::exp(-PhysicsComponent::damping.x * dt);
+        const double damping_y_base = -PhysicsComponent::damping.y * dt;
 
         const double size_x = t.size.x;
         const double size_y = t.size.y;
@@ -238,5 +214,46 @@ void PhysicsSystem(World& world, float deltaTime)
         t.render_position = t.position;
         c.dirty = true;
         t.dirty = true;
+    }
+}
+
+bool isSubmerged(World& world, const TransformComponent& transform)
+{
+    int cx = ifloor(transform.position.x + transform.size.x * 0.5);
+    int cy = ifloor(transform.position.y + transform.size.y * 0.5);
+    return blockDatabase[world.getBlock(cx, cy).id].liquid;
+}
+
+void stepEntityPhysics(Entity& entity, World& world, float deltaTime)
+{
+    const double dt = static_cast<double>(deltaTime);
+    if(dt <= 0.0) return;
+    if(!entity.hasComponent<PhysicsComponent>() || !entity.hasComponent<TransformComponent>()) return;
+    stepOne(entity, world, dt);
+}
+
+void PhysicsSystem(World& world, float deltaTime, const UUID& skip_entity)
+{
+    const double dt = static_cast<double>(deltaTime);
+    if(dt <= 0.0) return;
+
+    const bool has_skip = !(skip_entity == UUID{});
+
+    for(auto& [id, entity] : world.getEntities())
+    {
+        if(has_skip && id == skip_entity) continue;
+
+        if(!entity.hasComponent<PhysicsComponent>() || !entity.hasComponent<TransformComponent>()) continue;
+
+        // NetworkInterpolationComponent only exists on remote-driven entities
+        // on the client (added in ClientGameState::applySnapshot for anything
+        // that isn't the local player). Running client-side physics on them
+        // drifts `position` away from the authoritative snapshot and makes
+        // `render_position` (written at the bottom of this loop) fight with
+        // NetworkInterpolationSystem's output. Headless/server has no such
+        // components, so this branch is a no-op there.
+        if(entity.hasComponent<NetworkInterpolationComponent>()) continue;
+
+        stepOne(entity, world, dt);
     }
 }

@@ -301,7 +301,7 @@ void GameServer::processIncoming()
                     InputPacket input_packet = deserializeInput(reader);
                     auto iterator = remote_input_queues.find(packet.clientId);
                     if (iterator == remote_input_queues.end()) break;
-                    iterator->second.push_back(std::move(input_packet.inputs));
+                    iterator->second.push_back(QueuedInputBatch{input_packet.seq, std::move(input_packet.inputs)});
                     break;
                 }
                 case PacketType::BlockUpdate:
@@ -512,6 +512,7 @@ void GameServer::broadcastSnapshot()
     {
         SnapshotPacket snapshot;
         snapshot.tick = tick;
+        snapshot.last_input_seq = data.last_input_seq_applied;
         snapshot.dayTime = world.getDayTime();
         snapshot.days = world.days;
         snapshot.weather = world.weather;
@@ -656,7 +657,15 @@ void GameServer::update(float dt)
 
             if (queue.size() > INPUT_QUEUE_HARD_CAP)
             {
-                while (queue.size() > INPUT_QUEUE_TARGET) queue.pop_front();
+                // Dropped batches are still "ack'd" as far as the client is
+                // concerned — without this, reconciliation would replay the
+                // dropped inputs forever since the server never confirms them.
+                while (queue.size() > INPUT_QUEUE_TARGET)
+                {
+                    if (queue.front().seq > client_it->second.last_input_seq_applied)
+                        client_it->second.last_input_seq_applied = queue.front().seq;
+                    queue.pop_front();
+                }
             }
 
             size_t to_consume = 1;
@@ -664,7 +673,10 @@ void GameServer::update(float dt)
 
             for (size_t i = 0; i < to_consume && !queue.empty(); ++i)
             {
-                processWorldInputs(world, std::move(queue.front()), iterator->second);
+                auto& batch = queue.front();
+                if (batch.seq > client_it->second.last_input_seq_applied)
+                    client_it->second.last_input_seq_applied = batch.seq;
+                processWorldInputs(world, std::move(batch.inputs), iterator->second);
                 queue.pop_front();
             }
         }

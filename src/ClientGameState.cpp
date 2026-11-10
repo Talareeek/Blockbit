@@ -204,6 +204,9 @@ void ClientGameState::applySnapshot(const SnapshotPacket& snapshot)
 {
     latest_tick = snapshot.tick;
 
+    if (snapshot.last_input_seq > last_input_seq_applied)
+        last_input_seq_applied = snapshot.last_input_seq;
+
     // Anchor the render clock the first time we actually know the server's
     // tick number. Subsequent frames advance it by wall-clock dt.
     if (!render_tick_anchored)
@@ -231,9 +234,22 @@ void ClientGameState::applySnapshot(const SnapshotPacket& snapshot)
             lightning_flash = LIGHTNING_FLASH_DURATION;
         }
 
+        // Seed interpolation for remote entities at their spawn position so
+        // the very first "updated_entities" sample has something to lerp
+        // FROM instead of being teleported into place by the size==1 branch
+        // of NetworkInterpolationSystem.
+        const bool is_local = (local_player_entity_id == id);
+        if (!is_local && entity.hasComponent<TransformComponent>())
+        {
+            entity.addComponent<NetworkInterpolationComponent>(NetworkInterpolationComponent{});
+            const auto& transform = entity.getComponent<TransformComponent>();
+            entity.getComponent<NetworkInterpolationComponent>().pushSample(
+                snapshot.tick, transform.position, transform.rotation);
+        }
+
         local_world.addEntity(std::move(entity));
 
-        if (local_player_entity_id == id)
+        if (is_local)
         {
             player_ui_initialized = false;
             content_view.reset();
@@ -267,6 +283,39 @@ void ClientGameState::applySnapshot(const SnapshotPacket& snapshot)
             content_view.reset();
         }
         local_world.removeEntity(id);
+    }
+
+    // Reconcile the local player. applyUpdate above has already snapped its
+    // TransformComponent/PhysicsComponent back to the server-authoritative
+    // state for whatever tick produced this snapshot — now drop acknowledged
+    // pending inputs and replay the rest so the visible position is a
+    // forward-prediction, not a lag-behind correction.
+    reconcileLocalPlayer();
+}
+
+void ClientGameState::reconcileLocalPlayer()
+{
+    if (!local_player_entity_id.has_value()) return;
+    if (!local_world.doesEntityExist(local_player_entity_id.value())) return;
+
+    // Drop acknowledged pending batches (seq <= last_input_seq_applied).
+    while (!pending_inputs.empty() && pending_inputs.front().seq <= last_input_seq_applied)
+    {
+        pending_inputs.pop_front();
+    }
+
+    // Replay what's left: each entry is one tick's worth of inputs the server
+    // hasn't yet processed. Apply the same prediction forces + physics step
+    // we did when the batch was first produced. Matches server
+    // processWorldInputs + PhysicsSystem cadence exactly.
+    const float tick_step = 1.0f / static_cast<float>(tick_rate);
+    auto& player_entity = local_world.getEntity(local_player_entity_id.value());
+
+    for (const auto& batch : pending_inputs)
+    {
+        applyLocalPlayerInputPrediction(local_world, batch.inputs,
+                                        local_player_entity_id.value(), tick_step);
+        stepEntityPhysics(player_entity, local_world, tick_step);
     }
 }
 
@@ -552,20 +601,36 @@ void ClientGameState::sendTickInputs()
                       std::make_move_iterator(gamepad_frame.end()));
     }
 
-    if (inputs.empty()) return;
+    // We still want to send EMPTY input batches once reconciliation is on —
+    // the seq is used to acknowledge the server's progress and to keep the
+    // pending queue draining even when the player isn't pressing anything.
+    const float tick_step = 1.0f / static_cast<float>(tick_rate);
 
-    // Client-side prediction: apply the player's movement inputs locally
-    // before sending them off. PhysicsSystem on the client will then step
-    // the player each frame, so motion is responsive instead of waiting
-    // one round-trip for a snapshot.
-    if (local_player_entity_id.has_value())
+    const uint64_t seq = next_input_seq++;
+
+    // Keep an authoritative copy of this tick's inputs so applySnapshot can
+    // replay them after a reconciliation. Must happen BEFORE applying the
+    // prediction locally, otherwise a snapshot that arrives this same tick
+    // would see a partial state.
+    pending_inputs.push_back(PendingInputBatch{seq, inputs});
+
+    // Bound pending_inputs to a sane window so a long network stall can't
+    // grow it without end. 240 batches at 120 Hz = 2 s of unack'd inputs,
+    // comfortably beyond the HARD_CAP+drain window on the server side.
+    while (pending_inputs.size() > 240) pending_inputs.pop_front();
+
+    // Client-side prediction: apply this tick's forces on the local player.
+    // The actual integration happens in onTick via stepEntityPhysics so that
+    // physics advances even while chat/view-open keeps us from polling inputs.
+    if (local_player_entity_id.has_value() && local_world.doesEntityExist(local_player_entity_id.value()))
     {
-        applyLocalPlayerInputPrediction(local_world, inputs, local_player_entity_id.value(),
-                                        1.0f / static_cast<float>(tick_rate));
+        applyLocalPlayerInputPrediction(local_world, pending_inputs.back().inputs,
+                                        local_player_entity_id.value(), tick_step);
     }
 
     InputPacket packet;
     packet.id = my_entity_id;
+    packet.seq = seq;
     packet.inputs = std::move(inputs);
     inputs.clear();
 
@@ -600,6 +665,18 @@ void ClientGameState::onTick(float tick_step)
     else
     {
         inputs.clear();
+    }
+
+    // Local player physics runs here — NOT inside PhysicsSystem's iteration
+    // (which skips this entity). Having a single integration site makes
+    // prediction + replay coherent: sendTickInputs applies forces, stepEntityPhysics
+    // integrates, and applySnapshot's reconcile replays by re-applying forces and
+    // re-stepping. Done every tick so gravity/velocity keep advancing even when
+    // acceptsPlayerInput is false (chat, pause, view open).
+    if (local_player_entity_id.has_value() && local_world.doesEntityExist(local_player_entity_id.value()))
+    {
+        auto& player_entity = local_world.getEntity(local_player_entity_id.value());
+        stepEntityPhysics(player_entity, local_world, tick_step);
     }
 
     drainViewEventsAndSend(content_view.get(), transport.get());
@@ -830,7 +907,12 @@ void ClientGameState::update(float dt)
         return;
     }
 
-    since_last_tick += dt;
+    // Clamp the real-frame dt that feeds the tick accumulator: a 1 s alt-tab
+    // hitch otherwise queues ~tick_rate ticks into one frame, which we'll
+    // immediately drop (cap below) AND then teleport remote entities via the
+    // render-clock drift path. One frame's worth of ticks is already a lot.
+    const float clamped_dt = std::min(dt, MAX_FRAME_DT);
+    since_last_tick += clamped_dt;
 
     uint32_t max_ticks_this_frame = local_server ? local_server->getMaxTicksPerFrame() : 10u;
     uint32_t ticks_executed = 0;
@@ -839,7 +921,11 @@ void ClientGameState::update(float dt)
     {
         if (ticks_executed >= max_ticks_this_frame)
         {
-            since_last_tick = 0.0f;
+            // Carry at most one tick_step forward so the next frame picks up
+            // where we left off instead of silently discarding the backlog.
+            // The excess is dropped — it would just snowball into another
+            // over-cap frame otherwise.
+            since_last_tick = std::min(since_last_tick, tick_step);
             break;
         }
         ++ticks_executed;
@@ -867,6 +953,15 @@ void ClientGameState::update(float dt)
         }
 
         onTick(tick_step);
+
+        // Run client-side prediction physics per tick with tick_step, matching
+        // the authoritative server's PhysicsSystem cadence. The local player
+        // is explicitly skipped: it is integrated inside onTick (sendTickInputs
+        // + stepEntityPhysics) and re-integrated during reconciliation. Any
+        // other NetworkInterpolationComponent-owning entities short-circuit
+        // at the top of PhysicsSystem.
+        PhysicsSystem(local_world, tick_step,
+                      local_player_entity_id.value_or(UUID{}));
 
         sf::View game_view(
             {0.0f, 0.0f},
@@ -923,9 +1018,9 @@ void ClientGameState::update(float dt)
         since_last_tick -= tick_step;
     }
 
-    if (since_last_tick > tick_step) since_last_tick -= dt;
-
-    PhysicsSystem(local_world, dt);
+    // PhysicsSystem was moved into the tick loop above so prediction steps
+    // with tick_step dt (matching the server). Keep observeDamageParticles
+    // here because it only reads state and doesn't care about tick cadence.
 
     observeDamageParticles();
 
@@ -976,17 +1071,43 @@ void ClientGameState::update(float dt)
     if (render_tick_anchored)
     {
         const double tick_step_d = static_cast<double>(getTickStep(tick_rate));
-        render_tick_clock += static_cast<double>(dt) / tick_step_d;
+        const double advance = static_cast<double>(clamped_dt) / tick_step_d;
 
-        // Clamp to the viable interpolation window. If we drifted too far
-        // behind latest_tick (e.g. long stall), skip forward to the target
-        // offset; if we somehow ran past latest_tick we'd start extrapolating,
-        // so hold at latest_tick which is the newest sample we have.
+        // Soft catch-up instead of hard clamp: if we're too far behind
+        // target_offset, spend this frame advancing 2x so the correction is
+        // spread over a handful of frames rather than a teleport. If we're
+        // comfortably inside the window, just advance 1x.
         const double target_offset = static_cast<double>(latest_tick) - INTERPOLATION_DELAY_TICKS;
-        if (render_tick_clock < target_offset - RENDER_CLOCK_MAX_LAG)
-            render_tick_clock = target_offset;
-        if (render_tick_clock > static_cast<double>(latest_tick))
-            render_tick_clock = static_cast<double>(latest_tick);
+        const double behind = target_offset - render_tick_clock;
+
+        double speed_factor = 1.0;
+        if (behind > RENDER_CLOCK_MAX_LAG)
+        {
+            // Beyond the soft cap — accelerate the catch-up proportionally,
+            // but still never teleport.
+            speed_factor = std::min(4.0, 1.0 + behind / RENDER_CLOCK_MAX_LAG);
+        }
+        else if (behind > INTERPOLATION_DELAY_TICKS)
+        {
+            speed_factor = 1.5;
+        }
+        else if (behind < -INTERPOLATION_DELAY_TICKS)
+        {
+            // Rendered too far into the future (lost snapshots). Slow down
+            // instead of freezing at latest_tick — NetworkInterpolationSystem
+            // can dead-reckon briefly without ugly snaps.
+            speed_factor = 0.5;
+        }
+
+        render_tick_clock += advance * speed_factor;
+
+        // Hard safety: don't let render_tick_clock run arbitrarily past
+        // latest_tick during a full disconnect. One full interpolation
+        // window past latest_tick is the furthest we'll dead-reckon.
+        const double hard_future_cap =
+            static_cast<double>(latest_tick) + INTERPOLATION_DELAY_TICKS;
+        if (render_tick_clock > hard_future_cap)
+            render_tick_clock = hard_future_cap;
     }
 
     NetworkInterpolationSystem(local_world, render_tick_clock);

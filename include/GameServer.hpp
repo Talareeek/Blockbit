@@ -32,6 +32,12 @@ struct ClientData
     std::string nickname;
 
     std::unique_ptr<ServerView> content_view;
+
+    // Highest InputPacket.seq already applied for this client. Echoed back
+    // in every SnapshotPacket so the client can drop acknowledged pending
+    // inputs and replay the rest on top of the authoritative snapshot
+    // (reconciliation path in ClientGameState::applySnapshot).
+    uint64_t last_input_seq_applied = 0;
 };
 
 struct BanEntry
@@ -61,7 +67,13 @@ private:
     std::unordered_map<std::string, UUID> nickname_to_entity;
 
     std::unordered_set<uint32_t> known_clients;
-    std::unordered_map<uint32_t, std::deque<std::vector<Input>>> remote_input_queues;
+
+    struct QueuedInputBatch
+    {
+        uint64_t seq = 0;
+        std::vector<Input> inputs;
+    };
+    std::unordered_map<uint32_t, std::deque<QueuedInputBatch>> remote_input_queues;
 
     uint16_t tick_rate = 120;
     uint32_t max_ticks_per_frame = 10;
