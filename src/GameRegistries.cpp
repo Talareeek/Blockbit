@@ -223,35 +223,40 @@ void registerVanillaContent()
     auto pack = PackLoader::loadPack("resources/packs/blockbit");
     if (!pack.ok)
     {
-        std::cerr << "[Pack] Skipped loading blockbit pack: " << pack.error << '\n';
+        // The vanilla pack is mandatory — without it the game has no blocks
+        // or items at all. Historical static initializers in src/Block.cpp /
+        // src/Item.cpp were removed in Phase 1c-E, so a missing or broken
+        // pack directory is now a fatal start-up error instead of a silent
+        // fallback.
+        std::cerr << "[Pack] FATAL: cannot load vanilla pack: " << pack.error << '\n';
+        std::cerr << "[Pack] Expected at resources/packs/blockbit/ (relative to CWD).\n";
+        std::exit(1);
     }
-    else
-    {
-        std::cout << "[Pack] Loaded '" << pack.manifest.id
-                  << "' v" << pack.manifest.version
-                  << " — " << pack.blocks.size() << " blocks, "
-                  << pack.items.size() << " items\n";
-        PackLoader::applyToDatabases(pack);
 
-        // Re-mirror the (now pack-driven) databases into the registries so
-        // keys and data agree across every lookup path.
-        reg.blocks.clear();
-        reg.items.clear();
-        for (std::size_t i = 0; i < kBlockNames.size(); ++i)
-        {
-            const auto id = static_cast<BlockID>(i);
-            if (auto it = blockDatabase.find(id); it != blockDatabase.end())
-                reg.blocks.registerAt(static_cast<RuntimeID>(i),
-                                      vanillaKey(kBlockNames[i]),
-                                      it->second);
-        }
-        for (std::size_t i = 0; i < kItemNames.size(); ++i)
-        {
-            const auto id = static_cast<ItemID>(i);
-            if (auto it = itemDatabase.find(id); it != itemDatabase.end())
-                reg.items.registerAt(static_cast<RuntimeID>(i),
-                                     vanillaKey(kItemNames[i]),
-                                     it->second);
-        }
+    std::cout << "[Pack] Loaded '" << pack.manifest.id
+              << "' v" << pack.manifest.version
+              << " — " << pack.blocks.size() << " blocks, "
+              << pack.items.size() << " items\n";
+    PackLoader::applyToDatabases(pack);
+
+    // Re-mirror the pack-driven databases into the registries so keys and
+    // data agree across every lookup path.
+    reg.blocks.clear();
+    reg.items.clear();
+    for (std::size_t i = 0; i < kBlockNames.size(); ++i)
+    {
+        const auto id = static_cast<BlockID>(i);
+        if (auto it = blockDatabase.find(id); it != blockDatabase.end())
+            reg.blocks.registerAt(static_cast<RuntimeID>(i),
+                                  vanillaKey(kBlockNames[i]),
+                                  it->second);
+    }
+    for (std::size_t i = 0; i < kItemNames.size(); ++i)
+    {
+        const auto id = static_cast<ItemID>(i);
+        if (auto it = itemDatabase.find(id); it != itemDatabase.end())
+            reg.items.registerAt(static_cast<RuntimeID>(i),
+                                 vanillaKey(kItemNames[i]),
+                                 it->second);
     }
 }
