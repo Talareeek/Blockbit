@@ -1,0 +1,17 @@
+{
+    "attack_delay": 0.699999988079071,
+    "category": "tool",
+    "damage": 6,
+    "id": "blockbit:wooden_axe",
+    "is_bottle": false,
+    "legacy_id": 45,
+    "max_durability": 59,
+    "max_stack_size": 1,
+    "name": "Wooden Axe",
+    "rarity": "common",
+    "texture": "wooden_axe",
+    "tool": {
+        "level": 1,
+        "type": "axe"
+    }
+}

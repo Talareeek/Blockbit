@@ -156,12 +156,12 @@ void RenderEntities(World& world, const sf::Vector2<double> camera, sf::RenderWi
         {
             auto& player = entity.getComponent<PlayerControlledComponent>();
 
-            if(!player.nickname.empty())
+            if(!player.identity.display_name.empty())
             {
                 unsigned int font_size = static_cast<unsigned int>(unit_size * 0.3f);
                 if(font_size < 1) font_size = 1;
 
-                sf::Text name_text(AssetManager::getFont(AssetManager::FontID::PressStart2P), player.nickname, font_size);
+                sf::Text name_text(AssetManager::getFont(AssetManager::FontID::PressStart2P), player.identity.display_name, font_size);
 
                 sf::FloatRect bounds = name_text.getLocalBounds();
                 name_text.setOrigin({bounds.position.x + bounds.size.x / 2.0f, bounds.position.y + bounds.size.y});

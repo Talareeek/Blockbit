@@ -93,52 +93,16 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 16,
             .rarity = ItemRarity::Rare,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user, const ItemStack&) -> bool
-            {
-                Entity& player = world.getEntity(user);
-
-                if(!player.hasComponent<TransformComponent>())
-                    return false;
-
-                sf::Vector2<double> playerPos =
-                    player.getComponent<TransformComponent>().position;
-
-                Entity explosiveEntity(generateUUID());
-
-                explosiveEntity.addComponent(
-                    TransformComponent{
-                        playerPos,
-                        {1.0, 1.0},
-                        sf::degrees(0.0f)
-                    }
-                );
-
-                explosiveEntity.addComponent(ExplosiveComponent{3.0f});
-
-                explosiveEntity.addComponent(
-                    RenderComponent{
-                        AssetManager::GameTextureID::Dynamite,
-                        {{0, 0}, {16, 16}},
-                        {1.0f, 1.0f}
-                    }
-                );
-
-                explosiveEntity.addComponent(
-                    PhysicsComponent{
-                        (mouse - playerPos) * 3.0,
-                        {0.0f, 0.0f},
-                        {0.0f, 0.0f},
-                        1.0f,
-                        true,
-                        true,
-                        false,
-                        true
-                    }
-                );
-
-                world.addEntity(std::move(explosiveEntity));
-
-                return true;
+            .behavior = {
+                ItemBehaviorType::ThrowProjectile,
+                ThrowProjectileParams{
+                    .projectile    = PrefabID::Dynamite,
+                    .pattern       = ThrowProjectileParams::Pattern::Single,
+                    .count         = 1,
+                    .throw_speed   = 3.0f,
+                    .spread        = 0.f,
+                    .height_offset = 0.f,
+                }
             }
         }
     },
@@ -150,51 +114,16 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 16,
             .rarity = ItemRarity::Epic,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user, const ItemStack&) -> bool
-            {
-                (void)user;
-
-                int column_x = static_cast<int>(std::floor(mouse.x));
-
-                for(int y = 1; y < CHUNK_HEIGHT; y++)
-                {
-                    Entity explosive(generateUUID());
-
-                    explosive.addComponent(
-                        TransformComponent{
-                            {static_cast<double>(column_x) + 0.5, static_cast<double>(y) + 0.5},
-                            {1.0, 1.0},
-                            sf::degrees(0.0f)
-                        }
-                    );
-
-                    explosive.addComponent(ExplosiveComponent{3.0f, true, true, 0.05f, 0.0f});
-
-                    explosive.addComponent(
-                        RenderComponent{
-                            AssetManager::GameTextureID::Dynamite,
-                            {{0, 0}, {16, 16}},
-                            {1.0f, 1.0f}
-                        }
-                    );
-
-                    explosive.addComponent(
-                        PhysicsComponent{
-                            {0.0f, 0.0f},
-                            {0.0f, 0.0f},
-                            {0.0f, 0.0f},
-                            1.0f,
-                            true,
-                            false,
-                            true,
-                            false
-                        }
-                    );
-
-                    world.addEntity(std::move(explosive));
+            .behavior = {
+                ItemBehaviorType::ThrowProjectile,
+                ThrowProjectileParams{
+                    .projectile    = PrefabID::Dynamite,
+                    .pattern       = ThrowProjectileParams::Pattern::Column,
+                    .count         = static_cast<uint32_t>(CHUNK_HEIGHT - 1),
+                    .throw_speed   = 0.f,
+                    .spread        = 0.f,
+                    .height_offset = 0.f,
                 }
-
-                return true;
             }
         }
     },
@@ -206,61 +135,16 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 16,
             .rarity = ItemRarity::Mythic,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user, const ItemStack&) -> bool
-            {
-                (void)user;
-
-                constexpr int NUKE_COUNT = 100;
-                constexpr float NUKE_SPREAD_SPEED = 100.0f;
-                constexpr int NUKE_HEIGHT_OFFSET = 25;
-
-                sf::Vector2<double> spawn_pos = {
-                    std::floor(mouse.x) + 0.5,
-                    std::floor(mouse.y) + 0.5 + static_cast<double>(NUKE_HEIGHT_OFFSET)
-                };
-
-                for(int i = 0; i < NUKE_COUNT; i++)
-                {
-                    float t = (static_cast<float>(i) / static_cast<float>(NUKE_COUNT - 1)) * 2.0f - 1.0f;
-                    float vx = t * NUKE_SPREAD_SPEED;
-
-                    Entity explosive(generateUUID());
-
-                    explosive.addComponent(
-                        TransformComponent{
-                            spawn_pos,
-                            {1.0, 1.0},
-                            sf::degrees(0.0f)
-                        }
-                    );
-
-                    explosive.addComponent(ExplosiveComponent{3.0f});
-
-                    explosive.addComponent(
-                        RenderComponent{
-                            AssetManager::GameTextureID::Dynamite,
-                            {{0, 0}, {16, 16}},
-                            {1.0f, 1.0f}
-                        }
-                    );
-
-                    explosive.addComponent(
-                        PhysicsComponent{
-                            {vx, 0.0f},
-                            {0.0f, 0.0f},
-                            {0.0f, 0.0f},
-                            1.0f,
-                            false,
-                            true,
-                            false,
-                            true
-                        }
-                    );
-
-                    world.addEntity(std::move(explosive));
+            .behavior = {
+                ItemBehaviorType::ThrowProjectile,
+                ThrowProjectileParams{
+                    .projectile    = PrefabID::Dynamite,
+                    .pattern       = ThrowProjectileParams::Pattern::Arc,
+                    .count         = 100,
+                    .throw_speed   = 0.f,
+                    .spread        = 100.f,
+                    .height_offset = 25.f,
                 }
-
-                return true;
             }
         }
     },
@@ -462,38 +346,14 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Rare,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user, const ItemStack&) -> bool
-            {
-                Entity& player = world.getEntity(user);
-
-                if(!player.hasComponent<InventoryComponent>())
-                    return false;
-
-                auto& inventory =
-                    player.getComponent<InventoryComponent>().inventory;
-
-                sf::Vector2i block_pos = {
-                    static_cast<int>(std::floor(mouse.x)),
-                    static_cast<int>(std::floor(mouse.y))
-                };
-
-                if(
-                    world.getBlock(block_pos.x, block_pos.y).id == BlockID::Water &&
-                    WaterState::unpack(world.getBlock(block_pos.x, block_pos.y).metadata).level ==
-                        WaterState::SOURCE
-                )
-                {
-                    world.setBlock(
-                        block_pos.x,
-                        block_pos.y,
-                        {BlockID::Air, 0}
-                    );
-
-                    inventory.removeItemWithLeftover(ItemID::Bucket, 1);
-                    inventory.addItemWithLeftover(ItemID::Water_Bucket, 1);
+            .behavior = {
+                ItemBehaviorType::FluidBucket,
+                FluidBucketParams{
+                    .fluid              = BlockID::Water,
+                    .source_level_value = WaterState::SOURCE,
+                    .empty_variant      = ItemID::Bucket,
+                    .filled_variant     = ItemID::Water_Bucket,
                 }
-
-                return false;
             }
         }
     },
@@ -505,44 +365,14 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Rare,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user, const ItemStack&)
-            {
-                Entity& player = world.getEntity(user);
-
-                if(!player.hasComponent<InventoryComponent>())
-                    return false;
-
-                auto& inventory =
-                    player.getComponent<InventoryComponent>().inventory;
-
-                sf::Vector2i block_pos = {
-                    static_cast<int>(std::floor(mouse.x)),
-                    static_cast<int>(std::floor(mouse.y))
-                };
-
-                if(
-                    world.getBlock(block_pos.x, block_pos.y).id == BlockID::Air ||
-                    (
-                        world.getBlock(block_pos.x, block_pos.y).id == BlockID::Water &&
-                        WaterState::unpack(world.getBlock(block_pos.x, block_pos.y).metadata).level <
-                            WaterState::SOURCE
-                    )
-                )
-                {
-                    world.setBlock(
-                        block_pos.x,
-                        block_pos.y,
-                        {
-                            BlockID::Water,
-                            WaterState{WaterState::SOURCE}.pack()
-                        }
-                    );
-
-                    inventory.removeItemWithLeftover(ItemID::Water_Bucket, 1);
-                    inventory.addItemWithLeftover(ItemID::Bucket, 1);
+            .behavior = {
+                ItemBehaviorType::FluidBucket,
+                FluidBucketParams{
+                    .fluid              = BlockID::Water,
+                    .source_level_value = WaterState::SOURCE,
+                    .empty_variant      = ItemID::Bucket,
+                    .filled_variant     = ItemID::Water_Bucket,
                 }
-
-                return false;
             }
         }
     },
@@ -564,60 +394,12 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 1,
             .rarity = ItemRarity::Rare,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user, const ItemStack&) -> bool
-            {
-                (void)user;
-                sf::Vector2i position = {
-                    static_cast<int>(std::floor(mouse.x)),
-                    static_cast<int>(std::floor(mouse.y))
-                };
-
-                Block target = world.getBlock(position.x, position.y);
-
-                if(target.id == BlockID::Furnace)
-                {
-                    auto* furnace = dynamic_cast<FurnaceBlockEntity*>(world.getBlockEntity(position.x, position.y));
-                    if(!furnace) return false;
-                    if(furnace->isLit()) return false;
-                    if(furnace->fuel.empty() || furnace->input.empty()) return false;
-
-                    auto fuel_it = fuelBurnTimes.find(furnace->fuel.itemID);
-                    if(fuel_it == fuelBurnTimes.end()) return false;
-
-                    auto smelt_it = smeltingRecipes.find(furnace->input.itemID);
-                    if(smelt_it == smeltingRecipes.end()) return false;
-
-                    furnace->lit = true;
-                    furnace->burn_time_total     = fuel_it->second;
-                    furnace->burn_time_remaining = fuel_it->second;
-                    furnace->cook_time_total     = smelt_it->second.cook_time;
-                    furnace->cook_time_remaining = smelt_it->second.cook_time;
-
-                    if(--furnace->fuel.quantity == 0) furnace->fuel = {ItemID::None, 0};
-
-                    if(!FurnaceState::unpack(target.metadata).lit)
-                    {
-                        world.setBlock(position.x, position.y, {BlockID::Furnace, FurnaceState{true}.pack()});
-                    }
-
-                    return false;
+            .behavior = {
+                ItemBehaviorType::Ignite,
+                IgniteParams{
+                    .consume_on_success = false,
+                    .can_place_fire     = true,
                 }
-
-                if(
-                    target.id == BlockID::Air &&
-                    blockDatabase[
-                        world.getBlock(position.x, position.y - 1).id
-                    ].solid
-                )
-                {
-                    world.setBlock(
-                        position.x,
-                        position.y,
-                        {BlockID::Fire, 0}
-                    );
-                }
-
-                return false;
             }
         }
     },
@@ -1090,40 +872,9 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .rarity = ItemRarity::Rare,
             .category = ItemCategory::Consumable,
             .is_bottle = true,
-            .onUse = [](World& world, sf::Vector2<double>, UUID user, const ItemStack& stack) -> bool
-            {
-                if(!stack.instanceID.has_value()) return false;
-                const ItemInstanceData* data = findInstance(*stack.instanceID);
-                if(!data) return false;
-                const MagicEffectItemComponent* bottle = data->get<MagicEffectItemComponent>();
-                if(!bottle || bottle->effect == EffectID::None || bottle->duration <= 0.0f) return false;
-
-                Entity& player = world.getEntity(user);
-                if(!player.hasComponent<EffectsComponent>()) return false;
-
-                auto& effects = player.getComponent<EffectsComponent>();
-                EffectInstance* existing = nullptr;
-                for(auto& e : effects.effects)
-                {
-                    if(e.id == bottle->effect) { existing = &e; break; }
-                }
-
-                if(existing)
-                {
-                    existing->remaining_duration = std::max(existing->remaining_duration, bottle->duration);
-                    existing->magnitude = std::max(existing->magnitude, bottle->magnitude);
-                }
-                else
-                {
-                    EffectInstance e;
-                    e.id = bottle->effect;
-                    e.interval = 999.0f;
-                    e.remaining_duration = bottle->duration;
-                    e.magnitude = bottle->magnitude;
-                    effects.effects.push_back(e);
-                }
-                effects.dirty = true;
-                return true;
+            .behavior = {
+                ItemBehaviorType::ConsumeEffect,
+                ConsumeEffectParams{}
             }
         }
     },
@@ -1135,43 +886,12 @@ std::unordered_map<ItemID, ItemData> itemDatabase =
             .maxStackSize = 64,
             .rarity = ItemRarity::Common,
             .category = ItemCategory::Misc,
-            .onUse = [](World& world, sf::Vector2<double> mouse, UUID user, const ItemStack&) -> bool
-            {
-                (void)user;
-                sf::Vector2i position = {
-                    static_cast<int>(std::floor(mouse.x)),
-                    static_cast<int>(std::floor(mouse.y))
-                };
-
-                Block target = world.getBlock(position.x, position.y);
-
-                if(target.id != BlockID::Furnace) return false;
-
-                auto* furnace = dynamic_cast<FurnaceBlockEntity*>(world.getBlockEntity(position.x, position.y));
-                if(!furnace) return false;
-                if(furnace->isLit()) return false;
-                if(furnace->fuel.empty() || furnace->input.empty()) return false;
-
-                auto fuel_it = fuelBurnTimes.find(furnace->fuel.itemID);
-                if(fuel_it == fuelBurnTimes.end()) return false;
-
-                auto smelt_it = smeltingRecipes.find(furnace->input.itemID);
-                if(smelt_it == smeltingRecipes.end()) return false;
-
-                furnace->lit = true;
-                furnace->burn_time_total     = fuel_it->second;
-                furnace->burn_time_remaining = fuel_it->second;
-                furnace->cook_time_total     = smelt_it->second.cook_time;
-                furnace->cook_time_remaining = smelt_it->second.cook_time;
-
-                if(--furnace->fuel.quantity == 0) furnace->fuel = {ItemID::None, 0};
-
-                if(!FurnaceState::unpack(target.metadata).lit)
-                {
-                    world.setBlock(position.x, position.y, {BlockID::Furnace, FurnaceState{true}.pack()});
+            .behavior = {
+                ItemBehaviorType::Ignite,
+                IgniteParams{
+                    .consume_on_success = true,
+                    .can_place_fire     = false,
                 }
-
-                return true;
             }
         }
     },

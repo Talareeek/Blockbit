@@ -166,16 +166,50 @@ std::wstring PacketReader::readWideString()
     return result;
 }
 
+// Wire format V2 — palette + indexes. Both ends run the same registry
+// (identical runtime ids per Phase 1a-A, and after Phase 1a-E guaranteed by
+// RegistrySyncPacket), so the palette carries bare RuntimeIDs instead of the
+// RegistryKey strings used by on-disk saves.
 void PacketWriter::writeChunk(const Chunk& chunk)
 {
-    writeBytes(chunk.blocks, CHUNK_WIDTH * CHUNK_HEIGHT * sizeof(Block));
     write(chunk.chunk_position);
     writeBytes(chunk.climates, CHUNK_WIDTH * sizeof(Climate));
     writeBytes(chunk.biomes, CHUNK_WIDTH * sizeof(Biome));
 
+    constexpr int kCells = CHUNK_WIDTH * CHUNK_HEIGHT;
+
+    std::unordered_map<uint32_t, uint8_t> seen;
+    std::vector<uint16_t> palette;
+    std::vector<uint8_t>  indexes(kCells);
+    std::vector<uint16_t> metadata(kCells);
+    palette.reserve(32);
+
+    for (int y = 0, cell = 0; y < CHUNK_HEIGHT; ++y)
+    {
+        for (int x = 0; x < CHUNK_WIDTH; ++x, ++cell)
+        {
+            const Block& b = chunk.blocks[y][x];
+            const uint32_t raw_id = static_cast<uint32_t>(b.id);
+            auto [it, inserted] = seen.try_emplace(raw_id, static_cast<uint8_t>(palette.size()));
+            if (inserted)
+            {
+                if (palette.size() >= 256)
+                    throw std::runtime_error("writeChunk: palette overflow (> 256 unique blocks per chunk)");
+                palette.push_back(static_cast<uint16_t>(raw_id));
+            }
+            indexes[cell]  = it->second;
+            metadata[cell] = b.metadata;
+        }
+    }
+
+    write(static_cast<uint16_t>(palette.size()));
+    writeBytes(palette.data(), palette.size() * sizeof(uint16_t));
+    writeBytes(indexes.data(), indexes.size());
+    writeBytes(metadata.data(), metadata.size() * sizeof(uint16_t));
+
     write(static_cast<uint32_t>(chunk.entity_ids.size()));
-    
-    for(auto& id : chunk.entity_ids)
+
+    for (auto& id : chunk.entity_ids)
     {
         write(id);
     }
@@ -185,10 +219,31 @@ Chunk PacketReader::readChunk()
 {
     Chunk chunk;
 
-    readBytes(chunk.blocks, CHUNK_WIDTH * CHUNK_HEIGHT * sizeof(Block));
     chunk.chunk_position = read<int>();
     readBytes(chunk.climates, CHUNK_WIDTH * sizeof(Climate));
     readBytes(chunk.biomes, CHUNK_WIDTH * sizeof(Biome));
+
+    const uint16_t palette_size = read<uint16_t>();
+    std::vector<uint16_t> palette(palette_size);
+    if (palette_size > 0) readBytes(palette.data(), palette_size * sizeof(uint16_t));
+
+    constexpr int kCells = CHUNK_WIDTH * CHUNK_HEIGHT;
+    std::vector<uint8_t>  indexes(kCells);
+    std::vector<uint16_t> metadata(kCells);
+    readBytes(indexes.data(), kCells);
+    readBytes(metadata.data(), kCells * sizeof(uint16_t));
+
+    for (int y = 0, cell = 0; y < CHUNK_HEIGHT; ++y)
+    {
+        for (int x = 0; x < CHUNK_WIDTH; ++x, ++cell)
+        {
+            const uint8_t idx = indexes[cell];
+            if (idx >= palette.size())
+                throw std::runtime_error("readChunk: palette index out of range");
+            chunk.blocks[y][x].id       = static_cast<BlockID>(palette[idx]);
+            chunk.blocks[y][x].metadata = metadata[cell];
+        }
+    }
 
     uint32_t size = read<uint32_t>();
 
@@ -214,6 +269,25 @@ std::vector<char> serializePacket(const InitializationPacket& p)
 {
     PacketWriter w(PacketType::Initialization);
     w.write<uint16_t>(p.tick_rate);
+    return w.release();
+}
+
+std::vector<char> serializePacket(const RegistrySyncPacket& p)
+{
+    PacketWriter w(PacketType::RegistrySync);
+
+    auto writeList = [&](const std::vector<RegistrySyncPacket::Entry>& list)
+    {
+        w.write<uint32_t>(static_cast<uint32_t>(list.size()));
+        for (const auto& e : list)
+        {
+            w.write<uint16_t>(e.runtime_id);
+            w.writeString(e.key);
+        }
+    };
+
+    writeList(p.blocks);
+    writeList(p.items);
     return w.release();
 }
 
@@ -418,7 +492,8 @@ std::vector<char> serializePacket(const StatusResponsePacket& p)
 std::vector<char> serializePacket(const LoginPacket& p)
 {
     PacketWriter writer(PacketType::Login);
-    writer.writeString(p.nickname);
+    writer.write(p.identity.id);
+    writer.writeString(p.identity.display_name);
 
     return writer.release();
 }
@@ -492,6 +567,26 @@ std::vector<char> serializePacket(const ViewEventPacket& p)
 // ----- deserialize -----
 // The type byte is consumed by the network layer before these are called,
 // so the reader points directly at the payload.
+
+RegistrySyncPacket deserializeRegistrySync(PacketReader& r)
+{
+    RegistrySyncPacket p;
+
+    auto readList = [&](std::vector<RegistrySyncPacket::Entry>& out)
+    {
+        const uint32_t count = r.read<uint32_t>();
+        out.resize(count);
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            out[i].runtime_id = r.read<uint16_t>();
+            out[i].key        = r.readString();
+        }
+    };
+
+    readList(p.blocks);
+    readList(p.items);
+    return p;
+}
 
 InitializationPacket deserializeInitialization(PacketReader& r)
 {
@@ -600,7 +695,8 @@ LoginPacket deserializeLogin(PacketReader& r)
 {
     LoginPacket p;
 
-    p.nickname = r.readString();
+    p.identity.id           = r.read<uint64_t>();
+    p.identity.display_name = r.readString();
 
     return p;
 }

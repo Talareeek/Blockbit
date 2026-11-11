@@ -1,0 +1,11 @@
+{
+    "attack_delay": 0.25,
+    "category": "misc",
+    "id": "blockbit:raw_gold",
+    "is_bottle": false,
+    "legacy_id": 21,
+    "max_stack_size": 64,
+    "name": "Raw Gold",
+    "rarity": "rare",
+    "texture": "raw_gold"
+}

@@ -16,11 +16,12 @@
 #include "../include/Entity.hpp"
 
 #include "AssetManager.hpp"
+#include "Behavior.hpp"
 
 class World;
 struct ItemStack;
 
-enum class ItemID : uint32_t
+enum class ItemID : uint16_t
 {
     None = 0,
     Stone,
@@ -195,6 +196,12 @@ struct ItemData
     // colour), then the frame half on top — so one bottle.png produces any
     // potion colour without a separate ItemID per effect.
     bool is_bottle = false;
+
+    // Declarative behavior — read by dispatchItemUse. `type = None` falls
+    // back to the legacy `onUse` lambda so the port can happen one item at a
+    // time without forcing a big-bang rewrite. Once Phase 1c lands and
+    // itemDatabase stops carrying lambdas, onUse can be removed.
+    ItemBehavior behavior;
 
     // `stack` is the exact stack being consumed — pass it in so onUse can
     // read per-instance data (MagicEffectItemComponent, enchantments, etc.)

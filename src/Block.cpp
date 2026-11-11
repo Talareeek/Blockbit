@@ -5,7 +5,9 @@
 
 #include <algorithm>
 
-namespace
+// Vanilla block callbacks (named, not anonymous) so ContentProfiles can wire
+// them into pack-loaded blocks by name. See include/ContentProfiles.hpp.
+namespace blockbit_callbacks
 {
     // Can a falling block pass through this cell on the way down? Air, water
     // and lava are passable; the fluid gets displaced by the final landing.
@@ -391,6 +393,8 @@ BlockID itemToBlock(ItemID item)
     }
 }
 
+using namespace blockbit_callbacks;
+
 std::unordered_map<BlockID, BlockData> blockDatabase = 
 {
     { BlockID::Air,
@@ -496,6 +500,13 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
                 .onNeighborChanged  = water_on_neighbor_changed,
                 .onScheduledTick    = water_on_scheduled_tick
             },
+            .behavior = {
+                BlockBehaviorType::CascadeFluid,
+                CascadeFluidParams{
+                    .max_level        = WaterState::SOURCE,
+                    .tick_delay_ticks = 30,
+                }
+            },
             .light_opacity = 3,
             .lets_light = true,
         }
@@ -513,6 +524,13 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
                 .onPlace            = lava_on_place,
                 .onNeighborChanged  = lava_on_neighbor_changed,
                 .onScheduledTick    = lava_on_scheduled_tick
+            },
+            .behavior = {
+                BlockBehaviorType::CascadeFluid,
+                CascadeFluidParams{
+                    .max_level        = LavaState::SOURCE,
+                    .tick_delay_ticks = 90,
+                }
             },
             .light_emission = 15,
             .light_opacity = 3,
@@ -777,6 +795,13 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
                 .onPlace            = falling_on_place,
                 .onPostPlacement    = falling_on_post_placement,
                 .onScheduledTick    = falling_on_scheduled_tick
+            },
+            .behavior = {
+                BlockBehaviorType::GravityBlock,
+                GravityBlockParams{
+                    .fall_delay_ticks = 2,
+                    .falling_prefab   = PrefabID::FallingBlock,
+                }
             }
         }
     },
@@ -879,6 +904,13 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
                 .onPlace            = falling_on_place,
                 .onPostPlacement    = falling_on_post_placement,
                 .onScheduledTick    = falling_on_scheduled_tick
+            },
+            .behavior = {
+                BlockBehaviorType::GravityBlock,
+                GravityBlockParams{
+                    .fall_delay_ticks = 2,
+                    .falling_prefab   = PrefabID::FallingBlock,
+                }
             }
         }
     },
@@ -896,6 +928,13 @@ std::unordered_map<BlockID, BlockData> blockDatabase =
             .callbacks = {
                 .onPostPlacement = cactus_on_post_placement,
                 .onRandomTick    = cactus_on_random_tick
+            },
+            .behavior = {
+                BlockBehaviorType::PlantGrowth,
+                PlantGrowthParams{
+                    .max_height = 3,
+                    .grows_as   = BlockID::Cactus,
+                }
             },
             .pp_accept_mask = DIRECTION_MASK_FROM_BELOW | DIRECTION_MASK_FROM_ABOVE,
             .random_tickable = true,

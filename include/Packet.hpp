@@ -16,6 +16,8 @@
 #include "GameCommon.hpp"
 #include "View.hpp"
 #include "BBT.hpp"
+#include "PlayerIdentity.hpp"
+#include "Registry.hpp"
 
 enum class PacketType : uint8_t
 {
@@ -50,7 +52,14 @@ enum class PacketType : uint8_t
     AdminRequest,
     AdminResponse,
 
-    ParticleBurst
+    ParticleBurst,
+
+    // Sent by the server immediately after Initialization and before any
+    // chunks/snapshots. Carries the server's live block+item registries
+    // (RegistryKey → RuntimeID) so the client can align its own runtime ids.
+    // For Phase 1a-E the client just validates its hardcoded vanilla matches;
+    // Phase 2 will drive content-pack sync off this packet.
+    RegistrySync
 };
 
 // Admin RPC opcodes. Shared between request and response so the response
@@ -95,6 +104,18 @@ struct AdminResponsePacket
 struct InitializationPacket
 {
     uint16_t tick_rate;
+};
+
+struct RegistrySyncPacket
+{
+    struct Entry
+    {
+        RegistryKey key;
+        RuntimeID   runtime_id;
+    };
+
+    std::vector<Entry> blocks;
+    std::vector<Entry> items;
 };
 
 struct ChunkPacket
@@ -148,7 +169,7 @@ struct InputPacket
 
 struct LoginPacket
 {
-    std::string nickname;
+    PlayerIdentity identity;
 };
 
 struct StatusResponsePacket
@@ -312,6 +333,7 @@ public:
 std::vector<char> serializePlainPacket(PacketType type);
 
 std::vector<char> serializePacket(const InitializationPacket& p);
+std::vector<char> serializePacket(const RegistrySyncPacket& p);
 std::vector<char> serializePacket(const ChunkPacket& p);
 std::vector<char> serializePacket(const BlockUpdatePacket& p);
 std::vector<char> serializePacket(const SnapshotPacket& p);
@@ -332,6 +354,7 @@ std::vector<char> serializePacket(const AdminResponsePacket& p);
 std::vector<char> serializePacket(const ParticleBurstPacket& p);
 
 InitializationPacket deserializeInitialization(PacketReader& r);
+RegistrySyncPacket   deserializeRegistrySync(PacketReader& r);
 ChunkPacket deserializeChunk(PacketReader& r);
 BlockUpdatePacket    deserializeBlockUpdate(PacketReader& r);
 SnapshotPacket       deserializeSnapshot(PacketReader& r);

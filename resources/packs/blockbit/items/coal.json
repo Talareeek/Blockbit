@@ -1,0 +1,11 @@
+{
+    "attack_delay": 0.25,
+    "category": "misc",
+    "id": "blockbit:coal",
+    "is_bottle": false,
+    "legacy_id": 19,
+    "max_stack_size": 64,
+    "name": "Coal",
+    "rarity": "common",
+    "texture": "coal"
+}

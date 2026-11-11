@@ -1,0 +1,33 @@
+{
+    "breakable": true,
+    "callbacks": "none",
+    "drag": 1.0,
+    "drop": {
+        "alternative_chance": 0.0,
+        "alternative_item_legacy_id": 0,
+        "always": true,
+        "item_legacy_id": 24,
+        "max": 1,
+        "min": 1
+    },
+    "hardness": 0.20000000298023224,
+    "id": "blockbit:oak_leaves",
+    "legacy_id": 19,
+    "lets_light": true,
+    "light_emission": 0,
+    "light_opacity": 2,
+    "liquid": false,
+    "mining": {
+        "level": 1,
+        "resistance": 5,
+        "tool": "axe"
+    },
+    "pp_accept_mask": 15,
+    "random_tickable": false,
+    "render": {
+        "profile": "default",
+        "texture": "oak_leaves"
+    },
+    "solid": true,
+    "transparent": true
+}

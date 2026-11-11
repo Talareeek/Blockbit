@@ -1,0 +1,33 @@
+{
+    "breakable": true,
+    "callbacks": "none",
+    "drag": 1.0,
+    "drop": {
+        "alternative_chance": 0.0,
+        "alternative_item_legacy_id": 0,
+        "always": false,
+        "item_legacy_id": 70,
+        "max": 1,
+        "min": 1
+    },
+    "hardness": 0.30000001192092896,
+    "id": "blockbit:glass",
+    "legacy_id": 40,
+    "lets_light": true,
+    "light_emission": 0,
+    "light_opacity": 1,
+    "liquid": false,
+    "mining": {
+        "level": 1,
+        "resistance": 1,
+        "tool": "pickaxe"
+    },
+    "pp_accept_mask": 15,
+    "random_tickable": false,
+    "render": {
+        "profile": "default",
+        "texture": "glass"
+    },
+    "solid": true,
+    "transparent": true
+}

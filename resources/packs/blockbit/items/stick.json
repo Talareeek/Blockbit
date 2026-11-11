@@ -1,0 +1,11 @@
+{
+    "attack_delay": 0.25,
+    "category": "misc",
+    "id": "blockbit:stick",
+    "is_bottle": false,
+    "legacy_id": 58,
+    "max_stack_size": 64,
+    "name": "Stick",
+    "rarity": "common",
+    "texture": "stick"
+}

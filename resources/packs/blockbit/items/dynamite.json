@@ -1,0 +1,22 @@
+{
+    "attack_delay": 0.25,
+    "behavior": {
+        "params": {
+            "count": 1,
+            "height_offset": 0.0,
+            "pattern": "single",
+            "projectile": "dynamite",
+            "spread": 0.0,
+            "throw_speed": 3.0
+        },
+        "type": "throw_projectile"
+    },
+    "category": "misc",
+    "id": "blockbit:dynamite",
+    "is_bottle": false,
+    "legacy_id": 7,
+    "max_stack_size": 16,
+    "name": "Dynamite",
+    "rarity": "rare",
+    "texture": "dynamite"
+}

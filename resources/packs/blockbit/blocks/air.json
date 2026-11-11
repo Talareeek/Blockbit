@@ -1,0 +1,17 @@
+{
+    "breakable": false,
+    "callbacks": "none",
+    "drag": 1.0,
+    "hardness": 0.0,
+    "id": "blockbit:air",
+    "legacy_id": 0,
+    "lets_light": true,
+    "light_emission": 0,
+    "light_opacity": 1,
+    "liquid": false,
+    "pp_accept_mask": 15,
+    "random_tickable": false,
+    "render": null,
+    "solid": false,
+    "transparent": true
+}

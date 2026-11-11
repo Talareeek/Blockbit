@@ -7,6 +7,7 @@
 #include "ServerTransport.hpp"
 #include "Input.hpp"
 #include "View.hpp"
+#include "PlayerIdentity.hpp"
 
 #include <memory>
 #include <optional>
@@ -29,7 +30,7 @@ struct ClientData
 {
     std::unordered_set<int> known_chunks;
     std::unordered_set<UUID> known_entities;
-    std::string nickname;
+    PlayerIdentity identity;
 
     std::unique_ptr<ServerView> content_view;
 
@@ -42,7 +43,8 @@ struct ClientData
 
 struct BanEntry
 {
-    std::string nickname;
+    uint64_t    identity_id = 0;
+    std::string nickname;   // Display-name hint recorded at ban time.
     std::string reason;
     std::string banned_at; // ISO-8601 UTC string, e.g. "2026-10-24T18:32:07Z"
 };
@@ -64,7 +66,7 @@ private:
     bool save_on_destruct = true;
 
     std::unordered_map<uint32_t, ClientData> clients;
-    std::unordered_map<std::string, UUID> nickname_to_entity;
+    std::unordered_map<uint64_t, UUID> identity_to_entity;
 
     std::unordered_set<uint32_t> known_clients;
 
@@ -105,9 +107,9 @@ private:
     std::string server_description = "A server for Blockbit game";
     uint32_t    max_players        = 20;
 
-    void spawnPlayerFor(std::string nickname);
-    void respawnPlayerFor(std::string nickname);
-    void deactivatePlayerFor(std::string nickname);
+    void spawnPlayerFor(const PlayerIdentity& identity);
+    void respawnPlayerFor(const PlayerIdentity& identity);
+    void deactivatePlayerFor(const PlayerIdentity& identity);
 
     void sendChunkTo(uint32_t client_id, int around_chunk_position);
     void streamChunksToClients();
@@ -125,13 +127,15 @@ private:
 
     void handleAdminRequest(uint32_t client_id, const std::string& nickname, const struct AdminRequestPacket& request);
 
-    std::unordered_set<std::string> operators;
+    // Operator roster keyed by stable identity id. The string payload is the
+    // display-name hint recorded at the time the operator was granted.
+    std::unordered_map<uint64_t, std::string> operators;
     std::filesystem::path operatorsFilePath() const;
     std::filesystem::path legacyOperatorsFilePath() const; // ops.txt (pre-migration)
     void loadOperators();
     void saveOperators() const;
 
-    std::unordered_map<std::string, BanEntry> bans;
+    std::unordered_map<uint64_t, BanEntry> bans;
     std::filesystem::path bansFilePath() const;
     void loadBans();
     void saveBans() const;

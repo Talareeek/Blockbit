@@ -1,0 +1,17 @@
+{
+    "attack_delay": 0.8999999761581421,
+    "category": "tool",
+    "damage": 11,
+    "id": "blockbit:diamond_axe",
+    "is_bottle": false,
+    "legacy_id": 49,
+    "max_durability": 1561,
+    "max_stack_size": 1,
+    "name": "Diamond Axe",
+    "rarity": "common",
+    "texture": "diamond_axe",
+    "tool": {
+        "level": 5,
+        "type": "axe"
+    }
+}

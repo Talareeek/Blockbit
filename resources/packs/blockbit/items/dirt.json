@@ -1,0 +1,11 @@
+{
+    "attack_delay": 0.25,
+    "category": "block",
+    "id": "blockbit:dirt",
+    "is_bottle": false,
+    "legacy_id": 3,
+    "max_stack_size": 64,
+    "name": "Dirt",
+    "rarity": "common",
+    "texture": "dirt"
+}

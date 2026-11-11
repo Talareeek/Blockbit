@@ -1,0 +1,16 @@
+{
+    "attack_delay": 0.25,
+    "category": "tool",
+    "id": "blockbit:diamond_shovel",
+    "is_bottle": false,
+    "legacy_id": 55,
+    "max_durability": 1561,
+    "max_stack_size": 1,
+    "name": "Diamond Shovel",
+    "rarity": "common",
+    "texture": "diamond_shovel",
+    "tool": {
+        "level": 5,
+        "type": "shovel"
+    }
+}

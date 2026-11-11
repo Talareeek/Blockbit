@@ -1,0 +1,16 @@
+{
+    "attack_delay": 0.25,
+    "category": "tool",
+    "id": "blockbit:wooden_shovel",
+    "is_bottle": false,
+    "legacy_id": 51,
+    "max_durability": 59,
+    "max_stack_size": 1,
+    "name": "Wooden Shovel",
+    "rarity": "common",
+    "texture": "wooden_shovel",
+    "tool": {
+        "level": 1,
+        "type": "shovel"
+    }
+}

@@ -1,0 +1,22 @@
+{
+    "attack_delay": 0.25,
+    "behavior": {
+        "params": {
+            "count": 100,
+            "height_offset": 25.0,
+            "pattern": "arc",
+            "projectile": "dynamite",
+            "spread": 100.0,
+            "throw_speed": 0.0
+        },
+        "type": "throw_projectile"
+    },
+    "category": "misc",
+    "id": "blockbit:nuke_shot",
+    "is_bottle": false,
+    "legacy_id": 9,
+    "max_stack_size": 16,
+    "name": "Nuke Shot",
+    "rarity": "mythic",
+    "texture": "bedrock"
+}

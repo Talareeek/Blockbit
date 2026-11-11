@@ -1,0 +1,11 @@
+{
+    "attack_delay": 0.25,
+    "category": "block",
+    "id": "blockbit:spruce_leaves",
+    "is_bottle": false,
+    "legacy_id": 29,
+    "max_stack_size": 64,
+    "name": "Spruce Leaves",
+    "rarity": "common",
+    "texture": "spruce_leaves"
+}

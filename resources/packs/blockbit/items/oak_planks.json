@@ -1,0 +1,11 @@
+{
+    "attack_delay": 0.25,
+    "category": "block",
+    "id": "blockbit:oak_planks",
+    "is_bottle": false,
+    "legacy_id": 25,
+    "max_stack_size": 64,
+    "name": "Oak Planks",
+    "rarity": "common",
+    "texture": "oak_planks"
+}

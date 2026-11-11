@@ -17,6 +17,7 @@
 #include "../include/Prefab.hpp"
 #include "../include/EffectRegistry.hpp"
 #include "../include/StructureRegistry.hpp"
+#include "../include/GameRegistries.hpp"
 #include "../include/Settings.hpp"
 #include "../include/GameCommon.hpp"
 #include "../include/Item.hpp"
@@ -545,6 +546,7 @@ Game::Game()
     PrefabRegistry::init();
     EffectRegistry::init();
     StructureRegistry::init();
+    registerVanillaContent();
 
 
     console.assignGame(this);

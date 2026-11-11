@@ -10,6 +10,7 @@
 #include "../include/PlayerControlledComponent.hpp"
 #include "../include/Chunk.hpp"
 #include "../include/Packet.hpp"
+#include "../include/GameRegistries.hpp"
 #include "../include/PlayerControlledSystem.hpp"
 #include "../include/AISystem.hpp"
 #include "../include/TransformSystem.hpp"
@@ -160,9 +161,9 @@ void GameServer::streamChunksToClients()
 {
     for(auto& [client_id, data] : clients)
     {
-        if(nickname_to_entity.contains(data.nickname))
+        if(identity_to_entity.contains(data.identity.id))
         {
-            Entity& entity = world.getEntity(nickname_to_entity[data.nickname]);
+            Entity& entity = world.getEntity(identity_to_entity[data.identity.id]);
 
             if(!entity.hasComponent<TransformComponent>()) continue;
 
@@ -197,6 +198,28 @@ void GameServer::syncConnections()
         {
             known_clients.insert(client_id);
             transport->send(client_id, serializePacket(InitializationPacket{tick_rate}));
+
+            // Snapshot of the live block+item registries, sent once per client
+            // right after init so every runtime id used in later chunk / snapshot
+            // packets is already known to the client.
+            RegistrySyncPacket sync;
+            {
+                const auto& reg = gameRegistries();
+                sync.blocks.reserve(reg.blocks.size());
+                for (RuntimeID id = 0; id < reg.blocks.size(); ++id)
+                {
+                    if (!reg.blocks.contains(id)) continue;
+                    sync.blocks.push_back({reg.blocks.keyOf(id), id});
+                }
+                sync.items.reserve(reg.items.size());
+                for (RuntimeID id = 0; id < reg.items.size(); ++id)
+                {
+                    if (!reg.items.contains(id)) continue;
+                    sync.items.push_back({reg.items.keyOf(id), id});
+                }
+            }
+            transport->send(client_id, serializePacket(sync));
+
             std::cout << "[Server] Client " << client_id << " connected, waiting for Login\n";
         }
     }
@@ -216,13 +239,13 @@ void GameServer::syncConnections()
                 it->second.content_view->onClose(world);
                 it->second.content_view.reset();
             }
-            std::string nickname = it->second.nickname;
-            deactivatePlayerFor(nickname);
+            PlayerIdentity identity = it->second.identity;
+            deactivatePlayerFor(identity);
             clients.erase(it);
             known_clients.erase(client_id);
             remote_input_queues.erase(client_id);
 
-            std::wstring wide_nickname(nickname.begin(), nickname.end());
+            std::wstring wide_nickname(identity.display_name.begin(), identity.display_name.end());
             sendSystemMessageToAll(L"[color=#FFFF00]" + wide_nickname + L" left the game[/color]");
             continue;
         }
@@ -246,9 +269,18 @@ void GameServer::processIncoming()
                 {
                     LoginPacket login = deserializeLogin(reader);
 
-                    if(!isNicknameAllowed(login.nickname))
+                    if(!isNicknameAllowed(login.identity.display_name))
                     {
-                        std::cerr << "[Server] Login with not allowed nickname: " << login.nickname << " from: " << packet.clientId << '\n';
+                        std::cerr << "[Server] Login with not allowed nickname: " << login.identity.display_name << " from: " << packet.clientId << '\n';
+                        break;
+                    }
+
+                    // A zero id should never leave the client; if it does the
+                    // handshake is malformed. Defensively reject so the id
+                    // field never carries an "unassigned" sentinel server-side.
+                    if (login.identity.id == 0)
+                    {
+                        std::cerr << "[Server] Login with id=0 from client " << packet.clientId << ", rejecting\n";
                         break;
                     }
 
@@ -258,7 +290,7 @@ void GameServer::processIncoming()
                         break;
                     }
 
-                    if (const BanEntry* ban = findBan(login.nickname))
+                    if (const BanEntry* ban = findBan(login.identity.display_name))
                     {
                         std::wstring wreason(ban->reason.begin(), ban->reason.end());
                         std::wstring message = L"[Server] You are banned";
@@ -267,7 +299,7 @@ void GameServer::processIncoming()
                         sendSystemMessageTo(packet.clientId, message);
 
                         std::cout << "[Server] Rejected banned nickname "
-                                  << login.nickname << " from client " << packet.clientId
+                                  << login.identity.display_name << " from client " << packet.clientId
                                   << " (reason: " << (ban->reason.empty() ? "<none>" : ban->reason) << ")\n";
 
                         transport->disconnect(packet.clientId, message);
@@ -277,16 +309,16 @@ void GameServer::processIncoming()
 
                     if(!clients.contains(packet.clientId))
                     {
-                        clients[packet.clientId].nickname = login.nickname;
+                        clients[packet.clientId].identity = login.identity;
                         remote_input_queues[packet.clientId] = {};
-                        spawnPlayerFor(login.nickname);
+                        spawnPlayerFor(login.identity);
 
-                        UUID entity_id = nickname_to_entity[login.nickname];
+                        UUID entity_id = identity_to_entity[login.identity.id];
                         transport->send(packet.clientId, serializePacket(TrackPacket{entity_id}));
 
-                        std::cout << "[Server] Logged " << packet.clientId << " as " << login.nickname << '\n';
+                        std::cout << "[Server] Logged " << packet.clientId << " as " << login.identity.display_name << '\n';
 
-                        std::wstring wide_nickname(login.nickname.begin(), login.nickname.end());
+                        std::wstring wide_nickname(login.identity.display_name.begin(), login.identity.display_name.end());
                         sendSystemMessageToAll(L"[color=#FFFF00]" + wide_nickname + L" joined the game[/color]");
                     }
                     else
@@ -334,7 +366,7 @@ void GameServer::processIncoming()
                     auto it = clients.find(packet.clientId);
                     if (it == clients.end()) break;
 
-                    const std::string& nickname = it->second.nickname;
+                    const std::string& nickname = it->second.identity.display_name;
                     std::wstring wide_nickname(nickname.begin(), nickname.end());
 
                     sendChat(wide_nickname, chat_message.message);
@@ -348,7 +380,7 @@ void GameServer::processIncoming()
                     auto it = clients.find(packet.clientId);
                     if (it == clients.end()) break;
 
-                    const std::string& nickname = it->second.nickname;
+                    const std::string& nickname = it->second.identity.display_name;
 
                     std::wistringstream stream(command_message.command);
                     std::wstring command_name;
@@ -408,8 +440,8 @@ void GameServer::processIncoming()
                     auto client_it = clients.find(packet.clientId);
                     if (client_it == clients.end()) break;
 
-                    auto entity_it = nickname_to_entity.find(client_it->second.nickname);
-                    if (entity_it == nickname_to_entity.end()) break;
+                    auto entity_it = identity_to_entity.find(client_it->second.identity.id);
+                    if (entity_it == identity_to_entity.end()) break;
 
                     if (!world.doesEntityExist(entity_it->second)) break;
 
@@ -455,7 +487,7 @@ void GameServer::processIncoming()
                     auto client_it = clients.find(packet.clientId);
                     if (client_it == clients.end()) break;
 
-                    handleAdminRequest(packet.clientId, client_it->second.nickname, request);
+                    handleAdminRequest(packet.clientId, client_it->second.identity.display_name, request);
                     break;
                 }
                 default:
@@ -555,8 +587,8 @@ void GameServer::dispatchPendingViewOpens()
 {
     for (auto& [client_id, data] : clients)
     {
-        auto entity_it = nickname_to_entity.find(data.nickname);
-        if (entity_it == nickname_to_entity.end()) continue;
+        auto entity_it = identity_to_entity.find(data.identity.id);
+        if (entity_it == identity_to_entity.end()) continue;
         if (!world.doesEntityExist(entity_it->second)) continue;
 
         auto& entity = world.getEntity(entity_it->second);
@@ -651,8 +683,8 @@ void GameServer::update(float dt)
             auto client_it = clients.find(client_id);
             if (client_it == clients.end()) continue;
 
-            auto iterator = nickname_to_entity.find(client_it->second.nickname);
-            if (iterator == nickname_to_entity.end()) continue;
+            auto iterator = identity_to_entity.find(client_it->second.identity.id);
+            if (iterator == identity_to_entity.end()) continue;
             if (!world.doesEntityExist(iterator->second)) continue;
 
             if (queue.size() > INPUT_QUEUE_HARD_CAP)
@@ -700,8 +732,8 @@ void GameServer::update(float dt)
 
         for(auto& [client_id, data] : clients)
         {
-            auto it = nickname_to_entity.find(data.nickname);
-            if (it != nickname_to_entity.end() && world.doesEntityExist(it->second)) continue;
+            auto it = identity_to_entity.find(data.identity.id);
+            if (it != identity_to_entity.end() && world.doesEntityExist(it->second)) continue;
 
             if (data.content_view)
             {
@@ -710,9 +742,9 @@ void GameServer::update(float dt)
                 transport->send(client_id, serializePacket(CloseViewPacket{}));
             }
 
-            respawnPlayerFor(data.nickname);
+            respawnPlayerFor(data.identity);
 
-            transport->send(client_id, serializePacket(TrackPacket{nickname_to_entity[data.nickname]}));
+            transport->send(client_id, serializePacket(TrackPacket{identity_to_entity[data.identity.id]}));
         }
 
         world.tick(dt);
@@ -820,11 +852,11 @@ void GameServer::update(float dt)
     }
 }
 
-void GameServer::spawnPlayerFor(std::string nickname)
+void GameServer::spawnPlayerFor(const PlayerIdentity& identity)
 {
-    if(world.playerFileExist(nickname))
+    if(world.playerFileExist(identity))
     {
-        nickname_to_entity[nickname] = world.loadPlayer(nickname);
+        identity_to_entity[identity.id] = world.loadPlayer(identity);
     }
     else
     {
@@ -832,35 +864,35 @@ void GameServer::spawnPlayerFor(std::string nickname)
 
         if(entity.hasComponent<TransformComponent>()) entity.getComponent<TransformComponent>().position = world.getSpawnPoint();
 
-        entity.addComponent(PlayerControlledComponent{nickname});
+        entity.addComponent(PlayerControlledComponent{identity});
 
-        nickname_to_entity[nickname] = entity.getID();
+        identity_to_entity[identity.id] = entity.getID();
 
         world.addEntity(std::move(entity));
     }
 
-    std::cout << "[Server] Spawned player for " << nickname << '\n';
+    std::cout << "[Server] Spawned player for " << identity.display_name << '\n';
 }
 
-void GameServer::respawnPlayerFor(std::string nickname)
+void GameServer::respawnPlayerFor(const PlayerIdentity& identity)
 {
     Entity entity = PrefabRegistry::get(PrefabID::Player).cloneAs(generateUUID());
 
     if(entity.hasComponent<TransformComponent>()) entity.getComponent<TransformComponent>().position = world.getSpawnPoint();
 
-    entity.addComponent(PlayerControlledComponent{nickname});
+    entity.addComponent(PlayerControlledComponent{identity});
 
-    nickname_to_entity[nickname] = entity.getID();
+    identity_to_entity[identity.id] = entity.getID();
 
     world.addEntity(std::move(entity));
 
-    std::cout << "[Server] Respawned player for " << nickname << '\n';
+    std::cout << "[Server] Respawned player for " << identity.display_name << '\n';
 }
 
-void GameServer::deactivatePlayerFor(std::string nickname)
+void GameServer::deactivatePlayerFor(const PlayerIdentity& identity)
 {
-    auto it = nickname_to_entity.find(nickname);
-    if (it == nickname_to_entity.end()) return;
+    auto it = identity_to_entity.find(identity.id);
+    if (it == identity_to_entity.end()) return;
 
     UUID entity_id = it->second;
 
@@ -870,16 +902,16 @@ void GameServer::deactivatePlayerFor(std::string nickname)
         world.removeEntity(entity_id);
     }
 
-    nickname_to_entity.erase(it);
+    identity_to_entity.erase(it);
 
-    std::cout << "[Server] Despawned player for " << nickname << '\n';
+    std::cout << "[Server] Despawned player for " << identity.display_name << '\n';
 }
 void GameServer::updatePlayerEntityConnections()
 {
-    for(auto it = nickname_to_entity.begin(); it != nickname_to_entity.end();)
+    for(auto it = identity_to_entity.begin(); it != identity_to_entity.end();)
     {
         if(!world.doesEntityExist(it->second))
-            it = nickname_to_entity.erase(it);
+            it = identity_to_entity.erase(it);
         else
             ++it;
     }
@@ -888,21 +920,32 @@ GameServer::~GameServer()
 {
     transport->stop();
 
-    std::vector<std::string> connected_nicknames;
-    connected_nicknames.reserve(nickname_to_entity.size());
+    // Snapshot connected identities before deactivating — deactivatePlayerFor
+    // mutates identity_to_entity, so iterating it directly would invalidate.
+    std::vector<PlayerIdentity> connected;
+    connected.reserve(identity_to_entity.size());
 
-    for (auto& [nickname, entity_id] : nickname_to_entity)
-        connected_nicknames.push_back(nickname);
+    for (auto& [id, entity_id] : identity_to_entity)
+    {
+        PlayerIdentity ident{id, ""};
+        if (world.doesEntityExist(entity_id))
+        {
+            auto& entity = world.getEntity(entity_id);
+            if (entity.hasComponent<PlayerControlledComponent>())
+                ident.display_name = entity.getComponent<PlayerControlledComponent>().identity.display_name;
+        }
+        connected.push_back(std::move(ident));
+    }
 
-    for (auto& nickname : connected_nicknames)
+    for (auto& identity : connected)
     {
         try
         {
-            deactivatePlayerFor(nickname);
+            deactivatePlayerFor(identity);
         }
         catch (const std::exception& exception)
         {
-            std::cerr << "[Server] Failed to save player " << nickname << " on shutdown: " << exception.what() << '\n';
+            std::cerr << "[Server] Failed to save player " << identity.display_name << " on shutdown: " << exception.what() << '\n';
         }
     }
 
@@ -952,6 +995,12 @@ void GameServer::loadOperators()
     auto json_path   = operatorsFilePath();
     auto legacy_path = legacyOperatorsFilePath();
 
+    auto hex_to_id = [](const std::string& s) -> uint64_t
+    {
+        try { return std::stoull(s, nullptr, 16); }
+        catch (...) { return 0; }
+    };
+
     if (std::filesystem::exists(json_path))
     {
         try
@@ -963,7 +1012,21 @@ void GameServer::loadOperators()
             {
                 for (const auto& entry : data)
                 {
-                    if (entry.is_string()) operators.insert(entry.get<std::string>());
+                    // Legacy entries are bare strings (pre-identity ops.json);
+                    // new entries are {"id": "<hex>", "nickname": "<hint>"}.
+                    if (entry.is_string())
+                    {
+                        std::string name = entry.get<std::string>();
+                        operators[hashDisplayName(name)] = std::move(name);
+                    }
+                    else if (entry.is_object())
+                    {
+                        std::string name = entry.value("nickname", std::string());
+                        std::string id_hex = entry.value("id", std::string());
+                        uint64_t id = hex_to_id(id_hex);
+                        if (id == 0) id = hashDisplayName(name);
+                        if (id != 0) operators[id] = std::move(name);
+                    }
                 }
             }
 
@@ -987,7 +1050,7 @@ void GameServer::loadOperators()
             if (first == std::string::npos) continue;
             std::string trimmed = line.substr(first, last - first + 1);
             if (trimmed.empty() || trimmed[0] == '#') continue;
-            operators.insert(std::move(trimmed));
+            operators[hashDisplayName(trimmed)] = std::move(trimmed);
         }
 
         std::cout << "[Server] Migrated " << operators.size()
@@ -1016,7 +1079,13 @@ void GameServer::saveOperators() const
     {
         std::filesystem::create_directories(server_path);
         nlohmann::json data = nlohmann::json::array();
-        for (const auto& nick : operators) data.push_back(nick);
+        for (const auto& [id, hint] : operators)
+        {
+            data.push_back({
+                {"id",       identityIdToHex(id)},
+                {"nickname", hint}
+            });
+        }
         std::ofstream out(operatorsFilePath(), std::ios::trunc);
         out << data.dump(4);
     }
@@ -1028,17 +1097,29 @@ void GameServer::saveOperators() const
 
 bool GameServer::isOperator(const std::string& nickname) const
 {
-    return operators.contains(nickname);
+    return operators.contains(hashDisplayName(nickname));
 }
 
 void GameServer::addOperator(const std::string& nickname)
 {
-    if (operators.insert(nickname).second) saveOperators();
+    uint64_t id = hashDisplayName(nickname);
+    auto [it, inserted] = operators.try_emplace(id, nickname);
+    if (inserted)
+    {
+        saveOperators();
+    }
+    else if (it->second != nickname)
+    {
+        // Same id already present with a different display-name hint; update
+        // the hint so the admin UI shows the latest casing.
+        it->second = nickname;
+        saveOperators();
+    }
 }
 
 void GameServer::removeOperator(const std::string& nickname)
 {
-    if (operators.erase(nickname) > 0) saveOperators();
+    if (operators.erase(hashDisplayName(nickname)) > 0) saveOperators();
 }
 
 std::filesystem::path GameServer::bansFilePath() const
@@ -1066,6 +1147,12 @@ void GameServer::loadBans()
         return;
     }
 
+    auto hex_to_id = [](const std::string& s) -> uint64_t
+    {
+        try { return std::stoull(s, nullptr, 16); }
+        catch (...) { return 0; }
+    };
+
     try
     {
         std::ifstream in(path);
@@ -1087,8 +1174,14 @@ void GameServer::loadBans()
             be.reason    = entry.value("reason",    std::string());
             be.banned_at = entry.value("banned_at", std::string());
 
-            if (be.nickname.empty()) continue;
-            bans[be.nickname] = std::move(be);
+            std::string id_hex = entry.value("id", std::string());
+            be.identity_id = hex_to_id(id_hex);
+            // Pre-identity entries lack "id"; fall back to the deterministic
+            // hash of the recorded nickname so the ban still catches them.
+            if (be.identity_id == 0) be.identity_id = hashDisplayName(be.nickname);
+
+            if (be.identity_id == 0) continue;
+            bans[be.identity_id] = std::move(be);
         }
 
         std::cout << "[Server] Loaded " << bans.size() << " ban(s) from " << path << '\n';
@@ -1106,9 +1199,10 @@ void GameServer::saveBans() const
         std::filesystem::create_directories(server_path);
 
         nlohmann::json data = nlohmann::json::array();
-        for (const auto& [nick, entry] : bans)
+        for (const auto& [id, entry] : bans)
         {
             data.push_back({
+                {"id",        identityIdToHex(entry.identity_id)},
                 {"nickname",  entry.nickname},
                 {"reason",    entry.reason},
                 {"banned_at", entry.banned_at}
@@ -1126,12 +1220,12 @@ void GameServer::saveBans() const
 
 bool GameServer::isBanned(const std::string& nickname) const
 {
-    return bans.contains(nickname);
+    return bans.contains(hashDisplayName(nickname));
 }
 
 const BanEntry* GameServer::findBan(const std::string& nickname) const
 {
-    auto it = bans.find(nickname);
+    auto it = bans.find(hashDisplayName(nickname));
     if (it == bans.end()) return nullptr;
     return &it->second;
 }
@@ -1139,16 +1233,17 @@ const BanEntry* GameServer::findBan(const std::string& nickname) const
 void GameServer::addBan(const std::string& nickname, const std::string& reason)
 {
     BanEntry entry;
-    entry.nickname  = nickname;
-    entry.reason    = reason;
-    entry.banned_at = currentTimestampIso8601();
-    bans[nickname]  = std::move(entry);
+    entry.identity_id = hashDisplayName(nickname);
+    entry.nickname    = nickname;
+    entry.reason      = reason;
+    entry.banned_at   = currentTimestampIso8601();
+    bans[entry.identity_id] = std::move(entry);
     saveBans();
 }
 
 bool GameServer::removeBan(const std::string& nickname)
 {
-    if (bans.erase(nickname) > 0)
+    if (bans.erase(hashDisplayName(nickname)) > 0)
     {
         saveBans();
         return true;
@@ -1160,7 +1255,7 @@ std::vector<BanEntry> GameServer::listBans() const
 {
     std::vector<BanEntry> out;
     out.reserve(bans.size());
-    for (const auto& [nick, entry] : bans) out.push_back(entry);
+    for (const auto& [id, entry] : bans) out.push_back(entry);
     std::sort(out.begin(), out.end(),
               [](const BanEntry& a, const BanEntry& b) { return a.nickname < b.nickname; });
     return out;
@@ -1168,7 +1263,9 @@ std::vector<BanEntry> GameServer::listBans() const
 
 std::vector<std::string> GameServer::listOperatorNicknames() const
 {
-    std::vector<std::string> out(operators.begin(), operators.end());
+    std::vector<std::string> out;
+    out.reserve(operators.size());
+    for (const auto& [id, hint] : operators) out.push_back(hint);
     std::sort(out.begin(), out.end());
     return out;
 }
@@ -1177,15 +1274,15 @@ std::optional<uint32_t> GameServer::findClientIdByNickname(const std::string& ni
 {
     for (const auto& [client_id, data] : clients)
     {
-        if (data.nickname == nickname) return client_id;
+        if (data.identity.display_name == nickname) return client_id;
     }
     return std::nullopt;
 }
 
 std::optional<UUID> GameServer::findEntityByNickname(const std::string& nickname) const
 {
-    auto it = nickname_to_entity.find(nickname);
-    if (it == nickname_to_entity.end()) return std::nullopt;
+    auto it = identity_to_entity.find(hashDisplayName(nickname));
+    if (it == identity_to_entity.end()) return std::nullopt;
     if (!world.doesEntityExist(it->second)) return std::nullopt;
     return it->second;
 }
@@ -1275,7 +1372,7 @@ void GameServer::handleAdminRequest(uint32_t client_id, const std::string& nickn
                     entry.id = id;
                     if (entity.hasComponent<PlayerControlledComponent>())
                     {
-                        entry.label = "Player: " + entity.getComponent<PlayerControlledComponent>().nickname;
+                        entry.label = "Player: " + entity.getComponent<PlayerControlledComponent>().identity.display_name;
                     }
                     else
                     {

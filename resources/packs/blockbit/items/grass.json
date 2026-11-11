@@ -1,0 +1,11 @@
+{
+    "attack_delay": 0.25,
+    "category": "block",
+    "id": "blockbit:grass",
+    "is_bottle": false,
+    "legacy_id": 2,
+    "max_stack_size": 64,
+    "name": "Grass",
+    "rarity": "common",
+    "texture": "grass"
+}

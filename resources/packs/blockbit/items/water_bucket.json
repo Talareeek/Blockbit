@@ -1,0 +1,20 @@
+{
+    "attack_delay": 0.25,
+    "behavior": {
+        "params": {
+            "empty_variant_legacy_id": 30,
+            "filled_variant_legacy_id": 31,
+            "fluid_legacy_id": 7,
+            "source_level_value": 9
+        },
+        "type": "fluid_bucket"
+    },
+    "category": "misc",
+    "id": "blockbit:water_bucket",
+    "is_bottle": false,
+    "legacy_id": 31,
+    "max_stack_size": 1,
+    "name": "Water Bucket",
+    "rarity": "rare",
+    "texture": "water_bucket"
+}

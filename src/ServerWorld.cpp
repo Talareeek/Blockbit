@@ -16,6 +16,7 @@
 #include "../include/InventoryComponent.hpp"
 #include "../include/ItemInstance.hpp"
 #include "../include/Item.hpp"
+#include "../include/GameRegistries.hpp"
 #include "../include/RenderComponent.hpp"
 #include "../include/WorldLightView.hpp"
 
@@ -448,44 +449,94 @@ void ServerWorld::loadChunkScheduledTicks(int chunk_position)
     block_update_pipeline.deserializeChunk(chunk_position, Tag(root.root()));
 }
 
-static constexpr uint32_t CHUNK_FILE_MAGIC = 0x4B434242u;
+// V2 magic bytes ('BBC2' little-endian) — palette + indexes format with
+// RegistryKey strings so content survives registry re-ordering between
+// Blockbit versions and modpack additions. Older format saves are rejected
+// and regenerated from world gen.
+static constexpr uint32_t CHUNK_FILE_MAGIC_V2 = 0x32434242u;
 
 void ServerWorld::saveChunkEnvironment(int chunk_position)
 {
     auto iterator = chunks.find(chunk_position);
     if(iterator == chunks.end()) return;
 
-    size_t block_size = sizeof(BlockID) + sizeof(uint16_t);
-    size_t raw_size = CHUNK_WIDTH * CHUNK_HEIGHT * block_size + 16 * sizeof(Climate) + 16 * sizeof(Biome);
+    constexpr int kCells = CHUNK_WIDTH * CHUNK_HEIGHT;
 
-    std::vector<char> raw(raw_size);
-    char* ptr = raw.data();
+    // Build the palette once: map BlockID → small palette index in first-seen
+    // order. The on-disk palette entries are RegistryKey strings so the save
+    // keeps working if a later game version shifts runtime ids around.
+    std::unordered_map<uint32_t, uint8_t> seen;
+    std::vector<std::string>              palette_keys;
+    std::vector<uint8_t>                  indexes(kCells);
+    std::vector<uint16_t>                 metadata(kCells);
+    palette_keys.reserve(32);
 
-    for(int y = 0; y < CHUNK_HEIGHT; y++)
+    const auto& reg = gameRegistries().blocks;
+
+    for (int y = 0, cell = 0; y < CHUNK_HEIGHT; ++y)
     {
-        for(int x = 0; x < CHUNK_WIDTH; x++)
+        for (int x = 0; x < CHUNK_WIDTH; ++x, ++cell)
         {
             const Block& block = iterator->second.blocks[y][x];
-
-            std::memcpy(ptr, &block.id, sizeof(BlockID));
-            ptr += sizeof(BlockID);
-
-            std::memcpy(ptr, &block.metadata, sizeof(uint16_t));
-            ptr += sizeof(uint16_t);
+            const uint32_t raw_id = static_cast<uint32_t>(block.id);
+            auto [it, inserted] = seen.try_emplace(raw_id, static_cast<uint8_t>(palette_keys.size()));
+            if (inserted)
+            {
+                if (palette_keys.size() >= 256)
+                {
+                    std::cerr << "saveChunkEnvironment: palette overflow at chunk " << chunk_position << '\n';
+                    return;
+                }
+                if (raw_id < reg.size() && reg.contains(static_cast<RuntimeID>(raw_id)))
+                {
+                    palette_keys.push_back(reg.keyOf(static_cast<RuntimeID>(raw_id)));
+                }
+                else
+                {
+                    // Unknown id — log and fall back to air so the chunk still
+                    // round-trips rather than silently corrupting a save.
+                    std::cerr << "saveChunkEnvironment: unknown BlockID " << raw_id
+                              << " in chunk " << chunk_position << " — writing as blockbit:air\n";
+                    palette_keys.push_back("blockbit:air");
+                }
+            }
+            indexes[cell]  = it->second;
+            metadata[cell] = block.metadata;
         }
     }
 
-    for(int x = 0; x < 16; x++)
+    // Serialize the palette+indexes+climates+biomes blob (pre-zstd).
+    std::vector<char> raw;
+    raw.reserve(kCells + kCells * sizeof(uint16_t)
+                + 32 * palette_keys.size()
+                + CHUNK_WIDTH * (sizeof(Climate) + sizeof(Biome))
+                + 8);
+
+    auto appendBytes = [&](const void* data, std::size_t n)
     {
-        const Climate& climate = iterator->second.climates[x]; 
-        const Biome& biome = iterator->second.biomes[x];
+        const char* bytes = static_cast<const char*>(data);
+        raw.insert(raw.end(), bytes, bytes + n);
+    };
 
-        std::memcpy(ptr, &climate, sizeof(Climate));
-        ptr += sizeof(Climate);
-
-        std::memcpy(ptr, &biome, sizeof(Biome));
-        ptr += sizeof(Biome);
+    const uint16_t palette_count = static_cast<uint16_t>(palette_keys.size());
+    appendBytes(&palette_count, sizeof(uint16_t));
+    for (const auto& key : palette_keys)
+    {
+        const uint16_t len = static_cast<uint16_t>(key.size());
+        appendBytes(&len, sizeof(uint16_t));
+        appendBytes(key.data(), len);
     }
+
+    appendBytes(indexes.data(), indexes.size());
+    appendBytes(metadata.data(), metadata.size() * sizeof(uint16_t));
+
+    for (int x = 0; x < CHUNK_WIDTH; ++x)
+    {
+        appendBytes(&iterator->second.climates[x], sizeof(Climate));
+        appendBytes(&iterator->second.biomes[x],   sizeof(Biome));
+    }
+
+    const size_t raw_size = raw.size();
 
     size_t bound = ZSTD_compressBound(raw_size);
     std::vector<char> compressed(bound);
@@ -522,12 +573,12 @@ void ServerWorld::saveChunkEnvironment(int chunk_position)
             return;
         }
 
-        uint32_t magic = CHUNK_FILE_MAGIC;
-        uint32_t raw_size32 = static_cast<uint32_t>(raw_size);
+        uint32_t magic             = CHUNK_FILE_MAGIC_V2;
+        uint32_t raw_size32        = static_cast<uint32_t>(raw_size);
         uint32_t compressed_size32 = static_cast<uint32_t>(compressed_size);
 
-        file.write(reinterpret_cast<const char*>(&magic), sizeof(uint32_t));
-        file.write(reinterpret_cast<const char*>(&raw_size32), sizeof(uint32_t));
+        file.write(reinterpret_cast<const char*>(&magic),             sizeof(uint32_t));
+        file.write(reinterpret_cast<const char*>(&raw_size32),        sizeof(uint32_t));
         file.write(reinterpret_cast<const char*>(&compressed_size32), sizeof(uint32_t));
         file.write(compressed.data(), compressed_size);
         file.flush();
@@ -649,8 +700,6 @@ void ServerWorld::loadChunkEnvironment(int chunk_position)
 {
     std::filesystem::path chunk_path = path / ("chunk_" + std::to_string(chunk_position)) / "environment";
 
-    size_t expected_raw_size = CHUNK_WIDTH * CHUNK_HEIGHT * (sizeof(BlockID) + sizeof(uint16_t)) + CHUNK_WIDTH * (sizeof(Climate) + sizeof(Biome));
-
     auto discardCorrupt = [&](const std::string& reason)
     {
         std::cerr << "Discarding corrupt chunk file " << chunk_path
@@ -662,54 +711,33 @@ void ServerWorld::loadChunkEnvironment(int chunk_position)
     std::ifstream file(chunk_path, std::ios::binary);
     if(!file) return;
 
-    uint32_t first_word = 0;
-    file.read(reinterpret_cast<char*>(&first_word), sizeof(uint32_t));
-    if(file.gcount() != static_cast<std::streamsize>(sizeof(uint32_t)))
+    uint32_t magic = 0;
+    file.read(reinterpret_cast<char*>(&magic), sizeof(uint32_t));
+    if(file.gcount() != static_cast<std::streamsize>(sizeof(uint32_t)) || magic != CHUNK_FILE_MAGIC_V2)
     {
-        discardCorrupt("header truncated");
+        discardCorrupt("not a V2 palette chunk file");
         return;
     }
 
-    uint32_t raw_size = 0;
-    std::vector<char> compressed;
-
-    if(first_word == CHUNK_FILE_MAGIC)
+    uint32_t raw_size        = 0;
+    uint32_t compressed_size = 0;
+    file.read(reinterpret_cast<char*>(&raw_size),        sizeof(uint32_t));
+    file.read(reinterpret_cast<char*>(&compressed_size), sizeof(uint32_t));
+    if(!file)
     {
-        uint32_t compressed_size = 0;
-        file.read(reinterpret_cast<char*>(&raw_size), sizeof(uint32_t));
-        file.read(reinterpret_cast<char*>(&compressed_size), sizeof(uint32_t));
-        if(!file)
-        {
-            discardCorrupt("header incomplete");
-            return;
-        }
-        if(raw_size != expected_raw_size)
-        {
-            discardCorrupt("raw_size mismatch");
-            return;
-        }
-
-        compressed.resize(compressed_size);
-        if(compressed_size > 0)
-        {
-            file.read(compressed.data(), compressed_size);
-            if(file.gcount() != static_cast<std::streamsize>(compressed_size))
-            {
-                discardCorrupt("compressed payload truncated");
-                return;
-            }
-        }
+        discardCorrupt("header incomplete");
+        return;
     }
-    else
+
+    std::vector<char> compressed(compressed_size);
+    if(compressed_size > 0)
     {
-        // Legacy format: [raw_size uint32][compressed data to EOF]
-        raw_size = first_word;
-        if(raw_size != expected_raw_size)
+        file.read(compressed.data(), compressed_size);
+        if(file.gcount() != static_cast<std::streamsize>(compressed_size))
         {
-            discardCorrupt("legacy raw_size mismatch");
+            discardCorrupt("compressed payload truncated");
             return;
         }
-        compressed.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     }
 
     if(compressed.empty())
@@ -740,20 +768,90 @@ void ServerWorld::loadChunkEnvironment(int chunk_position)
     chunk.meshDirty = true;
 
     const char* ptr = raw.data();
+    const char* end = raw.data() + raw.size();
 
-    for(int y = 0; y < CHUNK_HEIGHT; y++)
+    auto readFromBuffer = [&](void* dst, std::size_t n) -> bool
     {
-        for(int x = 0; x < CHUNK_WIDTH; x++)
+        if (static_cast<std::size_t>(end - ptr) < n) return false;
+        std::memcpy(dst, ptr, n);
+        ptr += n;
+        return true;
+    };
+
+    // Palette: [u16 count][count x (u16 len + bytes)]. Each key is looked up
+    // in the live block registry — after Phase 2 lands, a missing key means a
+    // pack dependency was dropped and we fall back to air with a loud log
+    // line rather than corrupting the chunk.
+    uint16_t palette_count = 0;
+    if (!readFromBuffer(&palette_count, sizeof(uint16_t)))
+    {
+        discardCorrupt("v2 palette header truncated");
+        return;
+    }
+
+    std::vector<BlockID> palette_to_id(palette_count, BlockID::Air);
+    const auto& reg = gameRegistries().blocks;
+
+    for (uint16_t i = 0; i < palette_count; ++i)
+    {
+        uint16_t len = 0;
+        if (!readFromBuffer(&len, sizeof(uint16_t)))
         {
-            Block& block = chunk.blocks[y][x];
+            discardCorrupt("v2 palette key length truncated");
+            return;
+        }
+        if (static_cast<std::size_t>(end - ptr) < len)
+        {
+            discardCorrupt("v2 palette key bytes truncated");
+            return;
+        }
+        std::string key(ptr, ptr + len);
+        ptr += len;
 
-            std::memcpy(&block.id, ptr, sizeof(BlockID));
-            ptr += sizeof(BlockID);
-
-            std::memcpy(&block.metadata, ptr, sizeof(uint16_t));
-            ptr += sizeof(uint16_t);
+        if (auto rid = reg.find(key); rid.has_value())
+        {
+            palette_to_id[i] = static_cast<BlockID>(*rid);
+        }
+        else
+        {
+            std::cerr << "loadChunkEnvironment: unknown block key '" << key
+                      << "' in chunk " << chunk_position << " — substituting blockbit:air\n";
+            palette_to_id[i] = BlockID::Air;
         }
     }
+
+    constexpr int kCells = CHUNK_WIDTH * CHUNK_HEIGHT;
+    if (static_cast<std::size_t>(end - ptr) < static_cast<std::size_t>(kCells) + kCells * sizeof(uint16_t))
+    {
+        discardCorrupt("v2 index/metadata truncated");
+        return;
+    }
+
+    for (int y = 0, cell = 0; y < CHUNK_HEIGHT; ++y)
+    {
+        for (int x = 0; x < CHUNK_WIDTH; ++x, ++cell)
+        {
+            const uint8_t idx = static_cast<uint8_t>(ptr[cell]);
+            if (idx >= palette_count)
+            {
+                discardCorrupt("v2 palette index out of range");
+                return;
+            }
+            chunk.blocks[y][x].id = palette_to_id[idx];
+        }
+    }
+    ptr += kCells;
+
+    for (int y = 0, cell = 0; y < CHUNK_HEIGHT; ++y)
+    {
+        for (int x = 0; x < CHUNK_WIDTH; ++x, ++cell)
+        {
+            uint16_t md = 0;
+            std::memcpy(&md, ptr + cell * sizeof(uint16_t), sizeof(uint16_t));
+            chunk.blocks[y][x].metadata = md;
+        }
+    }
+    ptr += kCells * sizeof(uint16_t);
 
     for(int x = 0; x < CHUNK_WIDTH; x++)
     {
@@ -797,6 +895,24 @@ void ServerWorld::loadChunkEntities(int chunk_position)
     }
 }
 
+namespace
+{
+    // Player entity files live inside the world directory keyed by identity id.
+    // Using the id (16-char hex + .plr extension) instead of the raw display
+    // name keeps the filesystem happy (no slashes/spaces/traversal) and makes
+    // the save survive a persona-name change — the switch to Steam personas
+    // is the whole reason this keying moved away from the nickname string.
+    std::filesystem::path playerFilePath(const std::filesystem::path& world_path, uint64_t id)
+    {
+        return world_path / (identityIdToHex(id) + ".plr");
+    }
+
+    std::filesystem::path legacyPlayerFilePath(const std::filesystem::path& world_path, const std::string& display_name)
+    {
+        return world_path / display_name;
+    }
+}
+
 void ServerWorld::savePlayer(UUID entity_id)
 {
     Entity& entity = getEntity(entity_id);
@@ -808,12 +924,12 @@ void ServerWorld::savePlayer(UUID entity_id)
 
 
 
-    BBT root(player.nickname);
+    BBT root(player.identity.display_name);
 
     root.root() = entities.at(entity_id).serialize().get<TagCompound>();
 
 
-    std::ofstream stream(path / (player.nickname), std::ios::binary);
+    std::ofstream stream(playerFilePath(path, player.identity.id), std::ios::binary);
 
     std::vector<uint8_t> buffer = root.save();
 
@@ -821,13 +937,38 @@ void ServerWorld::savePlayer(UUID entity_id)
 
     stream.close();
 
-    std::cout << "Saved entity for player " << player.nickname << '\n';
+    // Old build keyed the save file by the raw display name. If the world was
+    // migrated after login (loadPlayer handled that), the legacy file is
+    // already gone; this handles the case where we saved from a fresh spawn
+    // that happened to share a name with a pre-identity leftover.
+    std::error_code ec;
+    std::filesystem::remove(legacyPlayerFilePath(path, player.identity.display_name), ec);
+
+    std::cout << "Saved entity for player " << player.identity.display_name
+              << " (id " << identityIdToHex(player.identity.id) << ")\n";
 }
 
 
-UUID ServerWorld::loadPlayer(std::string nickname)
+UUID ServerWorld::loadPlayer(const PlayerIdentity& identity)
 {
-    std::filesystem::path player_path = path / nickname;
+    std::filesystem::path player_path = playerFilePath(path, identity.id);
+
+    // Migrate pre-identity worlds: a save keyed by the raw display name gets
+    // promoted to the id-hex path on first load.
+    std::filesystem::path legacy = legacyPlayerFilePath(path, identity.display_name);
+    if (!std::filesystem::exists(player_path) && std::filesystem::exists(legacy))
+    {
+        std::error_code ec;
+        std::filesystem::rename(legacy, player_path, ec);
+        if (ec)
+        {
+            // Can't rename across weird mounts — fall back to copy then remove.
+            std::filesystem::copy_file(legacy, player_path, std::filesystem::copy_options::overwrite_existing, ec);
+            std::filesystem::remove(legacy, ec);
+        }
+        std::cout << "Migrated legacy player file '" << identity.display_name
+                  << "' to " << identityIdToHex(identity.id) << ".plr\n";
+    }
 
     std::ifstream stream(player_path, std::ios::ate | std::ios::binary);
 
@@ -851,17 +992,26 @@ UUID ServerWorld::loadPlayer(std::string nickname)
 
     entity.deserialize(tag);
 
+    // Save files predate the identity_id field; stamp the current identity on
+    // the loaded component so subsequent saves migrate correctly.
+    if (entity.hasComponent<PlayerControlledComponent>())
+    {
+        auto& player = entity.getComponent<PlayerControlledComponent>();
+        player.identity = identity;
+    }
+
     UUID id = entity.getID();
     addEntity(std::move(entity));
 
-    std::cout << "Loaded entity for player " << nickname << '\n';
+    std::cout << "Loaded entity for player " << identity.display_name << '\n';
 
     return id;
 }
 
-bool ServerWorld::playerFileExist(std::string nickname) const
+bool ServerWorld::playerFileExist(const PlayerIdentity& identity) const
 {
-    return std::filesystem::exists(path / (nickname));
+    return std::filesystem::exists(playerFilePath(path, identity.id))
+        || std::filesystem::exists(legacyPlayerFilePath(path, identity.display_name));
 }
 
 bool ServerWorld::hasChunkFile(int chunk_position) const

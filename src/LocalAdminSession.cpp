@@ -26,7 +26,7 @@ void LocalAdminSession::listEntities(ListCallback cb)
 
         if (entity.hasComponent<PlayerControlledComponent>())
         {
-            descriptor.label = "Player: " + entity.getComponent<PlayerControlledComponent>().nickname;
+            descriptor.label = "Player: " + entity.getComponent<PlayerControlledComponent>().identity.display_name;
         }
         else
         {

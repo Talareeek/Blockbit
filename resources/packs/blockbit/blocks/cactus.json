@@ -1,0 +1,44 @@
+{
+    "behavior": {
+        "params": {
+            "grows_as_legacy_id": 35,
+            "max_height": 3
+        },
+        "type": "plant_growth"
+    },
+    "breakable": true,
+    "callbacks": "cactus",
+    "drag": 1.0,
+    "drop": {
+        "alternative_chance": 0.0,
+        "alternative_item_legacy_id": 0,
+        "always": true,
+        "item_legacy_id": 65,
+        "max": 1,
+        "min": 1
+    },
+    "hardness": 0.4000000059604645,
+    "id": "blockbit:cactus",
+    "legacy_id": 35,
+    "lets_light": true,
+    "light_emission": 0,
+    "light_opacity": 2,
+    "liquid": false,
+    "mining": {
+        "level": 0,
+        "resistance": 1,
+        "tool": "none"
+    },
+    "pp_accept_mask": 12,
+    "random_tickable": true,
+    "render": {
+        "profile": "cactus",
+        "texture": "cactus"
+    },
+    "solid": true,
+    "support_blocks_below_legacy": [
+        27,
+        35
+    ],
+    "transparent": true
+}

@@ -1,0 +1,33 @@
+{
+    "breakable": true,
+    "callbacks": "none",
+    "drag": 1.0,
+    "drop": {
+        "alternative_chance": 0.0,
+        "alternative_item_legacy_id": 0,
+        "always": false,
+        "item_legacy_id": 20,
+        "max": 1,
+        "min": 1
+    },
+    "hardness": 3.0,
+    "id": "blockbit:iron_ore",
+    "legacy_id": 10,
+    "lets_light": false,
+    "light_emission": 0,
+    "light_opacity": 15,
+    "liquid": false,
+    "mining": {
+        "level": 2,
+        "resistance": 5,
+        "tool": "pickaxe"
+    },
+    "pp_accept_mask": 15,
+    "random_tickable": false,
+    "render": {
+        "profile": "default",
+        "texture": "iron_ore"
+    },
+    "solid": true,
+    "transparent": false
+}

@@ -1,0 +1,11 @@
+{
+    "attack_delay": 0.25,
+    "category": "block",
+    "id": "blockbit:smooth_stone",
+    "is_bottle": false,
+    "legacy_id": 67,
+    "max_stack_size": 64,
+    "name": "Smooth Stone",
+    "rarity": "common",
+    "texture": "smooth_stone"
+}

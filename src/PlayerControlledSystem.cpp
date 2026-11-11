@@ -1,4 +1,5 @@
 #include "../include/PlayerControlledSystem.hpp"
+#include "../include/ItemBehavior.hpp"
 #include "../include/GameCommon.hpp"
 #include "../include/PlayerControlledComponent.hpp"
 #include "../include/TransformComponent.hpp"
@@ -285,7 +286,18 @@ void PlayerControlledSystem(World& world, float dt)
             }
             else if(itemDatabase[selected.itemID].category != ItemCategory::Block)
             {
-                if(itemDatabase[selected.itemID].onUse(world, player.cursor_position, id, selected))
+                const auto& data = itemDatabase[selected.itemID];
+                bool consumed = false;
+
+                // Declarative behavior takes precedence; `None` means the
+                // item hasn't been ported yet so the legacy onUse lambda
+                // still runs. This fallback goes away at the end of Phase 1b.
+                if (data.behavior.type != ItemBehaviorType::None)
+                    consumed = dispatchItemUse(data.behavior, world, player.cursor_position, id, selected);
+                else
+                    consumed = data.onUse(world, player.cursor_position, id, selected);
+
+                if (consumed)
                 {
                     selected.quantity--;
                     inventory.dirty = true;

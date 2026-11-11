@@ -1,0 +1,18 @@
+{
+    "attack_delay": 0.25,
+    "behavior": {
+        "params": {
+            "can_place_fire": true,
+            "consume_on_success": false
+        },
+        "type": "ignite"
+    },
+    "category": "misc",
+    "id": "blockbit:lighter",
+    "is_bottle": false,
+    "legacy_id": 33,
+    "max_stack_size": 1,
+    "name": "Lighter",
+    "rarity": "rare",
+    "texture": "lighter"
+}

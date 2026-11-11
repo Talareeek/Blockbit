@@ -1,0 +1,22 @@
+{
+    "attack_delay": 0.25,
+    "behavior": {
+        "params": {
+            "count": 255,
+            "height_offset": 0.0,
+            "pattern": "column",
+            "projectile": "dynamite",
+            "spread": 0.0,
+            "throw_speed": 0.0
+        },
+        "type": "throw_projectile"
+    },
+    "category": "misc",
+    "id": "blockbit:stab_shot",
+    "is_bottle": false,
+    "legacy_id": 8,
+    "max_stack_size": 16,
+    "name": "Stab Shot",
+    "rarity": "epic",
+    "texture": "bedrock"
+}

@@ -1,0 +1,17 @@
+{
+    "attack_delay": 0.8999999761581421,
+    "category": "tool",
+    "damage": 13,
+    "id": "blockbit:ruby_axe",
+    "is_bottle": false,
+    "legacy_id": 50,
+    "max_durability": 2048,
+    "max_stack_size": 1,
+    "name": "Ruby Axe",
+    "rarity": "epic",
+    "texture": "ruby_axe",
+    "tool": {
+        "level": 6,
+        "type": "axe"
+    }
+}

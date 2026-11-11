@@ -24,6 +24,7 @@
 #include "../include/Prefab.hpp"
 #include "../include/EffectRegistry.hpp"
 #include "../include/StructureRegistry.hpp"
+#include "../include/GameRegistries.hpp"
 #include "../include/ServerConfig.hpp"
 #include "../include/ServerWorld.hpp"
 #include "../include/Block.hpp"
@@ -1119,6 +1120,7 @@ int main(int argc, char* argv[])
     PrefabRegistry::init();
     EffectRegistry::init();
     StructureRegistry::init();
+    registerVanillaContent();
 
     MenuContext ctx{args.server_dir, std::move(config)};
 

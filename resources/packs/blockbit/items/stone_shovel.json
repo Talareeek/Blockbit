@@ -1,0 +1,16 @@
+{
+    "attack_delay": 0.25,
+    "category": "tool",
+    "id": "blockbit:stone_shovel",
+    "is_bottle": false,
+    "legacy_id": 52,
+    "max_durability": 131,
+    "max_stack_size": 1,
+    "name": "Stone Shovel",
+    "rarity": "common",
+    "texture": "stone_shovel",
+    "tool": {
+        "level": 2,
+        "type": "shovel"
+    }
+}

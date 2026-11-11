@@ -1,0 +1,15 @@
+{
+    "attack_delay": 0.25,
+    "behavior": {
+        "params": {},
+        "type": "consume_effect"
+    },
+    "category": "consumable",
+    "id": "blockbit:magic_bottle",
+    "is_bottle": true,
+    "legacy_id": 75,
+    "max_stack_size": 1,
+    "name": "Magic Bottle",
+    "rarity": "rare",
+    "texture": "bottle"
+}

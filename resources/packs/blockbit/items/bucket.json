@@ -1,0 +1,20 @@
+{
+    "attack_delay": 0.25,
+    "behavior": {
+        "params": {
+            "empty_variant_legacy_id": 30,
+            "filled_variant_legacy_id": 31,
+            "fluid_legacy_id": 7,
+            "source_level_value": 9
+        },
+        "type": "fluid_bucket"
+    },
+    "category": "misc",
+    "id": "blockbit:bucket",
+    "is_bottle": false,
+    "legacy_id": 30,
+    "max_stack_size": 1,
+    "name": "Bucket",
+    "rarity": "rare",
+    "texture": "bucket"
+}

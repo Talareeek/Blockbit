@@ -1,0 +1,16 @@
+{
+    "attack_delay": 0.25,
+    "category": "tool",
+    "id": "blockbit:diamond_pickaxe",
+    "is_bottle": false,
+    "legacy_id": 43,
+    "max_durability": 1561,
+    "max_stack_size": 1,
+    "name": "Diamond Pickaxe",
+    "rarity": "common",
+    "texture": "diamond_pickaxe",
+    "tool": {
+        "level": 5,
+        "type": "pickaxe"
+    }
+}

@@ -10,6 +10,7 @@
 #include "../include/InventoryComponent.hpp"
 #include "../include/AssetManager.hpp"
 #include "../include/Chunk.hpp"
+#include "../include/GameRegistries.hpp"
 #include "../include/PauseScreenState.hpp"
 #include "../include/InputManager.hpp"
 #include "../include/AnimationSystem.hpp"
@@ -49,7 +50,7 @@ ClientGameState::ClientGameState(Game* game, std::filesystem::path world_path, u
 {
     game->getWindow().setTitle(std::string("Blockbit - ") + (network_port == 0 ? "Singleplayer" : "Host"));
 
-    this->nickname = std::move(nickname);
+    this->identity = makeIdentityFromNickname(std::move(nickname));
 
     auto loopback_pair = makeLoopbackPair();
 
@@ -73,7 +74,7 @@ ClientGameState::ClientGameState(Game* game, std::filesystem::path world_path, u
 
     transport = std::move(loopback_pair.clientSide);
     transport->connect("loopback", 0);
-    transport->send(serializePacket(LoginPacket{this->nickname}));
+    transport->send(serializePacket(LoginPacket{this->identity}));
     login_sent = true;
 
     was_connected = true;
@@ -100,7 +101,7 @@ ClientGameState::ClientGameState(Game* game, std::string name, unsigned int seed
 {
     game->getWindow().setTitle(std::string("Blockbit - ") + (network_port == 0 ? "Singleplayer" : "Host"));
 
-    this->nickname = std::move(nickname);
+    this->identity = makeIdentityFromNickname(std::move(nickname));
 
     auto loopback_pair = makeLoopbackPair();
 
@@ -124,7 +125,7 @@ ClientGameState::ClientGameState(Game* game, std::string name, unsigned int seed
 
     transport = std::move(loopback_pair.clientSide);
     transport->connect("loopback", 0);
-    transport->send(serializePacket(LoginPacket{this->nickname}));
+    transport->send(serializePacket(LoginPacket{this->identity}));
     login_sent = true;
 
     was_connected = true;
@@ -154,7 +155,7 @@ ClientGameState::ClientGameState(Game* game, const std::string& host, uint16_t p
     pending_host = host;
     pending_port = port;
     remote_address = host + ":" + std::to_string(port);
-    this->nickname = std::move(nickname);
+    this->identity = makeIdentityFromNickname(std::move(nickname));
 
     transport = makeClientTransport();
 
@@ -340,6 +341,53 @@ void ClientGameState::processIncoming()
                     auto init = deserializeInitialization(reader);
 
                     tick_rate = init.tick_rate;
+
+                    break;
+                }
+                case PacketType::RegistrySync:
+                {
+                    // Phase 1a-E validation: every server-advertised key must
+                    // map to the same runtime id locally. Vanilla content is
+                    // hardcoded on both sides, so a mismatch here almost
+                    // certainly means the server runs a different Blockbit
+                    // build; Phase 2 will replace this with a proper pack-hash
+                    // check before this packet is even sent.
+                    auto sync = deserializeRegistrySync(reader);
+                    const auto& reg = gameRegistries();
+                    std::size_t mismatches = 0;
+
+                    auto validate = [&](const char* kind,
+                                        const std::vector<RegistrySyncPacket::Entry>& entries,
+                                        const auto& local)
+                    {
+                        for (const auto& e : entries)
+                        {
+                            auto local_id = local.find(e.key);
+                            if (!local_id.has_value())
+                            {
+                                std::cerr << "[Client] RegistrySync: missing " << kind
+                                          << " key '" << e.key << "' locally\n";
+                                ++mismatches;
+                            }
+                            else if (*local_id != e.runtime_id)
+                            {
+                                std::cerr << "[Client] RegistrySync: " << kind
+                                          << " '" << e.key << "' server id=" << e.runtime_id
+                                          << " local id=" << *local_id << '\n';
+                                ++mismatches;
+                            }
+                        }
+                    };
+
+                    validate("block", sync.blocks, reg.blocks);
+                    validate("item",  sync.items,  reg.items);
+
+                    if (mismatches == 0)
+                    {
+                        std::cout << "[Client] RegistrySync OK — "
+                                  << sync.blocks.size() << " blocks, "
+                                  << sync.items.size()  << " items\n";
+                    }
 
                     break;
                 }
@@ -847,9 +895,9 @@ void ClientGameState::update(float dt)
 
             if (was_connected && !login_sent && transport->isConnected())
             {
-                transport->send(serializePacket(LoginPacket{nickname}));
+                transport->send(serializePacket(LoginPacket{identity}));
                 login_sent = true;
-                std::cerr << "[Client] Sent Login as \"" << nickname << "\"\n";
+                std::cerr << "[Client] Sent Login as \"" << identity.display_name << "\"\n";
             }
 
             // isConnecting() carves out the async-handshake window for GNS;

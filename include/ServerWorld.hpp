@@ -6,6 +6,7 @@
 #include "BlockUpdate.hpp"
 #include "BlockUpdatePipeline.hpp"
 #include "Packet.hpp"
+#include "PlayerIdentity.hpp"
 
 #include <unordered_set>
 
@@ -124,11 +125,11 @@ public:
     void loadChunkEntities(int chunk_position);
     void loadChunkBlockEntities(int chunk_position);
     void loadChunkScheduledTicks(int chunk_position);
-    UUID loadPlayer(std::string nickname);
-    
+    UUID loadPlayer(const PlayerIdentity& identity);
+
 
     bool hasChunkFile(int chunk_position) const;
-    bool playerFileExist(std::string nickname) const;
+    bool playerFileExist(const PlayerIdentity& identity) const;
 
     void loadOrCreateChunk(int chunk_position);
 

@@ -1,0 +1,27 @@
+{
+    "behavior": {
+        "params": {
+            "max_level": 9,
+            "tick_delay_ticks": 30
+        },
+        "type": "cascade_fluid"
+    },
+    "breakable": false,
+    "callbacks": "water",
+    "drag": 4.0,
+    "hardness": 0.0,
+    "id": "blockbit:water",
+    "legacy_id": 7,
+    "lets_light": true,
+    "light_emission": 0,
+    "light_opacity": 3,
+    "liquid": true,
+    "pp_accept_mask": 15,
+    "random_tickable": false,
+    "render": {
+        "profile": "water",
+        "texture": "water"
+    },
+    "solid": false,
+    "transparent": true
+}

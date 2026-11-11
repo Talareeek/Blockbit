@@ -9,7 +9,7 @@
 
 class World;
 
-enum class PrefabID
+enum class PrefabID : uint8_t
 {
     Player,
     Pig,

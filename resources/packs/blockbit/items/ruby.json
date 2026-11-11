@@ -1,0 +1,11 @@
+{
+    "attack_delay": 0.25,
+    "category": "misc",
+    "id": "blockbit:ruby",
+    "is_bottle": false,
+    "legacy_id": 57,
+    "max_stack_size": 64,
+    "name": "Ruby",
+    "rarity": "common",
+    "texture": "ruby"
+}

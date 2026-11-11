@@ -1,0 +1,16 @@
+{
+    "attack_delay": 0.25,
+    "category": "tool",
+    "id": "blockbit:ruby_pickaxe",
+    "is_bottle": false,
+    "legacy_id": 44,
+    "max_durability": 2048,
+    "max_stack_size": 1,
+    "name": "Ruby Pickaxe",
+    "rarity": "epic",
+    "texture": "ruby_pickaxe",
+    "tool": {
+        "level": 6,
+        "type": "pickaxe"
+    }
+}

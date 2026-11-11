@@ -8,6 +8,7 @@
 #include <vector>
 #include "Item.hpp"
 #include "AssetManager.hpp"
+#include "Behavior.hpp"
 #include "BlockStates.hpp"
 
 // Forward decls so client-only translation units can include Block.hpp without
@@ -15,7 +16,7 @@
 // BlockUpdate.hpp (BlockUpdateContext) which only server code needs.
 struct BlockUpdateContext;
 
-enum class BlockID : uint32_t
+enum class BlockID : uint16_t
 {
     Air,
     Stone,
@@ -155,6 +156,11 @@ struct BlockData
     std::optional<DropProperties> drop;
 
     BlockUpdateCallbacks callbacks{};
+
+    // Declarative counterpart to `callbacks` — Phase 1c JSON will set this
+    // and derive the callback pointers; for now vanilla hardcodes both,
+    // with `behavior` serving as metadata only.
+    BlockBehavior behavior;
 
     // Mask of directions this block accepts PP from. A seedling only grows if
     // the ground below changes, so its mask would be DIRECTION_MASK_FROM_BELOW.

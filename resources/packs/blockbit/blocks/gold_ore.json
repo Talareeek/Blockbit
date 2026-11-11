@@ -1,0 +1,33 @@
+{
+    "breakable": true,
+    "callbacks": "none",
+    "drag": 1.0,
+    "drop": {
+        "alternative_chance": 0.0,
+        "alternative_item_legacy_id": 0,
+        "always": false,
+        "item_legacy_id": 21,
+        "max": 1,
+        "min": 1
+    },
+    "hardness": 3.0,
+    "id": "blockbit:gold_ore",
+    "legacy_id": 11,
+    "lets_light": false,
+    "light_emission": 0,
+    "light_opacity": 15,
+    "liquid": false,
+    "mining": {
+        "level": 4,
+        "resistance": 5,
+        "tool": "pickaxe"
+    },
+    "pp_accept_mask": 15,
+    "random_tickable": false,
+    "render": {
+        "profile": "default",
+        "texture": "gold_ore"
+    },
+    "solid": true,
+    "transparent": false
+}

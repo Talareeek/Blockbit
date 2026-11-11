@@ -1,0 +1,33 @@
+{
+    "breakable": true,
+    "callbacks": "none",
+    "drag": 1.0,
+    "drop": {
+        "alternative_chance": 0.0,
+        "alternative_item_legacy_id": 0,
+        "always": true,
+        "item_legacy_id": 59,
+        "max": 1,
+        "min": 1
+    },
+    "hardness": 2.0,
+    "id": "blockbit:chest",
+    "legacy_id": 30,
+    "lets_light": true,
+    "light_emission": 0,
+    "light_opacity": 15,
+    "liquid": false,
+    "mining": {
+        "level": 1,
+        "resistance": 5,
+        "tool": "axe"
+    },
+    "pp_accept_mask": 15,
+    "random_tickable": false,
+    "render": {
+        "profile": "chest",
+        "texture": "chest"
+    },
+    "solid": true,
+    "transparent": false
+}

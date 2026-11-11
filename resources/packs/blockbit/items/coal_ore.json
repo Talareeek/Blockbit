@@ -1,0 +1,11 @@
+{
+    "attack_delay": 0.25,
+    "category": "block",
+    "id": "blockbit:coal_ore",
+    "is_bottle": false,
+    "legacy_id": 10,
+    "max_stack_size": 64,
+    "name": "Coal Ore",
+    "rarity": "common",
+    "texture": "coal_ore"
+}

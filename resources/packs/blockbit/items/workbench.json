@@ -1,0 +1,11 @@
+{
+    "attack_delay": 0.25,
+    "category": "block",
+    "id": "blockbit:workbench",
+    "is_bottle": false,
+    "legacy_id": 64,
+    "max_stack_size": 64,
+    "name": "Workbench",
+    "rarity": "common",
+    "texture": "workbench"
+}

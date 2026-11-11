@@ -651,7 +651,7 @@ std::unordered_map<std::wstring, Command> commandDatabase =
                 auto& e = world->getEntity(uuid);
 
                 std::string uuid_string = uuid.toString();
-                std::string nickname = e.getComponent<PlayerControlledComponent>().nickname;
+                std::string nickname = e.getComponent<PlayerControlledComponent>().identity.display_name;
 
                 context.reply(L"   entity " + utf8tow(uuid_string) + L" (player " + utf8tow(nickname) + L")");
             }

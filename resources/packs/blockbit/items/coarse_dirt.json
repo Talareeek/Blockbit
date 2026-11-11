@@ -1,0 +1,11 @@
+{
+    "attack_delay": 0.25,
+    "category": "block",
+    "id": "blockbit:coarse_dirt",
+    "is_bottle": false,
+    "legacy_id": 35,
+    "max_stack_size": 64,
+    "name": "Coarse Dirt",
+    "rarity": "common",
+    "texture": "coarse_dirt"
+}

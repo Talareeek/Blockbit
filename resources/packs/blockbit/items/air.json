@@ -1,0 +1,11 @@
+{
+    "attack_delay": 0.25,
+    "category": "misc",
+    "id": "blockbit:air",
+    "is_bottle": false,
+    "legacy_id": 0,
+    "max_stack_size": 0,
+    "name": "None",
+    "rarity": "common",
+    "texture": "stone"
+}

@@ -6,6 +6,7 @@
 #include "ClientTransport.hpp"
 #include "GameServer.hpp"
 #include "Packet.hpp"
+#include "PlayerIdentity.hpp"
 #include "HealthBar.hpp"
 #include "Hotbar.hpp"
 #include "Input.hpp"
@@ -80,7 +81,7 @@ private:
     std::string remote_address;
     std::string pending_host;
     uint16_t pending_port = 0;
-    std::string nickname;
+    PlayerIdentity identity;
     bool login_sent = false;
     
     std::unique_ptr<ClientView> content_view;
