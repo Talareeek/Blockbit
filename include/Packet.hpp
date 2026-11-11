@@ -59,7 +59,12 @@ enum class PacketType : uint8_t
     // (RegistryKey → RuntimeID) so the client can align its own runtime ids.
     // For Phase 1a-E the client just validates its hardcoded vanilla matches;
     // Phase 2 will drive content-pack sync off this packet.
-    RegistrySync
+    RegistrySync,
+
+    // Server → client, sent before RegistrySync. Lists every pack the
+    // server loaded with its hash so the client can refuse to join when
+    // local packs don't match (missing, wrong version, or modified files).
+    PackList
 };
 
 // Admin RPC opcodes. Shared between request and response so the response
@@ -116,6 +121,18 @@ struct RegistrySyncPacket
 
     std::vector<Entry> blocks;
     std::vector<Entry> items;
+};
+
+struct PackListPacket
+{
+    struct Entry
+    {
+        std::string id;
+        std::string version;
+        uint64_t    hash;
+    };
+
+    std::vector<Entry> packs;
 };
 
 struct ChunkPacket
@@ -334,6 +351,7 @@ std::vector<char> serializePlainPacket(PacketType type);
 
 std::vector<char> serializePacket(const InitializationPacket& p);
 std::vector<char> serializePacket(const RegistrySyncPacket& p);
+std::vector<char> serializePacket(const PackListPacket& p);
 std::vector<char> serializePacket(const ChunkPacket& p);
 std::vector<char> serializePacket(const BlockUpdatePacket& p);
 std::vector<char> serializePacket(const SnapshotPacket& p);
@@ -355,6 +373,7 @@ std::vector<char> serializePacket(const ParticleBurstPacket& p);
 
 InitializationPacket deserializeInitialization(PacketReader& r);
 RegistrySyncPacket   deserializeRegistrySync(PacketReader& r);
+PackListPacket       deserializePackList(PacketReader& r);
 ChunkPacket deserializeChunk(PacketReader& r);
 BlockUpdatePacket    deserializeBlockUpdate(PacketReader& r);
 SnapshotPacket       deserializeSnapshot(PacketReader& r);

@@ -5,15 +5,26 @@
 #include "Block.hpp"
 #include "Item.hpp"
 
-// Process-wide registries populated at startup. During Phase 1a-A these
-// mirror the legacy blockDatabase / itemDatabase: the RuntimeID handed back
-// equals the old enum value, so nothing downstream shifts. Later phases
-// (chunk palette, RegistrySyncPacket) start reading from here instead of the
-// legacy maps.
+#include <string>
+#include <vector>
+
+// Short summary of a pack that the server loaded. Advertised to clients in
+// the handshake so they can reject on missing / mismatched content.
+struct LoadedPackSummary
+{
+    std::string id;
+    std::string version;
+    uint64_t    hash = 0;
+};
+
+// Process-wide registries populated at startup. The blocks/items maps are
+// the authoritative source of vanilla and modded content; loaded_packs lists
+// every pack directory that contributed, including vanilla.
 struct GameRegistries
 {
-    Registry<BlockData> blocks;
-    Registry<ItemData>  items;
+    Registry<BlockData>            blocks;
+    Registry<ItemData>             items;
+    std::vector<LoadedPackSummary> loaded_packs;
 };
 
 GameRegistries& gameRegistries();

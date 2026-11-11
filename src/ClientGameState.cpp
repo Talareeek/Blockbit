@@ -344,6 +344,50 @@ void ClientGameState::processIncoming()
 
                     break;
                 }
+                case PacketType::PackList:
+                {
+                    auto list = deserializePackList(reader);
+                    const auto& loaded = gameRegistries().loaded_packs;
+                    std::size_t mismatches = 0;
+
+                    for (const auto& server_pack : list.packs)
+                    {
+                        const LoadedPackSummary* local = nullptr;
+                        for (const auto& p : loaded)
+                            if (p.id == server_pack.id) { local = &p; break; }
+
+                        if (!local)
+                        {
+                            std::cerr << "[Client] PackList: missing pack '"
+                                      << server_pack.id << "' required by server\n";
+                            ++mismatches;
+                            continue;
+                        }
+                        if (local->hash != server_pack.hash)
+                        {
+                            std::cerr << "[Client] PackList: pack '" << server_pack.id
+                                      << "' hash mismatch (server "
+                                      << std::hex << server_pack.hash
+                                      << " / local " << local->hash << std::dec
+                                      << ", versions server=" << server_pack.version
+                                      << " local=" << local->version << ")\n";
+                            ++mismatches;
+                        }
+                    }
+
+                    if (mismatches > 0)
+                    {
+                        std::cerr << "[Client] " << mismatches
+                                  << " pack mismatch(es) — disconnecting.\n";
+                        if (transport) transport->disconnect();
+                    }
+                    else
+                    {
+                        std::cout << "[Client] PackList OK — "
+                                  << list.packs.size() << " packs match\n";
+                    }
+                    break;
+                }
                 case PacketType::RegistrySync:
                 {
                     // Phase 1a-E validation: every server-advertised key must

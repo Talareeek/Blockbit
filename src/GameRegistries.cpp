@@ -2,9 +2,11 @@
 
 #include <array>
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <string_view>
 
+#include "../include/GameCommon.hpp"
 #include "../include/PackLoader.hpp"
 #include "../include/VanillaExporter.hpp"
 
@@ -235,9 +237,51 @@ void registerVanillaContent()
 
     std::cout << "[Pack] Loaded '" << pack.manifest.id
               << "' v" << pack.manifest.version
+              << " hash=" << std::hex << pack.hash << std::dec
               << " — " << pack.blocks.size() << " blocks, "
               << pack.items.size() << " items\n";
     PackLoader::applyToDatabases(pack);
+
+    reg.loaded_packs.clear();
+    reg.loaded_packs.push_back({pack.manifest.id, pack.manifest.version, pack.hash});
+
+    // Discover user-installed packs under <home>/Blockbit/packs/. Each
+    // subdirectory with a pack.json is loaded and its summary added to
+    // loaded_packs so the server-client handshake can refuse joins whose
+    // modpack set differs. Content registration (adding modpack blocks/
+    // items to blockDatabase/itemDatabase with dynamic RuntimeIDs) is
+    // deferred to Phase 3 — for now, modpack content is loaded, validated
+    // and hashed, but not yet active in-game.
+    const std::filesystem::path packs_root = getHomePath() / "Blockbit" / "packs";
+    if (std::filesystem::exists(packs_root))
+    {
+        std::error_code ec;
+        for (const auto& entry : std::filesystem::directory_iterator(packs_root, ec))
+        {
+            if (!entry.is_directory()) continue;
+            if (!std::filesystem::exists(entry.path() / "pack.json")) continue;
+
+            auto mod = PackLoader::loadPack(entry.path());
+            if (!mod.ok)
+            {
+                std::cerr << "[Pack] Skipping " << entry.path()
+                          << ": " << mod.error << '\n';
+                continue;
+            }
+            if (mod.manifest.id == "blockbit")
+            {
+                std::cerr << "[Pack] Skipping " << entry.path()
+                          << ": reserved namespace 'blockbit'\n";
+                continue;
+            }
+            std::cout << "[Pack] Found modpack '" << mod.manifest.id
+                      << "' v" << mod.manifest.version
+                      << " hash=" << std::hex << mod.hash << std::dec
+                      << " — " << mod.blocks.size() << " blocks, "
+                      << mod.items.size() << " items (not yet applied)\n";
+            reg.loaded_packs.push_back({mod.manifest.id, mod.manifest.version, mod.hash});
+        }
+    }
 
     // Re-mirror the pack-driven databases into the registries so keys and
     // data agree across every lookup path.

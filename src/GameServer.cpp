@@ -199,6 +199,16 @@ void GameServer::syncConnections()
             known_clients.insert(client_id);
             transport->send(client_id, serializePacket(InitializationPacket{tick_rate}));
 
+            // Pack manifest — client must have the same packs or disconnect
+            // itself. Sent before RegistrySync so the "wrong pack" reason
+            // arrives before any content-dependent packets could confuse it.
+            {
+                PackListPacket packs;
+                for (const auto& p : gameRegistries().loaded_packs)
+                    packs.packs.push_back({p.id, p.version, p.hash});
+                transport->send(client_id, serializePacket(packs));
+            }
+
             // Snapshot of the live block+item registries, sent once per client
             // right after init so every runtime id used in later chunk / snapshot
             // packets is already known to the client.

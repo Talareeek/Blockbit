@@ -1,5 +1,6 @@
 #include "../include/PackLoader.hpp"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -136,6 +137,56 @@ bool parseBlockBehaviorJson(const nlohmann::json& j, BlockBehavior& out, std::st
         }
     }
     return false;
+}
+
+// FNV1a-64 — fast, deterministic, good enough for "did this file change?"
+// Not for security. Seeded with the official FNV offset basis.
+constexpr uint64_t kFnvOffset = 14695981039346656037ULL;
+constexpr uint64_t kFnvPrime  = 1099511628211ULL;
+
+uint64_t fnvFold(uint64_t h, const char* data, std::size_t n)
+{
+    for (std::size_t i = 0; i < n; ++i)
+    {
+        h ^= static_cast<uint8_t>(data[i]);
+        h *= kFnvPrime;
+    }
+    return h;
+}
+
+PackHash computePackHash(const std::filesystem::path& dir)
+{
+    uint64_t h = kFnvOffset;
+
+    // Collect every regular file under dir sorted by path so the hash is
+    // stable regardless of filesystem iteration order.
+    std::vector<std::filesystem::path> files;
+    for (auto it  = std::filesystem::recursive_directory_iterator(dir);
+              it != std::filesystem::recursive_directory_iterator(); ++it)
+    {
+        if (it->is_regular_file()) files.push_back(it->path());
+    }
+    std::sort(files.begin(), files.end());
+
+    for (const auto& f : files)
+    {
+        // Fold in the relative path first so renaming a file changes the hash.
+        const auto rel = std::filesystem::relative(f, dir).generic_string();
+        h = fnvFold(h, rel.data(), rel.size());
+        h = fnvFold(h, "\0", 1);
+
+        std::ifstream in(f, std::ios::binary);
+        if (!in) continue;
+        char buf[4096];
+        while (in)
+        {
+            in.read(buf, sizeof(buf));
+            const auto got = in.gcount();
+            if (got > 0) h = fnvFold(h, buf, static_cast<std::size_t>(got));
+        }
+        h = fnvFold(h, "\0", 1);
+    }
+    return h;
 }
 
 std::string readFile(const std::filesystem::path& p)
@@ -362,12 +413,22 @@ bool parseItem(const std::filesystem::path& file, LoadedItem& out, std::string& 
     return true;
 }
 
+bool keyInNamespace(const RegistryKey& key, const std::string& ns)
+{
+    if (ns.empty()) return true; // manifest without id — accept (vanilla case)
+    if (key.size() <= ns.size() + 1) return false;
+    if (key.compare(0, ns.size(), ns) != 0) return false;
+    return key[ns.size()] == ':';
+}
+
 bool scanDir(const std::filesystem::path& dir,
              LoadResult& result,
              bool is_block,
              std::string& err)
 {
     if (!std::filesystem::exists(dir)) return true;
+
+    const std::string& ns = result.manifest.id;
 
     for (const auto& entry : std::filesystem::directory_iterator(dir))
     {
@@ -378,12 +439,24 @@ bool scanDir(const std::filesystem::path& dir,
         {
             LoadedBlock lb;
             if (!parseBlock(entry.path(), lb, err)) return false;
+            if (!keyInNamespace(lb.key, ns))
+            {
+                err = entry.path().string() + ": key '" + lb.key
+                    + "' does not belong to pack namespace '" + ns + "'";
+                return false;
+            }
             result.blocks.push_back(std::move(lb));
         }
         else
         {
             LoadedItem li;
             if (!parseItem(entry.path(), li, err)) return false;
+            if (!keyInNamespace(li.key, ns))
+            {
+                err = entry.path().string() + ": key '" + li.key
+                    + "' does not belong to pack namespace '" + ns + "'";
+                return false;
+            }
             result.items.push_back(std::move(li));
         }
     }
@@ -421,8 +494,29 @@ LoadResult loadPack(const std::filesystem::path& dir)
     if (!scanDir(dir / "blocks", result, true,  result.error)) return result;
     if (!scanDir(dir / "items",  result, false, result.error)) return result;
 
-    result.ok = true;
+    result.hash = computePackHash(dir);
+    result.ok   = true;
     return result;
+}
+
+LoadAllResult loadAll(const std::vector<std::filesystem::path>& dirs)
+{
+    LoadAllResult agg;
+    agg.packs.reserve(dirs.size());
+    for (std::size_t i = 0; i < dirs.size(); ++i)
+    {
+        LoadResult r = loadPack(dirs[i]);
+        if (!r.ok)
+        {
+            agg.ok            = false;
+            agg.error         = r.error;
+            agg.failing_index = i;
+            agg.packs.push_back(std::move(r));
+            return agg;
+        }
+        agg.packs.push_back(std::move(r));
+    }
+    return agg;
 }
 
 void applyToDatabases(const LoadResult& r)

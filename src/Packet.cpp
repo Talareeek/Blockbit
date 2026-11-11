@@ -272,6 +272,19 @@ std::vector<char> serializePacket(const InitializationPacket& p)
     return w.release();
 }
 
+std::vector<char> serializePacket(const PackListPacket& p)
+{
+    PacketWriter w(PacketType::PackList);
+    w.write<uint32_t>(static_cast<uint32_t>(p.packs.size()));
+    for (const auto& e : p.packs)
+    {
+        w.writeString(e.id);
+        w.writeString(e.version);
+        w.write<uint64_t>(e.hash);
+    }
+    return w.release();
+}
+
 std::vector<char> serializePacket(const RegistrySyncPacket& p)
 {
     PacketWriter w(PacketType::RegistrySync);
@@ -567,6 +580,22 @@ std::vector<char> serializePacket(const ViewEventPacket& p)
 // ----- deserialize -----
 // The type byte is consumed by the network layer before these are called,
 // so the reader points directly at the payload.
+
+PackListPacket deserializePackList(PacketReader& r)
+{
+    PackListPacket p;
+    const uint32_t count = r.read<uint32_t>();
+    p.packs.reserve(count);
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        PackListPacket::Entry e;
+        e.id      = r.readString();
+        e.version = r.readString();
+        e.hash    = r.read<uint64_t>();
+        p.packs.push_back(std::move(e));
+    }
+    return p;
+}
 
 RegistrySyncPacket deserializeRegistrySync(PacketReader& r)
 {
