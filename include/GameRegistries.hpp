@@ -3,9 +3,11 @@
 
 #include "Registry.hpp"
 #include "Block.hpp"
+#include "Entity.hpp"
 #include "Item.hpp"
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 // Short summary of a pack that the server loaded. Advertised to clients in
@@ -25,6 +27,13 @@ struct GameRegistries
     Registry<BlockData>            blocks;
     Registry<ItemData>             items;
     std::vector<LoadedPackSummary> loaded_packs;
+
+    // Prefab templates keyed by RegistryKey (e.g. "blockbit:pig",
+    // "ruby_mod:rubyling"). Vanilla prefabs are mirrored here after
+    // PrefabRegistry::init; modpack prefabs are added by the pack loader.
+    // The stored Entity is a template — spawn helpers deep-copy it, assign
+    // a fresh UUID, and inject the spawn position before adding to World.
+    std::unordered_map<std::string, Entity> prefabs;
 };
 
 GameRegistries& gameRegistries();

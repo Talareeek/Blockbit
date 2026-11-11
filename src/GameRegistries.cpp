@@ -8,8 +8,11 @@
 #include <unordered_set>
 #include <vector>
 
+#include "../include/ContentProfiles.hpp"
 #include "../include/GameCommon.hpp"
 #include "../include/PackLoader.hpp"
+#include "../include/Prefab.hpp"
+#include "../include/PrefabLoader.hpp"
 #include "../include/VanillaExporter.hpp"
 
 GameRegistries& gameRegistries()
@@ -55,6 +58,26 @@ void installPack(const PackLoader::LoadResult& pack,
 
         next_item = std::max<RuntimeID>(next_item, static_cast<RuntimeID>(rid + 1));
     }
+}
+
+void installPrefabs(const std::filesystem::path& dir, const std::string& ns)
+{
+    auto scan = PrefabLoader::scanPrefabs(dir, ns);
+    if (!scan.ok)
+    {
+        std::cerr << "[Pack] prefab load error in '" << ns << "': " << scan.error << '\n';
+        return;
+    }
+    auto& reg = gameRegistries();
+    for (auto& lp : scan.prefabs)
+    {
+        // Entity is move-only; store via the UUID-remapping clone so the
+        // registry's template never aliases a live world entity's UUID.
+        reg.prefabs.insert_or_assign(lp.key, lp.data.cloneAs(UUID{}));
+    }
+    if (!scan.prefabs.empty())
+        std::cout << "[Pack] '" << ns << "' contributed "
+                  << scan.prefabs.size() << " prefab(s)\n";
 }
 
 // Kahn's algorithm. Returns a dependency-respecting order over the modpack
@@ -125,6 +148,7 @@ void registerVanillaContent()
     // can start from zero every time this function runs.
     reg.blocks.clear();
     reg.items.clear();
+    reg.prefabs.clear();
     reg.loaded_packs.clear();
     blockDatabase.clear();
     itemDatabase.clear();
@@ -182,6 +206,20 @@ void registerVanillaContent()
     RuntimeID next_item  = 0;
 
     installPack(vanilla, next_block, next_item);
+
+    // Mirror hardcoded vanilla prefabs into the key-based registry so
+    // spawn-by-key works for 'blockbit:pig', 'blockbit:player', etc.
+    // PrefabRegistry::init runs before registerVanillaContent (see
+    // Game::Game / HeadlessMain) — safe to read here.
+    for (const auto pid : {PrefabID::Player, PrefabID::Pig, PrefabID::Dynamite,
+                           PrefabID::DroppedItem, PrefabID::FallingBlock,
+                           PrefabID::Cube})
+    {
+        const std::string key = "blockbit:" + ContentProfiles::nameFromPrefab(pid);
+        reg.prefabs.insert_or_assign(key, PrefabRegistry::get(pid).cloneAs(UUID{}));
+    }
+
+    installPrefabs("resources/packs/blockbit", vanilla.manifest.id);
     reg.loaded_packs.push_back({vanilla.manifest.id, vanilla.manifest.version, vanilla.hash});
 
     modpacks = topoSortModpacks(std::move(modpacks));
@@ -189,6 +227,7 @@ void registerVanillaContent()
     {
         std::cout << "[Pack] Installing '" << mod.manifest.id << "'\n";
         installPack(mod, next_block, next_item);
+        installPrefabs(packs_root / mod.manifest.id, mod.manifest.id);
         reg.loaded_packs.push_back({mod.manifest.id, mod.manifest.version, mod.hash});
     }
 
