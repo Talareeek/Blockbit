@@ -11,9 +11,9 @@
     "drag": 1.0,
     "drop": {
         "alternative_chance": 0.10000000149011612,
-        "alternative_item_legacy_id": 38,
+        "alternative_item": "blockbit:flint",
         "always": true,
-        "item_legacy_id": 37,
+        "item": "blockbit:gravel",
         "max": 1,
         "min": 1
     },

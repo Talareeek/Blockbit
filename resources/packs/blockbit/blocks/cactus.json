@@ -1,7 +1,7 @@
 {
     "behavior": {
         "params": {
-            "grows_as_legacy_id": 35,
+            "grows_as": "blockbit:cactus",
             "max_height": 3
         },
         "type": "plant_growth"
@@ -11,9 +11,9 @@
     "drag": 1.0,
     "drop": {
         "alternative_chance": 0.0,
-        "alternative_item_legacy_id": 0,
+        "alternative_item": "blockbit:air",
         "always": true,
-        "item_legacy_id": 65,
+        "item": "blockbit:cactus",
         "max": 1,
         "min": 1
     },
@@ -36,9 +36,9 @@
         "texture": "cactus"
     },
     "solid": true,
-    "support_blocks_below_legacy": [
-        27,
-        35
+    "support_blocks_below": [
+        "blockbit:sand",
+        "blockbit:cactus"
     ],
     "transparent": true
 }

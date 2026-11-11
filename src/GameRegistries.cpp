@@ -61,6 +61,89 @@ void installPack(const PackLoader::LoadResult& pack,
     }
 }
 
+// Resolve the string refs captured during JSON parse into concrete BlockID
+// / ItemID values. Runs after every pack is installed so cross-pack refs
+// (vanilla block dropping a modpack item, modpack block whose grows_as is
+// a vanilla block) resolve through the fully-populated registry.
+void resolveRefs(const PackLoader::LoadResult& pack)
+{
+    auto& reg = gameRegistries();
+
+    auto resolveItem = [&](const std::string& key,
+                           const std::string& context) -> ItemID
+    {
+        if (key.empty()) return ItemID{};
+        if (auto rid = reg.items.find(key); rid.has_value())
+            return static_cast<ItemID>(*rid);
+        std::cerr << "[Pack] unresolved item ref '" << key
+                  << "' in " << context << " — falling back to air\n";
+        return ItemID{};
+    };
+
+    auto resolveBlock = [&](const std::string& key,
+                            const std::string& context) -> BlockID
+    {
+        if (key.empty()) return BlockID{};
+        if (auto rid = reg.blocks.find(key); rid.has_value())
+            return static_cast<BlockID>(*rid);
+        std::cerr << "[Pack] unresolved block ref '" << key
+                  << "' in " << context << " — falling back to air\n";
+        return BlockID{};
+    };
+
+    for (const auto& lb : pack.blocks)
+    {
+        auto it = blockDatabase.find(lb.legacy_id);
+        if (it == blockDatabase.end()) continue;
+        auto& bd = it->second;
+
+        // Skip when the loaded entry didn't carry a string ref — a
+        // bootstrap path (legacy numeric) may have already populated the
+        // value; overwriting with the empty-string fallback would clobber it.
+        if (bd.drop.has_value())
+        {
+            if (!lb.drop_item.empty())
+                bd.drop->drop = resolveItem(lb.drop_item, lb.key + ".drop.item");
+            if (!lb.drop_alternative_item.empty())
+                bd.drop->alternative_drop = resolveItem(lb.drop_alternative_item, lb.key + ".drop.alternative_item");
+        }
+
+        if (!lb.support_blocks_below.empty())
+        {
+            bd.support_blocks_below.clear();
+            bd.support_blocks_below.reserve(lb.support_blocks_below.size());
+            for (const auto& key : lb.support_blocks_below)
+                bd.support_blocks_below.push_back(resolveBlock(key, lb.key + ".support_blocks_below"));
+        }
+
+        if (bd.behavior.type == BlockBehaviorType::PlantGrowth && !lb.plant_grows_as.empty())
+        {
+            if (auto* p = std::get_if<PlantGrowthParams>(&bd.behavior.params))
+                p->grows_as = resolveBlock(lb.plant_grows_as, lb.key + ".behavior.grows_as");
+        }
+    }
+
+    for (const auto& li : pack.items)
+    {
+        auto it = itemDatabase.find(li.legacy_id);
+        if (it == itemDatabase.end()) continue;
+        auto& id = it->second;
+
+        if (id.behavior.type == ItemBehaviorType::FluidBucket)
+        {
+            if (auto* p = std::get_if<FluidBucketParams>(&id.behavior.params))
+            {
+                if (!li.fluid_bucket_fluid.empty())
+                    p->fluid = resolveBlock(li.fluid_bucket_fluid, li.key + ".behavior.fluid");
+                if (!li.fluid_bucket_empty_variant.empty())
+                    p->empty_variant = resolveItem(li.fluid_bucket_empty_variant, li.key + ".behavior.empty_variant");
+                if (!li.fluid_bucket_filled_variant.empty())
+                    p->filled_variant = resolveItem(li.fluid_bucket_filled_variant, li.key + ".behavior.filled_variant");
+            }
+        }
+    }
+}
+
 void installPrefabs(const std::filesystem::path& dir, const std::string& ns)
 {
     auto scan = PrefabLoader::scanPrefabs(dir, ns);
@@ -233,6 +316,12 @@ void registerVanillaContent()
         installPrefabs(packs_root / mod.manifest.id, mod.manifest.id);
         reg.loaded_packs.push_back({mod.manifest.id, mod.manifest.version, mod.hash});
     }
+
+    // Every pack is now registered — resolve string cross-refs (drops,
+    // support blocks, plant_growth target, fluid-bucket variants) against
+    // the fully-populated registry.
+    resolveRefs(vanilla);
+    for (const auto& mod : modpacks) resolveRefs(mod);
 
     std::cout << "[Pack] " << reg.loaded_packs.size() << " packs active — "
               << reg.blocks.size() << " blocks, "

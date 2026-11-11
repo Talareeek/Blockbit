@@ -4,9 +4,9 @@
     "drag": 1.0,
     "drop": {
         "alternative_chance": 0.0,
-        "alternative_item_legacy_id": 0,
+        "alternative_item": "blockbit:air",
         "always": false,
-        "item_legacy_id": 4,
+        "item": "blockbit:cobblestone",
         "max": 1,
         "min": 1
     },

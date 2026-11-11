@@ -4,9 +4,9 @@
     "drag": 1.0,
     "drop": {
         "alternative_chance": 0.0,
-        "alternative_item_legacy_id": 0,
+        "alternative_item": "blockbit:air",
         "always": true,
-        "item_legacy_id": 66,
+        "item": "blockbit:dead_bush",
         "max": 1,
         "min": 1
     },
@@ -29,8 +29,8 @@
         "texture": "dead_bush"
     },
     "solid": false,
-    "support_blocks_below_legacy": [
-        27
+    "support_blocks_below": [
+        "blockbit:sand"
     ],
     "transparent": true
 }

@@ -80,6 +80,20 @@ std::string renderProfileOf(BlockID id)
     return "default";
 }
 
+std::string vanillaBlockKey(BlockID id)
+{
+    const auto idx = static_cast<std::size_t>(id);
+    if (idx >= sizeof(kBlockNames)/sizeof(kBlockNames[0])) return "blockbit:air";
+    return std::string("blockbit:") + std::string(kBlockNames[idx]);
+}
+
+std::string vanillaItemKey(ItemID id)
+{
+    const auto idx = static_cast<std::size_t>(id);
+    if (idx >= sizeof(kItemNames)/sizeof(kItemNames[0])) return "blockbit:air";
+    return std::string("blockbit:") + std::string(kItemNames[idx]);
+}
+
 json serializeBlockBehavior(const BlockBehavior& bh)
 {
     json j;
@@ -101,8 +115,8 @@ json serializeBlockBehavior(const BlockBehavior& bh)
         case BlockBehaviorType::PlantGrowth:
             if (const auto* p = std::get_if<PlantGrowthParams>(&bh.params))
                 j["params"] = {
-                    {"max_height",     p->max_height},
-                    {"grows_as_legacy_id", static_cast<int>(p->grows_as)}};
+                    {"max_height", p->max_height},
+                    {"grows_as",   vanillaBlockKey(p->grows_as)}};
             break;
         case BlockBehaviorType::None:
             break;
@@ -129,10 +143,10 @@ json serializeItemBehavior(const ItemBehavior& bh)
         case ItemBehaviorType::FluidBucket:
             if (const auto* p = std::get_if<FluidBucketParams>(&bh.params))
                 j["params"] = {
-                    {"fluid_legacy_id",         static_cast<int>(p->fluid)},
-                    {"source_level_value",      p->source_level_value},
-                    {"empty_variant_legacy_id", static_cast<int>(p->empty_variant)},
-                    {"filled_variant_legacy_id", static_cast<int>(p->filled_variant)}};
+                    {"fluid",              vanillaBlockKey(p->fluid)},
+                    {"source_level_value", p->source_level_value},
+                    {"empty_variant",      vanillaItemKey(p->empty_variant)},
+                    {"filled_variant",     vanillaItemKey(p->filled_variant)}};
             break;
         case ItemBehaviorType::Ignite:
             if (const auto* p = std::get_if<IgniteParams>(&bh.params))
@@ -189,12 +203,12 @@ json serializeBlock(BlockID id, std::string_view name, const BlockData& b)
     if (b.drop.has_value())
     {
         j["drop"] = {
-            {"always",                     b.drop->always_drop},
-            {"item_legacy_id",             static_cast<int>(b.drop->drop)},
-            {"min",                        b.drop->min_amount},
-            {"max",                        b.drop->max_amount},
-            {"alternative_chance",         b.drop->alternative_drop_chance},
-            {"alternative_item_legacy_id", static_cast<int>(b.drop->alternative_drop)}};
+            {"always",              b.drop->always_drop},
+            {"item",                vanillaItemKey(b.drop->drop)},
+            {"min",                 b.drop->min_amount},
+            {"max",                 b.drop->max_amount},
+            {"alternative_chance",  b.drop->alternative_drop_chance},
+            {"alternative_item",    vanillaItemKey(b.drop->alternative_drop)}};
     }
 
     j["callbacks"] = ContentProfiles::callbackProfileOf(b.callbacks);
@@ -202,8 +216,8 @@ json serializeBlock(BlockID id, std::string_view name, const BlockData& b)
     if (!b.support_blocks_below.empty())
     {
         json arr = json::array();
-        for (auto sid : b.support_blocks_below) arr.push_back(static_cast<int>(sid));
-        j["support_blocks_below_legacy"] = arr;
+        for (auto sid : b.support_blocks_below) arr.push_back(vanillaBlockKey(sid));
+        j["support_blocks_below"] = arr;
     }
 
     if (b.behavior.type != BlockBehaviorType::None)

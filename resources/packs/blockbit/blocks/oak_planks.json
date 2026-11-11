@@ -4,9 +4,9 @@
     "drag": 1.0,
     "drop": {
         "alternative_chance": 0.0,
-        "alternative_item_legacy_id": 0,
+        "alternative_item": "blockbit:air",
         "always": true,
-        "item_legacy_id": 25,
+        "item": "blockbit:oak_planks",
         "max": 1,
         "min": 1
     },

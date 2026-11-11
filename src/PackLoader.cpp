@@ -65,10 +65,10 @@ bool parseItemBehaviorJson(const nlohmann::json& j, ItemBehavior& out, std::stri
         case ItemBehaviorType::FluidBucket:
         {
             FluidBucketParams p{};
-            p.fluid              = static_cast<BlockID>(params.value("fluid_legacy_id", 0));
+            p.fluid              = BlockID{};  // patched during resolution
             p.source_level_value = static_cast<uint8_t>(params.value("source_level_value", 0));
-            p.empty_variant      = static_cast<ItemID>(params.value("empty_variant_legacy_id", 0));
-            p.filled_variant     = static_cast<ItemID>(params.value("filled_variant_legacy_id", 0));
+            p.empty_variant      = ItemID{};
+            p.filled_variant     = ItemID{};
             out.params = p;
             return true;
         }
@@ -132,7 +132,7 @@ bool parseBlockBehaviorJson(const nlohmann::json& j, BlockBehavior& out, std::st
         {
             PlantGrowthParams p{};
             p.max_height = static_cast<uint8_t>(params.value("max_height", 1));
-            p.grows_as   = static_cast<BlockID>(params.value("grows_as_legacy_id", 0));
+            p.grows_as   = BlockID{}; // patched during resolution
             out.params = p;
             return true;
         }
@@ -294,12 +294,14 @@ bool parseBlock(const std::filesystem::path& file, LoadedBlock& out, std::string
         const auto& d = j["drop"];
         DropProperties dp{};
         dp.always_drop             = d.value("always", false);
-        dp.drop                    = static_cast<ItemID>(d.value("item_legacy_id", 0));
+        dp.drop                    = ItemID{}; // patched during resolution
         dp.min_amount              = static_cast<uint8_t>(d.value("min", 1));
         dp.max_amount              = static_cast<uint8_t>(d.value("max", 1));
         dp.alternative_drop_chance = d.value("alternative_chance", 0.0f);
-        dp.alternative_drop        = static_cast<ItemID>(d.value("alternative_item_legacy_id", 0));
+        dp.alternative_drop        = ItemID{}; // patched during resolution
         b.drop = dp;
+        out.drop_item             = d.value("item",             std::string{});
+        out.drop_alternative_item = d.value("alternative_item", std::string{});
     }
 
     const std::string cb_profile = j.value("callbacks", "none");
@@ -309,11 +311,13 @@ bool parseBlock(const std::filesystem::path& file, LoadedBlock& out, std::string
         return false;
     }
 
-    // support_blocks_below carries numeric legacy ids for now.
-    if (j.contains("support_blocks_below_legacy") && j["support_blocks_below_legacy"].is_array())
+    // support_blocks_below carries RegistryKey strings. The BlockData's
+    // support_blocks_below vector is filled during the resolution pass once
+    // every pack has registered its blocks.
+    if (j.contains("support_blocks_below") && j["support_blocks_below"].is_array())
     {
-        for (const auto& v : j["support_blocks_below_legacy"])
-            b.support_blocks_below.push_back(static_cast<BlockID>(v.get<int>()));
+        for (const auto& v : j["support_blocks_below"])
+            if (v.is_string()) out.support_blocks_below.push_back(v.get<std::string>());
     }
 
     if (j.contains("behavior") && j["behavior"].is_object())
@@ -323,6 +327,14 @@ bool parseBlock(const std::filesystem::path& file, LoadedBlock& out, std::string
         {
             err = file.string() + ": behavior: " + bh_err;
             return false;
+        }
+
+        // Harvest string refs that the behavior parser left for resolution
+        // (currently only plant_growth.grows_as).
+        if (b.behavior.type == BlockBehaviorType::PlantGrowth)
+        {
+            const auto& params = j["behavior"].value("params", nlohmann::json::object());
+            out.plant_grows_as = params.value("grows_as", std::string{});
         }
     }
 
@@ -416,6 +428,14 @@ bool parseItem(const std::filesystem::path& file, LoadedItem& out, std::string& 
         {
             err = file.string() + ": behavior: " + bh_err;
             return false;
+        }
+
+        if (it.behavior.type == ItemBehaviorType::FluidBucket)
+        {
+            const auto& params = j["behavior"].value("params", nlohmann::json::object());
+            out.fluid_bucket_fluid          = params.value("fluid",          std::string{});
+            out.fluid_bucket_empty_variant  = params.value("empty_variant",  std::string{});
+            out.fluid_bucket_filled_variant = params.value("filled_variant", std::string{});
         }
     }
 

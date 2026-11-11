@@ -39,6 +39,14 @@ struct LoadedBlock
     BlockID     legacy_id     = BlockID{};     // valid only when has_legacy_id
     bool        has_legacy_id = false;         // JSON explicitly set legacy_id
     BlockData   data;
+
+    // String-form refs collected during parse; resolved after every pack is
+    // installed so cross-pack references work (modpack block dropping a
+    // vanilla item, vanilla block resolving a modpack block as support, etc).
+    std::string              drop_item;              // -> data.drop->drop
+    std::string              drop_alternative_item;  // -> data.drop->alternative_drop
+    std::vector<std::string> support_blocks_below;   // -> data.support_blocks_below
+    std::string              plant_grows_as;         // -> PlantGrowthParams::grows_as
 };
 
 struct LoadedItem
@@ -47,6 +55,10 @@ struct LoadedItem
     ItemID      legacy_id     = ItemID{};
     bool        has_legacy_id = false;
     ItemData    data;
+
+    std::string fluid_bucket_fluid;           // -> FluidBucketParams::fluid
+    std::string fluid_bucket_empty_variant;   // -> FluidBucketParams::empty_variant
+    std::string fluid_bucket_filled_variant;  // -> FluidBucketParams::filled_variant
 };
 
 struct LoadResult
