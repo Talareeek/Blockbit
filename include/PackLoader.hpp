@@ -19,10 +19,11 @@ namespace PackLoader
 
 struct PackManifest
 {
-    std::string id;        // "blockbit"
-    std::string name;      // display
-    std::string version;   // semver-ish
-    uint32_t    format = 1;
+    std::string              id;        // "blockbit"
+    std::string              name;      // display
+    std::string              version;   // semver-ish
+    uint32_t                 format = 1;
+    std::vector<std::string> depends;   // other pack ids this one needs before load
 };
 
 // FNV1a-64 fingerprint of pack.json + every content file (sorted by path).
@@ -33,15 +34,17 @@ using PackHash = uint64_t;
 
 struct LoadedBlock
 {
-    RegistryKey key;       // "blockbit:stone"
-    BlockID     legacy_id; // optional override, 0 if unspecified — see schema
+    RegistryKey key;                           // "blockbit:stone"
+    BlockID     legacy_id     = BlockID{};     // valid only when has_legacy_id
+    bool        has_legacy_id = false;         // JSON explicitly set legacy_id
     BlockData   data;
 };
 
 struct LoadedItem
 {
     RegistryKey key;
-    ItemID      legacy_id;
+    ItemID      legacy_id     = ItemID{};
+    bool        has_legacy_id = false;
     ItemData    data;
 };
 
@@ -72,10 +75,6 @@ struct LoadAllResult
     std::vector<LoadResult> packs;
 };
 LoadAllResult loadAll(const std::vector<std::filesystem::path>& dirs);
-
-// Writes the loaded entries into blockDatabase and itemDatabase keyed by
-// their legacy_id. Overwrites existing entries. Logs a count summary.
-void applyToDatabases(const LoadResult& r);
 
 } // namespace PackLoader
 

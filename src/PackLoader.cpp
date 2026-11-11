@@ -230,7 +230,11 @@ bool parseBlock(const std::filesystem::path& file, LoadedBlock& out, std::string
         return false;
     }
 
-    out.legacy_id = static_cast<decltype(out.legacy_id)>(j.value("legacy_id", 0));
+    if (j.contains("legacy_id"))
+    {
+        out.legacy_id     = static_cast<decltype(out.legacy_id)>(j["legacy_id"].get<int>());
+        out.has_legacy_id = true;
+    }
 
     BlockData& b = out.data;
     b.solid       = j.value("solid", false);
@@ -356,7 +360,11 @@ bool parseItem(const std::filesystem::path& file, LoadedItem& out, std::string& 
         return false;
     }
 
-    out.legacy_id = static_cast<decltype(out.legacy_id)>(j.value("legacy_id", 0));
+    if (j.contains("legacy_id"))
+    {
+        out.legacy_id     = static_cast<decltype(out.legacy_id)>(j["legacy_id"].get<int>());
+        out.has_legacy_id = true;
+    }
 
     ItemData& it = out.data;
     it.name         = j.value("name", std::string{});
@@ -484,6 +492,11 @@ LoadResult loadPack(const std::filesystem::path& dir)
         result.manifest.name    = j.value("name", std::string{});
         result.manifest.version = j.value("version", std::string{});
         result.manifest.format  = j.value("format", 1u);
+        if (j.contains("depends") && j["depends"].is_array())
+        {
+            for (const auto& d : j["depends"])
+                if (d.is_string()) result.manifest.depends.push_back(d.get<std::string>());
+        }
     }
     catch (const std::exception& e)
     {
@@ -517,23 +530,6 @@ LoadAllResult loadAll(const std::vector<std::filesystem::path>& dirs)
         agg.packs.push_back(std::move(r));
     }
     return agg;
-}
-
-void applyToDatabases(const LoadResult& r)
-{
-    std::size_t blocks = 0, items = 0;
-    for (const auto& lb : r.blocks)
-    {
-        blockDatabase[lb.legacy_id] = lb.data;
-        ++blocks;
-    }
-    for (const auto& li : r.items)
-    {
-        itemDatabase[li.legacy_id] = li.data;
-        ++items;
-    }
-    std::cout << "[Pack] Applied " << blocks << " blocks and "
-              << items << " items to live databases\n";
 }
 
 } // namespace PackLoader

@@ -1,10 +1,12 @@
 #include "../include/GameRegistries.hpp"
 
-#include <array>
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
-#include <string_view>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include "../include/GameCommon.hpp"
 #include "../include/PackLoader.hpp"
@@ -19,154 +21,96 @@ GameRegistries& gameRegistries()
 namespace
 {
 
-// Maps BlockID enum value → snake_case key segment. The array index equals the
-// enum value, so BlockID::Stone (== 1) → kBlockNames[1] == "stone". Order must
-// exactly match the enum in include/Block.hpp; a mismatch is a bug, not a
-// migration — fix the table.
-constexpr std::array<std::string_view, 45> kBlockNames =
+// Walk a pack's entries and install them into blockDatabase/itemDatabase and
+// the live registries. Vanilla entries carry an explicit `legacy_id` from
+// JSON — those are used as-is. Modpack entries don't; they're assigned the
+// next unused RuntimeID. `next_block` / `next_item` track the high-water
+// mark and grow monotonically so later packs never collide with earlier ones.
+void installPack(const PackLoader::LoadResult& pack,
+                 RuntimeID& next_block,
+                 RuntimeID& next_item)
 {
-    "air",                    // 0  BlockID::Air
-    "stone",                  // 1  BlockID::Stone
-    "grass",                  // 2  BlockID::Grass
-    "dirt",                   // 3  BlockID::Dirt
-    "cobblestone",            // 4  BlockID::Cobblestone
-    "obsidian",               // 5  BlockID::Obsidian
-    "bedrock",                // 6  BlockID::Bedrock
-    "water",                  // 7  BlockID::Water
-    "lava",                   // 8  BlockID::Lava
-    "coal_ore",               // 9
-    "iron_ore",               // 10
-    "gold_ore",               // 11
-    "diamond_ore",            // 12
-    "ruby_ore",               // 13
-    "iron_block",             // 14
-    "gold_block",             // 15
-    "ruby_block",             // 16
-    "coal_block",             // 17
-    "oak_log",                // 18
-    "oak_leaves",             // 19
-    "oak_planks",             // 20
-    "birch_log",              // 21
-    "birch_leaves",           // 22
-    "spruce_log",             // 23
-    "spruce_leaves",          // 24
-    "woodcutter",             // 25
-    "fire",                   // 26
-    "sand",                   // 27
-    "coarse_dirt",            // 28
-    "snow",                   // 29
-    "chest",                  // 30
-    "bricks",                 // 31
-    "furnace",                // 32
-    "workbench",              // 33
-    "gravel",                 // 34
-    "cactus",                 // 35
-    "dead_bush",              // 36
-    "smooth_stone",           // 37
-    "diorite",                // 38
-    "granite",                // 39
-    "glass",                  // 40
-    "output_bulb",            // 41
-    "ruby_wire",              // 42
-    "coreheart_of_blockbit",  // 43
-    "upgrade_table"           // 44
-};
-static_assert(kBlockNames.size() == static_cast<std::size_t>(BlockID::Upgrade_Table) + 1,
-              "kBlockNames size must match BlockID enum range exactly");
+    auto& reg = gameRegistries();
 
-// Maps ItemID enum value → snake_case key segment. ItemID::None is value 0 and
-// represents an empty slot sentinel — keyed as "air" to match the Minecraft
-// convention where the empty item and the air block share a name.
-constexpr std::array<std::string_view, 76> kItemNames =
+    for (const auto& lb : pack.blocks)
+    {
+        const BlockID id = lb.has_legacy_id ? lb.legacy_id
+                                             : static_cast<BlockID>(next_block);
+        const RuntimeID rid = static_cast<RuntimeID>(id);
+
+        blockDatabase[id] = lb.data;
+        reg.blocks.registerAt(rid, lb.key, lb.data);
+
+        next_block = std::max<RuntimeID>(next_block, static_cast<RuntimeID>(rid + 1));
+    }
+
+    for (const auto& li : pack.items)
+    {
+        const ItemID id = li.has_legacy_id ? li.legacy_id
+                                            : static_cast<ItemID>(next_item);
+        const RuntimeID rid = static_cast<RuntimeID>(id);
+
+        itemDatabase[id] = li.data;
+        reg.items.registerAt(rid, li.key, li.data);
+
+        next_item = std::max<RuntimeID>(next_item, static_cast<RuntimeID>(rid + 1));
+    }
+}
+
+// Kahn's algorithm. Returns a dependency-respecting order over the modpack
+// list, or an empty vector with an error message written to std::cerr when
+// something is missing / cyclic. Vanilla ('blockbit') is NEVER listed here —
+// callers load it first and treat it as a synthetic root. Any modpack
+// listing 'blockbit' in its depends is satisfied automatically since vanilla
+// is loaded before this returns.
+std::vector<PackLoader::LoadResult>
+topoSortModpacks(std::vector<PackLoader::LoadResult> packs)
 {
-    "air",                    // 0  ItemID::None
-    "stone",                  // 1
-    "grass",                  // 2
-    "dirt",                   // 3
-    "cobblestone",            // 4
-    "obsidian",               // 5
-    "bedrock",                // 6
-    "dynamite",               // 7
-    "stab_shot",              // 8
-    "nuke_shot",              // 9
-    "coal_ore",               // 10
-    "iron_ore",               // 11
-    "gold_ore",               // 12
-    "diamond_ore",            // 13
-    "ruby_ore",               // 14
-    "iron_block",             // 15
-    "gold_block",             // 16
-    "ruby_block",             // 17
-    "coal_block",             // 18
-    "coal",                   // 19
-    "raw_iron",               // 20
-    "raw_gold",               // 21
-    "diamond",                // 22
-    "oak_log",                // 23
-    "oak_leaves",             // 24
-    "oak_planks",             // 25
-    "birch_log",              // 26
-    "birch_leaves",           // 27
-    "spruce_log",             // 28
-    "spruce_leaves",          // 29
-    "bucket",                 // 30
-    "water_bucket",           // 31
-    "woodcutter",             // 32
-    "lighter",                // 33
-    "sand",                   // 34
-    "coarse_dirt",            // 35
-    "snow",                   // 36
-    "gravel",                 // 37
-    "flint",                  // 38
-    "wooden_pickaxe",         // 39
-    "stone_pickaxe",          // 40
-    "iron_pickaxe",           // 41
-    "gold_pickaxe",           // 42
-    "diamond_pickaxe",        // 43
-    "ruby_pickaxe",           // 44
-    "wooden_axe",             // 45
-    "stone_axe",              // 46
-    "iron_axe",               // 47
-    "gold_axe",               // 48
-    "diamond_axe",            // 49
-    "ruby_axe",               // 50
-    "wooden_shovel",          // 51
-    "stone_shovel",           // 52
-    "iron_shovel",            // 53
-    "gold_shovel",            // 54
-    "diamond_shovel",         // 55
-    "ruby_shovel",            // 56
-    "ruby",                   // 57
-    "stick",                  // 58
-    "chest",                  // 59
-    "bricks",                 // 60
-    "furnace",                // 61
-    "iron_ingot",             // 62
-    "gold_ingot",             // 63
-    "workbench",              // 64
-    "cactus",                 // 65
-    "dead_bush",              // 66
-    "smooth_stone",           // 67
-    "diorite",                // 68
-    "granite",                // 69
-    "glass",                  // 70
-    "output_bulb",            // 71
-    "ruby_wire",              // 72
-    "coreheart_of_blockbit",  // 73
-    "upgrade_table",          // 74
-    "magic_bottle"            // 75
-};
-static_assert(kItemNames.size() == static_cast<std::size_t>(ItemID::Magic_Bottle) + 1,
-              "kItemNames size must match ItemID enum range exactly");
+    std::unordered_map<std::string, std::size_t> index_by_id;
+    for (std::size_t i = 0; i < packs.size(); ++i) index_by_id[packs[i].manifest.id] = i;
 
-constexpr std::string_view kVanillaNamespace = "blockbit:";
+    // Count unmet (non-self) deps for each node. "blockbit" is assumed met.
+    std::vector<std::size_t> indeg(packs.size(), 0);
+    std::vector<std::vector<std::size_t>> adj(packs.size());
 
-std::string vanillaKey(std::string_view name)
-{
-    std::string out;
-    out.reserve(kVanillaNamespace.size() + name.size());
-    out.append(kVanillaNamespace);
-    out.append(name);
+    for (std::size_t i = 0; i < packs.size(); ++i)
+    {
+        for (const auto& dep : packs[i].manifest.depends)
+        {
+            if (dep == "blockbit") continue;
+            auto it = index_by_id.find(dep);
+            if (it == index_by_id.end())
+            {
+                std::cerr << "[Pack] '" << packs[i].manifest.id
+                          << "' depends on missing pack '" << dep
+                          << "' — skipping the dependent and its dependers.\n";
+                return {};
+            }
+            adj[it->second].push_back(i);
+            ++indeg[i];
+        }
+    }
+
+    std::vector<std::size_t> ready;
+    for (std::size_t i = 0; i < packs.size(); ++i) if (indeg[i] == 0) ready.push_back(i);
+
+    std::vector<PackLoader::LoadResult> out;
+    out.reserve(packs.size());
+    while (!ready.empty())
+    {
+        const auto n = ready.back();
+        ready.pop_back();
+        out.push_back(std::move(packs[n]));
+        for (auto m : adj[n])
+            if (--indeg[m] == 0) ready.push_back(m);
+    }
+
+    if (out.size() != packs.size())
+    {
+        std::cerr << "[Pack] dependency cycle detected — "
+                  << (packs.size() - out.size())
+                  << " pack(s) skipped. Remaining in sort: " << out.size() << ".\n";
+    }
     return out;
 }
 
@@ -176,82 +120,31 @@ void registerVanillaContent()
 {
     auto& reg = gameRegistries();
 
+    // Fresh state — the previous implementation needed a two-pass seed from
+    // the static initializers, but those are gone since Phase 1c-E, so we
+    // can start from zero every time this function runs.
     reg.blocks.clear();
     reg.items.clear();
+    reg.loaded_packs.clear();
+    blockDatabase.clear();
+    itemDatabase.clear();
 
-    // Blocks — iterate the hardcoded blockDatabase and mirror each entry. The
-    // enum value becomes the RuntimeID, preserving every existing serialized
-    // byte on disk and on the wire until Phase 1a-C flips BlockID itself.
-    for (std::size_t i = 0; i < kBlockNames.size(); ++i)
+    // --- vanilla ----------------------------------------------------------
+    auto vanilla = PackLoader::loadPack("resources/packs/blockbit");
+    if (!vanilla.ok)
     {
-        const auto id = static_cast<BlockID>(i);
-        auto it = blockDatabase.find(id);
-        if (it == blockDatabase.end()) continue;
-
-        reg.blocks.registerAt(
-            static_cast<RuntimeID>(i),
-            vanillaKey(kBlockNames[i]),
-            it->second);
-    }
-
-    for (std::size_t i = 0; i < kItemNames.size(); ++i)
-    {
-        const auto id = static_cast<ItemID>(i);
-        auto it = itemDatabase.find(id);
-        if (it == itemDatabase.end()) continue;
-
-        reg.items.registerAt(
-            static_cast<RuntimeID>(i),
-            vanillaKey(kItemNames[i]),
-            it->second);
-    }
-
-    // One-shot exporter hook — set BLOCKBIT_EXPORT_VANILLA=<dir> to dump the
-    // live blockDatabase / itemDatabase as JSON into <dir> and exit. The hook
-    // runs AFTER mirroring to registries so both sources of truth agree.
-    if (const char* export_dir = std::getenv("BLOCKBIT_EXPORT_VANILLA"))
-    {
-        auto stats = VanillaExporter::exportTo(export_dir);
-        std::cout << "[VanillaExporter] Wrote "
-                  << stats.blocks_written << " blocks, "
-                  << stats.items_written  << " items to " << export_dir << '\n';
-        std::exit(0);
-    }
-
-    // Phase 1c probe: try to load resources/packs/blockbit/. For now this
-    // only augments the hardcoded db with any entries that aren't already
-    // present and logs a summary so we can see the loader works end-to-end.
-    // Phase 1c-E will replace the hardcoded path with pure pack loading.
-    auto pack = PackLoader::loadPack("resources/packs/blockbit");
-    if (!pack.ok)
-    {
-        // The vanilla pack is mandatory — without it the game has no blocks
-        // or items at all. Historical static initializers in src/Block.cpp /
-        // src/Item.cpp were removed in Phase 1c-E, so a missing or broken
-        // pack directory is now a fatal start-up error instead of a silent
-        // fallback.
-        std::cerr << "[Pack] FATAL: cannot load vanilla pack: " << pack.error << '\n';
+        std::cerr << "[Pack] FATAL: cannot load vanilla pack: " << vanilla.error << '\n';
         std::cerr << "[Pack] Expected at resources/packs/blockbit/ (relative to CWD).\n";
         std::exit(1);
     }
+    std::cout << "[Pack] Loaded '" << vanilla.manifest.id
+              << "' v" << vanilla.manifest.version
+              << " hash=" << std::hex << vanilla.hash << std::dec
+              << " — " << vanilla.blocks.size() << " blocks, "
+              << vanilla.items.size() << " items\n";
 
-    std::cout << "[Pack] Loaded '" << pack.manifest.id
-              << "' v" << pack.manifest.version
-              << " hash=" << std::hex << pack.hash << std::dec
-              << " — " << pack.blocks.size() << " blocks, "
-              << pack.items.size() << " items\n";
-    PackLoader::applyToDatabases(pack);
-
-    reg.loaded_packs.clear();
-    reg.loaded_packs.push_back({pack.manifest.id, pack.manifest.version, pack.hash});
-
-    // Discover user-installed packs under <home>/Blockbit/packs/. Each
-    // subdirectory with a pack.json is loaded and its summary added to
-    // loaded_packs so the server-client handshake can refuse joins whose
-    // modpack set differs. Content registration (adding modpack blocks/
-    // items to blockDatabase/itemDatabase with dynamic RuntimeIDs) is
-    // deferred to Phase 3 — for now, modpack content is loaded, validated
-    // and hashed, but not yet active in-game.
+    // --- modpack discovery ------------------------------------------------
+    std::vector<PackLoader::LoadResult> modpacks;
     const std::filesystem::path packs_root = getHomePath() / "Blockbit" / "packs";
     if (std::filesystem::exists(packs_root))
     {
@@ -274,33 +167,43 @@ void registerVanillaContent()
                           << ": reserved namespace 'blockbit'\n";
                 continue;
             }
-            std::cout << "[Pack] Found modpack '" << mod.manifest.id
+            std::cout << "[Pack] Loaded '" << mod.manifest.id
                       << "' v" << mod.manifest.version
                       << " hash=" << std::hex << mod.hash << std::dec
                       << " — " << mod.blocks.size() << " blocks, "
-                      << mod.items.size() << " items (not yet applied)\n";
-            reg.loaded_packs.push_back({mod.manifest.id, mod.manifest.version, mod.hash});
+                      << mod.items.size() << " items\n";
+            modpacks.push_back(std::move(mod));
         }
     }
 
-    // Re-mirror the pack-driven databases into the registries so keys and
-    // data agree across every lookup path.
-    reg.blocks.clear();
-    reg.items.clear();
-    for (std::size_t i = 0; i < kBlockNames.size(); ++i)
+    // --- install in order: vanilla first so its legacy_ids pin the low
+    //     slots, then modpacks grab the next free IDs. --------------------
+    RuntimeID next_block = 0;
+    RuntimeID next_item  = 0;
+
+    installPack(vanilla, next_block, next_item);
+    reg.loaded_packs.push_back({vanilla.manifest.id, vanilla.manifest.version, vanilla.hash});
+
+    modpacks = topoSortModpacks(std::move(modpacks));
+    for (const auto& mod : modpacks)
     {
-        const auto id = static_cast<BlockID>(i);
-        if (auto it = blockDatabase.find(id); it != blockDatabase.end())
-            reg.blocks.registerAt(static_cast<RuntimeID>(i),
-                                  vanillaKey(kBlockNames[i]),
-                                  it->second);
+        std::cout << "[Pack] Installing '" << mod.manifest.id << "'\n";
+        installPack(mod, next_block, next_item);
+        reg.loaded_packs.push_back({mod.manifest.id, mod.manifest.version, mod.hash});
     }
-    for (std::size_t i = 0; i < kItemNames.size(); ++i)
+
+    std::cout << "[Pack] " << reg.loaded_packs.size() << " packs active — "
+              << reg.blocks.size() << " blocks, "
+              << reg.items.size()  << " items total\n";
+
+    // --- one-shot exporter hook. Runs AFTER everything is loaded so a dump
+    //     reflects the active content set (including modpack additions). --
+    if (const char* export_dir = std::getenv("BLOCKBIT_EXPORT_VANILLA"))
     {
-        const auto id = static_cast<ItemID>(i);
-        if (auto it = itemDatabase.find(id); it != itemDatabase.end())
-            reg.items.registerAt(static_cast<RuntimeID>(i),
-                                 vanillaKey(kItemNames[i]),
-                                 it->second);
+        auto stats = VanillaExporter::exportTo(export_dir);
+        std::cout << "[VanillaExporter] Wrote "
+                  << stats.blocks_written << " blocks, "
+                  << stats.items_written  << " items to " << export_dir << '\n';
+        std::exit(0);
     }
 }
