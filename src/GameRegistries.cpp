@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "../include/AssetManager.hpp"
 #include "../include/ContentProfiles.hpp"
 #include "../include/GameCommon.hpp"
 #include "../include/PackLoader.hpp"
@@ -153,8 +154,10 @@ void registerVanillaContent()
     blockDatabase.clear();
     itemDatabase.clear();
 
+    AssetManager::GameTextureID next_texture = ContentProfiles::firstDynamicTextureId();
+
     // --- vanilla ----------------------------------------------------------
-    auto vanilla = PackLoader::loadPack("resources/packs/blockbit");
+    auto vanilla = PackLoader::loadPack("resources/packs/blockbit", next_texture);
     if (!vanilla.ok)
     {
         std::cerr << "[Pack] FATAL: cannot load vanilla pack: " << vanilla.error << '\n';
@@ -178,7 +181,7 @@ void registerVanillaContent()
             if (!entry.is_directory()) continue;
             if (!std::filesystem::exists(entry.path() / "pack.json")) continue;
 
-            auto mod = PackLoader::loadPack(entry.path());
+            auto mod = PackLoader::loadPack(entry.path(), next_texture);
             if (!mod.ok)
             {
                 std::cerr << "[Pack] Skipping " << entry.path()

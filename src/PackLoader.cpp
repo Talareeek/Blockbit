@@ -7,6 +7,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "../include/AssetManager.hpp"
 #include "../include/Behavior.hpp"
 #include "../include/ContentProfiles.hpp"
 #include "../include/Registry.hpp"
@@ -473,7 +474,8 @@ bool scanDir(const std::filesystem::path& dir,
 
 } // namespace
 
-LoadResult loadPack(const std::filesystem::path& dir)
+LoadResult loadPack(const std::filesystem::path& dir,
+                    AssetManager::GameTextureID& next_texture_id)
 {
     LoadResult result;
 
@@ -504,6 +506,10 @@ LoadResult loadPack(const std::filesystem::path& dir)
         return result;
     }
 
+    // Textures must register BEFORE parseBlock / parseItem run, so content
+    // keys like {"texture":"ruby_mod:foo"} resolve to live GameTextureIDs.
+    scanPackTextures(dir, result.manifest.id, next_texture_id);
+
     if (!scanDir(dir / "blocks", result, true,  result.error)) return result;
     if (!scanDir(dir / "items",  result, false, result.error)) return result;
 
@@ -512,24 +518,40 @@ LoadResult loadPack(const std::filesystem::path& dir)
     return result;
 }
 
-LoadAllResult loadAll(const std::vector<std::filesystem::path>& dirs)
+std::size_t scanPackTextures(const std::filesystem::path& packDir,
+                             const std::string& packNamespace,
+                             AssetManager::GameTextureID& next_texture_id)
 {
-    LoadAllResult agg;
-    agg.packs.reserve(dirs.size());
-    for (std::size_t i = 0; i < dirs.size(); ++i)
+    const auto tex_dir = packDir / "textures";
+    if (!std::filesystem::exists(tex_dir)) return 0;
+
+    std::size_t count = 0;
+    std::error_code ec;
+    for (auto it  = std::filesystem::recursive_directory_iterator(tex_dir, ec);
+              it != std::filesystem::recursive_directory_iterator(); ++it)
     {
-        LoadResult r = loadPack(dirs[i]);
-        if (!r.ok)
-        {
-            agg.ok            = false;
-            agg.error         = r.error;
-            agg.failing_index = i;
-            agg.packs.push_back(std::move(r));
-            return agg;
-        }
-        agg.packs.push_back(std::move(r));
+        if (!it->is_regular_file()) continue;
+        if (it->path().extension() != ".png") continue;
+
+        // relative path, forward-slashes, without the .png extension
+        const auto rel_with_ext = std::filesystem::relative(it->path(), tex_dir);
+        auto rel = rel_with_ext;
+        rel.replace_extension();
+        const std::string rel_key = rel.generic_string();
+        const std::string key     = packNamespace + ":" + rel_key;
+
+        const auto id = next_texture_id;
+        AssetManager::loadGameTexture(id, it->path().string());
+        ContentProfiles::registerTextureKey(key, id);
+
+        next_texture_id = static_cast<AssetManager::GameTextureID>(
+            static_cast<uint32_t>(next_texture_id) + 1);
+        ++count;
+
+        std::cout << "[Pack] Loaded texture '" << key << "' as id "
+                  << static_cast<uint32_t>(id) << '\n';
     }
-    return agg;
+    return count;
 }
 
 } // namespace PackLoader

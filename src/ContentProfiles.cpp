@@ -142,14 +142,45 @@ namespace ContentProfiles
 
 using namespace blockbit_callbacks;
 
+// Runtime key→id map. Seeded on first use with the vanilla name table
+// (vanilla "<name>" entries become "blockbit:<name>" keys); modpack texture
+// loads add further entries past the vanilla enum range.
+std::unordered_map<std::string, AssetManager::GameTextureID>& textureKeyMap()
+{
+    static std::unordered_map<std::string, AssetManager::GameTextureID> map = [] {
+        std::unordered_map<std::string, AssetManager::GameTextureID> m;
+        for (const auto& [id, name] : textureMap().entries)
+            m.emplace("blockbit:" + std::string(name), id);
+        return m;
+    }();
+    return map;
+}
+
 std::optional<AssetManager::GameTextureID> textureFromName(std::string_view name)
 {
+    if (name.find(':') != std::string_view::npos)
+    {
+        const std::string key(name);
+        auto it = textureKeyMap().find(key);
+        if (it != textureKeyMap().end()) return it->second;
+        return std::nullopt;
+    }
     return textureMap().fromName(name);
 }
 
 std::string nameFromTexture(AssetManager::GameTextureID id)
 {
     return textureMap().toName(id);
+}
+
+void registerTextureKey(const std::string& key, AssetManager::GameTextureID id)
+{
+    textureKeyMap()[key] = id;
+}
+
+AssetManager::GameTextureID firstDynamicTextureId()
+{
+    return static_cast<AssetManager::GameTextureID>(1000);
 }
 
 // --- Prefab ---------------------------------------------------------------

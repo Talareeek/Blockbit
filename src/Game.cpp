@@ -3,6 +3,7 @@
 #include <map>
 #include <iostream>
 #include <optional>
+#include <unordered_set>
 
 #include "../include/Game.hpp"
 #include "../include/Entity.hpp"
@@ -488,51 +489,9 @@ Game::Game()
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Coreheart_Of_Blockbit, "resources/textures/coreheart_of_blockbit.png");
     AssetManager::loadGameTexture(AssetManager::GameTextureID::Upgrade_Table, "resources/textures/upgrade_table.png");
 
-    BlockAtlas::add(AssetManager::GameTextureID::Stone);
-    BlockAtlas::add(AssetManager::GameTextureID::Grass);
-    BlockAtlas::add(AssetManager::GameTextureID::Dirt);
-    BlockAtlas::add(AssetManager::GameTextureID::Cobblestone);
-    BlockAtlas::add(AssetManager::GameTextureID::Obsidian);
-    BlockAtlas::add(AssetManager::GameTextureID::Bedrock);
-    BlockAtlas::add(AssetManager::GameTextureID::Water);
-    BlockAtlas::add(AssetManager::GameTextureID::Lava);
-    BlockAtlas::add(AssetManager::GameTextureID::Coal_Ore);
-    BlockAtlas::add(AssetManager::GameTextureID::Iron_Ore);
-    BlockAtlas::add(AssetManager::GameTextureID::Gold_Ore);
-    BlockAtlas::add(AssetManager::GameTextureID::Diamond_Ore);
-    BlockAtlas::add(AssetManager::GameTextureID::Iron_Block);
-    BlockAtlas::add(AssetManager::GameTextureID::Gold_Block);
-    BlockAtlas::add(AssetManager::GameTextureID::Ruby_Block);
-    BlockAtlas::add(AssetManager::GameTextureID::Coal_Block);
-    BlockAtlas::add(AssetManager::GameTextureID::Oak_Log);
-    BlockAtlas::add(AssetManager::GameTextureID::Oak_Leaves);
-    BlockAtlas::add(AssetManager::GameTextureID::Oak_Planks);
-    BlockAtlas::add(AssetManager::GameTextureID::Birch_Log);
-    BlockAtlas::add(AssetManager::GameTextureID::Birch_Leaves);
-    BlockAtlas::add(AssetManager::GameTextureID::Spruce_Log);
-    BlockAtlas::add(AssetManager::GameTextureID::Spruce_Leaves);
-    BlockAtlas::add(AssetManager::GameTextureID::Woodcutter);
-    BlockAtlas::add(AssetManager::GameTextureID::Fire);
-    BlockAtlas::add(AssetManager::GameTextureID::Sand);
-    BlockAtlas::add(AssetManager::GameTextureID::Coarse_Dirt);
-    BlockAtlas::add(AssetManager::GameTextureID::Snow);
-    BlockAtlas::add(AssetManager::GameTextureID::Ruby_Ore);
-    BlockAtlas::add(AssetManager::GameTextureID::Chest);
-    BlockAtlas::add(AssetManager::GameTextureID::Bricks);
-    BlockAtlas::add(AssetManager::GameTextureID::Furnace);
-    BlockAtlas::add(AssetManager::GameTextureID::Workbench);
-    BlockAtlas::add(AssetManager::GameTextureID::Gravel);
-    BlockAtlas::add(AssetManager::GameTextureID::Cactus);
-    BlockAtlas::add(AssetManager::GameTextureID::Dead_Bush);
-    BlockAtlas::add(AssetManager::GameTextureID::Smooth_Stone);
-    BlockAtlas::add(AssetManager::GameTextureID::Diorite);
-    BlockAtlas::add(AssetManager::GameTextureID::Granite);
-    BlockAtlas::add(AssetManager::GameTextureID::Glass);
-    BlockAtlas::add(AssetManager::GameTextureID::Output_Bulb);
-    BlockAtlas::add(AssetManager::GameTextureID::Ruby_Wire);
-    BlockAtlas::add(AssetManager::GameTextureID::Coreheart_Of_Blockbit);
-    BlockAtlas::add(AssetManager::GameTextureID::Upgrade_Table);
-    BlockAtlas::build();
+    // BlockAtlas setup happens AFTER registerVanillaContent (below), so
+    // every block registered by vanilla or by a modpack contributes its
+    // texture to the atlas — Phase 4-C/D.
 
     AssetManager::loadShader(AssetManager::ShaderID::Sun, "resources/shaders/sun.frag");
     AssetManager::loadShader(AssetManager::ShaderID::Brightness, "resources/shaders/brightness.frag");
@@ -547,6 +506,22 @@ Game::Game()
     EffectRegistry::init();
     StructureRegistry::init();
     registerVanillaContent();
+
+    // Collect every texture referenced by a registered block (vanilla +
+    // modpack) and bake the atlas in one shot. Each texture is added once —
+    // BlockAtlas::add pushes to a vector, so a std::unordered_set de-dupes
+    // in case multiple blocks share a texture.
+    {
+        std::unordered_set<uint32_t> seen;
+        for (const auto& [id, data] : blockDatabase)
+        {
+            if (!data.render.has_value()) continue;
+            const auto tid = data.render->texture;
+            if (seen.insert(static_cast<uint32_t>(tid)).second)
+                BlockAtlas::add(tid);
+        }
+        BlockAtlas::build();
+    }
 
 
     console.assignGame(this);
