@@ -25,6 +25,7 @@
 #include "../include/EffectRegistry.hpp"
 #include "../include/StructureRegistry.hpp"
 #include "../include/GameRegistries.hpp"
+#include "../include/PackLoader.hpp"
 #include "../include/ServerConfig.hpp"
 #include "../include/ServerWorld.hpp"
 #include "../include/Block.hpp"
@@ -1144,6 +1145,18 @@ int main(int argc, char* argv[])
         {
             auto world_path = args.server_dir / "worlds" / config.world_name;
             bool world_exists = std::filesystem::exists(world_path);
+
+            if (world_exists)
+            {
+                auto pack_check = PackLoader::validateWorldPacks(world_path);
+                if (!pack_check.ok)
+                {
+                    std::cerr << c::red() << "[Server] refusing to load world '"
+                              << config.world_name << "': " << pack_check.reason
+                              << c::reset() << '\n';
+                    continue;
+                }
+            }
 
             auto transport = makeServerTransport(config.port);
 

@@ -19,6 +19,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <unordered_map>
 
 class MenuGameState : public GameState
 {
@@ -31,8 +32,14 @@ private:
     TextButton quit;
     TextButton settings;
     TextButton structure_editor;
+    TextButton packs;
     WorldList worldList;
     LobbyPlayerElement player;
+
+    // Loaded on demand the first time the Packs window opens; indexed by
+    // pack id so ImGui::Image can bind the sf::Texture directly.
+    std::unordered_map<std::string, sf::Texture> pack_icon_cache;
+    bool show_pack_window = false;
 
     sf::Vector2f accountSlotPosition;
     sf::Vector2f accountSlotSize;
@@ -63,8 +70,9 @@ private:
 
     void beginProbe(const std::string& text);
     void cancelActiveProbe();
-    
+
     void renderExitConfirmation();
+    void renderPackWindow();
 
 public:
 

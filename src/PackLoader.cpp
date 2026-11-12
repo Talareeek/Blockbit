@@ -10,6 +10,7 @@
 #include "../include/AssetManager.hpp"
 #include "../include/Behavior.hpp"
 #include "../include/ContentProfiles.hpp"
+#include "../include/GameRegistries.hpp"
 #include "../include/Registry.hpp"
 
 namespace PackLoader
@@ -723,6 +724,47 @@ std::size_t scanPackTextures(const std::filesystem::path& packDir,
                   << count << " texture(s)\n";
     }
     return count;
+}
+
+WorldPackCheck validateWorldPacks(const std::filesystem::path& worldDir)
+{
+    WorldPackCheck r;
+    const auto file = worldDir / "packs.json";
+    if (!std::filesystem::exists(file)) return r; // predates pack-selection
+
+    std::ifstream in(file);
+    if (!in) { r.ok = false; r.reason = "cannot open packs.json"; return r; }
+
+    nlohmann::json j;
+    try { in >> j; }
+    catch (const std::exception& e) { r.ok = false; r.reason = std::string("packs.json parse: ") + e.what(); return r; }
+
+    if (!j.is_array()) { r.ok = false; r.reason = "packs.json: expected array"; return r; }
+
+    const auto& loaded = gameRegistries().loaded_packs;
+    for (const auto& entry : j)
+    {
+        const auto id   = entry.value("id", std::string{});
+        const auto hash = entry.value("hash", static_cast<uint64_t>(0));
+        if (id.empty()) continue;
+
+        const LoadedPackSummary* match = nullptr;
+        for (const auto& p : loaded) if (p.id == id) { match = &p; break; }
+
+        if (!match)
+        {
+            r.ok = false;
+            r.reason = "world needs pack '" + id + "' which isn't loaded";
+            return r;
+        }
+        if (match->hash != hash)
+        {
+            r.ok = false;
+            r.reason = "pack '" + id + "' hash mismatch (world expects one build, current pack is different)";
+            return r;
+        }
+    }
+    return r;
 }
 
 } // namespace PackLoader

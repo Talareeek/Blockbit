@@ -82,6 +82,18 @@ struct LoadResult
 LoadResult loadPack(const std::filesystem::path& dir,
                     AssetManager::GameTextureID& next_texture_id);
 
+struct WorldPackCheck
+{
+    bool        ok = true;
+    std::string reason;   // human-readable on failure, empty on success
+};
+
+// Reads <worldDir>/packs.json and validates that every listed pack is
+// currently loaded with a matching id/hash. If packs.json is missing, the
+// world predates Phase C+D and is accepted as-is. A failure returns ok=false
+// with a reason describing the first mismatch found.
+WorldPackCheck validateWorldPacks(const std::filesystem::path& worldDir);
+
 // Reads one pack's <packDir>/spawn_rules/*.json files and appends matching
 // SpawnEntry records into the given MobSpawnConfig. Each JSON names one
 // prefab + biome list; the entry is cloned per-biome. Namespace scoping is

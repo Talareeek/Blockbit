@@ -1,5 +1,7 @@
 #include "../include/MenuGameState.hpp"
 #include "../include/Game.hpp"
+#include "../include/GameRegistries.hpp"
+#include <imgui-SFML.h>
 #include "../include/AssetManager.hpp"
 #include "../include/Render.hpp"
 #include "../include/Settings.hpp"
@@ -51,6 +53,7 @@ MenuGameState::MenuGameState(Game* game) : GameState(game), serverPreview(&statu
     if(!blockbit_logo.loadFromFile("resources/textures/blockbit_logo.png")) throw std::runtime_error("Failed loading resources/textures/blockbit_logo.png");
 
 
+    UIElement::ScreenRelative packsRelative   {{0.015f, 0.72f}, {0.17f, 0.035f}, UIElement::ScreenRelative::ScaleMode::Stretch};
     UIElement::ScreenRelative editorRelative  {{0.015f, 0.77f}, {0.17f, 0.035f}, UIElement::ScreenRelative::ScaleMode::Stretch};
     UIElement::ScreenRelative settingsRelative{{0.015f, 0.82f}, {0.17f, 0.035f}, UIElement::ScreenRelative::ScaleMode::Stretch};
     UIElement::ScreenRelative quitRelative    {{0.015f, 0.87f}, {0.17f, 0.035f}, UIElement::ScreenRelative::ScaleMode::Stretch};
@@ -79,6 +82,13 @@ MenuGameState::MenuGameState(Game* game) : GameState(game), serverPreview(&statu
     });
     structure_editor.setColors(sf::Color(210, 210, 210), Settings::ui.main_color);
     structure_editor.updateScreenRelative(game->getWindow().getSize());
+
+    packs = TextButton(packsRelative, "Packs", [this]()
+    {
+        this->show_pack_window = true;
+    });
+    packs.setColors(sf::Color(210, 210, 210), Settings::ui.main_color);
+    packs.updateScreenRelative(game->getWindow().getSize());
 
     backgroundTexture = generateBackground();
 
@@ -191,6 +201,7 @@ void MenuGameState::handleEvent(const sf::Event& event)
     quit.handleEvent(event);
     settings.handleEvent(event);
     structure_editor.handleEvent(event);
+    packs.handleEvent(event);
     player.handleEvent(event);
 }
 
@@ -212,6 +223,8 @@ void MenuGameState::update(float dt)
     settings.setColors(sf::Color(210, 210, 210), Settings::ui.main_color);
     structure_editor.updateScreenRelative(size);
     structure_editor.setColors(sf::Color(210, 210, 210), Settings::ui.main_color);
+    packs.updateScreenRelative(size);
+    packs.setColors(sf::Color(210, 210, 210), Settings::ui.main_color);
     worldList.updateScreenRelative(size);
 
     worldList.position = {size.x * 0.75f, 0.0f};
@@ -221,6 +234,7 @@ void MenuGameState::update(float dt)
     quit.update(dt);
     settings.update(dt);
     structure_editor.update(dt);
+    packs.update(dt);
 
     player.update(dt);
 
@@ -309,11 +323,13 @@ void MenuGameState::render(sf::RenderWindow& window)
     settings.render(window);
     quit.render(window);
     structure_editor.render(window);
+    packs.render(window);
     player.render(window);
 
     account.performImGui(accountSlotPosition, accountSlotSize);
 
     renderExitConfirmation();
+    renderPackWindow();
 }
 
 void MenuGameState::renderExitConfirmation()
@@ -374,6 +390,73 @@ void MenuGameState::renderExitConfirmation()
     ImGui::End();
 
     if(!open) show_exit_confirmation = false;
+}
+
+void MenuGameState::renderPackWindow()
+{
+    if (!show_pack_window) return;
+
+    const sf::Vector2u window_size = game->getWindow().getSize();
+    const ImVec2 size(520.0f, 420.0f);
+    const ImVec2 position(
+        (static_cast<float>(window_size.x) - size.x) * 0.5f,
+        (static_cast<float>(window_size.y) - size.y) * 0.5f
+    );
+
+    ImGui::SetNextWindowPos(position, ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(size, ImGuiCond_Appearing);
+
+    bool open = true;
+    if (ImGui::Begin("Content Packs", &open,
+                     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings))
+    {
+        const auto& packs_list = gameRegistries().loaded_packs;
+        ImGui::Text("%zu pack(s) loaded", packs_list.size());
+        ImGui::Separator();
+
+        for (const auto& p : packs_list)
+        {
+            // Load the icon on first encounter — lazy so a pack without one
+            // or a pack never viewed costs nothing.
+            sf::Texture* icon = nullptr;
+            if (!p.icon_path.empty())
+            {
+                auto it = pack_icon_cache.find(p.id);
+                if (it == pack_icon_cache.end())
+                {
+                    sf::Texture tex;
+                    if (tex.loadFromFile(p.icon_path))
+                    {
+                        auto [ins, _] = pack_icon_cache.emplace(p.id, std::move(tex));
+                        icon = &ins->second;
+                    }
+                }
+                else icon = &it->second;
+            }
+
+            const float row_h = 56.0f;
+            ImGui::BeginChild(("##pack_" + p.id).c_str(),
+                              ImVec2(0, row_h), true, ImGuiWindowFlags_NoScrollbar);
+            if (icon)
+            {
+                ImGui::Image(*icon, sf::Vector2f(48.0f, 48.0f));
+            }
+            else
+            {
+                ImGui::Dummy(ImVec2(48.0f, 48.0f));
+            }
+            ImGui::SameLine();
+            ImGui::BeginGroup();
+            ImGui::Text("%s", p.id.c_str());
+            ImGui::Text("v%s", p.version.c_str());
+            ImGui::Text("hash: %016llx", static_cast<unsigned long long>(p.hash));
+            ImGui::EndGroup();
+            ImGui::EndChild();
+        }
+    }
+    ImGui::End();
+
+    if (!open) show_pack_window = false;
 }
 
 void MenuGameState::onObscured()

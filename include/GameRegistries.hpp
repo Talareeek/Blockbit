@@ -18,6 +18,10 @@ struct LoadedPackSummary
     std::string id;
     std::string version;
     uint64_t    hash = 0;
+    // Absolute path to <pack>/icon.png if present; empty when the pack
+    // didn't ship an icon. UI layers load sf::Texture lazily from this
+    // path — keeps the pack system free of SFML coupling.
+    std::string icon_path;
 };
 
 // Process-wide registries populated at startup. The blocks/items maps are

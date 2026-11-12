@@ -1,6 +1,10 @@
 #include "../include/CreateWorldState.hpp"
 #include "../include/InputManager.hpp"
 #include "../include/Game.hpp"
+#include "../include/GameRegistries.hpp"
+
+#include <fstream>
+#include <nlohmann/json.hpp>
 #include "../include/ClientGameState.hpp"
 #include "../include/World.hpp"
 #include "../include/ClientWorld.hpp"
@@ -116,6 +120,11 @@ CreateWorldState::CreateWorldState(Game* game) : GameState(game)
 {
     flat_layers = FlatWorldProperties::defaults().layers;
     background_texture = generateBackground();
+
+    // Seed the pack checkboxes from the live set of loaded packs. Vanilla
+    // is always on and can't be toggled; everything else defaults on.
+    for (const auto& p : gameRegistries().loaded_packs)
+        pack_enabled[p.id] = true;
 
     rerollSeed();
 }
@@ -266,6 +275,25 @@ void CreateWorldState::createWorld()
     if (std::filesystem::exists(path)) return;
 
     std::filesystem::create_directories(path);
+
+    // Snapshot the pack selection + hashes into <world>/packs.json — the
+    // world refuses to load later if a listed pack goes missing or changes
+    // content (same handshake semantics as client↔server in Phase 2-D).
+    {
+        nlohmann::json packs_json = nlohmann::json::array();
+        for (const auto& p : gameRegistries().loaded_packs)
+        {
+            auto it = pack_enabled.find(p.id);
+            if (it == pack_enabled.end() || !it->second) continue;
+            packs_json.push_back({
+                {"id",      p.id},
+                {"version", p.version},
+                {"hash",    p.hash}
+            });
+        }
+        std::ofstream out(path / "packs.json");
+        if (out) out << packs_json.dump(4) << '\n';
+    }
 
     static thread_local std::mt19937 rng(std::random_device{}());
     unsigned int seed_value = static_cast<unsigned int>(rng());
@@ -530,6 +558,23 @@ void CreateWorldState::update(float dt)
         {
             ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f),
                 "A world named \"%s\" already exists.", name_buffer);
+        }
+
+        // Pack checkboxes — vanilla "blockbit" is required so its checkbox
+        // is forced on and non-interactive. Everything else can be toggled.
+        if (ImGui::CollapsingHeader("Content packs"))
+        {
+            for (const auto& p : gameRegistries().loaded_packs)
+            {
+                const bool required = (p.id == "blockbit");
+                bool enabled = pack_enabled[p.id];
+                if (required) ImGui::BeginDisabled();
+                if (ImGui::Checkbox(p.id.c_str(), &enabled))
+                    pack_enabled[p.id] = enabled;
+                if (required) ImGui::EndDisabled();
+                ImGui::SameLine();
+                ImGui::TextDisabled("v%s", p.version.c_str());
+            }
         }
 
         if (!can_create) ImGui::BeginDisabled();

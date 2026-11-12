@@ -6,6 +6,8 @@
 
 #include <SFML/Graphics/Texture.hpp>
 
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 class CreateWorldState : public GameState
@@ -46,6 +48,12 @@ private:
     unsigned int preview_seed = 0;
 
     bool should_close = false;
+
+    // Per-pack enable state for this world. Initialised from the live
+    // gameRegistries().loaded_packs — vanilla's "blockbit" is forced on;
+    // modpack ids default to on so the common case (create world with all
+    // installed packs) stays one click.
+    std::unordered_map<std::string, bool> pack_enabled;
 
     void createWorld();
 

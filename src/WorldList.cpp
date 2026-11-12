@@ -5,6 +5,7 @@
 #include "../include/ClientGameState.hpp"
 #include "../include/CreateWorldState.hpp"
 #include "../include/BBT.hpp"
+#include "../include/PackLoader.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -271,6 +272,13 @@ void WorldList::update(float dt)
         {
             auto world_path = entries[i].getPath();
             entries[i].clearRequests();
+            auto check = PackLoader::validateWorldPacks(world_path);
+            if (!check.ok)
+            {
+                std::cerr << "[WorldList] refusing to play '" << world_path.filename().string()
+                          << "': " << check.reason << '\n';
+                return;
+            }
             game->pushState(&game->currentState(), std::make_unique<ClientGameState>(game, world_path, 0, Account::username));
             return;
         }
@@ -278,6 +286,13 @@ void WorldList::update(float dt)
         {
             auto world_path = entries[i].getPath();
             entries[i].clearRequests();
+            auto check = PackLoader::validateWorldPacks(world_path);
+            if (!check.ok)
+            {
+                std::cerr << "[WorldList] refusing to host '" << world_path.filename().string()
+                          << "': " << check.reason << '\n';
+                return;
+            }
             game->pushState(&game->currentState(), std::make_unique<ClientGameState>(game, world_path, ClientGameState::DEFAULT_PORT, Account::username));
             return;
         }
