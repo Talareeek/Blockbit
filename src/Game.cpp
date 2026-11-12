@@ -380,7 +380,7 @@ Game::Game()
     window.setVerticalSyncEnabled(Settings::graphics.vsync);
     if(Settings::graphics.fps_limit > 0) window.setFramerateLimit(Settings::graphics.fps_limit);
 
-	if (!icon.loadFromFile("resources/textures/grass.png")) throw std::runtime_error("Failed loading an icon");
+	if (!icon.loadFromFile("resources/packs/blockbit/textures/grass.png")) throw std::runtime_error("Failed loading an icon");
 
 	window.setIcon(icon);
 
@@ -406,88 +406,6 @@ Game::Game()
     AssetManager::loadUITexture(AssetManager::UITextureID::Border, "resources/textures/border.png");
     AssetManager::getUITexture(AssetManager::UITextureID::Border).setRepeated(true);
 
-
-    //GAME TEXTURES
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Player, "resources/textures/player.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Dynamite, "resources/textures/dynamite.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Bucket, "resources/textures/bucket.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Water_Bucket, "resources/textures/water_bucket.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Pig, "resources/textures/pig.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Cube, "resources/textures/cube.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Lighter, "resources/textures/lighter.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Bottle, "resources/textures/bottle.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Wooden_Pickaxe, "resources/textures/wooden_pickaxe.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Stone_Pickaxe, "resources/textures/stone_pickaxe.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Gold_Pickaxe, "resources/textures/gold_pickaxe.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Iron_Pickaxe, "resources/textures/iron_pickaxe.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Diamond_Pickaxe, "resources/textures/diamond_pickaxe.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Wooden_Axe, "resources/textures/wooden_axe.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Stone_Axe, "resources/textures/stone_axe.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Gold_Axe, "resources/textures/gold_axe.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Iron_Axe, "resources/textures/iron_axe.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Diamond_Axe, "resources/textures/diamond_axe.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Wooden_Shovel, "resources/textures/wooden_shovel.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Stone_Shovel, "resources/textures/stone_shovel.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Gold_Shovel, "resources/textures/gold_shovel.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Iron_Shovel, "resources/textures/iron_shovel.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Diamond_Shovel, "resources/textures/diamond_shovel.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Ruby_Pickaxe, "resources/textures/ruby_pickaxe.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Ruby_Axe, "resources/textures/ruby_axe.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Ruby_Shovel, "resources/textures/ruby_shovel.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Ruby, "resources/textures/ruby.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Stick, "resources/textures/stick.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Coal, "resources/textures/coal.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Raw_Iron, "resources/textures/raw_iron.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Raw_Gold, "resources/textures/raw_gold.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Iron_Ingot, "resources/textures/iron_ingot.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Gold_Ingot, "resources/textures/gold_ingot.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Diamond, "resources/textures/diamond.png");
-
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Stone, "resources/textures/stone.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Grass, "resources/textures/grass.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Dirt, "resources/textures/dirt.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Cobblestone, "resources/textures/cobblestone.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Obsidian, "resources/textures/obsidian.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Bedrock, "resources/textures/bedrock.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Water, "resources/textures/water.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Lava, "resources/textures/lava.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Coal_Ore, "resources/textures/coal_ore.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Iron_Ore, "resources/textures/iron_ore.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Gold_Ore, "resources/textures/gold_ore.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Diamond_Ore, "resources/textures/diamond_ore.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Iron_Block, "resources/textures/iron_block.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Gold_Block, "resources/textures/gold_block.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Ruby_Block, "resources/textures/ruby_block.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Coal_Block, "resources/textures/coal_block.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Oak_Log, "resources/textures/oak_log.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Oak_Leaves, "resources/textures/oak_leaves.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Oak_Planks, "resources/textures/oak_planks.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Birch_Log, "resources/textures/birch_log.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Birch_Leaves, "resources/textures/birch_leaves.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Spruce_Log, "resources/textures/spruce_log.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Spruce_Leaves, "resources/textures/spruce_leaves.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Woodcutter, "resources/textures/woodcutter.png");    
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Fire, "resources/textures/fire.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Sand, "resources/textures/sand.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Coarse_Dirt, "resources/textures/coarse_dirt.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Snow, "resources/textures/snow.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Ruby_Ore, "resources/textures/ruby_ore.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Chest, "resources/textures/chest.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Bricks, "resources/textures/bricks.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Furnace, "resources/textures/furnace.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Workbench, "resources/textures/workbench.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Gravel, "resources/textures/gravel.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Cactus, "resources/textures/cactus.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Dead_Bush, "resources/textures/dead_bush.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Flint, "resources/textures/flint.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Smooth_Stone, "resources/textures/smooth_stone.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Diorite, "resources/textures/diorite.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Granite, "resources/textures/granite.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Glass, "resources/textures/glass.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Output_Bulb, "resources/textures/output_bulb.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Ruby_Wire, "resources/textures/ruby_wire.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Coreheart_Of_Blockbit, "resources/textures/coreheart_of_blockbit.png");
-    AssetManager::loadGameTexture(AssetManager::GameTextureID::Upgrade_Table, "resources/textures/upgrade_table.png");
 
     // BlockAtlas setup happens AFTER registerVanillaContent (below), so
     // every block registered by vanilla or by a modpack contributes its

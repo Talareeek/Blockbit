@@ -14,7 +14,6 @@
 #include "../include/PackLoader.hpp"
 #include "../include/Prefab.hpp"
 #include "../include/PrefabLoader.hpp"
-#include "../include/VanillaExporter.hpp"
 
 GameRegistries& gameRegistries()
 {
@@ -336,15 +335,4 @@ void registerVanillaContent()
     std::cout << "[Pack] " << reg.loaded_packs.size() << " packs active — "
               << reg.blocks.size() << " blocks, "
               << reg.items.size()  << " items total\n";
-
-    // --- one-shot exporter hook. Runs AFTER everything is loaded so a dump
-    //     reflects the active content set (including modpack additions). --
-    if (const char* export_dir = std::getenv("BLOCKBIT_EXPORT_VANILLA"))
-    {
-        auto stats = VanillaExporter::exportTo(export_dir);
-        std::cout << "[VanillaExporter] Wrote "
-                  << stats.blocks_written << " blocks, "
-                  << stats.items_written  << " items to " << export_dir << '\n';
-        std::exit(0);
-    }
 }

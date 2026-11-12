@@ -697,16 +697,30 @@ std::size_t scanPackTextures(const std::filesystem::path& packDir,
         const std::string rel_key = rel.generic_string();
         const std::string key     = packNamespace + ":" + rel_key;
 
-        const auto id = next_texture_id;
+        // Vanilla keys are pre-seeded in the texture key map with their
+        // hardcoded GameTextureID values. Reuse those so every call site
+        // that still references e.g. GameTextureID::Stone keeps working.
+        // Keys outside the pre-seed set get a fresh dynamic id.
+        AssetManager::GameTextureID id;
+        if (auto existing = ContentProfiles::textureFromName(key); existing.has_value())
+        {
+            id = *existing;
+        }
+        else
+        {
+            id = next_texture_id;
+            next_texture_id = static_cast<AssetManager::GameTextureID>(
+                static_cast<uint32_t>(next_texture_id) + 1);
+            ContentProfiles::registerTextureKey(key, id);
+        }
+
         AssetManager::loadGameTexture(id, it->path().string());
-        ContentProfiles::registerTextureKey(key, id);
-
-        next_texture_id = static_cast<AssetManager::GameTextureID>(
-            static_cast<uint32_t>(next_texture_id) + 1);
         ++count;
-
-        std::cout << "[Pack] Loaded texture '" << key << "' as id "
-                  << static_cast<uint32_t>(id) << '\n';
+    }
+    if (count > 0)
+    {
+        std::cout << "[Pack] '" << packNamespace << "' loaded "
+                  << count << " texture(s)\n";
     }
     return count;
 }
