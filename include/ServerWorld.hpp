@@ -7,6 +7,7 @@
 #include "BlockUpdatePipeline.hpp"
 #include "Packet.hpp"
 #include "PlayerIdentity.hpp"
+#include "Registry.hpp"
 
 #include <unordered_set>
 
@@ -79,6 +80,11 @@ public:
     void setName(const std::string& name) { this->name = name; }
 
     UUID spawn(PrefabID prefab_id, sf::Vector2<double> position);
+
+    // Spawn by RegistryKey — resolves against gameRegistries().prefabs
+    // (which includes vanilla prefabs under "blockbit:<name>" plus any
+    // modpack prefabs). Returns UUID{} when the key is not registered.
+    UUID spawn(const RegistryKey& prefab_key, sf::Vector2<double> position);
 
     sf::Vector2<double> getSpawnPoint();
     void generateWorldSpawn();

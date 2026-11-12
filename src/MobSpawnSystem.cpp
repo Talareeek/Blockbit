@@ -1,5 +1,12 @@
 #include "../include/MobSpawnSystem.hpp"
 
+#include "../include/GameRegistries.hpp"
+
+const MobSpawnConfig& liveMobSpawnConfig()
+{
+    return gameRegistries().spawn_config;
+}
+
 #include "../include/ServerWorld.hpp"
 #include "../include/TransformComponent.hpp"
 #include "../include/PhysicsComponent.hpp"
@@ -180,9 +187,17 @@ namespace
             if (it == blockDatabase.end()) return false;
             return it->second.solid;
         }
-        return std::find(rule.allowed_ground.begin(),
-                         rule.allowed_ground.end(),
-                         ground) != rule.allowed_ground.end();
+        // Resolve string keys to RuntimeIDs each time — avoids stale caches
+        // if someone reloads packs mid-run. Unknown keys silently fail, so a
+        // rule referencing a pack that didn't load just never matches.
+        const auto& reg = gameRegistries().blocks;
+        for (const auto& key : rule.allowed_ground)
+        {
+            if (auto rid = reg.find(key); rid.has_value()
+                && static_cast<BlockID>(*rid) == ground)
+                return true;
+        }
+        return false;
     }
 
     bool canSpawnHere(World& world, const SpawnEntry& entry,

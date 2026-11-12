@@ -7,7 +7,9 @@
 
 #include "AssetManager.hpp"
 #include "Block.hpp"
+#include "Climate.hpp"
 #include "Item.hpp"
+#include "MobSpawnConfig.hpp"
 #include "Registry.hpp"
 
 // Loads a content pack from disk: scans <dir>/pack.json for metadata, then
@@ -79,6 +81,15 @@ struct LoadResult
 // before block/item JSON parsing so cross-references resolve.
 LoadResult loadPack(const std::filesystem::path& dir,
                     AssetManager::GameTextureID& next_texture_id);
+
+// Reads one pack's <packDir>/spawn_rules/*.json files and appends matching
+// SpawnEntry records into the given MobSpawnConfig. Each JSON names one
+// prefab + biome list; the entry is cloned per-biome. Namespace scoping is
+// enforced on the file "id" (if present); allowed_ground keys are stored as
+// strings and resolved at check time by MobSpawnSystem.
+std::size_t scanPackSpawnRules(const std::filesystem::path& packDir,
+                               const std::string&           packNamespace,
+                               MobSpawnConfig&              out);
 
 // Recursively scans <packDir>/textures/**/*.png and loads each file into
 // AssetManager with a dynamic GameTextureID allocated from the counter.

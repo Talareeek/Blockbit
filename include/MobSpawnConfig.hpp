@@ -4,10 +4,12 @@
 #include "Block.hpp"
 #include "Climate.hpp"
 #include "Prefab.hpp"
+#include "Registry.hpp"
 
 #include <SFML/System/Vector2.hpp>
 
 #include <cstdint>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -21,9 +23,11 @@ enum class MobCategory : uint8_t
 
 struct SurfaceRule
 {
-    // Ground block right below the spawn tile must be one of these.
-    // Empty => any non-air solid is accepted.
-    std::vector<BlockID> allowed_ground;
+    // Ground block right below the spawn tile must have one of these
+    // RegistryKeys. Empty => any non-air solid is accepted. Keys that don't
+    // resolve in the live block registry are silently ignored (mobs with a
+    // rule depending on a missing-pack block just never spawn).
+    std::vector<RegistryKey> allowed_ground;
 
     // Air column required above the spawn tile.
     int required_air_above = 2;
@@ -38,7 +42,9 @@ struct SurfaceRule
 
 struct SpawnEntry
 {
-    PrefabID prefab;
+    // Prefab lookup key — e.g. "blockbit:pig" or "ruby_mod:rubyling".
+    // Resolved against gameRegistries().prefabs at spawn time.
+    RegistryKey prefab;
     MobCategory category;
 
     int weight   = 1;

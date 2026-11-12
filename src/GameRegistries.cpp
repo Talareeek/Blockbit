@@ -293,6 +293,10 @@ void registerVanillaContent()
 
     installPack(vanilla, next_block, next_item);
 
+    // Seed the live spawn table with vanilla defaults — modpack
+    // spawn_rules/*.json files append on top.
+    reg.spawn_config = defaultMobSpawnConfig();
+
     // Mirror hardcoded vanilla prefabs into the key-based registry so
     // spawn-by-key works for 'blockbit:pig', 'blockbit:player', etc.
     // PrefabRegistry::init runs before registerVanillaContent (see
@@ -314,6 +318,12 @@ void registerVanillaContent()
         std::cout << "[Pack] Installing '" << mod.manifest.id << "'\n";
         installPack(mod, next_block, next_item);
         installPrefabs(packs_root / mod.manifest.id, mod.manifest.id);
+        if (const auto added = PackLoader::scanPackSpawnRules(
+                packs_root / mod.manifest.id, mod.manifest.id, reg.spawn_config))
+        {
+            std::cout << "[Pack] '" << mod.manifest.id
+                      << "' contributed " << added << " spawn entr(y|ies)\n";
+        }
         reg.loaded_packs.push_back({mod.manifest.id, mod.manifest.version, mod.hash});
     }
 

@@ -5,6 +5,7 @@
 #include "Block.hpp"
 #include "Entity.hpp"
 #include "Item.hpp"
+#include "MobSpawnConfig.hpp"
 
 #include <string>
 #include <unordered_map>
@@ -34,6 +35,10 @@ struct GameRegistries
     // The stored Entity is a template — spawn helpers deep-copy it, assign
     // a fresh UUID, and inject the spawn position before adding to World.
     std::unordered_map<std::string, Entity> prefabs;
+
+    // Live biome spawn table. Seeded from defaultMobSpawnConfig() and
+    // augmented by each pack's spawn_rules/*.json. Consumed by MobSpawnSystem.
+    MobSpawnConfig spawn_config;
 };
 
 GameRegistries& gameRegistries();

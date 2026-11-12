@@ -1238,6 +1238,23 @@ UUID ServerWorld::spawn(PrefabID prefab_id, sf::Vector2<double> position)
     return entity.getID();
 }
 
+UUID ServerWorld::spawn(const RegistryKey& prefab_key, sf::Vector2<double> position)
+{
+    const auto& prefabs = gameRegistries().prefabs;
+    auto it = prefabs.find(prefab_key);
+    if (it == prefabs.end())
+    {
+        std::cerr << "[Server] spawn: unknown prefab key '" << prefab_key << "'\n";
+        return UUID{};
+    }
+
+    Entity entity = it->second.cloneAs(generateUUID());
+    if (entity.hasComponent<TransformComponent>())
+        entity.getComponent<TransformComponent>().position = position;
+    addEntity(std::move(entity));
+    return entity.getID();
+}
+
 void ServerWorld::refreshChunkStates()
 {
     loaded_chunk_positions.clear();

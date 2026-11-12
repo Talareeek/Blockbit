@@ -538,6 +538,143 @@ LoadResult loadPack(const std::filesystem::path& dir,
     return result;
 }
 
+// String ↔ enum helpers local to this translation unit — the global
+// ContentProfiles already handles tool/category/rarity/behavior; we keep
+// MobCategory and Biome parsing here to avoid broadening that surface.
+std::optional<MobCategory> mobCategoryFromName(std::string_view s)
+{
+    if (s == "hostile") return MobCategory::Hostile;
+    if (s == "passive") return MobCategory::Passive;
+    if (s == "ambient") return MobCategory::Ambient;
+    if (s == "water")   return MobCategory::Water;
+    return std::nullopt;
+}
+
+std::optional<Biome> biomeFromName(std::string_view s)
+{
+    if (s == "plains")       return Biome::Plains;
+    if (s == "forest")       return Biome::Forest;
+    if (s == "ocean")        return Biome::Ocean;
+    if (s == "desert")       return Biome::Desert;
+    if (s == "savanna")      return Biome::Savanna;
+    if (s == "mountains")    return Biome::Mountains;
+    if (s == "snow")         return Biome::Snow;
+    if (s == "jungle")       return Biome::Jungle;
+    if (s == "taiga")        return Biome::Taiga;
+    if (s == "snowy_taiga")  return Biome::SnowyTaiga;
+    if (s == "giant_taiga")  return Biome::GiantTaiga;
+    return std::nullopt;
+}
+
+std::size_t scanPackSpawnRules(const std::filesystem::path& packDir,
+                               const std::string& packNamespace,
+                               MobSpawnConfig& out)
+{
+    const auto dir = packDir / "spawn_rules";
+    if (!std::filesystem::exists(dir)) return 0;
+
+    std::size_t count = 0;
+    for (const auto& entry : std::filesystem::directory_iterator(dir))
+    {
+        if (!entry.is_regular_file()) continue;
+        if (entry.path().extension() != ".json") continue;
+
+        const std::string raw = readFile(entry.path());
+        if (raw.empty()) continue;
+
+        nlohmann::json j;
+        try { j = nlohmann::json::parse(raw); }
+        catch (const std::exception& e)
+        {
+            std::cerr << "[Pack] spawn_rule parse error " << entry.path()
+                      << ": " << e.what() << '\n';
+            continue;
+        }
+
+        // Namespace scope — the file's own "id" (optional) must match the
+        // pack namespace. Having an id is handy for logs but not required.
+        if (j.contains("id") && j["id"].is_string() && !packNamespace.empty())
+        {
+            const std::string prefix = packNamespace + ":";
+            const auto id = j["id"].get<std::string>();
+            if (id.compare(0, prefix.size(), prefix) != 0)
+            {
+                std::cerr << "[Pack] spawn_rule " << entry.path()
+                          << " id '" << id << "' outside namespace '"
+                          << packNamespace << "' — skipped\n";
+                continue;
+            }
+        }
+
+        SpawnEntry se;
+        se.prefab   = j.value("prefab", std::string{});
+        if (se.prefab.empty())
+        {
+            std::cerr << "[Pack] spawn_rule " << entry.path() << ": missing 'prefab'\n";
+            continue;
+        }
+
+        const std::string cat_name = j.value("category", "passive");
+        auto cat = mobCategoryFromName(cat_name);
+        if (!cat.has_value())
+        {
+            std::cerr << "[Pack] spawn_rule " << entry.path()
+                      << ": unknown category '" << cat_name << "'\n";
+            continue;
+        }
+        se.category = *cat;
+
+        se.weight   = j.value("weight",   1);
+        se.min_pack = j.value("min_pack", 1);
+        se.max_pack = j.value("max_pack", 1);
+        se.day_allowed   = j.value("day_allowed",   true);
+        se.night_allowed = j.value("night_allowed", true);
+        se.max_block_light = static_cast<uint8_t>(j.value("max_block_light", 15));
+        se.max_total_light = static_cast<uint8_t>(j.value("max_total_light", 15));
+
+        if (j.contains("entity_size") && j["entity_size"].is_array() && j["entity_size"].size() == 2)
+        {
+            se.entity_size = {j["entity_size"][0].get<double>(),
+                              j["entity_size"][1].get<double>()};
+        }
+
+        if (j.contains("surface") && j["surface"].is_object())
+        {
+            const auto& s = j["surface"];
+            se.surface.required_air_above = s.value("required_air_above", 2);
+            se.surface.requires_sky       = s.value("requires_sky",       false);
+            se.surface.forbids_sky        = s.value("forbids_sky",        false);
+            se.surface.requires_water     = s.value("requires_water",     false);
+            if (s.contains("allowed_ground") && s["allowed_ground"].is_array())
+            {
+                for (const auto& g : s["allowed_ground"])
+                    if (g.is_string())
+                        se.surface.allowed_ground.push_back(g.get<std::string>());
+            }
+        }
+
+        if (!j.contains("biomes") || !j["biomes"].is_array())
+        {
+            std::cerr << "[Pack] spawn_rule " << entry.path() << ": missing 'biomes'\n";
+            continue;
+        }
+        for (const auto& b_name_json : j["biomes"])
+        {
+            if (!b_name_json.is_string()) continue;
+            const auto b = biomeFromName(b_name_json.get<std::string>());
+            if (!b.has_value())
+            {
+                std::cerr << "[Pack] spawn_rule " << entry.path()
+                          << ": unknown biome '" << b_name_json.get<std::string>() << "'\n";
+                continue;
+            }
+            out.biome_tables[*b].entries[se.category].push_back(se);
+            ++count;
+        }
+    }
+    return count;
+}
+
 std::size_t scanPackTextures(const std::filesystem::path& packDir,
                              const std::string& packNamespace,
                              AssetManager::GameTextureID& next_texture_id)
