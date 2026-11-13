@@ -112,6 +112,7 @@ void SettingsWindow::render()
 
     if(ImGui::CollapsingHeader("Render", ImGuiTreeNodeFlags_DefaultOpen))
     {
+        ImGui::Checkbox("Show player names", &Settings::render.show_player_names);
         ImGui::Checkbox("Reach-zoom", &Settings::render.reach_zoom_enabled);
         ImGui::SliderFloat("Reach-zoom scale", &Settings::render.reach_zoom_scale, 0.0f, 4.0f, "%.2f");
 

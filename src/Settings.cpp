@@ -71,6 +71,7 @@ void Settings::load()
                 render.selector_color.b = static_cast<std::uint8_t>(std::clamp<int>(c[2].get<int>(), 0, 255));
             }
             render.selector_air_fade = std::clamp(r.value("selector_air_fade", render.selector_air_fade), 0.0f, 1.0f);
+            render.show_player_names  = r.value("show_player_names",  render.show_player_names);
         }
 
         if(data.contains("ui"))
@@ -193,7 +194,8 @@ void Settings::save()
             {"selector_color", { static_cast<int>(render.selector_color.r),
                                  static_cast<int>(render.selector_color.g),
                                  static_cast<int>(render.selector_color.b) }},
-            {"selector_air_fade", render.selector_air_fade}
+            {"selector_air_fade", render.selector_air_fade},
+            {"show_player_names", render.show_player_names}
         };
         data["ui"] = {
             {"main_color", { static_cast<int>(ui.main_color.r),

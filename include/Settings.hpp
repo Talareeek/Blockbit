@@ -45,6 +45,7 @@ public:
         float reach_zoom_scale = 0.15f;
         sf::Color selector_color{0, 0, 0};
         float selector_air_fade = 0.65f; // 0 = outline fully visible on air, 1 = fully invisible
+        bool show_player_names = true;
     };
 
     struct UI

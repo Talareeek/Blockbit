@@ -152,7 +152,7 @@ void RenderEntities(World& world, const sf::Vector2<double> camera, sf::RenderWi
         states.texture = &AssetManager::getGameTexture(component.textureID);
         window.draw(quad, states);
 
-        if(entity.hasComponent<PlayerControlledComponent>())
+        if(Settings::render.show_player_names && entity.hasComponent<PlayerControlledComponent>())
         {
             auto& player = entity.getComponent<PlayerControlledComponent>();
 
