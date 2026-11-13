@@ -95,6 +95,28 @@ struct WorldPackCheck
 // with a reason describing the first mismatch found.
 WorldPackCheck validateWorldPacks(const std::filesystem::path& worldDir);
 
+// Reads one pack's <packDir>/structures/*.json files and registers each
+// described structure template (loaded from a sibling .bbt file) with
+// StructureRegistry. The JSON shape:
+//
+//   { "id": "blockbit:buried_template",
+//     "template": "buried_template.bbt",
+//     "rule": {
+//       "grid": 1,
+//       "spawn_chance": 0.0002,
+//       "anchor_mode": "below_surface",  // "surface" | "fixed" | "below_surface"
+//       "min_surface_y": 0, "max_surface_y": 255,
+//       "target_y": 0, "allow_mirror": true,
+//       "biomes": ["plains", "forest"]   // omit or [] = any biome
+//     }
+//   }
+//
+// Namespace scoping is enforced on "id". The structure's RuntimeID in the
+// registry is structureIdFromKey(id) — same across platforms, so world-gen
+// placement RNG stays deterministic.
+std::size_t scanPackStructures(const std::filesystem::path& packDir,
+                               const std::string&           packNamespace);
+
 // Reads one pack's <packDir>/recipes/*.json files and merges them into the
 // global `recipes`, `smeltingRecipes`, `fuelBurnTimes` maps declared in
 // include/Item.hpp. Each file carries a "type" discriminator:

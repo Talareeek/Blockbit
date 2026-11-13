@@ -8,10 +8,13 @@
 #include <nlohmann/json.hpp>
 
 #include "../include/AssetManager.hpp"
+#include "../include/BBT.hpp"
 #include "../include/Behavior.hpp"
 #include "../include/ContentProfiles.hpp"
 #include "../include/GameRegistries.hpp"
 #include "../include/Registry.hpp"
+#include "../include/StructureRegistry.hpp"
+#include "../include/StructureTemplate.hpp"
 
 namespace PackLoader
 {
@@ -673,6 +676,150 @@ std::size_t scanPackSpawnRules(const std::filesystem::path& packDir,
             out.biome_tables[*b].entries[se.category].push_back(se);
             ++count;
         }
+    }
+    return count;
+}
+
+std::size_t scanPackStructures(const std::filesystem::path& packDir,
+                               const std::string& packNamespace)
+{
+    const auto dir = packDir / "structures";
+    if (!std::filesystem::exists(dir)) return 0;
+
+    auto anchorFromName = [](std::string_view s) -> std::optional<StructureRule::Anchor>
+    {
+        if (s == "surface")       return StructureRule::Anchor::Surface;
+        if (s == "fixed")         return StructureRule::Anchor::Fixed;
+        if (s == "below_surface") return StructureRule::Anchor::BelowSurface;
+        return std::nullopt;
+    };
+
+    auto biomeFromString = [](std::string_view s) -> std::optional<Biome>
+    {
+        if (s == "plains")      return Biome::Plains;
+        if (s == "forest")      return Biome::Forest;
+        if (s == "ocean")       return Biome::Ocean;
+        if (s == "desert")      return Biome::Desert;
+        if (s == "savanna")     return Biome::Savanna;
+        if (s == "mountains")   return Biome::Mountains;
+        if (s == "snow")        return Biome::Snow;
+        if (s == "jungle")      return Biome::Jungle;
+        if (s == "taiga")       return Biome::Taiga;
+        if (s == "snowy_taiga") return Biome::SnowyTaiga;
+        if (s == "giant_taiga") return Biome::GiantTaiga;
+        return std::nullopt;
+    };
+
+    std::size_t count = 0;
+    for (const auto& entry : std::filesystem::directory_iterator(dir))
+    {
+        if (!entry.is_regular_file()) continue;
+        if (entry.path().extension() != ".json") continue;
+
+        const std::string raw = readFile(entry.path());
+        if (raw.empty()) continue;
+
+        nlohmann::json j;
+        try { j = nlohmann::json::parse(raw); }
+        catch (const std::exception& e)
+        {
+            std::cerr << "[Pack] structure parse " << entry.path()
+                      << ": " << e.what() << '\n';
+            continue;
+        }
+
+        const std::string key = j.value("id", std::string{});
+        if (key.empty())
+        {
+            std::cerr << "[Pack] structure " << entry.path() << ": missing 'id'\n";
+            continue;
+        }
+        if (!packNamespace.empty())
+        {
+            const std::string prefix = packNamespace + ":";
+            if (key.compare(0, prefix.size(), prefix) != 0)
+            {
+                std::cerr << "[Pack] structure " << entry.path() << " id '"
+                          << key << "' outside namespace '"
+                          << packNamespace << "' — skipped\n";
+                continue;
+            }
+        }
+
+        const std::string tmpl_rel = j.value("template", std::string{});
+        if (tmpl_rel.empty())
+        {
+            std::cerr << "[Pack] structure " << entry.path() << ": missing 'template'\n";
+            continue;
+        }
+
+        // Load the .bbt sibling.
+        StructureTemplate tmpl;
+        {
+            std::ifstream in(dir / tmpl_rel, std::ios::binary);
+            if (!in)
+            {
+                std::cerr << "[Pack] structure " << entry.path()
+                          << ": cannot open template " << tmpl_rel << '\n';
+                continue;
+            }
+            std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(in)),
+                                       std::istreambuf_iterator<char>());
+            try
+            {
+                BBT bbt = BBT::load(bytes);
+                tmpl.deserialize(bbt.root().at("template"));
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr << "[Pack] structure " << entry.path()
+                          << ": bbt decode failed: " << e.what() << '\n';
+                continue;
+            }
+        }
+        if (tmpl.width == 0 || tmpl.height == 0)
+        {
+            std::cerr << "[Pack] structure " << entry.path()
+                      << ": template " << tmpl_rel << " has zero extent\n";
+            continue;
+        }
+
+        StructureRule rule;
+        rule.key = key;
+        if (j.contains("rule") && j["rule"].is_object())
+        {
+            const auto& r = j["rule"];
+            rule.grid          = r.value("grid",          128);
+            rule.spawn_chance  = r.value("spawn_chance",  0.0f);
+            rule.min_surface_y = r.value("min_surface_y", 0);
+            rule.max_surface_y = r.value("max_surface_y", 255);
+            rule.target_y      = r.value("target_y",      0);
+            rule.allow_mirror  = r.value("allow_mirror",  true);
+
+            const std::string anchor_name = r.value("anchor_mode", "surface");
+            if (auto a = anchorFromName(anchor_name); a.has_value())
+                rule.anchor_mode = *a;
+            else
+            {
+                std::cerr << "[Pack] structure " << entry.path()
+                          << ": unknown anchor_mode '" << anchor_name << "'\n";
+                continue;
+            }
+
+            if (r.contains("biomes") && r["biomes"].is_array())
+            {
+                for (const auto& b : r["biomes"])
+                {
+                    if (!b.is_string()) continue;
+                    if (auto bid = biomeFromString(b.get<std::string>()); bid.has_value())
+                        rule.biomes.push_back(*bid);
+                }
+            }
+        }
+
+        const auto id = structureIdFromKey(key);
+        StructureRegistry::add(id, std::move(tmpl), std::move(rule));
+        ++count;
     }
     return count;
 }

@@ -11,20 +11,20 @@
 
 // Numeric structure identifier. Start the list empty — users of this system
 // extend the enum and register templates in StructureRegistry::init().
-// Keep IDs stable once released, they're hashed into the deterministic
-// placement RNG.
-enum class StructureID : uint32_t
-{
-    None = 0,
-    Buried_Template = 1,
-};
+// Runtime structure handle — FNV1a-32 of the structure's RegistryKey. The
+// same (key → id) mapping holds across platforms and runs, so world-gen
+// placement RNG stays deterministic across versions. 0 means "unset".
+using StructureID = uint32_t;
+
+StructureID structureIdFromKey(const std::string& key);
 
 // Placement rule set attached to a template. Controls where the structure may
 // appear during world generation. Everything a biome- or height-based filter
 // needs lives here — the generator does not look at the template itself.
 struct StructureRule
 {
-    StructureID id = StructureID::None;
+    StructureID id = 0;
+    std::string key;  // RegistryKey the id was hashed from (for logging)
 
     // Deterministic grid cell size (in world blocks). The placement scan hashes
     // (grid_x, StructureID) to pick exactly one candidate world_x per cell.

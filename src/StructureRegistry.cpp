@@ -9,6 +9,21 @@
 std::unordered_map<StructureID, StructureTemplate> StructureRegistry::templates;
 std::unordered_map<StructureID, StructureRule>     StructureRegistry::rule_map;
 
+// Same FNV1a-32 that PackLoader uses for pack content hashing, scoped down
+// to 32 bits. Deterministic across runs and platforms.
+StructureID structureIdFromKey(const std::string& key)
+{
+    constexpr uint32_t offset = 2166136261u;
+    constexpr uint32_t prime  = 16777619u;
+    uint32_t h = offset;
+    for (char c : key)
+    {
+        h ^= static_cast<uint8_t>(c);
+        h *= prime;
+    }
+    return h;
+}
+
 void StructureRegistry::add(StructureID id, StructureTemplate tmpl, StructureRule rule)
 {
     rule.id = id;
@@ -116,36 +131,9 @@ void StructureRegistry::stamp(Chunk& chunk,
     }
 }
 
-static StructureTemplate loadTemplateFile(const std::string& filename)
-{
-    StructureTemplate tmpl;
-
-    std::ifstream in(getStructuresPath() / filename, std::ios::binary);
-    if (!in) return tmpl;
-
-    std::vector<uint8_t> bytes(
-        (std::istreambuf_iterator<char>(in)),
-        std::istreambuf_iterator<char>());
-
-    BBT bbt = BBT::load(bytes);
-    tmpl.deserialize(bbt.root().at("template"));
-    return tmpl;
-}
-
 void StructureRegistry::init()
 {
-    { // BURIED_TEMPLATE
-        StructureTemplate tmpl = loadTemplateFile("template.bbt");
-        if (tmpl.width == 0 || tmpl.height == 0) return;
-
-        StructureRule rule;
-        rule.grid          = 1;
-        rule.spawn_chance  = 1.0f / 5000.0f;
-        rule.anchor_mode   = StructureRule::Anchor::BelowSurface;
-        rule.min_surface_y = 0;
-        rule.max_surface_y = 255;
-        rule.allow_mirror  = true;
-
-        add(StructureID::Buried_Template, std::move(tmpl), rule);
-    }
+    // Nothing to do here anymore — templates come from pack JSON+bbt via
+    // PackLoader::scanPackStructures, invoked from registerVanillaContent.
 }
+

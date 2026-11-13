@@ -1,0 +1,12 @@
+{
+    "id": "blockbit:buried_template",
+    "template": "buried_template.bbt",
+    "rule": {
+        "grid": 1,
+        "spawn_chance": 0.0002,
+        "anchor_mode": "below_surface",
+        "min_surface_y": 0,
+        "max_surface_y": 255,
+        "allow_mirror": true
+    }
+}

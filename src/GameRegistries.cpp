@@ -363,6 +363,24 @@ void registerVanillaContent()
                       << added << " recipe(s)\n";
     }
 
+    // Structures — loaded last so modpacks referencing vanilla biomes/blocks
+    // work. Templates stay in their original .bbt format; only the placement
+    // rule and the pointer-to-.bbt live in JSON.
+    {
+        const auto added = PackLoader::scanPackStructures("resources/packs/blockbit",
+                                                          vanilla.manifest.id);
+        if (added > 0)
+            std::cout << "[Pack] 'blockbit' loaded " << added << " structure(s)\n";
+    }
+    for (const auto& mod : modpacks)
+    {
+        const auto added = PackLoader::scanPackStructures(packs_root / mod.manifest.id,
+                                                          mod.manifest.id);
+        if (added > 0)
+            std::cout << "[Pack] '" << mod.manifest.id << "' loaded "
+                      << added << " structure(s)\n";
+    }
+
     std::cout << "[Pack] " << reg.loaded_packs.size() << " packs active — "
               << reg.blocks.size() << " blocks, "
               << reg.items.size()  << " items total\n";
