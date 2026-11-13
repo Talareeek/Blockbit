@@ -2,11 +2,8 @@
     "behavior": {
         "params": {
             "count": 255,
-            "height_offset": 0.0,
             "pattern": "column",
-            "projectile": "dynamite",
-            "spread": 0.0,
-            "throw_speed": 0.0
+            "projectile": "blockbit:column_dynamite"
         },
         "type": "throw_projectile"
     },

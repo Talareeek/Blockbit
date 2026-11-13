@@ -4,9 +4,8 @@
             "count": 100,
             "height_offset": 25.0,
             "pattern": "arc",
-            "projectile": "dynamite",
-            "spread": 100.0,
-            "throw_speed": 0.0
+            "projectile": "blockbit:arc_dynamite",
+            "spread": 100.0
         },
         "type": "throw_projectile"
     },

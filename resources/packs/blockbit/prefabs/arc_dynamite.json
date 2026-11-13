@@ -1,0 +1,9 @@
+{
+    "id": "blockbit:arc_dynamite",
+    "components": {
+        "transform": {"size": [1.0, 1.0]},
+        "render":    {"texture": "blockbit:dynamite", "rect": [0, 0, 16, 16], "size": [1.0, 1.0]},
+        "physics":   {"mass": 1.0, "is_solid": true, "is_static": false, "is_gravity_active": false},
+        "explosive": {"force": 3.0, "destroy_blocks": true, "damage_entities": true, "fuse_time": 3.0}
+    }
+}

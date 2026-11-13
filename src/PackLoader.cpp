@@ -48,10 +48,9 @@ bool parseItemBehaviorJson(const nlohmann::json& j, ItemBehavior& out, std::stri
         case ItemBehaviorType::ThrowProjectile:
         {
             ThrowProjectileParams p{};
-            const std::string prefab_name = params.value("projectile", "dynamite");
-            if (auto pr = ContentProfiles::prefabFromName(prefab_name); pr.has_value())
-                p.projectile = *pr;
-            else { err = "unknown prefab '" + prefab_name + "'"; return false; }
+            p.projectile = params.value("projectile", std::string{});
+            if (p.projectile.empty())
+            { err = "throw_projectile: missing 'projectile' key"; return false; }
 
             const std::string pattern_name = params.value("pattern", "single");
             if (auto pat = ContentProfiles::throwPatternFromName(pattern_name); pat.has_value())

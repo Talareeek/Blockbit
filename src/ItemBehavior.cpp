@@ -4,6 +4,8 @@
 
 #include <algorithm>
 
+#include <iostream>
+
 #include "../include/AssetManager.hpp"
 #include "../include/Behavior.hpp"
 #include "../include/Block.hpp"
@@ -13,6 +15,7 @@
 #include "../include/Entity.hpp"
 #include "../include/ExplosiveComponent.hpp"
 #include "../include/FurnaceBlockEntity.hpp"
+#include "../include/GameRegistries.hpp"
 #include "../include/InventoryComponent.hpp"
 #include "../include/Item.hpp"
 #include "../include/ItemDataComponents.hpp"
@@ -25,41 +28,33 @@
 namespace
 {
 
-// Shared explosive factory. Each ThrowProjectile pattern spawns one or many
-// of these with pattern-specific transform and physics.
-Entity makeExplosive(sf::Vector2<double> position,
-                     sf::Vector2<double> velocity,
-                     ExplosiveComponent explosive,
-                     bool physics_gravity,
-                     bool physics_collide_world,
-                     bool physics_collide_entities,
-                     bool physics_push_entities)
+// Clones the prefab referenced by `prefab_key` and injects the given spawn
+// position + velocity. Everything else (render / explosive / physics flags
+// / health / AI …) comes from the prefab template — so changing a JSON's
+// "projectile" value actually changes what gets thrown.
+bool spawnFromPrefab(World& world,
+                     const std::string& prefab_key,
+                     sf::Vector2<double> position,
+                     sf::Vector2<double> velocity)
 {
-    Entity entity(generateUUID());
+    const auto& prefabs = gameRegistries().prefabs;
+    auto it = prefabs.find(prefab_key);
+    if (it == prefabs.end())
+    {
+        std::cerr << "[Item] throw_projectile: unknown prefab '" << prefab_key << "'\n";
+        return false;
+    }
 
-    entity.addComponent(
-        TransformComponent{position, {1.0, 1.0}, sf::degrees(0.0f)});
+    Entity entity = it->second.cloneAs(generateUUID());
 
-    entity.addComponent(std::move(explosive));
+    if (entity.hasComponent<TransformComponent>())
+        entity.getComponent<TransformComponent>().position = position;
 
-    entity.addComponent(
-        RenderComponent{
-            AssetManager::GameTextureID::Dynamite,
-            {{0, 0}, {16, 16}},
-            {1.0f, 1.0f}});
+    if (entity.hasComponent<PhysicsComponent>())
+        entity.getComponent<PhysicsComponent>().velocity = velocity;
 
-    entity.addComponent(
-        PhysicsComponent{
-            velocity,
-            {0.0f, 0.0f},
-            {0.0f, 0.0f},
-            1.0f,
-            physics_gravity,
-            physics_collide_world,
-            physics_collide_entities,
-            physics_push_entities});
-
-    return entity;
+    world.addEntity(std::move(entity));
+    return true;
 }
 
 bool handleThrowProjectile(const ThrowProjectileParams& p,
@@ -73,63 +68,47 @@ bool handleThrowProjectile(const ThrowProjectileParams& p,
     {
         case Pattern::Single:
         {
-            // Dynamite: spawn at player, throw toward mouse with linear scale.
+            // Spawn at player, throw toward mouse with linear scale.
             Entity& player = world.getEntity(user);
             if (!player.hasComponent<TransformComponent>()) return false;
 
             const sf::Vector2<double> origin =
                 player.getComponent<TransformComponent>().position;
 
-            Entity e = makeExplosive(
-                origin,
-                (mouse - origin) * static_cast<double>(p.throw_speed),
-                ExplosiveComponent{3.0f},
-                true, true, false, true);
-            world.addEntity(std::move(e));
-            return true;
+            return spawnFromPrefab(
+                world, p.projectile, origin,
+                (mouse - origin) * static_cast<double>(p.throw_speed));
         }
 
         case Pattern::Column:
         {
-            // StabShot: vertical stripe of stationary small explosives.
             const int column_x = static_cast<int>(std::floor(mouse.x));
             const uint32_t height = (p.count == 0) ? 1 : p.count;
-
             for (uint32_t y = 1; y <= height; ++y)
             {
-                Entity e = makeExplosive(
+                spawnFromPrefab(
+                    world, p.projectile,
                     {static_cast<double>(column_x) + 0.5,
                      static_cast<double>(y) + 0.5},
-                    {0.0, 0.0},
-                    ExplosiveComponent{3.0f, true, true, 0.05f, 0.0f},
-                    true, false, true, false);
-                world.addEntity(std::move(e));
+                    {0.0, 0.0});
             }
             return true;
         }
 
         case Pattern::Arc:
         {
-            // NukeShot: fan out horizontally from mouse+height_offset.
             const sf::Vector2<double> spawn_pos = {
                 std::floor(mouse.x) + 0.5,
                 std::floor(mouse.y) + 0.5 + static_cast<double>(p.height_offset)
             };
             const uint32_t count = (p.count == 0) ? 1 : p.count;
-
             for (uint32_t i = 0; i < count; ++i)
             {
                 const float t = (count == 1)
                     ? 0.f
                     : (static_cast<float>(i) / static_cast<float>(count - 1)) * 2.f - 1.f;
                 const double vx = static_cast<double>(t) * static_cast<double>(p.spread);
-
-                Entity e = makeExplosive(
-                    spawn_pos,
-                    {vx, 0.0},
-                    ExplosiveComponent{3.0f},
-                    false, true, false, true);
-                world.addEntity(std::move(e));
+                spawnFromPrefab(world, p.projectile, spawn_pos, {vx, 0.0});
             }
             return true;
         }

@@ -2,6 +2,7 @@
 #define BEHAVIOR_HPP
 
 #include <cstdint>
+#include <string>
 #include <variant>
 
 // Forward decls — Behavior.hpp is included by Item.hpp, so pulling in
@@ -32,12 +33,17 @@ struct ThrowProjectileParams
         Arc      // many entities at mouse.xy+offset, horizontal spread (NukeShot)
     };
 
-    PrefabID projectile;        // entity type the dispatcher spawns
-    Pattern  pattern;
-    uint32_t count          = 1;    // Single: 1; Column: column height; Arc: entity count
-    float    throw_speed    = 0.f;  // Single: velocity multiplier toward mouse
-    float    spread         = 0.f;  // Arc: horizontal velocity magnitude
-    float    height_offset  = 0.f;  // Arc: Y added to mouse before spawning
+    // RegistryKey of the prefab the dispatcher clones at spawn time —
+    // e.g. "blockbit:dynamite" or "ruby_mod:fireball". The prefab supplies
+    // every component (render, explosive, physics, …); the dispatcher only
+    // injects position and velocity, so changing this field actually
+    // changes what gets thrown.
+    std::string projectile;
+    Pattern     pattern;
+    uint32_t    count         = 1;   // Single: 1; Column: column height; Arc: entity count
+    float       throw_speed   = 0.f; // Single: velocity multiplier toward mouse
+    float       spread        = 0.f; // Arc: horizontal velocity magnitude
+    float       height_offset = 0.f; // Arc: Y added to mouse before spawning
 };
 
 struct FluidBucketParams

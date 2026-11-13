@@ -1,11 +1,8 @@
 {
     "behavior": {
         "params": {
-            "count": 1,
-            "height_offset": 0.0,
             "pattern": "single",
-            "projectile": "dynamite",
-            "spread": 0.0,
+            "projectile": "blockbit:dynamite",
             "throw_speed": 3.0
         },
         "type": "throw_projectile"

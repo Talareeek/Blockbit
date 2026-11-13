@@ -21,11 +21,26 @@ namespace blockbit_callbacks
         return id == BlockID::Sand || id == BlockID::Gravel;
     }
 
+    // Pulls `fall_delay_ticks` out of the block's GravityBlock behavior if
+    // one is attached; otherwise falls back to the historical 2-tick delay.
+    uint32_t falling_delay_for(BlockUpdateContext& ctx, sf::Vector2i pos)
+    {
+        const auto block = ctx.world.getBlock(pos.x, pos.y);
+        if (auto it = blockDatabase.find(block.id); it != blockDatabase.end())
+        {
+            const auto& bh = it->second.behavior;
+            if (bh.type == BlockBehaviorType::GravityBlock)
+                if (const auto* p = std::get_if<GravityBlockParams>(&bh.params))
+                    if (p->fall_delay_ticks > 0) return p->fall_delay_ticks;
+        }
+        return 2;
+    }
+
     void falling_try_schedule_fall(BlockUpdateContext& ctx, sf::Vector2i pos)
     {
         Block below = ctx.world.getBlock(pos.x, pos.y - 1);
         if (!falling_block_can_leave_into(below)) return;
-        ctx.pipeline.scheduleTick(pos, 2);  // 2-tick delay matches vanilla sand
+        ctx.pipeline.scheduleTick(pos, static_cast<int>(falling_delay_for(ctx, pos)));
     }
 
     void falling_on_place(BlockUpdateContext& ctx, sf::Vector2i pos)
@@ -67,7 +82,25 @@ namespace blockbit_callbacks
     // Delay between a water cell being disturbed and its flow logic firing.
     // 30 server ticks @ 120 TPS = 0.25 s, which lets a vertical fall tick down
     // at a visible pace instead of teleporting to the floor in a single frame.
+    // Used as the fallback when a fluid's CascadeFluid behavior doesn't set
+    // tick_delay_ticks.
     constexpr int WATER_TICK_DELAY = 30;
+
+    // Reads tick_delay_ticks from a CascadeFluid behavior attached to the
+    // block at `pos`. Returns `fallback` for non-fluid blocks or when the
+    // behavior leaves the field at zero.
+    int cascade_delay_for(BlockUpdateContext& ctx, sf::Vector2i pos, int fallback)
+    {
+        const auto block = ctx.world.getBlock(pos.x, pos.y);
+        if (auto it = blockDatabase.find(block.id); it != blockDatabase.end())
+        {
+            const auto& bh = it->second.behavior;
+            if (bh.type == BlockBehaviorType::CascadeFluid)
+                if (const auto* p = std::get_if<CascadeFluidParams>(&bh.params))
+                    if (p->tick_delay_ticks > 0) return static_cast<int>(p->tick_delay_ticks);
+        }
+        return fallback;
+    }
 
     bool water_cell_passable(Block b)
     {
@@ -94,7 +127,7 @@ namespace blockbit_callbacks
     {
         if (ctx.world.getBlock(pos.x, pos.y).id != BlockID::Water) return;
         if (ctx.pipeline.hasScheduledTick(pos)) return;
-        ctx.pipeline.scheduleTick(pos, WATER_TICK_DELAY);
+        ctx.pipeline.scheduleTick(pos, cascade_delay_for(ctx, pos, WATER_TICK_DELAY));
     }
 
     void water_on_place(BlockUpdateContext& ctx, sf::Vector2i pos)
@@ -192,15 +225,31 @@ namespace blockbit_callbacks
             ++height;
         }
 
-        if (height >= CACTUS_MAX_HEIGHT) return;
+        // Read max_height and grows_as from the block's PlantGrowth behavior
+        // so modpack-defined plants with different caps / species go through
+        // the same growth pipeline.
+        int max_height = CACTUS_MAX_HEIGHT;
+        BlockID grown  = BlockID::Cactus;
+        if (auto it = blockDatabase.find(self.id); it != blockDatabase.end())
+        {
+            const auto& bh = it->second.behavior;
+            if (bh.type == BlockBehaviorType::PlantGrowth)
+                if (const auto* p = std::get_if<PlantGrowthParams>(&bh.params))
+                {
+                    if (p->max_height > 0) max_height = p->max_height;
+                    if (p->grows_as != BlockID{}) grown = p->grows_as;
+                }
+        }
+
+        if (height >= max_height) return;
 
         Block above = ctx.world.getBlock(pos.x, pos.y + 1);
         if (above.id != BlockID::Air) return;
 
         // Suppress NC so neighbouring sand/water don't fire logical updates for
         // what is logically a self-contained growth step.
-        ctx.pipeline.setBlockSuppressNC(pos, {BlockID::Cactus, CactusState{false}.pack()});
-        ctx.pipeline.setBlockSuppressNC({pos.x, pos.y + 1}, {BlockID::Cactus, CactusState{true}.pack()});
+        ctx.pipeline.setBlockSuppressNC(pos, {grown, CactusState{false}.pack()});
+        ctx.pipeline.setBlockSuppressNC({pos.x, pos.y + 1}, {grown, CactusState{true}.pack()});
     }
 
     // Lava uses the same cascade as water but ticks three times slower and
@@ -230,7 +279,7 @@ namespace blockbit_callbacks
     {
         if (ctx.world.getBlock(pos.x, pos.y).id != BlockID::Lava) return;
         if (ctx.pipeline.hasScheduledTick(pos)) return;
-        ctx.pipeline.scheduleTick(pos, LAVA_TICK_DELAY);
+        ctx.pipeline.scheduleTick(pos, cascade_delay_for(ctx, pos, LAVA_TICK_DELAY));
     }
 
     void lava_on_place(BlockUpdateContext& ctx, sf::Vector2i pos)
