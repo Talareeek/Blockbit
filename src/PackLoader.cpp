@@ -511,10 +511,11 @@ LoadResult loadPack(const std::filesystem::path& dir,
     try
     {
         auto j = json::parse(raw);
-        result.manifest.id      = j.value("id", std::string{});
-        result.manifest.name    = j.value("name", std::string{});
-        result.manifest.version = j.value("version", std::string{});
-        result.manifest.format  = j.value("format", 1u);
+        result.manifest.id          = j.value("id", std::string{});
+        result.manifest.name        = j.value("name", std::string{});
+        result.manifest.version     = j.value("version", std::string{});
+        result.manifest.description = j.value("description", std::string{});
+        result.manifest.format      = j.value("format", 1u);
         if (j.contains("depends") && j["depends"].is_array())
         {
             for (const auto& d : j["depends"])

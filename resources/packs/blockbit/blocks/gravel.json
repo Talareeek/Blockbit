@@ -6,33 +6,22 @@
         },
         "type": "gravity_block"
     },
-    "breakable": true,
     "callbacks": "falling",
-    "drag": 1.0,
     "drop": {
         "alternative_chance": 0.10000000149011612,
         "alternative_item": "blockbit:flint",
         "always": true,
-        "item": "blockbit:gravel",
-        "max": 1,
-        "min": 1
+        "item": "blockbit:gravel"
     },
     "hardness": 0.6000000238418579,
     "id": "blockbit:gravel",
     "legacy_id": 34,
-    "lets_light": false,
-    "light_emission": 0,
-    "light_opacity": 15,
-    "liquid": false,
     "mining": {
         "level": 1,
         "resistance": 2,
         "tool": "shovel"
     },
-    "pp_accept_mask": 15,
-    "random_tickable": false,
     "render": {
-        "profile": "default",
         "texture": "gravel"
     },
     "solid": true,

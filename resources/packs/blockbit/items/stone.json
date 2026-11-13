@@ -1,11 +1,8 @@
 {
-    "attack_delay": 0.25,
     "category": "block",
     "id": "blockbit:stone",
-    "is_bottle": false,
     "legacy_id": 1,
     "max_stack_size": 64,
     "name": "Stone",
-    "rarity": "common",
     "texture": "stone"
 }

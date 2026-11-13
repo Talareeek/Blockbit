@@ -1,8 +1,5 @@
 {
-    "attack_delay": 0.25,
-    "category": "misc",
     "id": "blockbit:diamond",
-    "is_bottle": false,
     "legacy_id": 22,
     "max_stack_size": 64,
     "name": "Diamond",

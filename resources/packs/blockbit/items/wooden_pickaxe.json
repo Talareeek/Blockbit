@@ -1,13 +1,10 @@
 {
-    "attack_delay": 0.25,
     "category": "tool",
     "id": "blockbit:wooden_pickaxe",
-    "is_bottle": false,
     "legacy_id": 39,
     "max_durability": 59,
     "max_stack_size": 1,
     "name": "Wooden Pickaxe",
-    "rarity": "common",
     "texture": "wooden_pickaxe",
     "tool": {
         "level": 1,

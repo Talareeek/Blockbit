@@ -1,11 +1,8 @@
 {
-    "attack_delay": 0.25,
     "category": "block",
     "id": "blockbit:bedrock",
-    "is_bottle": false,
     "legacy_id": 6,
     "max_stack_size": 64,
     "name": "Bedrock",
-    "rarity": "common",
     "texture": "bedrock"
 }

@@ -1,5 +1,4 @@
 {
-    "attack_delay": 0.25,
     "behavior": {
         "params": {
             "count": 1,
@@ -11,9 +10,7 @@
         },
         "type": "throw_projectile"
     },
-    "category": "misc",
     "id": "blockbit:dynamite",
-    "is_bottle": false,
     "legacy_id": 7,
     "max_stack_size": 16,
     "name": "Dynamite",

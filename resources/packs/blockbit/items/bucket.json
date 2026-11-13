@@ -1,5 +1,4 @@
 {
-    "attack_delay": 0.25,
     "behavior": {
         "params": {
             "empty_variant": "blockbit:bucket",
@@ -9,9 +8,7 @@
         },
         "type": "fluid_bucket"
     },
-    "category": "misc",
     "id": "blockbit:bucket",
-    "is_bottle": false,
     "legacy_id": 30,
     "max_stack_size": 1,
     "name": "Bucket",

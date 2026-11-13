@@ -1,31 +1,16 @@
 {
-    "breakable": true,
-    "callbacks": "none",
-    "drag": 1.0,
     "drop": {
-        "alternative_chance": 0.0,
-        "alternative_item": "blockbit:air",
-        "always": false,
-        "item": "blockbit:iron_block",
-        "max": 1,
-        "min": 1
+        "item": "blockbit:iron_block"
     },
     "hardness": 5.0,
     "id": "blockbit:iron_block",
     "legacy_id": 14,
-    "lets_light": false,
-    "light_emission": 0,
-    "light_opacity": 15,
-    "liquid": false,
     "mining": {
         "level": 2,
         "resistance": 6,
         "tool": "pickaxe"
     },
-    "pp_accept_mask": 15,
-    "random_tickable": false,
     "render": {
-        "profile": "default",
         "texture": "iron_block"
     },
     "solid": true,

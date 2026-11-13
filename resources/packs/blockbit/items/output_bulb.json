@@ -1,11 +1,8 @@
 {
-    "attack_delay": 0.25,
     "category": "block",
     "id": "blockbit:output_bulb",
-    "is_bottle": false,
     "legacy_id": 71,
     "max_stack_size": 64,
     "name": "Output Bulb",
-    "rarity": "common",
     "texture": "output_bulb"
 }

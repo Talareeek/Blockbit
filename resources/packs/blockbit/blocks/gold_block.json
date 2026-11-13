@@ -1,31 +1,16 @@
 {
-    "breakable": true,
-    "callbacks": "none",
-    "drag": 1.0,
     "drop": {
-        "alternative_chance": 0.0,
-        "alternative_item": "blockbit:air",
-        "always": false,
-        "item": "blockbit:gold_block",
-        "max": 1,
-        "min": 1
+        "item": "blockbit:gold_block"
     },
     "hardness": 4.0,
     "id": "blockbit:gold_block",
     "legacy_id": 15,
-    "lets_light": false,
-    "light_emission": 0,
-    "light_opacity": 15,
-    "liquid": false,
     "mining": {
         "level": 4,
         "resistance": 6,
         "tool": "pickaxe"
     },
-    "pp_accept_mask": 15,
-    "random_tickable": false,
     "render": {
-        "profile": "default",
         "texture": "gold_block"
     },
     "solid": true,

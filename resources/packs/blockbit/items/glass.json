@@ -1,11 +1,8 @@
 {
-    "attack_delay": 0.25,
     "category": "block",
     "id": "blockbit:glass",
-    "is_bottle": false,
     "legacy_id": 70,
     "max_stack_size": 64,
     "name": "Glass",
-    "rarity": "common",
     "texture": "glass"
 }

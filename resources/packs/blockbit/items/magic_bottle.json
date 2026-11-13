@@ -1,5 +1,4 @@
 {
-    "attack_delay": 0.25,
     "behavior": {
         "params": {},
         "type": "consume_effect"

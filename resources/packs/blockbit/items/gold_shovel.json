@@ -1,13 +1,10 @@
 {
-    "attack_delay": 0.25,
     "category": "tool",
     "id": "blockbit:gold_shovel",
-    "is_bottle": false,
     "legacy_id": 54,
     "max_durability": 32,
     "max_stack_size": 1,
     "name": "Gold Shovel",
-    "rarity": "common",
     "texture": "gold_shovel",
     "tool": {
         "level": 3,

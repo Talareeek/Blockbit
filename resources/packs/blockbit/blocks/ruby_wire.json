@@ -1,33 +1,20 @@
 {
-    "breakable": true,
-    "callbacks": "none",
-    "drag": 1.0,
     "drop": {
-        "alternative_chance": 0.0,
-        "alternative_item": "blockbit:air",
         "always": true,
-        "item": "blockbit:ruby_wire",
-        "max": 1,
-        "min": 1
+        "item": "blockbit:ruby_wire"
     },
     "hardness": 0.20000000298023224,
     "id": "blockbit:ruby_wire",
     "legacy_id": 42,
     "lets_light": true,
-    "light_emission": 0,
     "light_opacity": 1,
-    "liquid": false,
     "mining": {
         "level": 0,
         "resistance": 1,
         "tool": "none"
     },
-    "pp_accept_mask": 15,
-    "random_tickable": false,
     "render": {
         "profile": "connected",
         "texture": "ruby_wire"
-    },
-    "solid": false,
-    "transparent": true
+    }
 }

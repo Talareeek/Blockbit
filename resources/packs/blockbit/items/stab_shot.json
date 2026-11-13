@@ -1,5 +1,4 @@
 {
-    "attack_delay": 0.25,
     "behavior": {
         "params": {
             "count": 255,
@@ -11,9 +10,7 @@
         },
         "type": "throw_projectile"
     },
-    "category": "misc",
     "id": "blockbit:stab_shot",
-    "is_bottle": false,
     "legacy_id": 8,
     "max_stack_size": 16,
     "name": "Stab Shot",

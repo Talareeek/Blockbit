@@ -1,31 +1,17 @@
 {
-    "breakable": true,
-    "callbacks": "none",
-    "drag": 1.0,
     "drop": {
-        "alternative_chance": 0.0,
-        "alternative_item": "blockbit:air",
         "always": true,
-        "item": "blockbit:birch_log",
-        "max": 1,
-        "min": 1
+        "item": "blockbit:birch_log"
     },
     "hardness": 2.0,
     "id": "blockbit:birch_log",
     "legacy_id": 21,
-    "lets_light": false,
-    "light_emission": 0,
-    "light_opacity": 15,
-    "liquid": false,
     "mining": {
         "level": 1,
         "resistance": 5,
         "tool": "axe"
     },
-    "pp_accept_mask": 15,
-    "random_tickable": false,
     "render": {
-        "profile": "default",
         "texture": "birch_log"
     },
     "solid": true,

@@ -1,5 +1,4 @@
 {
-    "attack_delay": 0.25,
     "behavior": {
         "params": {
             "can_place_fire": false,
@@ -7,12 +6,9 @@
         },
         "type": "ignite"
     },
-    "category": "misc",
     "id": "blockbit:flint",
-    "is_bottle": false,
     "legacy_id": 38,
     "max_stack_size": 64,
     "name": "Flint",
-    "rarity": "common",
     "texture": "flint"
 }

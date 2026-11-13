@@ -1,11 +1,8 @@
 {
-    "attack_delay": 0.25,
     "category": "block",
     "id": "blockbit:obsidian",
-    "is_bottle": false,
     "legacy_id": 5,
     "max_stack_size": 64,
     "name": "Obsidian",
-    "rarity": "common",
     "texture": "obsidian"
 }

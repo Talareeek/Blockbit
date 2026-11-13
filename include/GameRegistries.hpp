@@ -17,6 +17,7 @@ struct LoadedPackSummary
 {
     std::string id;
     std::string version;
+    std::string description;
     uint64_t    hash = 0;
     // Absolute path to <pack>/icon.png if present; empty when the pack
     // didn't ship an icon. UI layers load sf::Texture lazily from this

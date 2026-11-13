@@ -434,7 +434,7 @@ void MenuGameState::renderPackWindow()
                 else icon = &it->second;
             }
 
-            const float row_h = 56.0f;
+            const float row_h = p.description.empty() ? 60.0f : 90.0f;
             ImGui::BeginChild(("##pack_" + p.id).c_str(),
                               ImVec2(0, row_h), true, ImGuiWindowFlags_NoScrollbar);
             if (icon)
@@ -447,9 +447,10 @@ void MenuGameState::renderPackWindow()
             }
             ImGui::SameLine();
             ImGui::BeginGroup();
-            ImGui::Text("%s", p.id.c_str());
-            ImGui::Text("v%s", p.version.c_str());
-            ImGui::Text("hash: %016llx", static_cast<unsigned long long>(p.hash));
+            ImGui::Text("%s  v%s", p.id.c_str(), p.version.c_str());
+            if (!p.description.empty())
+                ImGui::TextWrapped("%s", p.description.c_str());
+            ImGui::TextDisabled("hash: %016llx", static_cast<unsigned long long>(p.hash));
             ImGui::EndGroup();
             ImGui::EndChild();
         }

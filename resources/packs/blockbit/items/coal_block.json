@@ -1,11 +1,8 @@
 {
-    "attack_delay": 0.25,
     "category": "block",
     "id": "blockbit:coal_block",
-    "is_bottle": false,
     "legacy_id": 18,
     "max_stack_size": 64,
     "name": "Coal Block",
-    "rarity": "common",
     "texture": "coal_block"
 }

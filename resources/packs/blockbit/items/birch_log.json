@@ -1,11 +1,8 @@
 {
-    "attack_delay": 0.25,
     "category": "block",
     "id": "blockbit:birch_log",
-    "is_bottle": false,
     "legacy_id": 26,
     "max_stack_size": 64,
     "name": "Birch Log",
-    "rarity": "common",
     "texture": "birch_log"
 }

@@ -1,11 +1,8 @@
 {
-    "attack_delay": 0.25,
     "category": "block",
     "id": "blockbit:bricks",
-    "is_bottle": false,
     "legacy_id": 60,
     "max_stack_size": 64,
     "name": "Bricks",
-    "rarity": "common",
     "texture": "bricks"
 }

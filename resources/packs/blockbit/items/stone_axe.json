@@ -3,12 +3,10 @@
     "category": "tool",
     "damage": 7,
     "id": "blockbit:stone_axe",
-    "is_bottle": false,
     "legacy_id": 46,
     "max_durability": 131,
     "max_stack_size": 1,
     "name": "Stone Axe",
-    "rarity": "common",
     "texture": "stone_axe",
     "tool": {
         "level": 2,

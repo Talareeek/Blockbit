@@ -310,7 +310,8 @@ void registerVanillaContent()
 
     installPrefabs("resources/packs/blockbit", vanilla.manifest.id);
     {
-        LoadedPackSummary s{vanilla.manifest.id, vanilla.manifest.version, vanilla.hash, {}};
+        LoadedPackSummary s{vanilla.manifest.id, vanilla.manifest.version,
+                            vanilla.manifest.description, vanilla.hash, {}};
         const std::filesystem::path icon = std::filesystem::path("resources/packs/blockbit") / "icon.png";
         if (std::filesystem::exists(icon)) s.icon_path = std::filesystem::absolute(icon).string();
         reg.loaded_packs.push_back(std::move(s));
@@ -328,7 +329,9 @@ void registerVanillaContent()
             std::cout << "[Pack] '" << mod.manifest.id
                       << "' contributed " << added << " spawn entr(y|ies)\n";
         }
-        LoadedPackSummary s{mod.manifest.id, mod.manifest.version, mod.hash, {}};
+
+        LoadedPackSummary s{mod.manifest.id, mod.manifest.version,
+                            mod.manifest.description, mod.hash, {}};
         const std::filesystem::path icon = packs_root / mod.manifest.id / "icon.png";
         if (std::filesystem::exists(icon)) s.icon_path = std::filesystem::absolute(icon).string();
         reg.loaded_packs.push_back(std::move(s));

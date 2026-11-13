@@ -1,13 +1,10 @@
 {
-    "attack_delay": 0.25,
     "category": "tool",
     "id": "blockbit:iron_shovel",
-    "is_bottle": false,
     "legacy_id": 53,
     "max_durability": 250,
     "max_stack_size": 1,
     "name": "Iron Shovel",
-    "rarity": "common",
     "texture": "iron_shovel",
     "tool": {
         "level": 4,

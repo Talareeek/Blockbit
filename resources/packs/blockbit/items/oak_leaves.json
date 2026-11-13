@@ -1,11 +1,8 @@
 {
-    "attack_delay": 0.25,
     "category": "block",
     "id": "blockbit:oak_leaves",
-    "is_bottle": false,
     "legacy_id": 24,
     "max_stack_size": 64,
     "name": "Oak Leaves",
-    "rarity": "common",
     "texture": "oak_leaves"
 }

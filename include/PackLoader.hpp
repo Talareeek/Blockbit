@@ -22,11 +22,12 @@ namespace PackLoader
 
 struct PackManifest
 {
-    std::string              id;        // "blockbit"
-    std::string              name;      // display
-    std::string              version;   // semver-ish
+    std::string              id;          // "blockbit"
+    std::string              name;        // display
+    std::string              version;     // semver-ish
+    std::string              description; // free-form blurb for the menu
     uint32_t                 format = 1;
-    std::vector<std::string> depends;   // other pack ids this one needs before load
+    std::vector<std::string> depends;     // other pack ids this one needs before load
 };
 
 // FNV1a-64 fingerprint of pack.json + every content file (sorted by path).

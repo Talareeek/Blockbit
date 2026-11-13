@@ -1,6 +1,7 @@
 {
-    "format": 1,
     "id": "blockbit",
     "name": "Blockbit",
-    "version": "0.1.0"
+    "version": "0.1.0",
+    "description": "The vanilla Blockbit content pack: blocks, items, prefabs, textures and natural-spawn rules the base game ships with.",
+    "format": 1
 }

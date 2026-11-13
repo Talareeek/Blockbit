@@ -1,25 +1,15 @@
 {
-    "breakable": true,
-    "callbacks": "none",
-    "drag": 1.0,
-    "hardness": 0.0,
     "id": "blockbit:fire",
     "legacy_id": 26,
     "lets_light": true,
     "light_emission": 15,
     "light_opacity": 1,
-    "liquid": false,
     "mining": {
         "level": 1,
         "resistance": 0,
         "tool": "axe"
     },
-    "pp_accept_mask": 15,
-    "random_tickable": false,
     "render": {
-        "profile": "default",
         "texture": "fire"
-    },
-    "solid": false,
-    "transparent": true
+    }
 }

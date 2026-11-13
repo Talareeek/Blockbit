@@ -1,29 +1,16 @@
 {
-    "breakable": true,
-    "callbacks": "none",
-    "drag": 1.0,
     "drop": {
-        "alternative_chance": 0.0,
-        "alternative_item": "blockbit:air",
         "always": true,
-        "item": "blockbit:output_bulb",
-        "max": 1,
-        "min": 1
+        "item": "blockbit:output_bulb"
     },
     "hardness": 0.30000001192092896,
     "id": "blockbit:output_bulb",
     "legacy_id": 41,
-    "lets_light": false,
-    "light_emission": 0,
-    "light_opacity": 15,
-    "liquid": false,
     "mining": {
         "level": 1,
         "resistance": 1,
         "tool": "pickaxe"
     },
-    "pp_accept_mask": 15,
-    "random_tickable": false,
     "render": {
         "profile": "output_bulb",
         "texture": "output_bulb"

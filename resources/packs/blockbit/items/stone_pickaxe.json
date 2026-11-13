@@ -1,13 +1,10 @@
 {
-    "attack_delay": 0.25,
     "category": "tool",
     "id": "blockbit:stone_pickaxe",
-    "is_bottle": false,
     "legacy_id": 40,
     "max_durability": 131,
     "max_stack_size": 1,
     "name": "Stone Pickaxe",
-    "rarity": "common",
     "texture": "stone_pickaxe",
     "tool": {
         "level": 2,

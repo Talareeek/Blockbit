@@ -6,24 +6,16 @@
         },
         "type": "plant_growth"
     },
-    "breakable": true,
     "callbacks": "cactus",
-    "drag": 1.0,
     "drop": {
-        "alternative_chance": 0.0,
-        "alternative_item": "blockbit:air",
         "always": true,
-        "item": "blockbit:cactus",
-        "max": 1,
-        "min": 1
+        "item": "blockbit:cactus"
     },
     "hardness": 0.4000000059604645,
     "id": "blockbit:cactus",
     "legacy_id": 35,
     "lets_light": true,
-    "light_emission": 0,
     "light_opacity": 2,
-    "liquid": false,
     "mining": {
         "level": 0,
         "resistance": 1,
@@ -39,6 +31,5 @@
     "support_blocks_below": [
         "blockbit:sand",
         "blockbit:cactus"
-    ],
-    "transparent": true
+    ]
 }

@@ -1,11 +1,7 @@
 {
-    "attack_delay": 0.25,
-    "category": "misc",
     "id": "blockbit:iron_ingot",
-    "is_bottle": false,
     "legacy_id": 62,
     "max_stack_size": 64,
     "name": "Iron Ingot",
-    "rarity": "common",
     "texture": "iron_ingot"
 }
