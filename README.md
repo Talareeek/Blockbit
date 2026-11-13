@@ -1,6 +1,5 @@
-![Blockbit Logo](resources/textures/blockbit_logo.png)
-
-![Screenshoot](resources/textures/loading_screen.png)
+<img width="100%" alt="blockbit logo" src="resources/textures/blockbit_logo.png">
+<img width="100%" alt="screenshot" src="https://github.com/user-attachments/assets/cfc445bf-3eff-4796-8aa1-a91dae45f134" />
 
 ---
 
