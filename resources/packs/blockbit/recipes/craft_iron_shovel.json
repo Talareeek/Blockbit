@@ -1,0 +1,19 @@
+{
+    "id": "blockbit:craft_iron_shovel",
+    "ingredients": [
+        {
+            "item": "blockbit:iron_ingot",
+            "quantity": 1
+        },
+        {
+            "item": "blockbit:stick",
+            "quantity": 2
+        }
+    ],
+    "output": {
+        "item": "blockbit:iron_shovel",
+        "quantity": 1
+    },
+    "requires_crafting_table": true,
+    "type": "crafting"
+}

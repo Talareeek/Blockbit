@@ -174,62 +174,8 @@ ItemStack Inventory::removeItemWithLeftover(ItemID itemID, uint32_t quantity)
     return {itemID, quantity};
 }
 
-std::unordered_map<ItemStack, Recipe> recipes
-{
-    {{.itemID = ItemID::Oak_Planks, .quantity = 4}, {{{ItemID::Oak_Log, 1}}, false}},
-    {{.itemID = ItemID::Stick, .quantity = 4}, {{{ItemID::Oak_Planks, 2}}, false}},
-    {{.itemID = ItemID::Workbench, .quantity = 1}, {{{ItemID::Oak_Planks, 4}}, false}},
-    {{.itemID = ItemID::Furnace,   .quantity = 1}, {{{ItemID::Cobblestone, 8}}, true}},
-
-    {{.itemID = ItemID::Wooden_Pickaxe,  .quantity = 1}, {{{ItemID::Oak_Planks, 3}, {ItemID::Stick, 2}}, true}},
-    {{.itemID = ItemID::Stone_Pickaxe,   .quantity = 1}, {{{ItemID::Cobblestone, 3}, {ItemID::Stick, 2}}, true}},
-    {{.itemID = ItemID::Iron_Pickaxe,    .quantity = 1}, {{{ItemID::Iron_Ingot, 3}, {ItemID::Stick, 2}}, true}},
-    {{.itemID = ItemID::Gold_Pickaxe,    .quantity = 1}, {{{ItemID::Gold_Ingot, 3}, {ItemID::Stick, 2}}, true}},
-    {{.itemID = ItemID::Diamond_Pickaxe, .quantity = 1}, {{{ItemID::Diamond, 3}, {ItemID::Stick, 2}}, true}},
-    {{.itemID = ItemID::Ruby_Pickaxe,    .quantity = 1}, {{{ItemID::Ruby, 3}, {ItemID::Stick, 2}}, true}},
-
-    {{.itemID = ItemID::Wooden_Axe,  .quantity = 1}, {{{ItemID::Oak_Planks, 3}, {ItemID::Stick, 2}}, true}},
-    {{.itemID = ItemID::Stone_Axe,   .quantity = 1}, {{{ItemID::Cobblestone, 3}, {ItemID::Stick, 2}}, true}},
-    {{.itemID = ItemID::Iron_Axe,    .quantity = 1}, {{{ItemID::Iron_Ingot, 3}, {ItemID::Stick, 2}}, true}},
-    {{.itemID = ItemID::Gold_Axe,    .quantity = 1}, {{{ItemID::Gold_Ingot, 3}, {ItemID::Stick, 2}}, true}},
-    {{.itemID = ItemID::Diamond_Axe, .quantity = 1}, {{{ItemID::Diamond, 3}, {ItemID::Stick, 2}}, true}},
-    {{.itemID = ItemID::Ruby_Axe,    .quantity = 1}, {{{ItemID::Ruby, 3}, {ItemID::Stick, 2}}, true}},
-
-    {{.itemID = ItemID::Wooden_Shovel,  .quantity = 1}, {{{ItemID::Oak_Planks, 1}, {ItemID::Stick, 2}}, true}},
-    {{.itemID = ItemID::Stone_Shovel,   .quantity = 1}, {{{ItemID::Cobblestone, 1}, {ItemID::Stick, 2}}, true}},
-    {{.itemID = ItemID::Iron_Shovel,    .quantity = 1}, {{{ItemID::Iron_Ingot, 1}, {ItemID::Stick, 2}}, true}},
-    {{.itemID = ItemID::Gold_Shovel,    .quantity = 1}, {{{ItemID::Gold_Ingot, 1}, {ItemID::Stick, 2}}, true}},
-    {{.itemID = ItemID::Diamond_Shovel, .quantity = 1}, {{{ItemID::Diamond, 1}, {ItemID::Stick, 2}}, true}},
-    {{.itemID = ItemID::Ruby_Shovel,    .quantity = 1}, {{{ItemID::Ruby, 1}, {ItemID::Stick, 2}}, true}},
-
-    {{.itemID = ItemID::Iron_Block, .quantity = 1}, {{{ItemID::Iron_Ingot, 9}}, true}},
-    {{.itemID = ItemID::Gold_Block, .quantity = 1}, {{{ItemID::Gold_Ingot, 9}}, true}},
-    {{.itemID = ItemID::Ruby_Block, .quantity = 1}, {{{ItemID::Ruby, 9}}, true}},
-    {{.itemID = ItemID::Coal_Block, .quantity = 1}, {{{ItemID::Coal, 9}}, true}},
-
-    {{.itemID = ItemID::Iron_Ingot, .quantity = 9}, {{{ItemID::Iron_Block, 1}}, true}},
-    {{.itemID = ItemID::Gold_Ingot, .quantity = 9}, {{{ItemID::Gold_Block, 1}}, true}},
-    {{.itemID = ItemID::Ruby,       .quantity = 9}, {{{ItemID::Ruby_Block, 1}}, true}},
-    {{.itemID = ItemID::Coal,       .quantity = 9}, {{{ItemID::Coal_Block, 1}}, true}},
-};
-
-std::unordered_map<ItemID, SmeltRecipe> smeltingRecipes
-{
-    {ItemID::Cobblestone, {ItemID::Stone,      10.0f}},
-    {ItemID::Raw_Iron,    {ItemID::Iron_Ingot, 10.0f}},
-    {ItemID::Raw_Gold,    {ItemID::Gold_Ingot, 10.0f}},
-};
-
-std::unordered_map<ItemID, float> fuelBurnTimes
-{
-    {ItemID::Coal,       80.0f},
-    {ItemID::Oak_Log,       15.0f},
-    {ItemID::Oak_Planks,    15.0f},
-    {ItemID::Oak_Leaves,     1.0f},
-    {ItemID::Birch_Log,     15.0f},
-    {ItemID::Birch_Leaves,   1.0f},
-    {ItemID::Spruce_Log,    15.0f},
-    {ItemID::Spruce_Leaves,  1.0f},
-    {ItemID::Woodcutter, 15.0f},
-    {ItemID::Stick,       5.0f},
-};
+// Populated at startup by PackLoader::scanPackRecipes from
+// resources/packs/blockbit/recipes/*.json (and any modpack recipes/).
+std::unordered_map<ItemStack, Recipe> recipes;
+std::unordered_map<ItemID, SmeltRecipe> smeltingRecipes;
+std::unordered_map<ItemID, float> fuelBurnTimes;

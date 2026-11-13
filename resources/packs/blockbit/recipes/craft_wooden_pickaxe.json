@@ -1,0 +1,19 @@
+{
+    "id": "blockbit:craft_wooden_pickaxe",
+    "ingredients": [
+        {
+            "item": "blockbit:oak_planks",
+            "quantity": 3
+        },
+        {
+            "item": "blockbit:stick",
+            "quantity": 2
+        }
+    ],
+    "output": {
+        "item": "blockbit:wooden_pickaxe",
+        "quantity": 1
+    },
+    "requires_crafting_table": true,
+    "type": "crafting"
+}

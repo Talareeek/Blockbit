@@ -1,0 +1,7 @@
+{
+    "cook_time": 10.0,
+    "id": "blockbit:smelt_raw_gold",
+    "input": "blockbit:raw_gold",
+    "output": "blockbit:gold_ingot",
+    "type": "smelting"
+}

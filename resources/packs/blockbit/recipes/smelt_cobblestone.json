@@ -1,0 +1,7 @@
+{
+    "cook_time": 10.0,
+    "id": "blockbit:smelt_cobblestone",
+    "input": "blockbit:cobblestone",
+    "output": "blockbit:stone",
+    "type": "smelting"
+}

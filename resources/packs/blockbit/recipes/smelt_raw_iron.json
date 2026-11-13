@@ -1,0 +1,7 @@
+{
+    "cook_time": 10.0,
+    "id": "blockbit:smelt_raw_iron",
+    "input": "blockbit:raw_iron",
+    "output": "blockbit:iron_ingot",
+    "type": "smelting"
+}

@@ -1,0 +1,6 @@
+{
+    "burn_time": 5.0,
+    "id": "blockbit:fuel_stick",
+    "item": "blockbit:stick",
+    "type": "fuel"
+}

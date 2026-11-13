@@ -1,0 +1,6 @@
+{
+    "burn_time": 80.0,
+    "id": "blockbit:fuel_coal",
+    "item": "blockbit:coal",
+    "type": "fuel"
+}

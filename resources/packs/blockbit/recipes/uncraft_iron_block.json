@@ -1,0 +1,15 @@
+{
+    "id": "blockbit:uncraft_iron_block",
+    "ingredients": [
+        {
+            "item": "blockbit:iron_block",
+            "quantity": 1
+        }
+    ],
+    "output": {
+        "item": "blockbit:iron_ingot",
+        "quantity": 9
+    },
+    "requires_crafting_table": true,
+    "type": "crafting"
+}

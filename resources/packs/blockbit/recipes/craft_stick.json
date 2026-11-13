@@ -1,0 +1,14 @@
+{
+    "id": "blockbit:craft_stick",
+    "ingredients": [
+        {
+            "item": "blockbit:oak_planks",
+            "quantity": 2
+        }
+    ],
+    "output": {
+        "item": "blockbit:stick",
+        "quantity": 4
+    },
+    "type": "crafting"
+}

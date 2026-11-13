@@ -1,0 +1,15 @@
+{
+    "id": "blockbit:uncraft_coal_block",
+    "ingredients": [
+        {
+            "item": "blockbit:coal_block",
+            "quantity": 1
+        }
+    ],
+    "output": {
+        "item": "blockbit:coal",
+        "quantity": 9
+    },
+    "requires_crafting_table": true,
+    "type": "crafting"
+}

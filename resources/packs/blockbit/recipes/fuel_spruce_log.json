@@ -1,0 +1,6 @@
+{
+    "burn_time": 15.0,
+    "id": "blockbit:fuel_spruce_log",
+    "item": "blockbit:spruce_log",
+    "type": "fuel"
+}

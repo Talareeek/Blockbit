@@ -1,0 +1,19 @@
+{
+    "id": "blockbit:craft_stone_shovel",
+    "ingredients": [
+        {
+            "item": "blockbit:cobblestone",
+            "quantity": 1
+        },
+        {
+            "item": "blockbit:stick",
+            "quantity": 2
+        }
+    ],
+    "output": {
+        "item": "blockbit:stone_shovel",
+        "quantity": 1
+    },
+    "requires_crafting_table": true,
+    "type": "crafting"
+}

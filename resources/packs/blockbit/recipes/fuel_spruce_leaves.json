@@ -1,0 +1,6 @@
+{
+    "burn_time": 1.0,
+    "id": "blockbit:fuel_spruce_leaves",
+    "item": "blockbit:spruce_leaves",
+    "type": "fuel"
+}

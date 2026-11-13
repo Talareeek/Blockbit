@@ -1,0 +1,15 @@
+{
+    "id": "blockbit:craft_furnace",
+    "ingredients": [
+        {
+            "item": "blockbit:cobblestone",
+            "quantity": 8
+        }
+    ],
+    "output": {
+        "item": "blockbit:furnace",
+        "quantity": 1
+    },
+    "requires_crafting_table": true,
+    "type": "crafting"
+}

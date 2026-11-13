@@ -1,0 +1,15 @@
+{
+    "id": "blockbit:uncraft_gold_block",
+    "ingredients": [
+        {
+            "item": "blockbit:gold_block",
+            "quantity": 1
+        }
+    ],
+    "output": {
+        "item": "blockbit:gold_ingot",
+        "quantity": 9
+    },
+    "requires_crafting_table": true,
+    "type": "crafting"
+}

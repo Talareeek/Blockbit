@@ -95,6 +95,32 @@ struct WorldPackCheck
 // with a reason describing the first mismatch found.
 WorldPackCheck validateWorldPacks(const std::filesystem::path& worldDir);
 
+// Reads one pack's <packDir>/recipes/*.json files and merges them into the
+// global `recipes`, `smeltingRecipes`, `fuelBurnTimes` maps declared in
+// include/Item.hpp. Each file carries a "type" discriminator:
+//
+//   { "id": "blockbit:craft_oak_planks",
+//     "type": "crafting",
+//     "output":       {"item": "blockbit:oak_planks", "quantity": 4},
+//     "ingredients":  [{"item": "blockbit:oak_log", "quantity": 1}],
+//     "requires_crafting_table": false }
+//
+//   { "id": "blockbit:smelt_cobblestone",
+//     "type": "smelting",
+//     "input":  "blockbit:cobblestone",
+//     "output": "blockbit:stone",
+//     "cook_time": 10.0 }
+//
+//   { "id": "blockbit:fuel_coal",
+//     "type": "fuel",
+//     "item":      "blockbit:coal",
+//     "burn_time": 80.0 }
+//
+// Must run after item parsing + resolution so RegistryKey refs land on live
+// ItemIDs. Namespace scoping is enforced on the "id" field.
+std::size_t scanPackRecipes(const std::filesystem::path& packDir,
+                            const std::string&           packNamespace);
+
 // Reads one pack's <packDir>/spawn_rules/*.json files and appends matching
 // SpawnEntry records into the given MobSpawnConfig. Each JSON names one
 // prefab + biome list; the entry is cloned per-biome. Namespace scoping is

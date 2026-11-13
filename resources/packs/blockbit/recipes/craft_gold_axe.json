@@ -1,0 +1,19 @@
+{
+    "id": "blockbit:craft_gold_axe",
+    "ingredients": [
+        {
+            "item": "blockbit:gold_ingot",
+            "quantity": 3
+        },
+        {
+            "item": "blockbit:stick",
+            "quantity": 2
+        }
+    ],
+    "output": {
+        "item": "blockbit:gold_axe",
+        "quantity": 1
+    },
+    "requires_crafting_table": true,
+    "type": "crafting"
+}

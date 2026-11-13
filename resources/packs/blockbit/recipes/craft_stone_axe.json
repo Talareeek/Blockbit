@@ -1,0 +1,19 @@
+{
+    "id": "blockbit:craft_stone_axe",
+    "ingredients": [
+        {
+            "item": "blockbit:cobblestone",
+            "quantity": 3
+        },
+        {
+            "item": "blockbit:stick",
+            "quantity": 2
+        }
+    ],
+    "output": {
+        "item": "blockbit:stone_axe",
+        "quantity": 1
+    },
+    "requires_crafting_table": true,
+    "type": "crafting"
+}

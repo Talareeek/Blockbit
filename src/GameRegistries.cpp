@@ -11,6 +11,7 @@
 #include "../include/AssetManager.hpp"
 #include "../include/ContentProfiles.hpp"
 #include "../include/GameCommon.hpp"
+#include "../include/Item.hpp"
 #include "../include/PackLoader.hpp"
 #include "../include/Prefab.hpp"
 #include "../include/PrefabLoader.hpp"
@@ -342,6 +343,25 @@ void registerVanillaContent()
     // the fully-populated registry.
     resolveRefs(vanilla);
     for (const auto& mod : modpacks) resolveRefs(mod);
+
+    // Recipes rely on item-key resolution, so they load after resolveRefs.
+    recipes.clear();
+    smeltingRecipes.clear();
+    fuelBurnTimes.clear();
+    {
+        const auto added = PackLoader::scanPackRecipes("resources/packs/blockbit",
+                                                       vanilla.manifest.id);
+        if (added > 0)
+            std::cout << "[Pack] 'blockbit' loaded " << added << " recipe(s)\n";
+    }
+    for (const auto& mod : modpacks)
+    {
+        const auto added = PackLoader::scanPackRecipes(packs_root / mod.manifest.id,
+                                                       mod.manifest.id);
+        if (added > 0)
+            std::cout << "[Pack] '" << mod.manifest.id << "' loaded "
+                      << added << " recipe(s)\n";
+    }
 
     std::cout << "[Pack] " << reg.loaded_packs.size() << " packs active — "
               << reg.blocks.size() << " blocks, "

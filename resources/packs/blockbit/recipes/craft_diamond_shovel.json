@@ -1,0 +1,19 @@
+{
+    "id": "blockbit:craft_diamond_shovel",
+    "ingredients": [
+        {
+            "item": "blockbit:diamond",
+            "quantity": 1
+        },
+        {
+            "item": "blockbit:stick",
+            "quantity": 2
+        }
+    ],
+    "output": {
+        "item": "blockbit:diamond_shovel",
+        "quantity": 1
+    },
+    "requires_crafting_table": true,
+    "type": "crafting"
+}

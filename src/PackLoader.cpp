@@ -677,6 +677,115 @@ std::size_t scanPackSpawnRules(const std::filesystem::path& packDir,
     return count;
 }
 
+std::size_t scanPackRecipes(const std::filesystem::path& packDir,
+                            const std::string& packNamespace)
+{
+    const auto dir = packDir / "recipes";
+    if (!std::filesystem::exists(dir)) return 0;
+
+    const auto& item_reg = gameRegistries().items;
+
+    auto resolveItem = [&](const std::string& key,
+                           const std::string& context,
+                           ItemID& out) -> bool
+    {
+        if (auto rid = item_reg.find(key); rid.has_value())
+        {
+            out = static_cast<ItemID>(*rid);
+            return true;
+        }
+        std::cerr << "[Pack] recipe unresolved item '" << key
+                  << "' in " << context << " — skipping\n";
+        return false;
+    };
+
+    std::size_t count = 0;
+    for (const auto& entry : std::filesystem::directory_iterator(dir))
+    {
+        if (!entry.is_regular_file()) continue;
+        if (entry.path().extension() != ".json") continue;
+
+        const std::string raw = readFile(entry.path());
+        if (raw.empty()) continue;
+
+        nlohmann::json j;
+        try { j = nlohmann::json::parse(raw); }
+        catch (const std::exception& e)
+        {
+            std::cerr << "[Pack] recipe parse " << entry.path()
+                      << ": " << e.what() << '\n';
+            continue;
+        }
+
+        // Namespace scope on "id" (optional but recommended).
+        if (j.contains("id") && j["id"].is_string() && !packNamespace.empty())
+        {
+            const std::string prefix = packNamespace + ":";
+            const auto id = j["id"].get<std::string>();
+            if (id.compare(0, prefix.size(), prefix) != 0)
+            {
+                std::cerr << "[Pack] recipe " << entry.path() << " id '"
+                          << id << "' outside namespace '"
+                          << packNamespace << "' — skipped\n";
+                continue;
+            }
+        }
+
+        const std::string ctx = entry.path().string();
+        const std::string type = j.value("type", std::string{});
+        if (type == "crafting")
+        {
+            if (!j.contains("output") || !j["output"].is_object()
+                || !j.contains("ingredients") || !j["ingredients"].is_array())
+            {
+                std::cerr << "[Pack] recipe " << ctx << ": crafting needs output+ingredients\n";
+                continue;
+            }
+            ItemID out_item{};
+            if (!resolveItem(j["output"].value("item", std::string{}), ctx + ".output", out_item))
+                continue;
+            ItemStack output{out_item, j["output"].value("quantity", 1u)};
+
+            Recipe r;
+            r.requires_crafting_table = j.value("requires_crafting_table", false);
+            r.ingredients.reserve(j["ingredients"].size());
+            bool ok = true;
+            for (const auto& ing : j["ingredients"])
+            {
+                ItemID iid{};
+                if (!resolveItem(ing.value("item", std::string{}), ctx + ".ingredient", iid))
+                { ok = false; break; }
+                r.ingredients.push_back({iid, ing.value("quantity", 1u)});
+            }
+            if (!ok) continue;
+
+            recipes[output] = std::move(r);
+            ++count;
+        }
+        else if (type == "smelting")
+        {
+            ItemID in_item{}, out_item{};
+            if (!resolveItem(j.value("input",  std::string{}), ctx + ".input",  in_item))  continue;
+            if (!resolveItem(j.value("output", std::string{}), ctx + ".output", out_item)) continue;
+            smeltingRecipes[in_item] = SmeltRecipe{out_item, j.value("cook_time", 10.0f)};
+            ++count;
+        }
+        else if (type == "fuel")
+        {
+            ItemID iid{};
+            if (!resolveItem(j.value("item", std::string{}), ctx + ".item", iid)) continue;
+            fuelBurnTimes[iid] = j.value("burn_time", 1.0f);
+            ++count;
+        }
+        else
+        {
+            std::cerr << "[Pack] recipe " << ctx
+                      << ": unknown type '" << type << "'\n";
+        }
+    }
+    return count;
+}
+
 std::size_t scanPackTextures(const std::filesystem::path& packDir,
                              const std::string& packNamespace,
                              AssetManager::GameTextureID& next_texture_id)

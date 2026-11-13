@@ -1,0 +1,15 @@
+{
+    "id": "blockbit:uncraft_ruby_block",
+    "ingredients": [
+        {
+            "item": "blockbit:ruby_block",
+            "quantity": 1
+        }
+    ],
+    "output": {
+        "item": "blockbit:ruby",
+        "quantity": 9
+    },
+    "requires_crafting_table": true,
+    "type": "crafting"
+}

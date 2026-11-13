@@ -1,0 +1,14 @@
+{
+    "id": "blockbit:craft_workbench",
+    "ingredients": [
+        {
+            "item": "blockbit:oak_planks",
+            "quantity": 4
+        }
+    ],
+    "output": {
+        "item": "blockbit:workbench",
+        "quantity": 1
+    },
+    "type": "crafting"
+}

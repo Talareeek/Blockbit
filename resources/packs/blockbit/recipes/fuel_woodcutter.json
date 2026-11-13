@@ -1,0 +1,6 @@
+{
+    "burn_time": 15.0,
+    "id": "blockbit:fuel_woodcutter",
+    "item": "blockbit:woodcutter",
+    "type": "fuel"
+}
