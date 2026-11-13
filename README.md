@@ -1,4 +1,7 @@
-<img width="100%" alt="blockbit logo" src="resources/textures/blockbit_logo.png">
+<img width="100%" alt="blocbit_logo" src="https://github.com/user-attachments/assets/59d81bdc-68d6-4d67-b58a-f9f0b72ceed0" />
+
+---
+
 <img width="100%" alt="screenshot" src="https://github.com/user-attachments/assets/cfc445bf-3eff-4796-8aa1-a91dae45f134" />
 
 ---
