@@ -272,7 +272,11 @@ namespace
             "  --tick-rate <n>        Server tick rate in Hz (default: 120)\n"
             "  --max-players <n>\n"
             "  --server-name <s>\n"
-            "  --server-description <s>\n";
+            "  --server-description <s>\n"
+            "\n"
+            "Transport:\n"
+            "  --legacy               Use the legacy asio TCP transport.\n"
+            "                         Default is GameNetworkingSockets.\n";
     }
 
     bool parseArgs(int argc, char* argv[], CliArgs& out)
@@ -336,6 +340,11 @@ namespace
             else if (arg == "--server-description")
             {
                 auto v = require("--server-description"); if (!v) return false; out.server_description = *v;
+            }
+            else if (arg == "--legacy")
+            {
+                // Opt into the original asio TCP transport. GNS is the default.
+                setDefaultTransportKind(TransportKind::Tcp);
             }
             else if (!got_server_dir && !arg.empty() && arg[0] != '-')
             {
@@ -1061,13 +1070,6 @@ int main(int argc, char* argv[])
 
     std::cout << c::dim() << "[Blockbit Dedicated Server " << __DATE__ << " " << __TIME__ << " build]"
               << c::reset() << '\n';
-
-    if (const char* envTransport = std::getenv("BB_TRANSPORT"))
-    {
-        TransportKind parsed;
-        if (parseTransportKind(envTransport, parsed)) setDefaultTransportKind(parsed);
-        else std::cerr << "[Server] ignoring BB_TRANSPORT=" << envTransport << " (expected tcp|gns)\n";
-    }
 
     CliArgs args;
     if (!parseArgs(argc, argv, args))

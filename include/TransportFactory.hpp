@@ -6,23 +6,18 @@
 
 #include <cstdint>
 #include <memory>
-#include <string_view>
 
 enum class TransportKind
 {
-    Tcp,  // asio TCP — original, always available
-    Gns,  // GameNetworkingSockets — only when built with BLOCKBIT_WITH_GNS=ON
+    Gns,  // GameNetworkingSockets — primary, requires BLOCKBIT_WITH_GNS=ON (default)
+    Tcp,  // asio TCP — legacy, opt-in with --legacy
 };
 
-// Process-wide transport selection, set by main.cpp after parsing --transport
-// (or env BB_TRANSPORT). Factories below consult this value, so call sites
-// in ClientGameState / HeadlessMain stay transport-agnostic.
+// Process-wide transport selection. Defaults to Gns; main.cpp / HeadlessMain.cpp
+// flip it to Tcp when --legacy is passed. Factories below consult this value,
+// so call sites in ClientGameState / HeadlessMain stay transport-agnostic.
 void          setDefaultTransportKind(TransportKind kind);
 TransportKind getDefaultTransportKind();
-
-// Returns Tcp for unrecognized strings so a typo doesn't silently fall back
-// to the slower/less-safe default elsewhere; caller decides whether to warn.
-bool parseTransportKind(std::string_view text, TransportKind& out);
 
 std::unique_ptr<ServerTransport> makeServerTransport(uint16_t port);
 

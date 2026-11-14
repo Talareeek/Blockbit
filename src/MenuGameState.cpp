@@ -130,9 +130,9 @@ void MenuGameState::beginProbe(const std::string& text)
     {
         try
         {
-            // Routes through the global transport selection so --transport gns
-            // probes also go via GNS; the asio Client was pinning to TCP and
-            // hence timing out against a GNS listen server.
+            // Routes through the global transport selection so probes use
+            // the same transport as the real join; the asio Client was
+            // pinning to TCP and timing out against a GNS listen server.
             auto client = makeClientTransport();
 
             auto connect_deadline = std::chrono::steady_clock::now() + PROBE_CONNECT_TIMEOUT;

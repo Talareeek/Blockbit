@@ -10,8 +10,8 @@
 namespace
 {
     // One-time GameNetworkingSockets_Init, process-wide. Shared by server
-    // and client transports. Kept lazy so builds that never construct a GNS
-    // transport (default --transport tcp) don't pay init cost.
+    // and client transports. Kept lazy so --legacy runs (asio TCP) don't
+    // pay the init cost.
     std::once_flag g_init_flag;
     std::atomic<bool> g_init_ok{false};
 

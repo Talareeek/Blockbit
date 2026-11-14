@@ -28,11 +28,10 @@ endif()
 # no debug info. Driven by build-headless.sh (sets BLOCKBIT_HEADLESS_STRIP=ON).
 option(BLOCKBIT_HEADLESS_STRIP "Build BlockbitServer with release flags stripped of debug info" OFF)
 
-# Optional alternate network transport using ValveSoftware/GameNetworkingSockets
-# (open-source, no Steam account required). When ON we find_package(GameNetworkingSockets)
-# and compile src/Gns*Transport.cpp into the core libs. Selected at runtime
-# with --transport gns (desktop) or env BB_TRANSPORT=gns.
-option(BLOCKBIT_WITH_GNS "Build with GameNetworkingSockets transport" OFF)
+# Primary network transport: ValveSoftware/GameNetworkingSockets (open-source,
+# no Steam account required). ON by default — the legacy asio TCP transport is
+# still compiled in and reachable at runtime with --legacy.
+option(BLOCKBIT_WITH_GNS "Build with GameNetworkingSockets transport" ON)
 if(DEFINED ENV{BLOCKBIT_WITH_GNS})
     set(BLOCKBIT_WITH_GNS $ENV{BLOCKBIT_WITH_GNS} CACHE BOOL "" FORCE)
 endif()

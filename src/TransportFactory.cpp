@@ -14,11 +14,11 @@
 
 #include <atomic>
 #include <iostream>
-#include <string>
 
 namespace
 {
-    std::atomic<TransportKind> g_kind{TransportKind::Tcp};
+    // GNS is the primary transport; the TCP path stays reachable via --legacy.
+    std::atomic<TransportKind> g_kind{TransportKind::Gns};
 }
 
 void setDefaultTransportKind(TransportKind kind)
@@ -29,13 +29,6 @@ void setDefaultTransportKind(TransportKind kind)
 TransportKind getDefaultTransportKind()
 {
     return g_kind;
-}
-
-bool parseTransportKind(std::string_view text, TransportKind& out)
-{
-    if (text == "tcp" || text == "TCP") { out = TransportKind::Tcp; return true; }
-    if (text == "gns" || text == "GNS") { out = TransportKind::Gns; return true; }
-    return false;
 }
 
 std::unique_ptr<ServerTransport> makeServerTransport(uint16_t port)
