@@ -1341,6 +1341,7 @@ void ClientGameState::render(sf::RenderWindow& window)
     // DEBUG OVERLAYS
     if (Settings::debug.render_hitboxes)      RenderEntityHitboxes(local_world, camera, window);
     if (Settings::debug.render_chunk_borders) RenderChunkBorders(camera, window);
+    if (Settings::debug.render_vectors)       RenderPhysicsVectors(local_world, camera, window);
 
 
     window.setView(sf::View(sf::FloatRect({0.0f, 0.0f}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)})));

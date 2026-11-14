@@ -125,9 +125,18 @@ private:
         int               origin_x;
         int               anchor_y;
         StructureRotation rotation;
+        uint32_t          seed; // mixed into per-cell rolls at stamp time
     };
 
     std::vector<StructurePlacement> getStructurePlacementsInCell(int grid_x, StructureID id) const;
+
+    // Walks the jigsaw graph starting from `root` and appends every connected
+    // piece (up to the rule's max_chain_depth) to `out`. Deterministic via the
+    // root's seed — every neighbour chunk that sees the same root resolves the
+    // same chain.
+    void expandJigsawChain(const StructurePlacement& root, int max_depth,
+                           std::vector<StructurePlacement>& out) const;
+
     void generateStructures(Chunk& chunk);
 
 public:

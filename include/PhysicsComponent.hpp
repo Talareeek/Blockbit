@@ -12,6 +12,10 @@ struct PhysicsComponent : public Component
     sf::Vector2<double> velocity;
     sf::Vector2<double> force;
     sf::Vector2<double> acceleration;
+    // Force applied during the last physics step before the per-tick reset.
+    // Kept so debug rendering can show a non-zero force arrow instead of the
+    // zero `force` snapshot that survives past the end of the tick.
+    sf::Vector2<double> last_force;
     float mass = 1.0f;
     bool onGround = false;
 
@@ -72,6 +76,8 @@ struct PhysicsComponent : public Component
 
         compound["velocity"] = Tag(velocity);
         compound["force"] = Tag(force);
+        compound["acceleration"] = Tag(acceleration);
+        compound["last_force"] = Tag(last_force);
         compound["mass"] = Tag(mass);
         compound["on_ground"] = Tag(onGround);
         compound["is_solid"] = Tag(isSolid);
@@ -83,8 +89,13 @@ struct PhysicsComponent : public Component
 
     void deserialize(const Tag& tag) override
     {
+        const auto& compound = tag.get<TagCompound>();
         velocity = tag["velocity"].get<sf::Vector2<double>>();
         force = tag["force"].get<sf::Vector2<double>>();
+        if (compound.count("acceleration"))
+            acceleration = tag["acceleration"].get<sf::Vector2<double>>();
+        if (compound.count("last_force"))
+            last_force = tag["last_force"].get<sf::Vector2<double>>();
         mass = tag["mass"].get<float>();
         onGround = tag["on_ground"].get<bool>();
         isSolid = tag["is_solid"].get<bool>();

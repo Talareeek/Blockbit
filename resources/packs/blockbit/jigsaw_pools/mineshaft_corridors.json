@@ -1,0 +1,8 @@
+{
+    "id": "blockbit:mineshaft_corridors",
+    "entries": [
+        {"structure": "blockbit:mineshaft_corridor_flat", "weight": 6},
+        {"structure": "blockbit:mineshaft_corridor_up",   "weight": 2},
+        {"structure": "blockbit:mineshaft_corridor_down", "weight": 2}
+    ]
+}

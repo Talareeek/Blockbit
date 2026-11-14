@@ -56,6 +56,7 @@ void Settings::load()
             const auto& d = data["debug"];
             debug.render_hitboxes      = d.value("render_hitboxes",      debug.render_hitboxes);
             debug.render_chunk_borders = d.value("render_chunk_borders", debug.render_chunk_borders);
+            debug.render_vectors       = d.value("render_vectors",       debug.render_vectors);
         }
 
         if(data.contains("render"))
@@ -186,7 +187,8 @@ void Settings::save()
         };
         data["debug"] = {
             {"render_hitboxes",      debug.render_hitboxes},
-            {"render_chunk_borders", debug.render_chunk_borders}
+            {"render_chunk_borders", debug.render_chunk_borders},
+            {"render_vectors",       debug.render_vectors}
         };
         data["render"] = {
             {"reach_zoom_enabled", render.reach_zoom_enabled},

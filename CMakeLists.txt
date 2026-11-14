@@ -499,3 +499,20 @@ if(BLOCKBIT_HEADLESS_STRIP AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(BlockbitServer PRIVATE -O3)
     target_link_options(BlockbitServer PRIVATE -s)
 endif()
+
+# -----------------------------------------------------------------------------
+# structure_gen: one-off utility that rewrites the mineshaft structure files
+# and emits sibling corridor pieces + a jigsaw pool JSON. Not wired to the
+# default `all` target; invoke explicitly:
+#   ninja -C build structure_gen && build/bin/structure_gen
+# Reuses the headless core so it can read/write .bbt files without pulling
+# in SFML graphics.
+# -----------------------------------------------------------------------------
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tools/structure_gen/main.cpp")
+    add_executable(structure_gen EXCLUDE_FROM_ALL
+        tools/structure_gen/main.cpp
+        $<TARGET_OBJECTS:bb_core_server>
+    )
+    target_link_libraries(structure_gen PRIVATE bb_core_deps)
+    target_compile_definitions(structure_gen PRIVATE HEADLESS_BUILD)
+endif()

@@ -3,6 +3,7 @@
 #include "../include/Entity.hpp"
 #include "../include/World.hpp"
 #include "../include/TransformComponent.hpp"
+#include "../include/PhysicsComponent.hpp"
 #include "../include/PlayerControlledComponent.hpp"
 #include "../include/Block.hpp"
 #include "../include/AssetManager.hpp"
@@ -1180,6 +1181,100 @@ void RenderEntityHitboxes(World& world, const sf::Vector2<double> camera, sf::Re
     }
 
     if (lines.getVertexCount() > 0) window.draw(lines);
+}
+
+void RenderPhysicsVectors(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window)
+{
+    const float unit_size = static_cast<float>(window.getSize().y) / static_cast<float>(WORLD_UNIT_SIZE_FACTOR);
+    const float thickness = std::max(1.0f, unit_size / 10.0f);
+
+    // Scale factors in world units per (unit of the respective quantity). Chosen
+    // so typical gameplay magnitudes produce arrows roughly one block long.
+    constexpr double VELOCITY_SCALE     = 0.25;
+    constexpr double FORCE_SCALE        = 0.02;
+    constexpr double ACCELERATION_SCALE = 0.02;
+
+    constexpr double MIN_DRAW_LENGTH = 1e-4;
+
+    sf::VertexArray triangles(sf::PrimitiveType::Triangles);
+
+    auto pushLine = [&](sf::Vector2f a, sf::Vector2f b, sf::Color color)
+    {
+        sf::Vector2f dir = b - a;
+        float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
+        if (len <= 0.0f) return;
+        sf::Vector2f n{-dir.y / len, dir.x / len};
+        sf::Vector2f off = n * (thickness * 0.5f);
+
+        sf::Vertex v0{a - off, color}; v0.texCoords = {0.f, 0.f};
+        sf::Vertex v1{b - off, color}; v1.texCoords = {0.f, 0.f};
+        sf::Vertex v2{b + off, color}; v2.texCoords = {0.f, 0.f};
+        sf::Vertex v3{a + off, color}; v3.texCoords = {0.f, 0.f};
+
+        triangles.append(v0); triangles.append(v1); triangles.append(v2);
+        triangles.append(v0); triangles.append(v2); triangles.append(v3);
+    };
+
+    auto pushArrow = [&](sf::Vector2f origin_px, sf::Vector2<double> vec_world, double scale, sf::Color color)
+    {
+        sf::Vector2<double> scaled = vec_world * scale;
+        double mag = std::sqrt(scaled.x * scaled.x + scaled.y * scaled.y);
+        if (mag < MIN_DRAW_LENGTH) return;
+
+        sf::Vector2f tip_px{
+            origin_px.x + static_cast<float>(scaled.x) * unit_size,
+            origin_px.y + static_cast<float>(scaled.y) * unit_size
+        };
+        pushLine(origin_px, tip_px, color);
+
+        // Arrowhead: two short segments back from the tip, angled ±25° from the
+        // reversed direction. Head length is clamped so short arrows do not get
+        // engulfed by their own head.
+        sf::Vector2f dir_px = tip_px - origin_px;
+        float dir_len = std::sqrt(dir_px.x * dir_px.x + dir_px.y * dir_px.y);
+        if (dir_len <= 0.0f) return;
+        sf::Vector2f unit{dir_px.x / dir_len, dir_px.y / dir_len};
+        float head_len = std::min(dir_len * 0.35f, unit_size * 0.4f);
+        constexpr float ang = 0.4363f; // ~25° in radians
+        const float cs = std::cos(ang);
+        const float sn = std::sin(ang);
+
+        sf::Vector2f back_left {
+            tip_px.x - head_len * ( unit.x * cs + unit.y * sn),
+            tip_px.y - head_len * (-unit.x * sn + unit.y * cs)
+        };
+        sf::Vector2f back_right{
+            tip_px.x - head_len * ( unit.x * cs - unit.y * sn),
+            tip_px.y - head_len * ( unit.x * sn + unit.y * cs)
+        };
+        pushLine(tip_px, back_left,  color);
+        pushLine(tip_px, back_right, color);
+    };
+
+    const sf::Color velocity_color     (0,   180, 255); // blue  — velocity
+    const sf::Color force_color        (255,  60,  60); // red   — resultant force
+    const sf::Color acceleration_color (255, 200,   0); // amber — acceleration
+
+    for (auto& [id, entity] : world.getEntities())
+    {
+        if (!entity.hasComponent<TransformComponent>()) continue;
+        if (!entity.hasComponent<PhysicsComponent>())   continue;
+
+        const auto& transform = entity.getComponent<TransformComponent>();
+        const auto& physics   = entity.getComponent<PhysicsComponent>();
+
+        const sf::Vector2<double> center = transform.render_position + transform.size / 2.0;
+        sf::Vector2f origin_px{
+            static_cast<float>((center.x - camera.x)) * unit_size,
+            static_cast<float>((center.y - camera.y)) * unit_size
+        };
+
+        pushArrow(origin_px, physics.velocity,     VELOCITY_SCALE,     velocity_color);
+        pushArrow(origin_px, physics.last_force,   FORCE_SCALE,        force_color);
+        pushArrow(origin_px, physics.acceleration, ACCELERATION_SCALE, acceleration_color);
+    }
+
+    if (triangles.getVertexCount() > 0) window.draw(triangles);
 }
 
 void RenderBorder(const sf::Vector2<double> camera, float view_scale, sf::RenderWindow& window)

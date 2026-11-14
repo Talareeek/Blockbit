@@ -1,0 +1,11 @@
+{
+    "id": "blockbit:mineshaft_corridor_up",
+    "template": "mineshaft_corridor_up.bbt",
+    "rule": {
+        "grid": 1,
+        "spawn_chance": 0.0,
+        "anchor_mode": "below_surface",
+        "allow_mirror": false,
+        "max_chain_depth": 0
+    }
+}

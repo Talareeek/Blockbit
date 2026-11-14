@@ -101,21 +101,39 @@ WorldPackCheck validateWorldPacks(const std::filesystem::path& worldDir);
 //
 //   { "id": "blockbit:buried_template",
 //     "template": "buried_template.bbt",
+//     "allow_mirror_y": false,           // optional JSON-side override
 //     "rule": {
 //       "grid": 1,
 //       "spawn_chance": 0.0002,
 //       "anchor_mode": "below_surface",  // "surface" | "fixed" | "below_surface"
 //       "min_surface_y": 0, "max_surface_y": 255,
 //       "target_y": 0, "allow_mirror": true,
+//       "max_chain_depth": 0,            // >0 enables jigsaw chain expansion
 //       "biomes": ["plains", "forest"]   // omit or [] = any biome
 //     }
 //   }
+//
+// Palettes, per-cell probability and jigsaw connection points are authored
+// in the editor and persisted inside the .bbt file — no JSON knob here.
 //
 // Namespace scoping is enforced on "id". The structure's RuntimeID in the
 // registry is structureIdFromKey(id) — same across platforms, so world-gen
 // placement RNG stays deterministic.
 std::size_t scanPackStructures(const std::filesystem::path& packDir,
                                const std::string&           packNamespace);
+
+// Reads <packDir>/loot_tables/*.json and registers each table in the global
+// LootTable registry. Resolves item keys against gameRegistries().items, so
+// must run after item parsing.
+std::size_t scanPackLootTables(const std::filesystem::path& packDir,
+                               const std::string&           packNamespace);
+
+// Reads <packDir>/jigsaw_pools/*.json and registers each pool. Entries are
+// structure RegistryKeys that get hashed via structureIdFromKey — no
+// cross-pack validation at scan time, missing IDs just produce empty rolls
+// during chain expansion.
+std::size_t scanPackJigsawPools(const std::filesystem::path& packDir,
+                                const std::string&           packNamespace);
 
 // Reads one pack's <packDir>/recipes/*.json files and merges them into the
 // global `recipes`, `smeltingRecipes`, `fuelBurnTimes` maps declared in

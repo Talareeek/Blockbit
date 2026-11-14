@@ -369,6 +369,39 @@ void registerVanillaContent()
                       << added << " structure(s)\n";
     }
 
+    // Loot tables + jigsaw pools follow structures. Pool entries resolve to
+    // StructureIDs via hash — if a modpack declares a pool before its
+    // structures are registered, chain expansion simply yields no match at
+    // runtime instead of crashing.
+    {
+        const auto added = PackLoader::scanPackLootTables("resources/packs/blockbit",
+                                                          vanilla.manifest.id);
+        if (added > 0)
+            std::cout << "[Pack] 'blockbit' loaded " << added << " loot table(s)\n";
+    }
+    for (const auto& mod : modpacks)
+    {
+        const auto added = PackLoader::scanPackLootTables(packs_root / mod.manifest.id,
+                                                          mod.manifest.id);
+        if (added > 0)
+            std::cout << "[Pack] '" << mod.manifest.id << "' loaded "
+                      << added << " loot table(s)\n";
+    }
+    {
+        const auto added = PackLoader::scanPackJigsawPools("resources/packs/blockbit",
+                                                           vanilla.manifest.id);
+        if (added > 0)
+            std::cout << "[Pack] 'blockbit' loaded " << added << " jigsaw pool(s)\n";
+    }
+    for (const auto& mod : modpacks)
+    {
+        const auto added = PackLoader::scanPackJigsawPools(packs_root / mod.manifest.id,
+                                                           mod.manifest.id);
+        if (added > 0)
+            std::cout << "[Pack] '" << mod.manifest.id << "' loaded "
+                      << added << " jigsaw pool(s)\n";
+    }
+
     std::cout << "[Pack] " << reg.loaded_packs.size() << " packs active — "
               << reg.blocks.size() << " blocks, "
               << reg.items.size()  << " items total\n";

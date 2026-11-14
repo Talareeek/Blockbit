@@ -352,6 +352,7 @@ void SettingsWindow::render()
     {
         ImGui::Checkbox("Render hitboxes",      &Settings::debug.render_hitboxes);
         ImGui::Checkbox("Render chunk borders", &Settings::debug.render_chunk_borders);
+        ImGui::Checkbox("Render vectors",       &Settings::debug.render_vectors);
         if(ImGui::Button("Console"))
         {
             game->getConsole().setOpen(true);

@@ -210,6 +210,8 @@ namespace
 
         c.velocity.x = vx;
         c.velocity.y = vy;
+        c.last_force = c.force;
+        c.acceleration = {c.force.x * inv_mass, c.force.y * inv_mass};
         c.force = {0.0, 0.0};
         t.render_position = t.position;
         c.dirty = true;

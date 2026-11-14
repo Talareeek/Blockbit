@@ -788,12 +788,13 @@ std::size_t scanPackStructures(const std::filesystem::path& packDir,
         if (j.contains("rule") && j["rule"].is_object())
         {
             const auto& r = j["rule"];
-            rule.grid          = r.value("grid",          128);
-            rule.spawn_chance  = r.value("spawn_chance",  0.0f);
-            rule.min_surface_y = r.value("min_surface_y", 0);
-            rule.max_surface_y = r.value("max_surface_y", 255);
-            rule.target_y      = r.value("target_y",      0);
-            rule.allow_mirror  = r.value("allow_mirror",  true);
+            rule.grid            = r.value("grid",            128);
+            rule.spawn_chance    = r.value("spawn_chance",    0.0f);
+            rule.min_surface_y   = r.value("min_surface_y",   0);
+            rule.max_surface_y   = r.value("max_surface_y",   255);
+            rule.target_y        = r.value("target_y",        0);
+            rule.allow_mirror    = r.value("allow_mirror",    true);
+            rule.max_chain_depth = r.value("max_chain_depth", 0);
 
             const std::string anchor_name = r.value("anchor_mode", "surface");
             if (auto a = anchorFromName(anchor_name); a.has_value())
@@ -816,8 +817,195 @@ std::size_t scanPackStructures(const std::filesystem::path& packDir,
             }
         }
 
+        // Optional template-side overlays. The .bbt file already carries the
+        // definitive cell grid (plus any palettes / jigsaws authored in the
+        // editor). JSON is allowed to tweak the "allow_mirror_y" bit without
+        // requiring an editor round-trip — this is the one knob authors most
+        // often want to A/B test on an existing template.
+        if (j.contains("allow_mirror_y") && j["allow_mirror_y"].is_boolean())
+            tmpl.allow_mirror_y = j["allow_mirror_y"].get<bool>();
+
         const auto id = structureIdFromKey(key);
         StructureRegistry::add(id, std::move(tmpl), std::move(rule));
+        ++count;
+    }
+    return count;
+}
+
+// ----- Loot tables -------------------------------------------------------
+//
+// <packDir>/loot_tables/*.json. Each file:
+//   { "id": "blockbit:mineshaft_chest",
+//     "min_rolls": 2, "max_rolls": 5,
+//     "entries": [
+//       {"item": "blockbit:iron_ingot", "min": 1, "max": 3, "weight": 10},
+//       {"item": "blockbit:diamond",    "min": 1, "max": 1, "weight": 1}
+//     ] }
+//
+// The table is registered under "id" and referenced from structure chests via
+// `loot` on the block entity marker. Items resolve against gameRegistries().
+std::size_t scanPackLootTables(const std::filesystem::path& packDir,
+                               const std::string& packNamespace)
+{
+    const auto dir = packDir / "loot_tables";
+    if (!std::filesystem::exists(dir)) return 0;
+
+    const auto& item_reg = gameRegistries().items;
+
+    std::size_t count = 0;
+    for (const auto& entry : std::filesystem::directory_iterator(dir))
+    {
+        if (!entry.is_regular_file()) continue;
+        if (entry.path().extension() != ".json") continue;
+
+        const std::string raw = readFile(entry.path());
+        if (raw.empty()) continue;
+
+        nlohmann::json j;
+        try { j = nlohmann::json::parse(raw); }
+        catch (const std::exception& e)
+        {
+            std::cerr << "[Pack] loot parse " << entry.path()
+                      << ": " << e.what() << '\n';
+            continue;
+        }
+
+        const std::string key = j.value("id", std::string{});
+        if (key.empty())
+        {
+            std::cerr << "[Pack] loot " << entry.path() << ": missing 'id'\n";
+            continue;
+        }
+        if (!packNamespace.empty())
+        {
+            const std::string prefix = packNamespace + ":";
+            if (key.compare(0, prefix.size(), prefix) != 0)
+            {
+                std::cerr << "[Pack] loot " << entry.path() << " id '"
+                          << key << "' outside namespace '"
+                          << packNamespace << "' — skipped\n";
+                continue;
+            }
+        }
+
+        LootTable table;
+        table.min_rolls = static_cast<uint16_t>(j.value("min_rolls", 1));
+        table.max_rolls = static_cast<uint16_t>(j.value("max_rolls", 3));
+
+        if (!j.contains("entries") || !j["entries"].is_array())
+        {
+            std::cerr << "[Pack] loot " << entry.path() << ": missing 'entries' array\n";
+            continue;
+        }
+
+        bool any_bad = false;
+        for (const auto& e : j["entries"])
+        {
+            if (!e.is_object()) continue;
+            const std::string item_key = e.value("item", std::string{});
+            auto rid = item_reg.find(item_key);
+            if (!rid.has_value())
+            {
+                std::cerr << "[Pack] loot " << entry.path()
+                          << " unresolved item '" << item_key << "' — skipped entry\n";
+                any_bad = true;
+                continue;
+            }
+            LootTableEntry le;
+            le.item      = static_cast<ItemID>(*rid);
+            le.min_count = static_cast<uint16_t>(e.value("min",    1));
+            le.max_count = static_cast<uint16_t>(e.value("max",    1));
+            le.weight    = static_cast<uint16_t>(e.value("weight", 1));
+            table.entries.push_back(le);
+        }
+
+        if (table.entries.empty())
+        {
+            if (!any_bad)
+                std::cerr << "[Pack] loot " << entry.path() << ": no resolvable entries\n";
+            continue;
+        }
+
+        StructureRegistry::addLootTable(key, std::move(table));
+        ++count;
+    }
+    return count;
+}
+
+// ----- Jigsaw pools ------------------------------------------------------
+//
+// <packDir>/jigsaw_pools/*.json. Each file:
+//   { "id": "blockbit:mineshaft_corridors",
+//     "entries": [
+//       {"structure": "blockbit:mineshaft_corridor", "weight": 3},
+//       {"structure": "blockbit:mineshaft_junction", "weight": 1}
+//     ] }
+//
+// Must run AFTER scanPackStructures so structure keys resolve to live IDs.
+std::size_t scanPackJigsawPools(const std::filesystem::path& packDir,
+                                const std::string& packNamespace)
+{
+    const auto dir = packDir / "jigsaw_pools";
+    if (!std::filesystem::exists(dir)) return 0;
+
+    std::size_t count = 0;
+    for (const auto& entry : std::filesystem::directory_iterator(dir))
+    {
+        if (!entry.is_regular_file()) continue;
+        if (entry.path().extension() != ".json") continue;
+
+        const std::string raw = readFile(entry.path());
+        if (raw.empty()) continue;
+
+        nlohmann::json j;
+        try { j = nlohmann::json::parse(raw); }
+        catch (const std::exception& e)
+        {
+            std::cerr << "[Pack] jigsaw_pool parse " << entry.path()
+                      << ": " << e.what() << '\n';
+            continue;
+        }
+
+        const std::string key = j.value("id", std::string{});
+        if (key.empty())
+        {
+            std::cerr << "[Pack] jigsaw_pool " << entry.path() << ": missing 'id'\n";
+            continue;
+        }
+        if (!packNamespace.empty())
+        {
+            const std::string prefix = packNamespace + ":";
+            if (key.compare(0, prefix.size(), prefix) != 0)
+            {
+                std::cerr << "[Pack] jigsaw_pool " << entry.path() << " id '"
+                          << key << "' outside namespace '"
+                          << packNamespace << "' — skipped\n";
+                continue;
+            }
+        }
+
+        std::vector<JigsawPoolEntry> entries;
+        if (j.contains("entries") && j["entries"].is_array())
+        {
+            for (const auto& e : j["entries"])
+            {
+                if (!e.is_object()) continue;
+                const std::string skey = e.value("structure", std::string{});
+                if (skey.empty()) continue;
+                JigsawPoolEntry pe;
+                pe.id     = structureIdFromKey(skey);
+                pe.weight = static_cast<uint16_t>(e.value("weight", 1));
+                entries.push_back(pe);
+            }
+        }
+        if (entries.empty())
+        {
+            std::cerr << "[Pack] jigsaw_pool " << entry.path()
+                      << ": no entries — skipped\n";
+            continue;
+        }
+
+        StructureRegistry::addJigsawPool(key, std::move(entries));
         ++count;
     }
     return count;

@@ -145,6 +145,19 @@ namespace
             case T::AddBlockEntity: return "Add block entity";
             case T::AddSpawn:       return "Add spawn";
             case T::RemoveMarker:   return "Remove marker";
+            case T::AddJigsaw:      return "Add jigsaw";
+        }
+        return "?";
+    }
+
+    const char* jigsawFacingName(StructureJigsawFacing f)
+    {
+        switch (f)
+        {
+            case StructureJigsawFacing::Right: return "Right";
+            case StructureJigsawFacing::Left:  return "Left";
+            case StructureJigsawFacing::Up:    return "Up";
+            case StructureJigsawFacing::Down:  return "Down";
         }
         return "?";
     }
@@ -170,6 +183,8 @@ namespace
     const sf::Color ANCHOR_COLOR   {255, 200, 50, 220};
     const sf::Color BE_COLOR       {200, 90, 220, 220};
     const sf::Color SPAWN_COLOR    {90, 230, 120, 220};
+    const sf::Color JIGSAW_COLOR   {240, 180, 60, 230};
+    const sf::Color POOL_TINT      {180, 80, 230, 70};
     const sf::Color HOVER_COLOR    {255, 255, 255, 60};
     const sf::Color DRAG_COLOR     {255, 220, 100, 80};
 }
@@ -190,9 +205,15 @@ void StructureEditorGameState::resetToBlank(int w, int h)
     tmpl.anchor_x = w / 2;
     tmpl.anchor_y = 0;
     tmpl.cells.assign(static_cast<std::size_t>(w * h),
-                      {Block{BlockID::Air, 0}, StructurePlacementMode::Skip});
+                      StructureCell{Block{BlockID::Air, 0},
+                                    StructurePlacementMode::Skip,
+                                    static_cast<int16_t>(-1), static_cast<uint8_t>(255)});
+    tmpl.palettes.clear();
     tmpl.block_entities.clear();
     tmpl.spawns.clear();
+    tmpl.jigsaws.clear();
+    tmpl.allow_mirror_y = false;
+    paint_pool_index = -1;
     current_name.clear();
     name_buffer[0] = '\0';
     dirty = false;
@@ -210,7 +231,8 @@ void StructureEditorGameState::resizeTemplate(int new_w, int new_h)
     if (new_w == tmpl.width && new_h == tmpl.height) return;
 
     std::vector<StructureCell> new_cells(static_cast<std::size_t>(new_w * new_h),
-        {Block{BlockID::Air, 0}, StructurePlacementMode::Skip});
+        StructureCell{Block{BlockID::Air, 0}, StructurePlacementMode::Skip,
+                      static_cast<int16_t>(-1), static_cast<uint8_t>(255)});
 
     const int copy_w = std::min(new_w, tmpl.width);
     const int copy_h = std::min(new_h, tmpl.height);
@@ -247,6 +269,11 @@ void StructureEditorGameState::resizeTemplate(int new_w, int new_h)
         std::remove_if(tmpl.spawns.begin(), tmpl.spawns.end(),
             [&](const StructureSpawn& sp) { return !in_bounds(sp.rx, sp.ry); }),
         tmpl.spawns.end());
+
+    tmpl.jigsaws.erase(
+        std::remove_if(tmpl.jigsaws.begin(), tmpl.jigsaws.end(),
+            [&](const StructureJigsaw& jg) { return !in_bounds(jg.rx, jg.ry); }),
+        tmpl.jigsaws.end());
 
     dirty = true;
 }
@@ -458,6 +485,25 @@ void StructureEditorGameState::drawCellIntoCanvas(sf::RenderTexture& rt, int tx,
             tint.setFillColor(AIR_ONLY_TINT);
             rt.draw(tint);
         }
+
+        if (cell.palette >= 0)
+        {
+            sf::RectangleShape tint(sz);
+            tint.setPosition(pos);
+            tint.setFillColor(POOL_TINT);
+            rt.draw(tint);
+        }
+
+        if (cell.probability < 255)
+        {
+            // Fade the whole cell to telegraph "may not stamp" without hiding
+            // the painted block underneath — alpha scales inversely to prob.
+            const uint8_t fade = static_cast<uint8_t>(180 - (cell.probability * 180 / 255));
+            sf::RectangleShape tint(sz);
+            tint.setPosition(pos);
+            tint.setFillColor(sf::Color(0, 0, 0, fade));
+            rt.draw(tint);
+        }
     }
 
     // Grid line on the right + bottom of the cell. Drawing only two edges per
@@ -548,6 +594,32 @@ void StructureEditorGameState::refreshCanvas()
         canvas.draw(diamond);
     }
 
+    // Jigsaw markers — triangle pointing in the facing direction. Author sees
+    // which edge chain pieces attach to without reading the side panel.
+    for (const StructureJigsaw& jg : tmpl.jigsaws)
+    {
+        if (!inBounds(jg.rx, jg.ry)) continue;
+        const float cx = (jg.rx + 0.5f) * cell_pixels + pan_x;
+        const float cy = (tmpl.height - 1 - jg.ry + 0.5f) * cell_pixels + pan_y;
+        const float r = cell_pixels * 0.32f;
+        sf::CircleShape tri(r, 3);
+        tri.setOrigin({r, r});
+        tri.setPosition({cx, cy});
+        // Default triangle points "up" on screen (negative y); rotate to match
+        // the jigsaw facing, remembering y is flipped in canvas space.
+        float deg = 0.0f;
+        switch (jg.facing)
+        {
+            case StructureJigsawFacing::Right: deg =  90.0f; break;
+            case StructureJigsawFacing::Left:  deg = 270.0f; break;
+            case StructureJigsawFacing::Up:    deg = 180.0f; break; // screen-up == world-down after flip
+            case StructureJigsawFacing::Down:  deg =   0.0f; break;
+        }
+        tri.setRotation(sf::degrees(deg));
+        tri.setFillColor(JIGSAW_COLOR);
+        canvas.draw(tri);
+    }
+
     // Hover highlight.
     if (has_hover && inBounds(hover_tx, hover_ty))
     {
@@ -592,6 +664,11 @@ void StructureEditorGameState::handleCanvasClick(int tx, int ty, bool /*shift_do
             StructureCell& cell = tmpl.cells[ty * tmpl.width + tx];
             cell.block = Block{BLOCK_OPTIONS[palette_index], paint_metadata};
             cell.mode  = paint_mode;
+            cell.palette = (paint_pool_index >= 0 &&
+                            paint_pool_index < static_cast<int>(tmpl.palettes.size()))
+                ? static_cast<int16_t>(paint_pool_index)
+                : static_cast<int16_t>(-1);
+            cell.probability = static_cast<uint8_t>(std::clamp(paint_probability, 0, 255));
             dirty = true;
             break;
         }
@@ -600,12 +677,17 @@ void StructureEditorGameState::handleCanvasClick(int tx, int ty, bool /*shift_do
             StructureCell& cell = tmpl.cells[ty * tmpl.width + tx];
             cell.block = Block{BlockID::Air, 0};
             cell.mode  = StructurePlacementMode::Skip;
+            cell.palette = -1;
+            cell.probability = 255;
             auto be_end = std::remove_if(tmpl.block_entities.begin(), tmpl.block_entities.end(),
                 [&](const StructureBlockEntity& be) { return be.rx == tx && be.ry == ty; });
             tmpl.block_entities.erase(be_end, tmpl.block_entities.end());
             auto sp_end = std::remove_if(tmpl.spawns.begin(), tmpl.spawns.end(),
                 [&](const StructureSpawn& sp) { return sp.rx == tx && sp.ry == ty; });
             tmpl.spawns.erase(sp_end, tmpl.spawns.end());
+            auto jg_end = std::remove_if(tmpl.jigsaws.begin(), tmpl.jigsaws.end(),
+                [&](const StructureJigsaw& jg) { return jg.rx == tx && jg.ry == ty; });
+            tmpl.jigsaws.erase(jg_end, tmpl.jigsaws.end());
             dirty = true;
             break;
         }
@@ -614,6 +696,8 @@ void StructureEditorGameState::handleCanvasClick(int tx, int ty, bool /*shift_do
             const StructureCell& cell = tmpl.cellAt(tx, ty);
             palette_index = paletteIndexOf(cell.block.id);
             paint_metadata = cell.block.metadata;
+            paint_pool_index = cell.palette;
+            paint_probability = cell.probability;
             if (cell.mode != StructurePlacementMode::Skip)
                 paint_mode = cell.mode;
             break;
@@ -631,10 +715,31 @@ void StructureEditorGameState::handleCanvasClick(int tx, int ty, bool /*shift_do
             auto it = std::find_if(tmpl.block_entities.begin(), tmpl.block_entities.end(),
                 [&](const StructureBlockEntity& be) { return be.rx == tx && be.ry == ty; });
             const BlockEntityID kind = BE_OPTIONS[block_entity_kind_index];
+            const std::string loot = (kind == BlockEntityID::Chest) ? chest_loot_table : std::string{};
             if (it != tmpl.block_entities.end())
-                it->id = kind;
+            {
+                it->id         = kind;
+                it->loot_table = loot;
+            }
             else
-                tmpl.block_entities.push_back({tx, ty, kind});
+            {
+                tmpl.block_entities.push_back(StructureBlockEntity{tx, ty, kind, loot});
+            }
+            dirty = true;
+            break;
+        }
+        case Tool::AddJigsaw:
+        {
+            auto it = std::find_if(tmpl.jigsaws.begin(), tmpl.jigsaws.end(),
+                [&](const StructureJigsaw& j) { return j.rx == tx && j.ry == ty; });
+            StructureJigsaw jg;
+            jg.rx        = tx;
+            jg.ry        = ty;
+            jg.facing    = static_cast<StructureJigsawFacing>(jigsaw_facing_index);
+            jg.connector = jigsaw_connector;
+            jg.pool      = jigsaw_pool;
+            if (it != tmpl.jigsaws.end()) *it = jg;
+            else                          tmpl.jigsaws.push_back(jg);
             dirty = true;
             break;
         }
@@ -660,6 +765,13 @@ void StructureEditorGameState::handleCanvasClick(int tx, int ty, bool /*shift_do
                 tmpl.spawns.erase(sp_it, tmpl.spawns.end());
                 dirty = true;
             }
+            auto jg_it = std::remove_if(tmpl.jigsaws.begin(), tmpl.jigsaws.end(),
+                [&](const StructureJigsaw& j) { return j.rx == tx && j.ry == ty; });
+            if (jg_it != tmpl.jigsaws.end())
+            {
+                tmpl.jigsaws.erase(jg_it, tmpl.jigsaws.end());
+                dirty = true;
+            }
             break;
         }
         case Tool::FillRect:
@@ -678,13 +790,21 @@ void StructureEditorGameState::handleFillRelease(int ax, int ay, int bx, int by)
     const int x1 = std::clamp(std::max(ax, bx), 0, tmpl.width - 1);
     const int y1 = std::clamp(std::max(ay, by), 0, tmpl.height - 1);
 
+    const int16_t pool = (paint_pool_index >= 0 &&
+                          paint_pool_index < static_cast<int>(tmpl.palettes.size()))
+        ? static_cast<int16_t>(paint_pool_index)
+        : static_cast<int16_t>(-1);
+    const uint8_t prob = static_cast<uint8_t>(std::clamp(paint_probability, 0, 255));
+
     for (int y = y0; y <= y1; y++)
     {
         for (int x = x0; x <= x1; x++)
         {
             StructureCell& cell = tmpl.cells[y * tmpl.width + x];
-            cell.block = Block{BLOCK_OPTIONS[palette_index], paint_metadata};
-            cell.mode  = paint_mode;
+            cell.block       = Block{BLOCK_OPTIONS[palette_index], paint_metadata};
+            cell.mode        = paint_mode;
+            cell.palette     = pool;
+            cell.probability = prob;
         }
     }
     dirty = true;
@@ -750,7 +870,8 @@ void StructureEditorGameState::drawLeftPanel()
     const Tool tools[] =
     {
         Tool::Paint, Tool::Erase, Tool::Pick, Tool::FillRect,
-        Tool::SetAnchor, Tool::AddBlockEntity, Tool::AddSpawn, Tool::RemoveMarker
+        Tool::SetAnchor, Tool::AddBlockEntity, Tool::AddSpawn,
+        Tool::AddJigsaw, Tool::RemoveMarker
     };
     for (Tool t : tools)
     {
@@ -837,6 +958,28 @@ void StructureEditorGameState::drawLeftPanel()
         static_cast<int>(StructurePlacementMode::AirOnly));
     paint_mode = static_cast<StructurePlacementMode>(mode_int);
 
+    ImGui::TextUnformatted("Cell pool (random block)");
+    std::string pool_label = (paint_pool_index < 0)
+        ? std::string{"<literal block>"}
+        : ("Pool #" + std::to_string(paint_pool_index));
+    if (ImGui::BeginCombo("##pool", pool_label.c_str()))
+    {
+        if (ImGui::Selectable("<literal block>", paint_pool_index < 0))
+            paint_pool_index = -1;
+        for (int i = 0; i < static_cast<int>(tmpl.palettes.size()); i++)
+        {
+            char label[32];
+            std::snprintf(label, sizeof(label), "Pool #%d (%zu blocks)", i, tmpl.palettes[i].blocks.size());
+            const bool sel = (paint_pool_index == i);
+            if (ImGui::Selectable(label, sel)) paint_pool_index = i;
+            if (sel) ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+
+    ImGui::TextUnformatted("Per-cell probability");
+    ImGui::SliderInt("##prob", &paint_probability, 0, 255, "%d/255");
+
     ImGui::Separator();
 
     if (tool == Tool::AddBlockEntity)
@@ -853,6 +996,12 @@ void StructureEditorGameState::drawLeftPanel()
             }
             ImGui::EndCombo();
         }
+        if (BE_OPTIONS[block_entity_kind_index] == BlockEntityID::Chest)
+        {
+            ImGui::TextUnformatted("Loot table (optional)");
+            ImGui::InputText("##loot", chest_loot_table, sizeof(chest_loot_table));
+            ImGui::TextDisabled("e.g. \"blockbit:mineshaft_chest\"");
+        }
     }
     else if (tool == Tool::AddSpawn)
     {
@@ -868,6 +1017,25 @@ void StructureEditorGameState::drawLeftPanel()
             }
             ImGui::EndCombo();
         }
+    }
+    else if (tool == Tool::AddJigsaw)
+    {
+        ImGui::TextUnformatted("Jigsaw facing");
+        const char* facings[] = {"Right", "Left", "Up", "Down"};
+        if (ImGui::BeginCombo("##jigsaw_facing", facings[jigsaw_facing_index]))
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                const bool sel = (i == jigsaw_facing_index);
+                if (ImGui::Selectable(facings[i], sel)) jigsaw_facing_index = i;
+                if (sel) ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::TextUnformatted("Connector");
+        ImGui::InputText("##jig_conn", jigsaw_connector, sizeof(jigsaw_connector));
+        ImGui::TextUnformatted("Pool key");
+        ImGui::InputText("##jig_pool", jigsaw_pool, sizeof(jigsaw_pool));
     }
 
     ImGui::Separator();
@@ -955,6 +1123,100 @@ void StructureEditorGameState::drawRightPanel()
     if (sp_remove >= 0)
     {
         tmpl.spawns.erase(tmpl.spawns.begin() + sp_remove);
+        dirty = true;
+    }
+
+    ImGui::Separator();
+    ImGui::Checkbox("Allow MirrorY variant", &tmpl.allow_mirror_y);
+    ImGui::TextDisabled("Rolled 50/50 when allowed; use only for symmetric templates.");
+
+    ImGui::Separator();
+    ImGui::Text("Palettes (pools) — %d", static_cast<int>(tmpl.palettes.size()));
+    if (ImGui::Button("Add palette"))
+    {
+        tmpl.palettes.push_back(StructurePalette{});
+        dirty = true;
+    }
+    ImGui::SameLine();
+    const bool can_del_pool = !tmpl.palettes.empty();
+    if (!can_del_pool) ImGui::BeginDisabled();
+    if (ImGui::Button("Remove last palette"))
+    {
+        const int removed_idx = static_cast<int>(tmpl.palettes.size()) - 1;
+        tmpl.palettes.pop_back();
+        for (auto& c : tmpl.cells)
+            if (c.palette == removed_idx) c.palette = -1;
+        if (paint_pool_index >= removed_idx) paint_pool_index = -1;
+        dirty = true;
+    }
+    if (!can_del_pool) ImGui::EndDisabled();
+
+    ImGui::BeginChild("##palettes", ImVec2(0.0f, 180.0f), true);
+    for (int pi = 0; pi < static_cast<int>(tmpl.palettes.size()); pi++)
+    {
+        ImGui::PushID(2000 + pi);
+        StructurePalette& p = tmpl.palettes[pi];
+        ImGui::Text("Pool #%d  (%zu entries)", pi, p.blocks.size());
+        for (int ei = 0; ei < static_cast<int>(p.blocks.size()); ei++)
+        {
+            ImGui::PushID(ei);
+            int entry_block = paletteIndexOf(p.blocks[ei].id);
+            ImGui::SetNextItemWidth(130.0f);
+            if (ImGui::Combo("##block", &entry_block, [](void*, int idx, const char** out)
+                { *out = blockName(BLOCK_OPTIONS[idx]); return true; },
+                nullptr, static_cast<int>(BLOCK_OPTIONS.size())))
+            {
+                p.blocks[ei].id = BLOCK_OPTIONS[entry_block];
+                dirty = true;
+            }
+            ImGui::SameLine();
+            int w = p.weights[ei];
+            ImGui::SetNextItemWidth(60.0f);
+            if (ImGui::InputInt("w", &w, 1, 10))
+            {
+                p.weights[ei] = static_cast<uint16_t>(std::clamp(w, 0, 65535));
+                dirty = true;
+            }
+            ImGui::SameLine();
+            if (ImGui::SmallButton("X"))
+            {
+                p.blocks.erase(p.blocks.begin() + ei);
+                p.weights.erase(p.weights.begin() + ei);
+                dirty = true;
+                ImGui::PopID();
+                break;
+            }
+            ImGui::PopID();
+        }
+        if (ImGui::SmallButton("Add entry"))
+        {
+            p.blocks.push_back(Block{BLOCK_OPTIONS[palette_index], 0});
+            p.weights.push_back(1);
+            dirty = true;
+        }
+        ImGui::Separator();
+        ImGui::PopID();
+    }
+    ImGui::EndChild();
+
+    ImGui::Text("Jigsaws (%d)", static_cast<int>(tmpl.jigsaws.size()));
+    ImGui::BeginChild("##jigsaw_list", ImVec2(0.0f, 100.0f), true);
+    int jig_remove = -1;
+    for (int i = 0; i < static_cast<int>(tmpl.jigsaws.size()); i++)
+    {
+        const auto& jg = tmpl.jigsaws[i];
+        ImGui::PushID(3000 + i);
+        ImGui::Text("(%d,%d) %s  conn=\"%s\"  pool=\"%s\"",
+                    jg.rx, jg.ry, jigsawFacingName(jg.facing),
+                    jg.connector.c_str(), jg.pool.c_str());
+        ImGui::SameLine();
+        if (ImGui::SmallButton("X")) jig_remove = i;
+        ImGui::PopID();
+    }
+    ImGui::EndChild();
+    if (jig_remove >= 0)
+    {
+        tmpl.jigsaws.erase(tmpl.jigsaws.begin() + jig_remove);
         dirty = true;
     }
 
@@ -1066,8 +1328,10 @@ void StructureEditorGameState::drawCanvasPanel()
                 // mental model from in-game building. Clears any block entity
                 // or spawn attached to the cell too, so the cell is fully blank.
                 StructureCell& cell = tmpl.cells[hover_ty * tmpl.width + hover_tx];
-                cell.block = Block{BlockID::Air, 0};
-                cell.mode  = StructurePlacementMode::Skip;
+                cell.block       = Block{BlockID::Air, 0};
+                cell.mode        = StructurePlacementMode::Skip;
+                cell.palette     = -1;
+                cell.probability = 255;
                 const int rx = hover_tx;
                 const int ry = hover_ty;
                 auto be_end = std::remove_if(tmpl.block_entities.begin(), tmpl.block_entities.end(),
@@ -1076,6 +1340,9 @@ void StructureEditorGameState::drawCanvasPanel()
                 auto sp_end = std::remove_if(tmpl.spawns.begin(), tmpl.spawns.end(),
                     [&](const StructureSpawn& sp) { return sp.rx == rx && sp.ry == ry; });
                 tmpl.spawns.erase(sp_end, tmpl.spawns.end());
+                auto jg_end = std::remove_if(tmpl.jigsaws.begin(), tmpl.jigsaws.end(),
+                    [&](const StructureJigsaw& j) { return j.rx == rx && j.ry == ry; });
+                tmpl.jigsaws.erase(jg_end, tmpl.jigsaws.end());
                 dirty = true;
             }
         }

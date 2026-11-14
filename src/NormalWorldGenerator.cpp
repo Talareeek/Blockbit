@@ -884,13 +884,15 @@ NormalWorldGenerator::getStructurePlacementsInCell(int grid_x, StructureID id) c
 
     SmallRng rng(structureSeed(grid_x, id));
 
-    // Pull four deterministic draws BEFORE any filter check so the per-cell
-    // seed stays stable regardless of which filter rejects. Same trick the
-    // tree placement scan uses (species roll).
-    const int    cell_offset = rng.range(rule.grid);
-    const double roll        = rng.unit();
-    const double mirror_roll = rng.unit();
-    const double depth_roll  = rng.unit();
+    // Pull the fixed set of draws BEFORE any filter so the per-cell seed stays
+    // stable regardless of which filter rejects. Additional draws exist for
+    // the new MirrorY variant roll and the chain expansion seed.
+    const int      cell_offset    = rng.range(rule.grid);
+    const double   roll           = rng.unit();
+    const double   mirror_roll    = rng.unit();
+    const double   mirror_y_roll  = rng.unit();
+    const double   depth_roll     = rng.unit();
+    const uint32_t chain_seed     = rng.next();
 
     const int origin_x = grid_x * rule.grid + cell_offset;
 
@@ -912,6 +914,8 @@ NormalWorldGenerator::getStructurePlacementsInCell(int grid_x, StructureID id) c
     if (col.height < rule.min_surface_y || col.height > rule.max_surface_y)
         return result;
 
+    const StructureTemplate& root_tmpl = StructureRegistry::getTemplate(id);
+
     int anchor_y = 0;
     switch (rule.anchor_mode)
     {
@@ -923,13 +927,8 @@ NormalWorldGenerator::getStructurePlacementsInCell(int grid_x, StructureID id) c
             break;
         case StructureRule::Anchor::BelowSurface:
         {
-            const StructureTemplate& tmpl = StructureRegistry::getTemplate(id);
-
-            // Keep the entire bbox strictly below the surface and above
-            // bedrock (y=0). Anchor y range is derived from the template's
-            // own anchor row within the bbox.
-            const int min_anchor = tmpl.anchor_y + 1;
-            const int max_anchor = col.height - 1 - (tmpl.height - 1 - tmpl.anchor_y);
+            const int min_anchor = root_tmpl.anchor_y + 1;
+            const int max_anchor = col.height - 1 - (root_tmpl.height - 1 - root_tmpl.anchor_y);
             if (max_anchor < min_anchor) return result;
 
             const int span = max_anchor - min_anchor + 1;
@@ -939,11 +938,144 @@ NormalWorldGenerator::getStructurePlacementsInCell(int grid_x, StructureID id) c
     }
 
     StructureRotation rotation = StructureRotation::Original;
-    if (rule.allow_mirror && mirror_roll < 0.5)
-        rotation = StructureRotation::MirrorX;
+    const bool flip_x = rule.allow_mirror        && mirror_roll   < 0.5;
+    const bool flip_y = root_tmpl.allow_mirror_y && mirror_y_roll < 0.5;
+    if (flip_x && flip_y) rotation = StructureRotation::MirrorXY;
+    else if (flip_x)      rotation = StructureRotation::MirrorX;
+    else if (flip_y)      rotation = StructureRotation::MirrorY;
 
-    result.push_back(StructurePlacement{id, origin_x, anchor_y, rotation});
+    StructurePlacement root{id, origin_x, anchor_y, rotation, chain_seed};
+    result.push_back(root);
+
+    if (rule.max_chain_depth > 0)
+        expandJigsawChain(root, rule.max_chain_depth, result);
+
     return result;
+}
+
+void NormalWorldGenerator::expandJigsawChain(const StructurePlacement& root, int max_depth,
+                                             std::vector<StructurePlacement>& out) const
+{
+    // Frontier walk — each entry is a piece whose jigsaws have not been
+    // expanded yet. `remaining` caps how deep this branch can still go.
+    // `skip_jigsaw` is the index of the jigsaw this piece used to connect to
+    // its parent; re-expanding it would attach a new piece on top of the
+    // parent and cause the chain to double back. Root starts with -1 (no
+    // incoming jigsaw).
+    struct Pending { StructurePlacement placement; int remaining; int skip_jigsaw; };
+    std::vector<Pending> frontier;
+    frontier.push_back({root, max_depth, -1});
+
+    while (!frontier.empty())
+    {
+        Pending current = frontier.front();
+        frontier.erase(frontier.begin());
+        if (current.remaining <= 0) continue;
+
+        const StructureTemplate& tmpl = StructureRegistry::getTemplate(current.placement.id);
+
+        for (std::size_t ji = 0; ji < tmpl.jigsaws.size(); ji++)
+        {
+            if (static_cast<int>(ji) == current.skip_jigsaw) continue;
+
+            const StructureJigsaw& j = tmpl.jigsaws[ji];
+
+            const auto* pool = StructureRegistry::findJigsawPool(j.pool);
+            if (!pool || pool->empty()) continue;
+
+            // Per-jigsaw RNG so chain shape doesn't depend on jigsaw ordering
+            // across siblings — adding a new jigsaw to a template won't shift
+            // the picks already made for the earlier ones.
+            uint32_t rng = mix32(current.placement.seed ^ static_cast<uint32_t>(ji) * 2654435761u);
+
+            uint32_t total_w = 0;
+            for (const auto& e : *pool) total_w += e.weight;
+            if (total_w == 0) continue;
+
+            rng = mix32(rng + 0x9E3779B9u);
+            const uint32_t pick = rng % total_w;
+            uint32_t acc = 0;
+            StructureID chosen_id = 0;
+            for (const auto& e : *pool)
+            {
+                acc += e.weight;
+                if (pick < acc) { chosen_id = e.id; break; }
+            }
+            if (chosen_id == 0) continue;
+
+            // Source jigsaw's absolute world facing + position.
+            int sx = 0, sy = 0;
+            tmpl.toWorld(current.placement.rotation,
+                         current.placement.origin_x, current.placement.anchor_y,
+                         j.rx, j.ry, sx, sy);
+            const StructureJigsawFacing src_facing =
+                StructureTemplate::rotateFacing(j.facing, current.placement.rotation);
+
+            // Where the matching target-jigsaw block must land in world coords —
+            // one step outward from the source along its facing.
+            int target_wx = sx;
+            int target_wy = sy;
+            StructureJigsawFacing opposite = StructureJigsawFacing::Right;
+            switch (src_facing)
+            {
+                case StructureJigsawFacing::Right: target_wx = sx + 1; opposite = StructureJigsawFacing::Left;  break;
+                case StructureJigsawFacing::Left:  target_wx = sx - 1; opposite = StructureJigsawFacing::Right; break;
+                case StructureJigsawFacing::Up:    target_wy = sy + 1; opposite = StructureJigsawFacing::Down;  break;
+                case StructureJigsawFacing::Down:  target_wy = sy - 1; opposite = StructureJigsawFacing::Up;    break;
+            }
+
+            const StructureTemplate& tt = StructureRegistry::getTemplate(chosen_id);
+            const StructureRule&     tr = StructureRegistry::getRule(chosen_id);
+
+            // Find a (jigsaw, rotation) pair on the target whose connector
+            // matches and whose rotated facing is `opposite`. Rotations are
+            // tried in fixed order so the chain stays deterministic.
+            const StructureRotation rot_order[] =
+            {
+                StructureRotation::Original,
+                StructureRotation::MirrorX,
+                StructureRotation::MirrorY,
+                StructureRotation::MirrorXY,
+            };
+
+            bool matched = false;
+            StructurePlacement next_place{};
+            int matched_jigsaw_idx = -1;
+            for (StructureRotation rot : rot_order)
+            {
+                const bool uses_mx = (rot == StructureRotation::MirrorX || rot == StructureRotation::MirrorXY);
+                const bool uses_my = (rot == StructureRotation::MirrorY || rot == StructureRotation::MirrorXY);
+                if (uses_mx && !tr.allow_mirror)        continue;
+                if (uses_my && !tt.allow_mirror_y)      continue;
+
+                for (std::size_t tji = 0; tji < tt.jigsaws.size(); tji++)
+                {
+                    const StructureJigsaw& tj = tt.jigsaws[tji];
+                    if (tj.connector != j.connector) continue;
+                    if (StructureTemplate::rotateFacing(tj.facing, rot) != opposite) continue;
+
+                    // Derive origin/anchor so target_world(tj.rx, tj.ry) == (target_wx, target_wy).
+                    const int sign_x = uses_mx ? -1 : 1;
+                    const int sign_y = uses_my ? -1 : 1;
+                    const int origin_x = target_wx - sign_x * (tj.rx - tt.anchor_x);
+                    const int anchor_y = target_wy - sign_y * (tj.ry - tt.anchor_y);
+
+                    next_place = StructurePlacement{
+                        chosen_id, origin_x, anchor_y, rot,
+                        mix32(rng ^ 0xBEEF1234u)
+                    };
+                    matched = true;
+                    matched_jigsaw_idx = static_cast<int>(tji);
+                    break;
+                }
+                if (matched) break;
+            }
+            if (!matched) continue;
+
+            out.push_back(next_place);
+            frontier.push_back({next_place, current.remaining - 1, matched_jigsaw_idx});
+        }
+    }
 }
 
 void NormalWorldGenerator::generateStructures(Chunk& chunk)
@@ -951,11 +1083,15 @@ void NormalWorldGenerator::generateStructures(Chunk& chunk)
     const auto& rules = StructureRegistry::rules();
     if (rules.empty()) return;
 
-    // Expand the scan range by ceil(max_structure_width / CHUNK_WIDTH) on each
-    // side so a structure whose origin lives in a neighbour chunk still gets
-    // stamped into this one. Same approach as ore veins (MAX_VEIN_REACH).
-    const int max_w = StructureRegistry::maxTemplateWidth();
-    const int neighbor_range = (max_w + CHUNK_WIDTH - 1) / CHUNK_WIDTH;
+    const int max_w     = StructureRegistry::maxTemplateWidth();
+    const int max_reach = StructureRegistry::maxChainReach();
+
+    // Scan range covers the biggest single stamp (max_w) plus a worst-case
+    // chain length (max_reach) on each side. Chained pieces can extend far
+    // beyond the root so every neighbour chunk that might host a chain segment
+    // still re-resolves the entire chain locally.
+    const int reach_blocks = max_w + max_reach;
+    const int neighbor_range = (reach_blocks + CHUNK_WIDTH - 1) / CHUNK_WIDTH;
 
     for (const auto& [id, rule] : rules)
     {
@@ -964,7 +1100,6 @@ void NormalWorldGenerator::generateStructures(Chunk& chunk)
         const int chunk_min = chunk.chunk_position * CHUNK_WIDTH;
         const int chunk_max = chunk_min + CHUNK_WIDTH - 1;
 
-        // Grid cells whose chosen origin could fall within (chunk ± neighbor_range).
         const int search_min = chunk_min - neighbor_range * CHUNK_WIDTH;
         const int search_max = chunk_max + neighbor_range * CHUNK_WIDTH;
 
@@ -975,7 +1110,7 @@ void NormalWorldGenerator::generateStructures(Chunk& chunk)
         {
             for (const StructurePlacement& p : getStructurePlacementsInCell(gx, id))
             {
-                StructureRegistry::stamp(chunk, p.id, p.origin_x, p.anchor_y, p.rotation);
+                StructureRegistry::stamp(chunk, p.id, p.origin_x, p.anchor_y, p.rotation, p.seed);
             }
         }
     }

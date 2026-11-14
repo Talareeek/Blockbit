@@ -31,6 +31,7 @@ public:
         AddBlockEntity= 5, // attach a BlockEntity to the clicked cell
         AddSpawn      = 6, // attach a PendingSpawn to the clicked cell
         RemoveMarker  = 7, // remove any block entity / spawn on the clicked cell
+        AddJigsaw     = 8, // attach a jigsaw connector to the clicked cell
     };
 
     StructureEditorGameState(Game* game);
@@ -54,9 +55,26 @@ private:
     Tool                    tool          = Tool::Paint;
     uint16_t                paint_metadata = 0; // stamped on painted cells
 
+    // Cell-pool selection. >= 0 => painted cells reference StructureTemplate
+    // ::palettes[paint_pool_index] and roll a block at stamp time. -1 means
+    // "literal block" and uses `palette_index` / `paint_metadata` as before.
+    int                     paint_pool_index   = -1;
+
+    // Per-cell probability (0..255). 255 means always stamp; lower values
+    // carve ruined/decayed variants. Applied to new paints only.
+    int                     paint_probability  = 255;
+
     // Block entity / spawn pickers for AddBlockEntity / AddSpawn tools.
     int                     block_entity_kind_index = 0; // into BE_OPTIONS
     int                     spawn_prefab_index      = 0; // into SPAWN_OPTIONS
+
+    // Jigsaw authoring state (used while the AddJigsaw tool is active).
+    int                     jigsaw_facing_index  = 0;    // 0=Right, 1=Left, 2=Up, 3=Down
+    char                    jigsaw_connector[64] = "corridor";
+    char                    jigsaw_pool[64]      = "";
+
+    // Loot-table key buffered for the next AddBlockEntity+Chest placement.
+    char                    chest_loot_table[96] = "";
 
     // ---- canvas viewport ---------------------------------------------------
 

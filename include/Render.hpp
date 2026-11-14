@@ -25,6 +25,12 @@ extern void RenderEntityHitboxes(World& world, const sf::Vector2<double> camera,
 
 extern void RenderChunkBorders(const sf::Vector2<double> camera, sf::RenderWindow& window);
 
+// Draws resultant force, acceleration, and velocity vectors as colored arrows
+// anchored at each entity's center. Reads PhysicsComponent::last_force
+// (preserved copy taken before the per-tick reset) so the force arrow stays
+// visible between ticks instead of collapsing to zero.
+extern void RenderPhysicsVectors(World& world, const sf::Vector2<double> camera, sf::RenderWindow& window);
+
 extern void RenderBorder(const sf::Vector2<double> camera, float view_scale, sf::RenderWindow& window);
 
 extern void RenderBlockDestruction(World& world, sf::Vector2<double> camera, sf::RenderWindow& window);

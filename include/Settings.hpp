@@ -37,6 +37,7 @@ public:
     {
         bool render_hitboxes = false;
         bool render_chunk_borders = false;
+        bool render_vectors = false;
     };
 
     struct Render
