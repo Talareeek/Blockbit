@@ -1,0 +1,18 @@
+{
+    "id": "blockbit:pig",
+    "components": {
+        "transform": {"size": [1.0, 0.75]},
+        "render":    {"texture": "blockbit:pig", "rect": [0, 0, 16, 12], "size": [1.0, 0.75]},
+        "physics":   {"mass": 1.0, "is_solid": true, "is_static": false, "is_gravity_active": true},
+        "health":    {"max": 100, "invulnerable": false},
+        "ai":        {"personality": "passive"},
+        "animation": {
+            "frame_size": [16, 12],
+            "clips": {
+                "idle":    {"start": 0, "count": 2, "time": 0.5, "loop": true},
+                "walking": {"start": 2, "count": 2, "time": 0.5, "loop": true}
+            }
+        },
+        "effects":   {}
+    }
+}

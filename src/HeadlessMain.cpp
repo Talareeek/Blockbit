@@ -1118,7 +1118,6 @@ int main(int argc, char* argv[])
         config = *loaded;
     }
 
-    PrefabRegistry::init();
     EffectRegistry::init();
     StructureRegistry::init();
     registerVanillaContent();

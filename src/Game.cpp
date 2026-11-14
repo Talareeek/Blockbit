@@ -420,7 +420,6 @@ Game::Game()
 
     AssetManager::loadMusic(AssetManager::MusicID::Dream, "resources/sounds/music/dream.mp3");
 
-    PrefabRegistry::init();
     EffectRegistry::init();
     StructureRegistry::init();
     registerVanillaContent();

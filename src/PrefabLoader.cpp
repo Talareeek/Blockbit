@@ -6,11 +6,14 @@
 #include <nlohmann/json.hpp>
 
 #include "../include/AIComponent.hpp"
+#include "../include/AnimationComponent.hpp"
 #include "../include/ContentProfiles.hpp"
 #include "../include/EffectsComponent.hpp"
 #include "../include/ExplosiveComponent.hpp"
+#include "../include/FallingBlockComponent.hpp"
 #include "../include/HealthComponent.hpp"
 #include "../include/InventoryComponent.hpp"
+#include "../include/ItemComponent.hpp"
 #include "../include/PhysicsComponent.hpp"
 #include "../include/RenderComponent.hpp"
 #include "../include/StaminaComponent.hpp"
@@ -53,8 +56,21 @@ bool addTransform(Entity& e, const json& j)
 bool addRender(Entity& e, const json& j, std::string& err)
 {
     const std::string tex_name = j.value("texture", std::string{});
-    auto tex = ContentProfiles::textureFromName(tex_name);
-    if (!tex.has_value()) { err = "unknown texture '" + tex_name + "'"; return false; }
+
+    // `"texture": "runtime"` — sentinel for prefabs like dropped items and
+    // falling blocks where the texture is overwritten at spawn time from the
+    // item/block being represented. Stored as GameTextureID(0).
+    AssetManager::GameTextureID tex_id{};
+    if (tex_name == "runtime")
+    {
+        tex_id = static_cast<AssetManager::GameTextureID>(0);
+    }
+    else
+    {
+        auto tex = ContentProfiles::textureFromName(tex_name);
+        if (!tex.has_value()) { err = "unknown texture '" + tex_name + "'"; return false; }
+        tex_id = *tex;
+    }
 
     sf::IntRect rect{{0, 0}, {16, 16}};
     if (j.contains("rect") && j["rect"].is_array() && j["rect"].size() == 4)
@@ -69,7 +85,7 @@ bool addRender(Entity& e, const json& j, std::string& err)
         sprite_size.x = j["size"][0].get<float>();
         sprite_size.y = j["size"][1].get<float>();
     }
-    e.addComponent(RenderComponent{*tex, rect, sprite_size});
+    e.addComponent(RenderComponent{tex_id, rect, sprite_size});
     return true;
 }
 
@@ -144,20 +160,86 @@ bool addEffects(Entity& e, const json& /*j*/)
     return true;
 }
 
+bool addAnimation(Entity& e, const json& j, std::string& err)
+{
+    AnimationComponent anim;
+
+    if (j.contains("frame_size") && j["frame_size"].is_array() && j["frame_size"].size() == 2)
+    {
+        anim.frameSize = {j["frame_size"][0].get<int>(), j["frame_size"][1].get<int>()};
+    }
+
+    const auto state_from_name = [](std::string_view n) -> std::optional<AnimationState>
+    {
+        if (n == "idle")    return AnimationState::Idle;
+        if (n == "walking") return AnimationState::Walking;
+        if (n == "running") return AnimationState::Running;
+        if (n == "jumping") return AnimationState::Jumping;
+        if (n == "using")   return AnimationState::Using;
+        if (n == "flying")  return AnimationState::Flying;
+        return std::nullopt;
+    };
+
+    if (j.contains("clips"))
+    {
+        if (!j["clips"].is_object())
+        {
+            err = "'animation.clips' must be an object";
+            return false;
+        }
+        for (const auto& [state_name, clip_json] : j["clips"].items())
+        {
+            auto state = state_from_name(state_name);
+            if (!state.has_value())
+            {
+                err = "unknown animation state '" + state_name + "'";
+                return false;
+            }
+            AnimationClip clip{
+                clip_json.value("start", 0u),
+                clip_json.value("count", 1u),
+                clip_json.value("time",  0.5f),
+                clip_json.value("loop",  true)
+            };
+            anim.animations[*state] = clip;
+        }
+    }
+
+    e.addComponent(std::move(anim));
+    return true;
+}
+
+bool addItem(Entity& e, const json& /*j*/)
+{
+    // Item stack is written at spawn time (spawnDroppedItem fills it in).
+    e.addComponent(ItemComponent{});
+    return true;
+}
+
+bool addFallingBlock(Entity& e, const json& /*j*/)
+{
+    // block_id / metadata are written at spawn time (spawnFallingBlock).
+    e.addComponent(FallingBlockComponent{});
+    return true;
+}
+
 bool addComponentByName(Entity& e,
                         const std::string& name,
                         const json& j,
                         std::string& err)
 {
-    if (name == "transform") return addTransform(e, j);
-    if (name == "render")    return addRender(e, j, err);
-    if (name == "physics")   return addPhysics(e, j);
-    if (name == "health")    return addHealth(e, j);
-    if (name == "ai")        return addAI(e, j);
-    if (name == "stamina")   return addStamina(e, j);
-    if (name == "inventory") return addInventory(e, j);
-    if (name == "explosive") return addExplosive(e, j);
-    if (name == "effects")   return addEffects(e, j);
+    if (name == "transform")     return addTransform(e, j);
+    if (name == "render")        return addRender(e, j, err);
+    if (name == "physics")       return addPhysics(e, j);
+    if (name == "health")        return addHealth(e, j);
+    if (name == "ai")            return addAI(e, j);
+    if (name == "stamina")       return addStamina(e, j);
+    if (name == "inventory")     return addInventory(e, j);
+    if (name == "explosive")     return addExplosive(e, j);
+    if (name == "effects")       return addEffects(e, j);
+    if (name == "animation")     return addAnimation(e, j, err);
+    if (name == "item")          return addItem(e, j);
+    if (name == "falling_block") return addFallingBlock(e, j);
     err = "unknown component '" + name + "'";
     return false;
 }

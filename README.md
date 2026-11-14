@@ -12,6 +12,7 @@ A 2D sandbox game written in **C++20** with **SFML**, inspired by classic block-
 ![SFML](https://img.shields.io/badge/SFML-3.x-green?logo=sfml)
 ![License](https://img.shields.io/badge/license-MIT-brightgreen)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey)
+![Discord](https://discord.gg/Q2A5Ndcsx)
 
 ---
 

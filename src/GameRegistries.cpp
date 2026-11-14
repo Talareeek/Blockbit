@@ -297,18 +297,6 @@ void registerVanillaContent()
     // spawn_rules/*.json files append on top.
     reg.spawn_config = defaultMobSpawnConfig();
 
-    // Mirror hardcoded vanilla prefabs into the key-based registry so
-    // spawn-by-key works for 'blockbit:pig', 'blockbit:player', etc.
-    // PrefabRegistry::init runs before registerVanillaContent (see
-    // Game::Game / HeadlessMain) — safe to read here.
-    for (const auto pid : {PrefabID::Player, PrefabID::Pig, PrefabID::Dynamite,
-                           PrefabID::DroppedItem, PrefabID::FallingBlock,
-                           PrefabID::Cube})
-    {
-        const std::string key = "blockbit:" + ContentProfiles::nameFromPrefab(pid);
-        reg.prefabs.insert_or_assign(key, PrefabRegistry::get(pid).cloneAs(UUID{}));
-    }
-
     installPrefabs("resources/packs/blockbit", vanilla.manifest.id);
     {
         LoadedPackSummary s{vanilla.manifest.id, vanilla.manifest.version,

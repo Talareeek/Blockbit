@@ -1,0 +1,19 @@
+{
+    "id": "blockbit:player",
+    "components": {
+        "transform": {"size": [0.75, 1.0]},
+        "render":    {"texture": "blockbit:player", "rect": [0, 0, 12, 16], "size": [0.75, 1.0]},
+        "physics":   {"mass": 1.0, "is_solid": true, "is_static": false, "is_gravity_active": true},
+        "health":    {"max": 100, "invulnerable": false},
+        "stamina":   {},
+        "inventory": {"slots": 36},
+        "animation": {
+            "frame_size": [12, 16],
+            "clips": {
+                "idle":    {"start": 0, "count": 2, "time": 0.5, "loop": true},
+                "walking": {"start": 2, "count": 2, "time": 0.5, "loop": true}
+            }
+        },
+        "effects":   {}
+    }
+}

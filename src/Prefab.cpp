@@ -1,155 +1,34 @@
 #include "../include/Prefab.hpp"
+#include "../include/ContentProfiles.hpp"
+#include "../include/GameRegistries.hpp"
 #include "../include/TransformComponent.hpp"
 #include "../include/PhysicsComponent.hpp"
-#include "../include/InventoryComponent.hpp"
 #include "../include/RenderComponent.hpp"
-#include "../include/AnimationComponent.hpp"
-#include "../include/HealthComponent.hpp"
-#include "../include/StaminaComponent.hpp"
-#include "../include/ExplosiveComponent.hpp"
-#include "../include/AIComponent.hpp"
 #include "../include/ItemComponent.hpp"
 #include "../include/FallingBlockComponent.hpp"
-#include "../include/EffectsComponent.hpp"
 #include "../include/World.hpp"
 
+#include <iostream>
 #include <random>
-
-std::unordered_map<PrefabID, Entity> PrefabRegistry::prefabs;
-
-void PrefabRegistry::add(PrefabID prefab_id, Entity& entity)
-{
-    prefabs.emplace(prefab_id, std::move(entity));
-}
+#include <stdexcept>
 
 const Entity& PrefabRegistry::get(PrefabID prefab_id)
 {
-    return prefabs.at(prefab_id);
+    // Vanilla prefabs live in the pack now (resources/packs/blockbit/prefabs/).
+    // Look them up by their "blockbit:<name>" key in the shared registry that
+    // the pack loader populates.
+    const std::string key = "blockbit:" + ContentProfiles::nameFromPrefab(prefab_id);
+    const auto& prefabs = gameRegistries().prefabs;
+    auto it = prefabs.find(key);
+    if (it == prefabs.end())
+    {
+        std::cerr << "[Prefab] missing vanilla prefab '" << key
+                  << "' — did resources/packs/blockbit/prefabs/" << key.substr(9)
+                  << ".json load?\n";
+        throw std::runtime_error("PrefabRegistry::get: prefab '" + key + "' not registered");
+    }
+    return it->second;
 }
-
-void PrefabRegistry::init()
-{
-    { // PLAYER
-        Entity entity(UUID{});
-
-        entity.addComponent(TransformComponent{{0.0f, 0.0f}, {0.75f, 1.0f}, sf::degrees(0.0f)});
-        entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
-        entity.addComponent(HealthComponent{100, 100, true});
-        entity.addComponent(StaminaComponent{StaminaComponent::DEFAULT_MAX, StaminaComponent::DEFAULT_MAX});
-
-        InventoryComponent inv(36);
-        inv.inventory.slots[0] = {ItemID::Coreheart_Of_Blockbit, 64};
-        entity.addComponent(std::move(inv));
-
-        entity.addComponent(RenderComponent{AssetManager::GameTextureID::Player, {{0, 0}, {12, 16}}, {0.75f, 1.0f}});
-
-        AnimationComponent animation;
-
-        animation.animations =
-        {
-            {AnimationState::Idle, AnimationClip{0, 2, 0.5f, true}},
-            {AnimationState::Walking, AnimationClip{2, 2, 0.5f, true}}
-        };
-
-        animation.frameSize = {12, 16};
-
-        entity.addComponent(animation);
-
-        entity.addComponent(EffectsComponent{});
-
-        add(PrefabID::Player, entity);
-    }
-
-    { // DYNAMITE
-        Entity entity(generateUUID());
-
-        entity.addComponent(TransformComponent{{0.0, 0.0}, {1.0, 1.0}, sf::degrees(0.0f)});
-
-        entity.addComponent(ExplosiveComponent{3.0f});
-
-        entity.addComponent(RenderComponent{AssetManager::GameTextureID::Dynamite, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
-
-                
-        entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
-
-        add(PrefabID::Dynamite, entity);
-    }
-
-    { // PIG
-        Entity entity(generateUUID());
-
-        entity.addComponent(TransformComponent{{0.0, 0.0}, {1.0f, 0.75f}, sf::degrees(0.0f)});
-        entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
-        entity.addComponent(RenderComponent{AssetManager::GameTextureID::Pig, {{0, 0}, {16, 12}}, {1.0f, 0.75f}});
-        entity.addComponent(HealthComponent{100, 100, true});
-
-        AIComponent ai;
-        ai.personality = AIComponent::Personality::Passive;
-        ai.state       = AIComponent::State::Idle;
-        entity.addComponent(ai);
-
-        AnimationComponent animation;
-
-        animation.animations =
-        {
-            {AnimationState::Idle, AnimationClip{0, 2, 0.5f, true}},
-            {AnimationState::Walking, AnimationClip{2, 2, 0.5f, true}}
-        };
-
-        animation.frameSize = {16, 12};
-
-        entity.addComponent(animation);
-
-        entity.addComponent(EffectsComponent{});
-
-        add(PrefabID::Pig, entity);
-    }
-
-    { // CUBE (boss)
-        Entity entity(generateUUID());
-
-        entity.addComponent(TransformComponent{{0.0, 0.0}, {4.0f, 4.0f}, sf::degrees(0.0f)});
-        entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
-        entity.addComponent(RenderComponent{AssetManager::GameTextureID::Cube, {{0, 0}, {64, 64}}, {4.0f, 4.0f}});
-        entity.addComponent(HealthComponent{500, 500, true});
-
-        AIComponent ai;
-        ai.personality    = AIComponent::Personality::Aggressive;
-        ai.state          = AIComponent::State::Idle;
-        ai.detectionRange = 16.0f;
-        ai.attackRange    = 3.0f;
-        ai.moveSpeed      = 25.0f;
-        entity.addComponent(ai);
-
-        entity.addComponent(EffectsComponent{});
-
-        add(PrefabID::Cube, entity);
-    }
-
-    { // DROPPED_ITEM
-        Entity entity(UUID{});
-
-        entity.addComponent(TransformComponent{{0.0, 0.0}, {0.5, 0.5}, sf::degrees(0.0f)});
-        entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
-        entity.addComponent(RenderComponent{static_cast<AssetManager::GameTextureID>(0), {{0, 0}, {16, 16}}, {0.5f, 0.5f}});
-        entity.addComponent(ItemComponent{});
-
-        add(PrefabID::DroppedItem, entity);
-    }
-
-    { // FALLING_BLOCK
-        Entity entity(UUID{});
-
-        // 1x1 so the entity lines up with the block grid on landing. isSolid=false
-        // so the player can walk through a mid-fall sand pillar (vanilla behaviour).
-        entity.addComponent(TransformComponent{{0.0, 0.0}, {1.0, 1.0}, sf::degrees(0.0f)});
-        entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, false, false, false, true});
-        entity.addComponent(RenderComponent{static_cast<AssetManager::GameTextureID>(0), {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
-        entity.addComponent(FallingBlockComponent{});
-
-        add(PrefabID::FallingBlock, entity);
-    }
-};
 
 sf::Vector2f randomDropSpread(float spread_factor)
 {

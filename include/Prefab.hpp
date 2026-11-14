@@ -19,19 +19,15 @@ enum class PrefabID : uint8_t
     Cube
 };
 
-class PrefabRegistry
+// Thin adapter over the pack-populated gameRegistries().prefabs map. The
+// enum-based API is still used across the codebase (ServerWorld::spawn,
+// GameServer player spawn, structure editor, debug commands); internally it
+// resolves to "blockbit:<name>" and looks the template up in the live
+// registry that the pack loader fills in.
+namespace PrefabRegistry
 {
-private:
-
-    static std::unordered_map<PrefabID, Entity> prefabs;
-
-public:
-
-    static void add(PrefabID prefab_id, Entity& entity);
-    static const Entity& get(PrefabID prefab_id);
-
-    static void init();
-};
+    const Entity& get(PrefabID prefab_id);
+}
 
 sf::Vector2f randomDropSpread(float spread_factor);
 
