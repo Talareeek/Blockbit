@@ -39,9 +39,11 @@ struct PlayerControlledComponent : public Component
     // batch (and cleared when a batch arrives with no MOVE). Applied as force
     // every tick regardless of whether a new input batch came in, so network
     // jitter / single-packet loss no longer produces "impulse" movement on
-    // the server. Not serialized — the client tracks its own copy for
-    // prediction and the server's authoritative state is Transform/Physics,
-    // not the intent itself.
+    // the server. Serialized so clients know each remote player's current
+    // direction — NetworkInterpolationSystem uses intent.x to decide whether
+    // to keep extrapolating (moving) or hold the last sample (stopped),
+    // preventing the "slides past the stop point" artifact when snapshots
+    // arrive late.
     sf::Vector2<float> move_intent{0.0f, 0.0f};
     bool move_sprint = false;
 
@@ -88,6 +90,8 @@ struct PlayerControlledComponent : public Component
         compound["mining_block"] = Tag(mining_block);
         compound["mining_time"] = Tag(mining_time);
         compound["noclip"] = Tag(noclip);
+        compound["move_intent"] = Tag(move_intent);
+        compound["move_sprint"] = Tag(move_sprint);
 
         return Tag(compound);
     }
@@ -108,6 +112,8 @@ struct PlayerControlledComponent : public Component
         if (compound.count("mining_block")) mining_block = tag["mining_block"].get<sf::Vector2i>();
         if (compound.count("mining_time"))  mining_time  = tag["mining_time"].get<float>();
         if (compound.count("noclip"))       noclip       = tag["noclip"].get<bool>();
+        if (compound.count("move_intent"))  move_intent  = tag["move_intent"].get<sf::Vector2f>();
+        if (compound.count("move_sprint"))  move_sprint  = tag["move_sprint"].get<bool>();
     }
 
     std::unique_ptr<Component> clone() const override

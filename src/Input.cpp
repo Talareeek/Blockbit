@@ -294,7 +294,6 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
     auto& physics = entity.getComponent<PhysicsComponent>();
     auto& transform = entity.getComponent<TransformComponent>();
     auto& player = entity.getComponent<PlayerControlledComponent>();
-    auto& animation = entity.getComponent<AnimationComponent>();
     auto& inventory = entity.getComponent<InventoryComponent>();
 
     // Stateful MOVE: this batch's intent is the last MOVE it contains, or
@@ -314,16 +313,19 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
                 found_move = true;
             }
         }
+        sf::Vector2<float> new_intent{0.0f, 0.0f};
+        bool new_sprint = false;
         if(found_move)
         {
-            player.move_intent = {static_cast<float>(latest_move.direction.x),
-                                  static_cast<float>(latest_move.direction.y)};
-            player.move_sprint = latest_move.sprint;
+            new_intent = {static_cast<float>(latest_move.direction.x),
+                          static_cast<float>(latest_move.direction.y)};
+            new_sprint = latest_move.sprint;
         }
-        else
+        if(new_intent != player.move_intent || new_sprint != player.move_sprint)
         {
-            player.move_intent = {0.0f, 0.0f};
-            player.move_sprint = false;
+            player.move_intent = new_intent;
+            player.move_sprint = new_sprint;
+            player.dirty = true;
         }
     }
 

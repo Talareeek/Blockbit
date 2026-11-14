@@ -1912,19 +1912,54 @@ void NetworkInterpolationSystem(World& world, double render_tick)
             // the last two samples so the entity keeps moving instead of
             // freezing. Bounded by MAX_EXTRAPOLATION_TICKS; past that we hold
             // the last sample rather than flying off.
+            //
+            // For player-controlled entities we additionally consult the
+            // server-sent move_intent: if intent.x == 0 the remote player
+            // explicitly stopped, so extrapolating from the last position
+            // delta would overshoot the stop point and snap back when the
+            // next real sample arrives. In that case we hold the last
+            // sample. If intent.x has a sign we also clamp the extrapolation
+            // direction to that sign — handles cases where the two
+            // snapshots we're using straddled a direction change.
             const auto& a = history[history.size() - 2];
             const auto& b = history.back();
             const double span = static_cast<double>(b.tick) - static_cast<double>(a.tick);
-            if (span > 0.0)
+
+            bool hold_last = false;
+            double dir_clamp = 0.0; // 0 = no clamp, +1 / -1 = clamp to that sign
+            if (entity.hasComponent<PlayerControlledComponent>())
+            {
+                const auto& player = entity.getComponent<PlayerControlledComponent>();
+                if (std::abs(player.move_intent.x) < 0.01f)
+                {
+                    hold_last = true;
+                }
+                else
+                {
+                    dir_clamp = (player.move_intent.x > 0.0f) ? 1.0 : -1.0;
+                }
+            }
+
+            if (hold_last || span <= 0.0)
+            {
+                transform.render_position = b.position;
+            }
+            else
             {
                 const double raw_overshoot = render_tick - static_cast<double>(b.tick);
                 const double overshoot = std::min(raw_overshoot, MAX_EXTRAPOLATION_TICKS);
                 const double alpha = 1.0 + overshoot / span;
-                transform.render_position = a.position + (b.position - a.position) * alpha;
-            }
-            else
-            {
-                transform.render_position = b.position;
+                sf::Vector2<double> predicted = a.position + (b.position - a.position) * alpha;
+                if (dir_clamp != 0.0)
+                {
+                    const double delta_x = predicted.x - b.position.x;
+                    if ((dir_clamp > 0.0 && delta_x < 0.0) ||
+                        (dir_clamp < 0.0 && delta_x > 0.0))
+                    {
+                        predicted.x = b.position.x;
+                    }
+                }
+                transform.render_position = predicted;
             }
             continue;
         }
