@@ -306,9 +306,13 @@ void ClientGameState::reconcileLocalPlayer()
     }
 
     // Replay what's left: each entry is one tick's worth of inputs the server
-    // hasn't yet processed. Apply the same prediction forces + physics step
-    // we did when the batch was first produced. Matches server
-    // processWorldInputs + PhysicsSystem cadence exactly.
+    // hasn't yet processed. Mirror the server tick pipeline exactly —
+    // update intent from the batch, convert intent -> force, integrate.
+    // Without the explicit applyMoveIntent call between prediction and
+    // physics, replayed ticks would integrate with zero force (intent lives
+    // in the component now; it is NOT directly written into physics.force by
+    // applyLocalPlayerInputPrediction) and the reconciled prediction would
+    // drift behind the server.
     const float tick_step = 1.0f / static_cast<float>(tick_rate);
     auto& player_entity = local_world.getEntity(local_player_entity_id.value());
 
@@ -316,6 +320,7 @@ void ClientGameState::reconcileLocalPlayer()
     {
         applyLocalPlayerInputPrediction(local_world, batch.inputs,
                                         local_player_entity_id.value(), tick_step);
+        applyMoveIntent(local_world, local_player_entity_id.value(), tick_step);
         stepEntityPhysics(player_entity, local_world, tick_step);
     }
 }
@@ -761,13 +766,18 @@ void ClientGameState::onTick(float tick_step)
 
     // Local player physics runs here — NOT inside PhysicsSystem's iteration
     // (which skips this entity). Having a single integration site makes
-    // prediction + replay coherent: sendTickInputs applies forces, stepEntityPhysics
-    // integrates, and applySnapshot's reconcile replays by re-applying forces and
-    // re-stepping. Done every tick so gravity/velocity keep advancing even when
-    // acceptsPlayerInput is false (chat, pause, view open).
+    // prediction + replay coherent: sendTickInputs updates the player's
+    // move intent, applyMoveIntent translates intent -> force, and
+    // stepEntityPhysics integrates. applySnapshot's reconcile replays the
+    // same (intent update -> intent apply -> step) sequence. Done every
+    // tick so gravity/velocity keep advancing even when acceptsPlayerInput
+    // is false (chat, pause, view open) and movement stays continuous
+    // across ticks where no input batch was built this frame — same
+    // continuity the server now has via its own applyMoveIntent call.
     if (local_player_entity_id.has_value() && local_world.doesEntityExist(local_player_entity_id.value()))
     {
         auto& player_entity = local_world.getEntity(local_player_entity_id.value());
+        applyMoveIntent(local_world, local_player_entity_id.value(), tick_step);
         stepEntityPhysics(player_entity, local_world, tick_step);
     }
 

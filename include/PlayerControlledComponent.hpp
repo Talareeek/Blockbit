@@ -35,7 +35,15 @@ struct PlayerControlledComponent : public Component
 
     bool jump = false;
 
-    sf::Vector2<double> move_direction;
+    // Stateful movement intent. Set from the last MOVE input in each received
+    // batch (and cleared when a batch arrives with no MOVE). Applied as force
+    // every tick regardless of whether a new input batch came in, so network
+    // jitter / single-packet loss no longer produces "impulse" movement on
+    // the server. Not serialized — the client tracks its own copy for
+    // prediction and the server's authoritative state is Transform/Physics,
+    // not the intent itself.
+    sf::Vector2<float> move_intent{0.0f, 0.0f};
+    bool move_sprint = false;
 
     bool noclip = false;
 
@@ -120,7 +128,8 @@ struct PlayerControlledComponent : public Component
         out->mining_time       = mining_time;
         out->change_slot       = change_slot;
         out->jump              = jump;
-        out->move_direction    = move_direction;
+        out->move_intent       = move_intent;
+        out->move_sprint       = move_sprint;
         out->noclip            = noclip;
         return out;
     }

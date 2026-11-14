@@ -61,4 +61,12 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id);
 // sprint-latch gate (via since_last_drain) stays in sync between snapshots.
 void applyLocalPlayerInputPrediction(World& world, const std::vector<Input>& inputs, UUID id, float dt);
 
+// Applies the player's stored move_intent (last known movement direction +
+// sprint flag) as force every tick, regardless of whether a new input batch
+// arrived. This is what makes movement smooth under network jitter: the
+// server (and the client's prediction) keep executing the player's last
+// expressed intent until a new batch changes it. dt is the tick step; used
+// to mirror the StaminaSystem sprint-latch gate between snapshots.
+void applyMoveIntent(World& world, UUID id, float dt);
+
 #endif // INPUT_HPP

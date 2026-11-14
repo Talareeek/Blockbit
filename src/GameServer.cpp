@@ -33,6 +33,7 @@
 #include "../include/InventoryView.hpp"
 #include "../include/FurnaceBlockEntity.hpp"
 #include "../include/Command.hpp"
+#include "../include/Input.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -684,9 +685,17 @@ void GameServer::update(float dt)
         syncConnections();
         processIncoming();
 
-        constexpr size_t INPUT_QUEUE_TARGET   = 1;
-        constexpr size_t INPUT_QUEUE_GRACE    = 2;
-        constexpr size_t INPUT_QUEUE_HARD_CAP = 10;
+        // Jitter buffer bounds. TARGET=2 means we try to keep a small cushion
+        // so single-tick network gaps don't drain the queue to empty; CAP=15
+        // gives ~125 ms of slack at 120 Hz before we drop. The old consume-2
+        // fast-forward is gone: doubling inputs in a single tick caused the
+        // very impulse pattern we're fixing (processWorldInputs accumulates
+        // into physics.force, and PhysicsSystem only integrates once per tick
+        // before zeroing force). At most 1 batch consumed per tick now; move
+        // intent stored in PlayerControlledComponent keeps motion continuous
+        // for ticks where the queue underruns.
+        constexpr size_t INPUT_QUEUE_TARGET   = 2;
+        constexpr size_t INPUT_QUEUE_HARD_CAP = 15;
 
         for (auto& [client_id, queue] : remote_input_queues)
         {
@@ -710,10 +719,7 @@ void GameServer::update(float dt)
                 }
             }
 
-            size_t to_consume = 1;
-            if (queue.size() > INPUT_QUEUE_TARGET + INPUT_QUEUE_GRACE) to_consume = 2;
-
-            for (size_t i = 0; i < to_consume && !queue.empty(); ++i)
+            if (!queue.empty())
             {
                 auto& batch = queue.front();
                 if (batch.seq > client_it->second.last_input_seq_applied)
@@ -721,6 +727,13 @@ void GameServer::update(float dt)
                 processWorldInputs(world, std::move(batch.inputs), iterator->second);
                 queue.pop_front();
             }
+
+            // Apply the stored movement intent EVERY tick (even when the
+            // queue was empty this tick). This is what turns the server's
+            // view of player motion from "impulsive bursts whenever a batch
+            // lands" into a continuous drive: the player's last expressed
+            // direction stays in effect until a new batch overwrites it.
+            applyMoveIntent(world, iterator->second, dt);
         }
 
         ChunkLoadSystem(world, dt);

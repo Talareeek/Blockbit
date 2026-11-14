@@ -141,18 +141,53 @@ void applyLocalPlayerInputPrediction(World& world, const std::vector<Input>& inp
 
     if(!entity.hasComponent<PhysicsComponent>() ||
        !entity.hasComponent<TransformComponent>() ||
-       !entity.hasComponent<AnimationComponent>()) return;
+       !entity.hasComponent<AnimationComponent>() ||
+       !entity.hasComponent<PlayerControlledComponent>()) return;
 
     auto& physics = entity.getComponent<PhysicsComponent>();
     auto& transform = entity.getComponent<TransformComponent>();
-    auto& animation = entity.getComponent<AnimationComponent>();
+    auto& player = entity.getComponent<PlayerControlledComponent>();
 
-    // Latch-style sprint flag for this tick's prediction, matching how the
-    // server's processWorldInputs + StaminaSystem interact: if the gate
-    // passes we both predict the 1.25x multiplier AND locally zero
-    // since_last_drain so the next input in the same batch (and every tick
-    // until stamina depletes) keeps clearing the gate.
+    // Mirror processWorldInputs: MOVE is stateful on the component; this
+    // batch's last MOVE becomes the current intent, or clear if absent.
+    {
+        bool found_move = false;
+        MoveData latest_move{};
+        for(const auto& input : inputs)
+        {
+            if(input.type == InputType::MOVE)
+            {
+                latest_move = std::get<MoveData>(input.value);
+                found_move = true;
+            }
+        }
+        if(found_move)
+        {
+            player.move_intent = {static_cast<float>(latest_move.direction.x),
+                                  static_cast<float>(latest_move.direction.y)};
+            player.move_sprint = latest_move.sprint;
+        }
+        else
+        {
+            player.move_intent = {0.0f, 0.0f};
+            player.move_sprint = false;
+        }
+    }
+
+    // Client-side stamina drain prediction (mirrors server StaminaSystem one
+    // tick). Done once per tick here — NOT inside applyMoveIntent, because
+    // applyMoveIntent also runs on the server where StaminaSystem is already
+    // the authoritative drain path and a second drain here would double it.
     bool predicted_sprint_this_tick = false;
+    if(std::abs(player.move_intent.x) > 0.01f && player.move_sprint
+       && entity.hasComponent<StaminaComponent>())
+    {
+        const auto& stamina = entity.getComponent<StaminaComponent>();
+        const float gate = (stamina.since_last_drain <= 0.0f)
+                           ? 0.0f
+                           : StaminaComponent::MIN_TO_START_SPRINT;
+        if(stamina.stamina > gate) predicted_sprint_this_tick = true;
+    }
 
     for(const auto& input : inputs)
     {
@@ -160,32 +195,7 @@ void applyLocalPlayerInputPrediction(World& world, const std::vector<Input>& inp
         {
             case InputType::MOVE:
             {
-                auto move = std::get<MoveData>(input.value);
-
-                float multiplier = 0.75f;
-                if(move.sprint && std::abs(move.direction.x) > 0.01f
-                   && entity.hasComponent<StaminaComponent>())
-                {
-                    const auto& stamina = entity.getComponent<StaminaComponent>();
-                    const float gate = (stamina.since_last_drain <= 0.0f)
-                                       ? 0.0f
-                                       : StaminaComponent::MIN_TO_START_SPRINT;
-                    if(stamina.stamina > gate)
-                    {
-                        multiplier = 1.25f;
-                        predicted_sprint_this_tick = true;
-                    }
-                }
-
-                multiplier *= 1.0f + 0.25f * static_cast<float>(effectMagnitude(entity, EffectID::Speed));
-
-                int block_x = (int)std::floor(transform.position.x + transform.size.x / 2.0f);
-                int block_y = (int)std::floor(transform.position.y);
-                physics.force.x += 45.0f * move.direction.x * multiplier / blockDatabase[world.getBlock(block_x, block_y).id].drag;
-
-                if(move.direction.x < 0.0f) animation.direction = AnimationComponent::Direction::Left;
-                else if(move.direction.x > 0.0f) animation.direction = AnimationComponent::Direction::Right;
-
+                // Handled above as stateful intent; nothing to do per-input.
                 break;
             }
             case InputType::JUMP:
@@ -209,11 +219,6 @@ void applyLocalPlayerInputPrediction(World& world, const std::vector<Input>& inp
         }
     }
 
-    // Mirror server StaminaSystem one tick. Without this, the client reads
-    // a stale since_last_drain (only updated via snapshots) and the gate
-    // flips back to MIN_TO_START_SPRINT in the middle of an active sprint
-    // whenever stamina drops below 10 — predicting a walk while the server
-    // is still sprinting, which the user sees as a snap-forward correction.
     if(entity.hasComponent<StaminaComponent>())
     {
         auto& stamina = entity.getComponent<StaminaComponent>();
@@ -229,6 +234,57 @@ void applyLocalPlayerInputPrediction(World& world, const std::vector<Input>& inp
     }
 }
 
+void applyMoveIntent(World& world, UUID id, float /*dt*/)
+{
+    if(!world.doesEntityExist(id)) return;
+    auto& entity = world.getEntity(id);
+
+    if(!entity.hasComponent<PhysicsComponent>() ||
+       !entity.hasComponent<TransformComponent>() ||
+       !entity.hasComponent<AnimationComponent>() ||
+       !entity.hasComponent<PlayerControlledComponent>()) return;
+
+    auto& physics = entity.getComponent<PhysicsComponent>();
+    auto& transform = entity.getComponent<TransformComponent>();
+    auto& animation = entity.getComponent<AnimationComponent>();
+    auto& player = entity.getComponent<PlayerControlledComponent>();
+
+    const float dir_x = player.move_intent.x;
+    if(std::abs(dir_x) <= 0.01f) return;
+
+    float multiplier = 0.75f;
+    if(player.move_sprint && entity.hasComponent<StaminaComponent>())
+    {
+        auto& stamina = entity.getComponent<StaminaComponent>();
+        const float gate = (stamina.since_last_drain <= 0.0f)
+                           ? 0.0f
+                           : StaminaComponent::MIN_TO_START_SPRINT;
+        if(stamina.stamina > gate)
+        {
+            multiplier = 1.25f;
+            stamina.sprint_requested = true;
+        }
+    }
+
+    multiplier *= 1.0f + 0.25f * static_cast<float>(effectMagnitude(entity, EffectID::Speed));
+
+    int block_x = (int)std::floor(transform.position.x + transform.size.x / 2.0f);
+    int block_y = (int)std::floor(transform.position.y);
+    physics.force.x += 45.0f * dir_x * multiplier / blockDatabase[world.getBlock(block_x, block_y).id].drag;
+    physics.dirty = true;
+
+    if(dir_x < 0.0f)
+    {
+        animation.direction = AnimationComponent::Direction::Left;
+        animation.dirty = true;
+    }
+    else
+    {
+        animation.direction = AnimationComponent::Direction::Right;
+        animation.dirty = true;
+    }
+}
+
 void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
 {
     auto& entity = world.getEntity(id);
@@ -241,47 +297,43 @@ void processWorldInputs(World& world, std::vector<Input> inputs, UUID id)
     auto& animation = entity.getComponent<AnimationComponent>();
     auto& inventory = entity.getComponent<InventoryComponent>();
 
+    // Stateful MOVE: this batch's intent is the last MOVE it contains, or
+    // "no movement" if it contains none. applyMoveIntent (called every tick
+    // from GameServer::update / ClientGameState::onTick) converts the stored
+    // intent into force. This keeps server movement smooth even when batches
+    // arrive in jittery bursts — the previous behavior of adding force
+    // per-MOVE here meant 0 batches/tick → stop and 2 batches/tick → lurch.
+    {
+        bool found_move = false;
+        MoveData latest_move{};
+        for(const auto& input : inputs)
+        {
+            if(input.type == InputType::MOVE)
+            {
+                latest_move = std::get<MoveData>(input.value);
+                found_move = true;
+            }
+        }
+        if(found_move)
+        {
+            player.move_intent = {static_cast<float>(latest_move.direction.x),
+                                  static_cast<float>(latest_move.direction.y)};
+            player.move_sprint = latest_move.sprint;
+        }
+        else
+        {
+            player.move_intent = {0.0f, 0.0f};
+            player.move_sprint = false;
+        }
+    }
+
     for(const auto& input : inputs)
     {
         switch(input.type)
         {
             case InputType::MOVE:
             {
-                auto move = std::get<MoveData>(input.value);
-
-                float multiplier = 0.75f;
-                if(move.sprint && std::abs(move.direction.x) > 0.01
-                   && entity.hasComponent<StaminaComponent>())
-                {
-                    auto& stamina = entity.getComponent<StaminaComponent>();
-                    const float gate = (stamina.since_last_drain <= 0.0f)
-                                       ? 0.0f
-                                       : StaminaComponent::MIN_TO_START_SPRINT;
-                    if(stamina.stamina > gate)
-                    {
-                        multiplier = 1.25f;
-                        stamina.sprint_requested = true;
-                    }
-                }
-
-                multiplier *= 1.0f + 0.25f * static_cast<float>(effectMagnitude(entity, EffectID::Speed));
-
-                int block_x = (int)std::floor(transform.position.x + transform.size.x / 2.0f);
-                int block_y = (int)std::floor(transform.position.y);
-                physics.force.x += 45.0f * move.direction.x * multiplier / blockDatabase[world.getBlock(block_x, block_y).id].drag;
-                physics.dirty = true;
-
-                if(move.direction.x < 0.0f)
-                {
-                    animation.direction = AnimationComponent::Direction::Left;
-                    animation.dirty = true;
-                }
-                else if(move.direction.x > 0.0f)
-                {
-                    animation.direction = AnimationComponent::Direction::Right;
-                    animation.dirty = true;
-                }
-
+                // Handled above as stateful intent; nothing to do per-input.
                 break;
             }
             case InputType::JUMP:
