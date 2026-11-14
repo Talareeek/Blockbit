@@ -42,6 +42,7 @@
 
 /build/
 build-headless/
+build-headless-gns/
 Blockbit
 Blockbit.exe
 /saves/
