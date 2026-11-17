@@ -59,7 +59,8 @@ enum class FeatureType
     Grass,
 
     Cactus,
-    DeadBush
+    DeadBush,
+    CopperOre
 };
 
 struct FeaturePlacement

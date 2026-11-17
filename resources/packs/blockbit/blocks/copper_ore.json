@@ -1,0 +1,18 @@
+{
+    "drop": {
+        "item": "blockbit:raw_copper"
+    },
+    "hardness": 3.0,
+    "id": "blockbit:copper_ore",
+    "legacy_id": 47,
+    "mining": {
+        "level": 2,
+        "resistance": 5,
+        "tool": "pickaxe"
+    },
+    "render": {
+        "texture": "copper_ore"
+    },
+    "solid": true,
+    "transparent": false
+}

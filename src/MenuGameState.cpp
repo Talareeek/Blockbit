@@ -329,7 +329,7 @@ void MenuGameState::render(sf::RenderWindow& window)
     account.performImGui(accountSlotPosition, accountSlotSize);
 
     renderExitConfirmation();
-    renderPackWindow();
+    renderPackWindow();    
 }
 
 void MenuGameState::renderExitConfirmation()

@@ -100,4 +100,6 @@ extern void renderHotbar(std::array<ItemStack, 9> items, uint8_t selected_slot, 
 
 extern void RenderMinimap(ClientWorld& world, sf::Vector2<double> camera, sf::RenderTarget& target);
 
+void renderVector(sf::Vector2f beginning, sf::Vector2f end, float thickness, sf::Color color, sf::RenderTarget& target);
+
 #endif // RENDER_HPP

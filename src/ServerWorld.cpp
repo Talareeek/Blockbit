@@ -19,6 +19,7 @@
 #include "../include/GameRegistries.hpp"
 #include "../include/RenderComponent.hpp"
 #include "../include/WorldLightView.hpp"
+#include "../include/LegacyWorldGenerator.hpp"
 
 #include <algorithm>
 
@@ -70,6 +71,10 @@ static std::unique_ptr<WorldGenerator> makeWorldGenerator(unsigned int seed, con
             };
 
             return std::make_unique<NoodleWorldGenerator>(seed, properties, generation_properties.noodle_threshold);
+        }
+        case GenerationType::Legacy:
+        {
+            return std::make_unique<LegacyWorldGenerator>(seed);
         }
 
         case GenerationType::Normal:

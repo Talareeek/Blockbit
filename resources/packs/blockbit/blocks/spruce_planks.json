@@ -1,0 +1,19 @@
+{
+    "drop": {
+        "always": true,
+        "item": "blockbit:spruce_planks"
+    },
+    "hardness": 0.20000000298023224,
+    "id": "blockbit:spruce_planks",
+    "legacy_id": 46,
+    "mining": {
+        "level": 1,
+        "resistance": 5,
+        "tool": "axe"
+    },
+    "render": {
+        "texture": "spruce_planks"
+    },
+    "solid": true,
+    "transparent": false
+}

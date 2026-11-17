@@ -1,0 +1,19 @@
+{
+    "drop": {
+        "always": true,
+        "item": "blockbit:birch_planks"
+    },
+    "hardness": 0.20000000298023224,
+    "id": "blockbit:birch_planks",
+    "legacy_id": 45,
+    "mining": {
+        "level": 1,
+        "resistance": 5,
+        "tool": "axe"
+    },
+    "render": {
+        "texture": "birch_planks"
+    },
+    "solid": true,
+    "transparent": false
+}

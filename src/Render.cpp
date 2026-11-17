@@ -2552,3 +2552,48 @@ void RenderMinimap(ClientWorld& world, sf::Vector2<double> camera, sf::RenderTar
 
     target.draw(minimap);
 }
+
+
+
+void renderVector(sf::Vector2f beginning, sf::Vector2f end, float thickness, sf::Color color, sf::RenderTarget& target)
+{
+    sf::Vector2f direction = end - beginning;
+
+    float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+
+    if (length == 0.0f) return;
+
+    sf::Vector2f unit = direction / length;
+    sf::Vector2f normal{-unit.y, unit.x};
+
+    float arrow_length = thickness * 4.0f;
+    float arrow_width = thickness * 3.0f;
+
+    sf::Vector2f arrow_base = end - unit * arrow_length;
+
+    sf::Vector2f offset = normal * (thickness / 2.0f);
+
+    sf::Vector2f c1 = beginning + offset;
+    sf::Vector2f c2 = beginning - offset;
+    sf::Vector2f c3 = arrow_base - offset;
+    sf::Vector2f c4 = arrow_base + offset;
+
+    sf::Vector2f arrow_left = arrow_base + normal * (arrow_width / 2.0f);
+    sf::Vector2f arrow_right = arrow_base - normal * (arrow_width / 2.0f);
+
+    sf::VertexArray vertices(sf::PrimitiveType::Triangles, 9);
+
+    vertices[0] = {c1, color};
+    vertices[1] = {c2, color};
+    vertices[2] = {c3, color};
+
+    vertices[3] = {c3, color};
+    vertices[4] = {c4, color};
+    vertices[5] = {c1, color};
+
+    vertices[6] = {end, color};
+    vertices[7] = {arrow_left, color};
+    vertices[8] = {arrow_right, color};
+
+    target.draw(vertices);
+}

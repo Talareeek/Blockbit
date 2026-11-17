@@ -101,7 +101,12 @@ public:
         Iron_Shovel,
         Gold_Shovel,
         Diamond_Shovel,
-        Ruby_Shovel
+        Ruby_Shovel,
+        Birch_Planks,
+        Spruce_Planks,
+        Copper_Ore,
+        Copper_Ingot,
+        Copper_Block
     };
 
     enum class UITextureID : uint32_t

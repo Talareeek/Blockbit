@@ -21,7 +21,8 @@ private:
         DungeonShooter = 2,
         Skygrid        = 3,
         Randomizer     = 4,
-        Noodle         = 5
+        Noodle         = 5,
+        Legacy
     };
 
     Mode mode = Mode::Normal;

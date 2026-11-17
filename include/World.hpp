@@ -32,7 +32,8 @@ enum class GenerationType : uint32_t
     DungeonShooter = 2,
     Skygrid        = 3,
     Randomizer     = 4,
-    Noodle         = 5
+    Noodle         = 5,
+    Legacy         = 6
 };
 
 struct GenerationProperties

@@ -1,7 +1,7 @@
 {
     "behavior": {
         "params": {
-            "can_place_fire": false,
+            "can_place_fire": true,
             "consume_on_success": true
         },
         "type": "ignite"

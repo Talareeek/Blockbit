@@ -1,0 +1,14 @@
+{
+    "id": "blockbit:craft_copper_block",
+    "ingredients": [
+        {
+            "item": "blockbit:copper_ingot",
+            "quantity": 9
+        }
+    ],
+    "output": {
+        "item": "blockbit:copper_block",
+        "quantity": 1
+    },
+    "type": "crafting"
+}

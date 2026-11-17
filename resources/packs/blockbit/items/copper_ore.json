@@ -1,0 +1,8 @@
+{
+    "category": "block",
+    "id": "blockbit:copper_ore",
+    "legacy_id": 78,
+    "max_stack_size": 64,
+    "name": "Copper Ore",
+    "texture": "copper_ore"
+}

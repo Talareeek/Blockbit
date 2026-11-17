@@ -20,6 +20,7 @@
 #include "../include/SkygridWorldGenerator.hpp"
 #include "../include/RandomizerWorldGenerator.hpp"
 #include "../include/NoodleWorldGenerator.hpp"
+#include "../include/LegacyWorldGenerator.hpp"
 
 #include <SFML/Graphics/Image.hpp>
 #include <SFML/Graphics/RenderTexture.hpp>
@@ -176,6 +177,12 @@ void CreateWorldState::rebuildPreview()
             gen = std::make_unique<NoodleWorldGenerator>(seed_value, np, static_cast<double>(noodle_threshold));
             break;
         }
+        case Mode::Legacy:
+        {
+            gen = std::make_unique<LegacyWorldGenerator>(seed_value);
+
+            break;
+        }
         case Mode::Normal:
         default:
         {
@@ -312,6 +319,7 @@ void CreateWorldState::createWorld()
         case Mode::Skygrid:        properties.type = GenerationType::Skygrid;        break;
         case Mode::Randomizer:     properties.type = GenerationType::Randomizer;     break;
         case Mode::Noodle:         properties.type = GenerationType::Noodle;         break;
+        case Mode::Legacy:         properties.type = GenerationType::Legacy;         break;
         case Mode::Normal:
         default:                   properties.type = GenerationType::Normal;         break;
     }
@@ -395,6 +403,8 @@ void CreateWorldState::update(float dt)
         ImGui::RadioButton("Randomizer", &mode_int, static_cast<int>(Mode::Randomizer));
         ImGui::SameLine();
         ImGui::RadioButton("Noodle", &mode_int, static_cast<int>(Mode::Noodle));
+        ImGui::SameLine();
+        ImGui::RadioButton("Legacy", &mode_int, static_cast<int>(Mode::Legacy));
         mode = static_cast<Mode>(mode_int);
         if (mode_int != previous_mode_int) rebuildPreview();
 
@@ -434,6 +444,10 @@ void CreateWorldState::update(float dt)
             ImGui::SliderFloat("Threshold", &noodle_threshold, 0.0f, 1.0f, "%.3f");
             if (ImGui::IsItemDeactivatedAfterEdit()) rebuildPreview();
             ImGui::TextDisabled("Higher = thinner strands, lower = fatter / more filled.");
+        }
+        else if (mode == Mode::Legacy)
+        {
+            ImGui::TextUnformatted("Legacy Blockbit world generator.");
         }
         else
         {

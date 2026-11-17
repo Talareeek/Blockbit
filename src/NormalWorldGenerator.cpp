@@ -104,6 +104,7 @@ namespace
         {FeatureType::GoldOre,    BlockID::Gold_Ore,    5, 60, 4, 6},
         {FeatureType::DiamondOre, BlockID::Diamond_Ore, 5, 25, 2, 5},
         {FeatureType::RubyOre,    BlockID::Ruby_Ore,    5, 15, 1, 4},
+        {FeatureType::CopperOre,  BlockID::Copper_Ore,  5, 100, 8, 8},
         {FeatureType::Gravel,     BlockID::Gravel,      5, 120, 8, 14},
         {FeatureType::Diorite,    BlockID::Diorite,     5, 110, 7, 20},
         {FeatureType::Granite,    BlockID::Granite,     5, 110, 7, 20},

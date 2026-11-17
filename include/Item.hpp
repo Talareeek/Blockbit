@@ -114,7 +114,12 @@ enum class ItemID : uint16_t
     // Single ItemID for every potion. The actual effect, duration, and
     // magnitude live in a MagicEffectItemComponent on the stack's instance
     // data, so stacks never auto-merge and each bottle is unique.
-    Magic_Bottle
+    Magic_Bottle,
+    Birch_Planks,
+    Spruce_Planks,
+    Copper_Ore,
+    Copper_Ingot,
+    Copper_Block
 };
 
 enum class ItemRarity

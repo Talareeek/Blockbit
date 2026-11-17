@@ -1,0 +1,8 @@
+{
+    "category": "block",
+    "id": "blockbit:copper_block",
+    "legacy_id": 80,
+    "max_stack_size": 64,
+    "name": "Copper Block",
+    "texture": "copper_block"
+}

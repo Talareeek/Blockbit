@@ -356,6 +356,10 @@ ItemID blockToItem(BlockID block)
         case BlockID::Oak_Log: return ItemID::Oak_Log;
         case BlockID::Oak_Leaves: return ItemID::Oak_Leaves;
         case BlockID::Oak_Planks: return ItemID::Oak_Planks;
+        case BlockID::Birch_Planks: return ItemID::Birch_Planks;
+        case BlockID::Spruce_Planks: return ItemID::Spruce_Planks;
+        case BlockID::Copper_Ore: return ItemID::Copper_Ore;
+        case BlockID::Copper_Block: return ItemID::Copper_Block;
         case BlockID::Birch_Log: return ItemID::Birch_Log;
         case BlockID::Birch_Leaves: return ItemID::Birch_Leaves;
         case BlockID::Spruce_Log: return ItemID::Spruce_Log;
@@ -415,6 +419,10 @@ BlockID itemToBlock(ItemID item)
         case ItemID::Oak_Log: return BlockID::Oak_Log;
         case ItemID::Oak_Leaves: return BlockID::Oak_Leaves;
         case ItemID::Oak_Planks: return BlockID::Oak_Planks;
+        case ItemID::Birch_Planks: return BlockID::Birch_Planks;
+        case ItemID::Spruce_Planks: return BlockID::Spruce_Planks;
+        case ItemID::Copper_Ore: return BlockID::Copper_Ore;
+        case ItemID::Copper_Block: return BlockID::Copper_Block;
         case ItemID::Birch_Log: return BlockID::Birch_Log;
         case ItemID::Birch_Leaves: return BlockID::Birch_Leaves;
         case ItemID::Spruce_Log: return BlockID::Spruce_Log;

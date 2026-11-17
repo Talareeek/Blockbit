@@ -1,0 +1,19 @@
+{
+    "drop": {
+        "always": true,
+        "item": "blockbit:copper_block"
+    },
+    "hardness": 3.0,
+    "id": "blockbit:copper_block",
+    "legacy_id": 48,
+    "mining": {
+        "level": 2,
+        "resistance": 5,
+        "tool": "pickaxe"
+    },
+    "render": {
+        "texture": "copper_block"
+    },
+    "solid": true,
+    "transparent": false
+}

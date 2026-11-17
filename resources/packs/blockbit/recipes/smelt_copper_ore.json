@@ -1,0 +1,7 @@
+{
+    "cook_time": 10.0,
+    "id": "blockbit:smelt_copper_ore",
+    "input": "blockbit:copper_ore",
+    "output": "blockbit:copper_ingot",
+    "type": "smelting"
+}

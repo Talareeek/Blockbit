@@ -62,7 +62,11 @@ enum class BlockID : uint16_t
     Output_Bulb,
     Ruby_Wire,
     Coreheart_Of_Blockbit,
-    Upgrade_Table
+    Upgrade_Table,
+    Birch_Planks,
+    Spruce_Planks,
+    Copper_Ore,
+    Copper_Block
 };
 
 // Cardinal-neighbor IDs supplied to the per-tile rect() so a block can pick a

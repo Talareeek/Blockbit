@@ -1,0 +1,6 @@
+{
+    "burn_time": 15.0,
+    "id": "blockbit:fuel_spruce_planks",
+    "item": "blockbit:spruce_planks",
+    "type": "fuel"
+}
