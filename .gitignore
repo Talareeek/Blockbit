@@ -64,3 +64,13 @@ imgui.ini
 /android/captures/
 *.apk
 *.aab
+
+
+toolchain-mingw.cmake
+
+release
+
+build-release-linux
+build-release-windows
+
+.vcpkg

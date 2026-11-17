@@ -36,6 +36,66 @@ if(DEFINED ENV{BLOCKBIT_WITH_GNS})
     set(BLOCKBIT_WITH_GNS $ENV{BLOCKBIT_WITH_GNS} CACHE BOOL "" FORCE)
 endif()
 
+# Third-party CMake dependencies are fetched from their upstream repositories.
+# Threads is provided by CMake; OpenSSL and Protobuf are system dependencies
+# required by GameNetworkingSockets when BLOCKBIT_WITH_GNS is enabled.
+include(FetchContent)
+
+# SFML — windowing/graphics/audio. Same source on desktop and Android.
+FetchContent_Declare(SFML
+    GIT_REPOSITORY https://github.com/SFML/SFML.git
+    GIT_TAG 3.1.0
+    GIT_SHALLOW ON
+    EXCLUDE_FROM_ALL
+    SYSTEM
+)
+
+# zstd — static lib only. Its CMakeLists lives under build/cmake.
+set(ZSTD_BUILD_STATIC   ON  CACHE BOOL "" FORCE)
+set(ZSTD_BUILD_SHARED   OFF CACHE BOOL "" FORCE)
+set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
+set(ZSTD_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
+# Note: github.com/facebook/zstd 404s as of late 2026; upstream now lives
+# under the original author's account.
+FetchContent_Declare(zstd
+    GIT_REPOSITORY https://github.com/Cyan4973/zstd.git
+    GIT_TAG v1.5.7
+    GIT_SHALLOW ON
+    EXCLUDE_FROM_ALL
+    SOURCE_SUBDIR build/cmake
+)
+
+# tinyxml2
+set(tinyxml2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(tinyxml2
+    GIT_REPOSITORY https://github.com/leethomason/tinyxml2.git
+    GIT_TAG 10.0.0
+    GIT_SHALLOW ON
+    EXCLUDE_FROM_ALL
+)
+
+# asio — standalone, header-only. Blockbit links against this + ASIO_STANDALONE.
+FetchContent_Declare(asio
+    GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+    GIT_TAG asio-1-30-2
+    GIT_SHALLOW ON
+    EXCLUDE_FROM_ALL
+)
+
+# imgui
+FetchContent_Declare(imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui
+    GIT_TAG v1.91.9b
+    GIT_SHALLOW ON
+)
+
+# nlohmann_json
+FetchContent_Declare(nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG v3.12.0
+    GIT_SHALLOW TRUE
+)
+
 # -----------------------------------------------------------------------------
 # Android: minimal scaffold. Phase 3 ships a green-window stub (src/android_main.cpp)
 # packaged as libBlockbit.so for a NativeActivity. Later phases will progressively
@@ -47,60 +107,15 @@ if(ANDROID)
     # CMAKE_SOURCE_DIR points at the wrapper's dir (android/app/src/main/cpp),
     # not here. CMAKE_CURRENT_SOURCE_DIR is the repo root while this file runs.
 
-    include(FetchContent)
-
-    FetchContent_Declare(SFML
-        GIT_REPOSITORY https://github.com/SFML/SFML.git
-        GIT_TAG 3.1.0
-        GIT_SHALLOW ON
-        EXCLUDE_FROM_ALL
-        SYSTEM
-    )
     FetchContent_MakeAvailable(SFML)
-
-    # zstd — static lib only. Its CMakeLists lives under build/cmake.
-    set(ZSTD_BUILD_STATIC   ON  CACHE BOOL "" FORCE)
-    set(ZSTD_BUILD_SHARED   OFF CACHE BOOL "" FORCE)
-    set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
-    set(ZSTD_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
-    # Note: github.com/facebook/zstd 404s as of late 2026; upstream now lives
-    # under the original author's account.
-    FetchContent_Declare(zstd
-        GIT_REPOSITORY https://github.com/Cyan4973/zstd.git
-        GIT_TAG v1.5.7
-        GIT_SHALLOW ON
-        EXCLUDE_FROM_ALL
-        SOURCE_SUBDIR build/cmake
-    )
     FetchContent_MakeAvailable(zstd)
-
-    # tinyxml2
-    set(tinyxml2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
-    FetchContent_Declare(tinyxml2
-        GIT_REPOSITORY https://github.com/leethomason/tinyxml2.git
-        GIT_TAG 10.0.0
-        GIT_SHALLOW ON
-        EXCLUDE_FROM_ALL
-    )
     FetchContent_MakeAvailable(tinyxml2)
 
-    # asio — standalone, header-only. Blockbit links against this + ASIO_STANDALONE.
-    FetchContent_Declare(asio
-        GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
-        GIT_TAG asio-1-30-2
-        GIT_SHALLOW ON
-        EXCLUDE_FROM_ALL
-    )
     FetchContent_MakeAvailable(asio)
     add_library(asio_header_only INTERFACE)
     target_include_directories(asio_header_only INTERFACE ${asio_SOURCE_DIR}/asio/include)
 
     # imgui / imgui-sfml / nlohmann_json match the desktop configuration below.
-    FetchContent_Declare(imgui
-        GIT_REPOSITORY https://github.com/ocornut/imgui
-        GIT_TAG v1.91.9b
-        GIT_SHALLOW ON
-    )
     FetchContent_MakeAvailable(imgui)
 
     # imgui-sfml's internal FindImGui.cmake reads IMGUI_DIR from the cache; a
@@ -155,11 +170,6 @@ set(OPENGL_FOUND TRUE)
     )
     FetchContent_MakeAvailable(imgui-sfml)
 
-    FetchContent_Declare(nlohmann_json
-        GIT_REPOSITORY https://github.com/nlohmann/json.git
-        GIT_TAG v3.12.0
-        GIT_SHALLOW TRUE
-    )
     FetchContent_MakeAvailable(nlohmann_json)
 
     # Pull every src/*.cpp except desktop/headless entry points. android_main.cpp
@@ -200,29 +210,41 @@ set(OPENGL_FOUND TRUE)
     return()
 endif()
 
-find_package(SFML REQUIRED COMPONENTS Graphics Window System Audio)
+# -----------------------------------------------------------------------------
+# Desktop
+# -----------------------------------------------------------------------------
+# Avoid Freetype's optional HarfBuzz bridge in cross builds. Its static
+# archive otherwise has unresolved HarfBuzz references with SFML's MinGW link
+# order; the game does not use text shaping features from this bridge.
+if(WIN32)
+    set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
+endif()
+FetchContent_MakeAvailable(SFML)
 find_package(Threads REQUIRED)
 
 if(BLOCKBIT_WITH_GNS)
     # Standalone GameNetworkingSockets — same ISteamNetworkingSockets API that
     # the Steam SDK's SDR transport plugs into later, so callsites don't move.
-    # Built from source via FetchContent; needs system OpenSSL + Protobuf
-    # (protoc is pulled from the Protobuf package). Static link so no extra
-    # .so has to ship beside the binary.
+    # Built from source via FetchContent and linked statically.
     find_package(OpenSSL)
-    find_package(Protobuf CONFIG QUIET)
-    if(NOT Protobuf_FOUND)
-        find_package(Protobuf)
-    endif()
-    if(NOT OpenSSL_FOUND OR NOT Protobuf_FOUND)
+    if(NOT OpenSSL_FOUND)
         message(FATAL_ERROR
-            "BLOCKBIT_WITH_GNS=ON requires OpenSSL and Protobuf on the system.\n"
-            "  Arch:   sudo pacman -S openssl protobuf\n"
-            "  Debian: sudo apt install libssl-dev libprotobuf-dev protobuf-compiler\n"
+            "BLOCKBIT_WITH_GNS=ON requires OpenSSL on the system (it cannot be\n"
+            "fetched from source the way the other dependencies here are — see\n"
+            "the comment near the top of this file).\n"
+            "  Arch:   sudo pacman -S openssl\n"
+            "  Debian: sudo apt install libssl-dev\n"
             "Re-run cmake after installing, or configure with -DBLOCKBIT_WITH_GNS=OFF.")
     endif()
 
-    include(FetchContent)
+    # GNS expects Protobuf's installed CMake package (including protoc). Its
+    # bundled compatibility FindProtobuf module conflicts with targets created
+    # by add_subdirectory(), so use the system package here.
+    find_package(Protobuf CONFIG QUIET)
+    if(NOT Protobuf_FOUND)
+        find_package(Protobuf REQUIRED)
+    endif()
+
     # GNS's own CMake honours these via option() — set them before
     # MakeAvailable so they take effect for the sub-build.
     set(BUILD_SHARED_LIB  OFF    CACHE BOOL   "" FORCE)
@@ -252,41 +274,23 @@ if(BLOCKBIT_WITH_GNS)
 endif()
 
 # zstd
-find_package(zstd CONFIG QUIET)
-if(TARGET zstd::libzstd_shared)
-    set(ZSTD_TARGET zstd::libzstd_shared)
+FetchContent_MakeAvailable(zstd)
+if(TARGET libzstd_static)
+    set(ZSTD_TARGET libzstd_static)
 elseif(TARGET zstd::libzstd_static)
     set(ZSTD_TARGET zstd::libzstd_static)
 else()
-    find_package(PkgConfig QUIET)
-    if(PkgConfig_FOUND)
-        pkg_check_modules(ZSTD QUIET IMPORTED_TARGET libzstd)
-    endif()
-    if(TARGET PkgConfig::ZSTD)
-        set(ZSTD_TARGET PkgConfig::ZSTD)
-    else()
-        find_path(ZSTD_INCLUDE_DIR zstd.h REQUIRED)
-        find_library(ZSTD_LIBRARY NAMES zstd zstd_static REQUIRED)
-        add_library(zstd_manual UNKNOWN IMPORTED)
-        set_target_properties(zstd_manual PROPERTIES
-            IMPORTED_LOCATION "${ZSTD_LIBRARY}"
-            INTERFACE_INCLUDE_DIRECTORIES "${ZSTD_INCLUDE_DIR}"
-        )
-        set(ZSTD_TARGET zstd_manual)
-    endif()
+    message(FATAL_ERROR "FetchContent pulled zstd but no expected static target was defined.")
 endif()
 
-find_package(tinyxml2 REQUIRED)
+# tinyxml2
+FetchContent_MakeAvailable(tinyxml2)
 
-include(FetchContent)
-FetchContent_Declare(imgui
-    GIT_REPOSITORY https://github.com/ocornut/imgui
-    GIT_TAG v1.91.9b
-    GIT_SHALLOW ON
-)
+# imgui
 FetchContent_MakeAvailable(imgui)
 
-set(IMGUI_DIR ${imgui_SOURCE_DIR})
+set(IMGUI_DIR ${imgui_SOURCE_DIR} CACHE PATH "" FORCE)
+set(IMGUI_INCLUDE_DIR ${imgui_SOURCE_DIR} CACHE PATH "" FORCE)
 set(IMGUI_SFML_FIND_SFML OFF)
 set(IMGUI_SFML_IMGUI_DEMO ON)
 FetchContent_Declare(imgui-sfml
@@ -296,12 +300,10 @@ FetchContent_Declare(imgui-sfml
 )
 FetchContent_MakeAvailable(imgui-sfml)
 
-FetchContent_Declare(
-    nlohmann_json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG v3.12.0
-    GIT_SHALLOW TRUE
-)
+FetchContent_MakeAvailable(asio)
+add_library(asio_header_only INTERFACE)
+target_include_directories(asio_header_only INTERFACE ${asio_SOURCE_DIR}/asio/include)
+
 FetchContent_MakeAvailable(nlohmann_json)
 
 
@@ -439,8 +441,16 @@ target_link_libraries(bb_core_deps INTERFACE
     Threads::Threads
     tinyxml2::tinyxml2
     nlohmann_json::nlohmann_json
+    asio_header_only
     ${ZSTD_TARGET}
 )
+
+if(WIN32)
+    target_link_libraries(bb_core_deps INTERFACE
+        ws2_32 mswsock
+        "$<LINK_GROUP:RESCAN,freetype,harfbuzz>"
+    )
+endif()
 
 if(BLOCKBIT_WITH_GNS)
     target_compile_definitions(bb_core_deps INTERFACE BLOCKBIT_WITH_GNS=1)
@@ -483,6 +493,7 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     endif()
 endif()
 
+
 # -----------------------------------------------------------------------------
 # BlockbitServer: headless/dedicated server.
 # -----------------------------------------------------------------------------
@@ -494,6 +505,7 @@ add_executable(BlockbitServer
 target_link_libraries(BlockbitServer PRIVATE bb_core_deps)
 target_compile_definitions(BlockbitServer PRIVATE HEADLESS_BUILD)
 target_compile_options(BlockbitServer PRIVATE ${BLOCKBIT_WARNING_FLAGS})
+
 
 if(BLOCKBIT_HEADLESS_STRIP AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(BlockbitServer PRIVATE -O3)

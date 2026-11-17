@@ -3,7 +3,17 @@
 # Helper script to run Blockbit, optionally loading a specific world
 # Usage: ./run.sh [world-name]
 
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 ./build.sh
+
+if [ ! -x ./build/bin/Blockbit ]; then
+    echo "Error: build completed without producing ./build/bin/Blockbit" >&2
+    exit 1
+fi
 
 if [ $# -eq 0 ]; then
     ./build/bin/Blockbit

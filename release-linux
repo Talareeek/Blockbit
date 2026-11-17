@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BUILD_DIR="${ROOT}/build-release-linux"
+
+cmake -S "$ROOT" -B "$BUILD_DIR" -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DSFML_BUILD_SHARED_LIBS=OFF \
+    -DBLOCKBIT_WITH_GNS=OFF \
+    -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++"
+cmake --build "$BUILD_DIR" --parallel "${JOBS:-$(nproc)}"
+
+mkdir -p "$ROOT/release/linux"
+cp "$BUILD_DIR/bin/Blockbit" "$ROOT/release/linux/Blockbit"
+cp "$BUILD_DIR/bin/BlockbitServer" "$ROOT/release/linux/BlockbitServer"
+echo "Linux release binaries: $ROOT/release/linux"
