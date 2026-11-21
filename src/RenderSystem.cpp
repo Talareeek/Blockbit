@@ -149,7 +149,7 @@ void RenderEntities(World& world, const sf::Vector2<double> camera, sf::RenderWi
         quad[3] = bl; quad[4] = tr; quad[5] = tl;
 
         sf::RenderStates states;
-        states.texture = &AssetManager::getGameTexture(component.textureID);
+        states.texture = &AssetManager::getGameTexture(component.runtime_texture_id);
         window.draw(quad, states);
 
         if(Settings::render.show_player_names && entity.hasComponent<PlayerControlledComponent>())

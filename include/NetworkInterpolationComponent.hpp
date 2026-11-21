@@ -30,8 +30,8 @@ struct NetworkInterpolationComponent : public Component
         return ComponentSide::Client;
     }
 
-    Tag serialize() const override { return Tag(TagCompound{}); }
-    void deserialize(const Tag&) override {}
+    Tag serializeForStorage() const override { return Tag(TagCompound{}); }
+    void deserializeFromStorage(const Tag&) override {}
 
     std::unique_ptr<Component> clone() const override
     {

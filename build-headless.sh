@@ -3,10 +3,7 @@
 # No debug flags: BLOCKBIT_HEADLESS_STRIP=ON toggles -O3 + stripped -s linking
 # in CMakeLists.txt. Does not touch the interactive Blockbit target.
 #
-# GNS is forced ON here so the dedicated server matches the client's default
-# transport. The flag is passed explicitly (not relying on the CMake default)
-# so a stale build-headless/ cache from before GNS was the default gets
-# overridden on reconfigure instead of silently producing a TCP-only server.
+# Dedicated server always uses the same required GNS transport as the client.
 
 set -e
 
@@ -39,7 +36,6 @@ cmake -G Ninja \
     -DCMAKE_C_COMPILER="${CC:-clang}" \
     -DCMAKE_CXX_COMPILER="${CXX:-clang++}" \
     -DBLOCKBIT_HEADLESS_STRIP=ON \
-    -DBLOCKBIT_WITH_GNS=ON \
     "$SCRIPT_DIR"
 
 print_status "Building BlockbitServer..."

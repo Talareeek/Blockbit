@@ -59,11 +59,11 @@ bool addRender(Entity& e, const json& j, std::string& err)
 
     // `"texture": "runtime"` — sentinel for prefabs like dropped items and
     // falling blocks where the texture is overwritten at spawn time from the
-    // item/block being represented. Stored as GameTextureID(0).
-    AssetManager::GameTextureID tex_id{};
+    // item/block being represented. Stored as RuntimeID(0).
+    RuntimeID tex_id{};
     if (tex_name == "runtime")
     {
-        tex_id = static_cast<AssetManager::GameTextureID>(0);
+        tex_id = static_cast<RuntimeID>(0);
     }
     else
     {

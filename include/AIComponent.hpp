@@ -97,7 +97,7 @@ struct AIComponent : public Component
         return ComponentSide::Server;
     }
 
-    Tag serialize() const override
+    Tag serializeForStorage() const override
     {
         TagCompound compound;
 
@@ -116,7 +116,7 @@ struct AIComponent : public Component
         return Tag(compound);
     }
 
-    void deserialize(const Tag& tag) override
+    void deserializeFromStorage(const Tag& tag) override
     {
         state = static_cast<State>(tag["state"].get<uint8_t>());
         personality = static_cast<Personality>(tag["personality"].get<uint8_t>());

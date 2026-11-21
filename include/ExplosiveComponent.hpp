@@ -60,7 +60,7 @@ struct ExplosiveComponent : public Component
         return "ExplosiveComponent";
     }
 
-    Tag serialize() const override
+    Tag serializeForStorage() const override
     {
         TagCompound compound;
 
@@ -74,7 +74,7 @@ struct ExplosiveComponent : public Component
     }
 
 
-    void deserialize(const Tag& tag) override
+    void deserializeFromStorage(const Tag& tag) override
     {
         force = tag["force"].get<float>();
         destroyBlocks = tag["destroy_blocks"].get<bool>();

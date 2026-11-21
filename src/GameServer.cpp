@@ -564,7 +564,7 @@ void GameServer::broadcastSnapshot()
         {
             if (data.known_entities.contains(id))
             {
-                Tag update = entity.serializeDirtyForClient();
+                Tag update = entity.serializeForClientUpdate();
                 if (!update.get<TagCompound>().empty())
                 {
                     snapshot.updated_entities.emplace(id, std::move(update));
@@ -572,7 +572,7 @@ void GameServer::broadcastSnapshot()
             }
             else
             {
-                snapshot.new_entities.emplace(id, entity.serializeForClient());
+                snapshot.new_entities.emplace(id, entity.serializeForClientInit());
                 data.known_entities.insert(id);
             }
         }
@@ -1436,7 +1436,7 @@ void GameServer::handleAdminRequest(uint32_t client_id, const std::string& nickn
                 }
 
                 std::vector<uint8_t> payload;
-                world.getEntity(id).serialize().save(payload, "");
+                world.getEntity(id).serializeForStorage().save(payload, "");
 
                 std::cout << "[Server] " << nickname << " admin read " << id.toString() << '\n';
                 send_response(AdminStatus::Ok, std::move(payload));

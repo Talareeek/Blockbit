@@ -178,7 +178,7 @@ struct ToolProperties
 struct ItemData
 {
     std::string name;
-    AssetManager::GameTextureID texture;
+    RuntimeID texture;
     uint32_t maxStackSize;
 
     ItemRarity rarity = ItemRarity::Common;

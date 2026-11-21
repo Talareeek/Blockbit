@@ -1,7 +1,7 @@
 #include "../include/ContentProfiles.hpp"
+#include "../include/GameRegistries.hpp"
 
 #include <array>
-#include <unordered_map>
 
 namespace
 {
@@ -27,96 +27,96 @@ struct BiMap
     }
 };
 
-using TextureMap = BiMap<AssetManager::GameTextureID>;
+using TextureMap = BiMap<RuntimeID>;
 
 const TextureMap& textureMap()
 {
-    using TID = AssetManager::GameTextureID;
     static const TextureMap m{{
-        {TID::Stone,                 "stone"},
-        {TID::Grass,                 "grass"},
-        {TID::Dirt,                  "dirt"},
-        {TID::Cobblestone,           "cobblestone"},
-        {TID::Obsidian,              "obsidian"},
-        {TID::Bedrock,               "bedrock"},
-        {TID::Water,                 "water"},
-        {TID::Lava,                  "lava"},
-        {TID::Coal_Ore,              "coal_ore"},
-        {TID::Iron_Ore,              "iron_ore"},
-        {TID::Gold_Ore,              "gold_ore"},
-        {TID::Diamond_Ore,           "diamond_ore"},
-        {TID::Ruby_Ore,              "ruby_ore"},
-        {TID::Iron_Block,            "iron_block"},
-        {TID::Gold_Block,            "gold_block"},
-        {TID::Ruby_Block,            "ruby_block"},
-        {TID::Coal_Block,            "coal_block"},
-        {TID::Oak_Log,               "oak_log"},
-        {TID::Oak_Leaves,            "oak_leaves"},
-        {TID::Oak_Planks,            "oak_planks"},
-        {TID::Birch_Log,             "birch_log"},
-        {TID::Birch_Leaves,          "birch_leaves"},
-        {TID::Spruce_Log,            "spruce_log"},
-        {TID::Spruce_Leaves,         "spruce_leaves"},
-        {TID::Woodcutter,            "woodcutter"},
-        {TID::Fire,                  "fire"},
-        {TID::Sand,                  "sand"},
-        {TID::Coarse_Dirt,           "coarse_dirt"},
-        {TID::Snow,                  "snow"},
-        {TID::Chest,                 "chest"},
-        {TID::Bricks,                "bricks"},
-        {TID::Furnace,               "furnace"},
-        {TID::Workbench,             "workbench"},
-        {TID::Gravel,                "gravel"},
-        {TID::Cactus,                "cactus"},
-        {TID::Dead_Bush,             "dead_bush"},
-        {TID::Smooth_Stone,          "smooth_stone"},
-        {TID::Diorite,               "diorite"},
-        {TID::Granite,               "granite"},
-        {TID::Glass,                 "glass"},
-        {TID::Output_Bulb,           "output_bulb"},
-        {TID::Ruby_Wire,             "ruby_wire"},
-        {TID::Coreheart_Of_Blockbit, "coreheart_of_blockbit"},
-        {TID::Upgrade_Table,         "upgrade_table"},
-        {TID::Birch_Planks,          "birch_planks"},
-        {TID::Spruce_Planks,         "spruce_planks"},
-        {TID::Copper_Ore,            "copper_ore"},
-        {TID::Copper_Ingot,          "copper_ingot"},
-        {TID::Copper_Block,          "copper_block"},
-        {TID::Dynamite,              "dynamite"},
-        {TID::Bucket,                "bucket"},
-        {TID::Water_Bucket,          "water_bucket"},
-        {TID::Lighter,               "lighter"},
-        {TID::Bottle,                "bottle"},
-        {TID::Coal,                  "coal"},
-        {TID::Raw_Iron,              "raw_iron"},
-        {TID::Raw_Gold,              "raw_gold"},
-        {TID::Iron_Ingot,            "iron_ingot"},
-        {TID::Gold_Ingot,            "gold_ingot"},
-        {TID::Diamond,               "diamond"},
-        {TID::Ruby,                  "ruby"},
-        {TID::Stick,                 "stick"},
-        {TID::Flint,                 "flint"},
-        {TID::Player,                "player"},
-        {TID::Pig,                   "pig"},
-        {TID::Cube,                  "cube"},
-        {TID::Wooden_Pickaxe,        "wooden_pickaxe"},
-        {TID::Stone_Pickaxe,         "stone_pickaxe"},
-        {TID::Iron_Pickaxe,          "iron_pickaxe"},
-        {TID::Gold_Pickaxe,          "gold_pickaxe"},
-        {TID::Diamond_Pickaxe,       "diamond_pickaxe"},
-        {TID::Ruby_Pickaxe,          "ruby_pickaxe"},
-        {TID::Wooden_Axe,            "wooden_axe"},
-        {TID::Stone_Axe,             "stone_axe"},
-        {TID::Iron_Axe,              "iron_axe"},
-        {TID::Gold_Axe,              "gold_axe"},
-        {TID::Diamond_Axe,           "diamond_axe"},
-        {TID::Ruby_Axe,              "ruby_axe"},
-        {TID::Wooden_Shovel,         "wooden_shovel"},
-        {TID::Stone_Shovel,          "stone_shovel"},
-        {TID::Iron_Shovel,           "iron_shovel"},
-        {TID::Gold_Shovel,           "gold_shovel"},
-        {TID::Diamond_Shovel,        "diamond_shovel"},
-        {TID::Ruby_Shovel,           "ruby_shovel"},
+        {static_cast<RuntimeID>(0),                 "stone"},
+        {static_cast<RuntimeID>(1),                 "grass"},
+        {static_cast<RuntimeID>(2),                  "dirt"},
+        {static_cast<RuntimeID>(3),           "cobblestone"},
+        {static_cast<RuntimeID>(4),              "obsidian"},
+        {static_cast<RuntimeID>(5),               "bedrock"},
+        {static_cast<RuntimeID>(6),                 "water"},
+        {static_cast<RuntimeID>(7),                  "lava"},
+        {static_cast<RuntimeID>(8),              "coal_ore"},
+        {static_cast<RuntimeID>(9),              "iron_ore"},
+        {static_cast<RuntimeID>(10),              "gold_ore"},
+        {static_cast<RuntimeID>(11),           "diamond_ore"},
+        {static_cast<RuntimeID>(12),              "ruby_ore"},
+        {static_cast<RuntimeID>(13),            "iron_block"},
+        {static_cast<RuntimeID>(14),            "gold_block"},
+        {static_cast<RuntimeID>(15),            "ruby_block"},
+        {static_cast<RuntimeID>(16),            "coal_block"},
+        {static_cast<RuntimeID>(17),               "oak_log"},
+        {static_cast<RuntimeID>(18),            "oak_leaves"},
+        {static_cast<RuntimeID>(19),            "oak_planks"},
+        {static_cast<RuntimeID>(20),             "birch_log"},
+        {static_cast<RuntimeID>(21),          "birch_leaves"},
+        {static_cast<RuntimeID>(22),            "spruce_log"},
+        {static_cast<RuntimeID>(23),         "spruce_leaves"},
+        {static_cast<RuntimeID>(24),            "woodcutter"},
+        {static_cast<RuntimeID>(25),                  "fire"},
+        {static_cast<RuntimeID>(26),                  "sand"},
+        {static_cast<RuntimeID>(27),           "coarse_dirt"},
+        {static_cast<RuntimeID>(28),                  "snow"},
+        {static_cast<RuntimeID>(29),                 "chest"},
+        {static_cast<RuntimeID>(30),                "bricks"},
+        {static_cast<RuntimeID>(31),               "furnace"},
+        {static_cast<RuntimeID>(32),             "workbench"},
+        {static_cast<RuntimeID>(33),                "gravel"},
+        {static_cast<RuntimeID>(34),                "cactus"},
+        {static_cast<RuntimeID>(35),             "dead_bush"},
+        {static_cast<RuntimeID>(36),          "smooth_stone"},
+        {static_cast<RuntimeID>(37),               "diorite"},
+        {static_cast<RuntimeID>(38),               "granite"},
+        {static_cast<RuntimeID>(39),                 "glass"},
+        {static_cast<RuntimeID>(40),           "output_bulb"},
+        {static_cast<RuntimeID>(41),             "ruby_wire"},
+        {static_cast<RuntimeID>(42), "coreheart_of_blockbit"},
+        {static_cast<RuntimeID>(43),         "upgrade_table"},
+        {static_cast<RuntimeID>(44),          "birch_planks"},
+        {static_cast<RuntimeID>(45),         "spruce_planks"},
+        {static_cast<RuntimeID>(46),            "copper_ore"},
+        {static_cast<RuntimeID>(47),          "copper_ingot"},
+        {static_cast<RuntimeID>(48),          "copper_block"},
+        {static_cast<RuntimeID>(49),              "dynamite"},
+        {static_cast<RuntimeID>(50),                "bucket"},
+        {static_cast<RuntimeID>(51),          "water_bucket"},
+        {static_cast<RuntimeID>(52),               "lighter"},
+        {static_cast<RuntimeID>(53),                "bottle"},
+        {static_cast<RuntimeID>(54),                  "coal"},
+        {static_cast<RuntimeID>(55),              "raw_iron"},
+        {static_cast<RuntimeID>(56),              "raw_gold"},
+        {static_cast<RuntimeID>(57),            "iron_ingot"},
+        {static_cast<RuntimeID>(58),            "gold_ingot"},
+        {static_cast<RuntimeID>(59),               "diamond"},
+        {static_cast<RuntimeID>(60),                  "ruby"},
+        {static_cast<RuntimeID>(61),                 "stick"},
+        {static_cast<RuntimeID>(62),                 "flint"},
+        {static_cast<RuntimeID>(63),                "player"},
+        {static_cast<RuntimeID>(64),                   "pig"},
+        {static_cast<RuntimeID>(65),                   "cow"},
+        {static_cast<RuntimeID>(66),                  "cube"},
+        {static_cast<RuntimeID>(67),        "wooden_pickaxe"},
+        {static_cast<RuntimeID>(68),         "stone_pickaxe"},
+        {static_cast<RuntimeID>(69),          "iron_pickaxe"},
+        {static_cast<RuntimeID>(70),          "gold_pickaxe"},
+        {static_cast<RuntimeID>(71),       "diamond_pickaxe"},
+        {static_cast<RuntimeID>(72),          "ruby_pickaxe"},
+        {static_cast<RuntimeID>(73),            "wooden_axe"},
+        {static_cast<RuntimeID>(74),             "stone_axe"},
+        {static_cast<RuntimeID>(75),              "iron_axe"},
+        {static_cast<RuntimeID>(76),              "gold_axe"},
+        {static_cast<RuntimeID>(77),           "diamond_axe"},
+        {static_cast<RuntimeID>(78),              "ruby_axe"},
+        {static_cast<RuntimeID>(79),         "wooden_shovel"},
+        {static_cast<RuntimeID>(80),          "stone_shovel"},
+        {static_cast<RuntimeID>(81),           "iron_shovel"},
+        {static_cast<RuntimeID>(82),           "gold_shovel"},
+        {static_cast<RuntimeID>(83),        "diamond_shovel"},
+        {static_cast<RuntimeID>(84),           "ruby_shovel"},
     }};
     return m;
 }
@@ -147,45 +147,37 @@ namespace ContentProfiles
 
 using namespace blockbit_callbacks;
 
-// Runtime key→id map. Seeded on first use with the vanilla name table
-// (vanilla "<name>" entries become "blockbit:<name>" keys); modpack texture
-// loads add further entries past the vanilla enum range.
-std::unordered_map<std::string, AssetManager::GameTextureID>& textureKeyMap()
-{
-    static std::unordered_map<std::string, AssetManager::GameTextureID> map = [] {
-        std::unordered_map<std::string, AssetManager::GameTextureID> m;
-        for (const auto& [id, name] : textureMap().entries)
-            m.emplace("blockbit:" + std::string(name), id);
-        return m;
-    }();
-    return map;
-}
-
-std::optional<AssetManager::GameTextureID> textureFromName(std::string_view name)
+std::optional<RuntimeID> textureFromName(std::string_view name)
 {
     if (name.find(':') != std::string_view::npos)
     {
-        const std::string key(name);
-        auto it = textureKeyMap().find(key);
-        if (it != textureKeyMap().end()) return it->second;
+        if (auto id = gameRegistries().textures.find(std::string(name)); id.has_value())
+            return id;
+        constexpr std::string_view vanillaPrefix = "blockbit:";
+        if (name.starts_with(vanillaPrefix))
+            return textureMap().fromName(name.substr(vanillaPrefix.size()));
         return std::nullopt;
     }
     return textureMap().fromName(name);
 }
 
-std::string nameFromTexture(AssetManager::GameTextureID id)
+std::string nameFromTexture(RuntimeID id)
 {
-    return textureMap().toName(id);
+    const auto& textures = gameRegistries().textures;
+    if (textures.contains(id)) return textures.keyOf(id);
+    if (const auto vanillaName = textureMap().toName(id); !vanillaName.empty())
+        return "blockbit:" + vanillaName;
+    return {};
 }
 
-void registerTextureKey(const std::string& key, AssetManager::GameTextureID id)
+void registerTextureKey(const std::string& key, RuntimeID id)
 {
-    textureKeyMap()[key] = id;
+    gameRegistries().textures.registerAt(id, key, id);
 }
 
-AssetManager::GameTextureID firstDynamicTextureId()
+RuntimeID firstDynamicTextureId()
 {
-    return static_cast<AssetManager::GameTextureID>(1000);
+    return static_cast<RuntimeID>(textureMap().entries.size());
 }
 
 // --- Prefab ---------------------------------------------------------------
@@ -194,6 +186,7 @@ std::optional<PrefabID> prefabFromName(std::string_view name)
 {
     if (name == "player")        return PrefabID::Player;
     if (name == "pig")           return PrefabID::Pig;
+    if (name == "cow")           return PrefabID::Cow;
     if (name == "dynamite")      return PrefabID::Dynamite;
     if (name == "dropped_item")  return PrefabID::DroppedItem;
     if (name == "falling_block") return PrefabID::FallingBlock;
@@ -207,6 +200,7 @@ std::string nameFromPrefab(PrefabID id)
     {
         case PrefabID::Player:        return "player";
         case PrefabID::Pig:           return "pig";
+        case PrefabID::Cow:           return "cow";
         case PrefabID::Dynamite:      return "dynamite";
         case PrefabID::DroppedItem:   return "dropped_item";
         case PrefabID::FallingBlock:  return "falling_block";

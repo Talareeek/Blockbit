@@ -35,6 +35,7 @@ constexpr unsigned int WORLD_UNIT_SIZE_FACTOR = 12;
 std::filesystem::path getHomePath();
 
 std::string wstringToString(const std::wstring wstring);
+std::wstring stringToWstring(const std::string& string);
 
 ImVec4 SFMLColorToImGuiColor(const sf::Color color);
 

@@ -86,7 +86,7 @@ struct TransformComponent : public Component
         return "TransformComponent";
     }
 
-    Tag serialize() const override
+    Tag serializeForStorage() const override
     {
         TagCompound compound;
 
@@ -98,7 +98,7 @@ struct TransformComponent : public Component
         return Tag(compound);
     }
 
-    void deserialize(const Tag& tag) override
+    void deserializeFromStorage(const Tag& tag) override
     {
         position = tag["position"].get<sf::Vector2<double>>();
         size = tag["size"].get<sf::Vector2<double>>();

@@ -498,7 +498,7 @@ bool scanDir(const std::filesystem::path& dir,
 } // namespace
 
 LoadResult loadPack(const std::filesystem::path& dir,
-                    AssetManager::GameTextureID& next_texture_id)
+                    RuntimeID& next_texture_id)
 {
     LoadResult result;
 
@@ -531,7 +531,7 @@ LoadResult loadPack(const std::filesystem::path& dir,
     }
 
     // Textures must register BEFORE parseBlock / parseItem run, so content
-    // keys like {"texture":"ruby_mod:foo"} resolve to live GameTextureIDs.
+    // keys like {"texture":"ruby_mod:foo"} resolve to live RuntimeIDs.
     scanPackTextures(dir, result.manifest.id, next_texture_id);
 
     if (!scanDir(dir / "blocks", result, true,  result.error)) return result;
@@ -1122,31 +1122,32 @@ std::size_t scanPackRecipes(const std::filesystem::path& packDir,
 
 std::size_t scanPackTextures(const std::filesystem::path& packDir,
                              const std::string& packNamespace,
-                             AssetManager::GameTextureID& next_texture_id)
+                             RuntimeID& next_texture_id)
 {
     const auto tex_dir = packDir / "textures";
     if (!std::filesystem::exists(tex_dir)) return 0;
 
     std::size_t count = 0;
     std::error_code ec;
-    for (auto it  = std::filesystem::recursive_directory_iterator(tex_dir, ec);
+    std::vector<std::filesystem::path> texture_files;
+    for (auto it = std::filesystem::recursive_directory_iterator(tex_dir, ec);
               it != std::filesystem::recursive_directory_iterator(); ++it)
     {
-        if (!it->is_regular_file()) continue;
-        if (it->path().extension() != ".png") continue;
+        if (it->is_regular_file() && it->path().extension() == ".png")
+            texture_files.push_back(it->path());
+    }
+    std::sort(texture_files.begin(), texture_files.end());
+    for (const auto& texture_file : texture_files)
+    {
 
-        // relative path, forward-slashes, without the .png extension
-        const auto rel_with_ext = std::filesystem::relative(it->path(), tex_dir);
-        auto rel = rel_with_ext;
-        rel.replace_extension();
-        const std::string rel_key = rel.generic_string();
+        // Texture keys use the pack namespace and the filename only.
+        const std::string rel_key = texture_file.stem().string();
         const std::string key     = packNamespace + ":" + rel_key;
 
-        // Vanilla keys are pre-seeded in the texture key map with their
-        // hardcoded GameTextureID values. Reuse those so every call site
-        // that still references e.g. GameTextureID::Stone keeps working.
-        // Keys outside the pre-seed set get a fresh dynamic id.
-        AssetManager::GameTextureID id;
+        // Vanilla keys are pre-seeded in the texture key map. Other keys get
+        // a fresh RuntimeID; duplicate basenames within a pack deliberately
+        // resolve to the same key, with sorted path order deciding the winner.
+        RuntimeID id;
         if (auto existing = ContentProfiles::textureFromName(key); existing.has_value())
         {
             id = *existing;
@@ -1154,12 +1155,14 @@ std::size_t scanPackTextures(const std::filesystem::path& packDir,
         else
         {
             id = next_texture_id;
-            next_texture_id = static_cast<AssetManager::GameTextureID>(
+            next_texture_id = static_cast<RuntimeID>(
                 static_cast<uint32_t>(next_texture_id) + 1);
             ContentProfiles::registerTextureKey(key, id);
         }
 
-        AssetManager::loadGameTexture(id, it->path().string());
+        ContentProfiles::registerTextureKey(key, id);
+
+        AssetManager::loadGameTexture(id, texture_file.string());
         ++count;
     }
     if (count > 0)

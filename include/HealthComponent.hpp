@@ -34,7 +34,7 @@ struct HealthComponent : public Component
         return "HealthComponent";
     }
 
-    Tag serialize() const override
+    Tag serializeForStorage() const override
     {
         TagCompound compound;
 
@@ -47,7 +47,7 @@ struct HealthComponent : public Component
         return Tag(compound);
     }
 
-    void deserialize(const Tag& tag) override
+    void deserializeFromStorage(const Tag& tag) override
     {
         health = tag["health"].get<uint32_t>();
         maxHealth = tag["max_health"].get<uint32_t>();

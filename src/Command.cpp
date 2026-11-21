@@ -17,6 +17,7 @@
 #include "../include/ItemInstance.hpp"
 #include "../include/ItemDataComponents.hpp"
 #include "../include/Prefab.hpp"
+#include "../include/ContentProfiles.hpp"
 
 #ifndef HEADLESS_BUILD
 #include "../include/Game.hpp"
@@ -187,6 +188,16 @@ std::unordered_map<std::wstring, Command> commandDatabase =
             else
             {
                 context.reply(L"BlockAtlas exported", sf::Color::Green);
+            }
+        }
+    }},
+
+    {L"am_loaded_textures", {false, false, false,
+        [](std::wstring /*command*/, CommandContext& context)
+        {
+            for(auto& [key, texture] : AssetManager::game_textures)
+            {
+                context.reply(stringToWstring(gameRegistries().textures.keyOf(static_cast<uint16_t>(key))) + L" - " + std::to_wstring(key));
             }
         }
     }},
@@ -697,7 +708,7 @@ std::unordered_map<std::wstring, Command> commandDatabase =
 
             entity.addComponent(TransformComponent{{x, y}, {1.0f, 0.75f}, sf::degrees(0.0f)});
             entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
-            entity.addComponent(RenderComponent{AssetManager::GameTextureID::Pig, {{0, 0}, {16, 12}}, {1.0f, 0.75f}});
+            entity.addComponent(RenderComponent{ContentProfiles::textureFromName("blockbit:pig").value(), {{0, 0}, {16, 12}}, {1.0f, 0.75f}});
             entity.addComponent(HealthComponent{100, 100});
 
             AIComponent ai;
@@ -760,7 +771,7 @@ std::unordered_map<std::wstring, Command> commandDatabase =
 
             entity.addComponent(TransformComponent{{x, y}, {1.0f, 0.75f}, sf::degrees(0.0f)});
             entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
-            entity.addComponent(RenderComponent{AssetManager::GameTextureID::Pig, {{0, 0}, {16, 12}}, {1.0f, 0.75f}});
+            entity.addComponent(RenderComponent{ContentProfiles::textureFromName("blockbit:pig").value(), {{0, 0}, {16, 12}}, {1.0f, 0.75f}});
             entity.addComponent(HealthComponent{100, 100});
 
             ExplosiveComponent explosive;
@@ -858,7 +869,7 @@ std::unordered_map<std::wstring, Command> commandDatabase =
             inv.inventory.slots[5] = {ItemID::Diamond_Axe, 1};
             inv.inventory.slots[6] = {ItemID::Diamond_Shovel, 1};
             entity.addComponent(std::move(inv));
-            entity.addComponent(RenderComponent{AssetManager::GameTextureID::Player, {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
+            entity.addComponent(RenderComponent{ContentProfiles::textureFromName("blockbit:player").value(), {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
             entity.addComponent(HealthComponent{100, 100});
 
             world->addEntity(std::move(entity));

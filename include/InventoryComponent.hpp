@@ -67,7 +67,7 @@ struct InventoryComponent : public Component
         return "InventoryComponent";
     }
 
-    Tag serialize() const override
+    Tag serializeForStorage() const override
     {
         TagCompound compound;
 
@@ -84,7 +84,7 @@ struct InventoryComponent : public Component
         return Tag(compound);
     }
 
-    void deserialize(const Tag& tag) override
+    void deserializeFromStorage(const Tag& tag) override
     {
         selectedSlot = tag["selected_slot"].get<uint8_t>();
 

@@ -23,18 +23,18 @@ namespace ContentProfiles
 //     (checked against the runtime texture-key registry), and
 //   - a bare vanilla name like "stone" (checked against the built-in table,
 //     for back-compat with legacy JSON authored before Phase 4).
-std::optional<AssetManager::GameTextureID> textureFromName(std::string_view name);
-std::string                                 nameFromTexture(AssetManager::GameTextureID id);
+std::optional<RuntimeID> textureFromName(std::string_view name);
+std::string                                 nameFromTexture(RuntimeID id);
 
 // Modpack-provided textures are loaded at startup; this stashes the
 // key→id mapping so JSON references (`"texture": "<ns>:<name>"`) resolve.
 // Overwriting a previously-registered key reassigns the id.
-void registerTextureKey(const std::string& key, AssetManager::GameTextureID id);
+void registerTextureKey(const std::string& key, RuntimeID id);
 
 // First unused TextureID the pack loader may hand out. The big gap past
 // the vanilla enum range leaves headroom for adding vanilla textures
 // without colliding with already-assigned modpack ids.
-AssetManager::GameTextureID firstDynamicTextureId();
+RuntimeID firstDynamicTextureId();
 
 // --- Prefab ----------------------------------------------------------------
 std::optional<PrefabID> prefabFromName(std::string_view name);

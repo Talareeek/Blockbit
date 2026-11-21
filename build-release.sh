@@ -30,7 +30,6 @@ mkdir -p "$RELEASE_DIR/linux" "$RELEASE_DIR/windows"
 echo "==> Build Linux (Release)"
 cmake -S "$ROOT_DIR" -B "$BUILD_LINUX" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
-    -DBLOCKBIT_WITH_GNS=ON \
     -DBLOCKBIT_HEADLESS_STRIP=ON \
     -DCMAKE_CXX_FLAGS="$ARCH_FLAGS" \
     -DCMAKE_EXE_LINKER_FLAGS="-flto -static-libgcc -static-libstdc++"
@@ -49,7 +48,6 @@ cmake -S "$ROOT_DIR" -B "$BUILD_WINDOWS" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
     -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE="$ROOT_DIR/toolchain-mingw.cmake" \
     -DVCPKG_TARGET_TRIPLET=x64-mingw-static \
-    -DBLOCKBIT_WITH_GNS=ON \
     -DBLOCKBIT_HEADLESS_STRIP=ON \
     -DOPENSSL_USE_STATIC_LIBS=TRUE \
     -DCMAKE_CXX_FLAGS="$ARCH_FLAGS" \

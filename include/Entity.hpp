@@ -59,11 +59,13 @@ public:
         return static_cast<const T&>(*components.at(typeid(T)));
     }
 
-    Tag serialize() const;
-    void deserialize(Tag& tag);
+    Tag serializeForStorage() const;
+    void deserializeFromStorage(Tag& tag);
 
-    Tag serializeForClient() const;
-    Tag serializeDirtyForClient() const;
+    Tag serializeForClientInit() const;
+    Tag serializeForClientUpdate() const;
+
+    void deserializeFromClientInit(Tag& tag);
 
     void applyUpdate(const Tag& tag);
     void clearDirty();

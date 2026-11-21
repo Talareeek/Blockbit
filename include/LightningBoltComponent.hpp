@@ -34,7 +34,7 @@ struct LightningBoltComponent : public Component
         return ComponentSide::Both;
     }
 
-    Tag serialize() const override
+    Tag serializeForStorage() const override
     {
         TagCompound compound;
         compound["lifetime_remaining"] = Tag(lifetime_remaining);
@@ -43,7 +43,7 @@ struct LightningBoltComponent : public Component
         return Tag(compound);
     }
 
-    void deserialize(const Tag& tag) override
+    void deserializeFromStorage(const Tag& tag) override
     {
         lifetime_remaining = tag["lifetime_remaining"].get<float>();
         seed               = tag["seed"].get<uint32_t>();

@@ -614,7 +614,7 @@ void ServerWorld::saveChunkEntities(int chunk_position)
 
     for(auto& uuid : chunk.entity_ids)
     {     
-        root[entities.at(uuid).getID().toString()] = entities.at(uuid).serialize();
+        root[entities.at(uuid).getID().toString()] = entities.at(uuid).serializeForStorage();
     }
 
     std::ofstream stream(path / ("chunk_" + std::to_string(chunk_position)) / "entities", std::ios::binary);
@@ -894,7 +894,7 @@ void ServerWorld::loadChunkEntities(int chunk_position)
     {
         Entity entity(uuidFromString(id_string).value());
 
-        entity.deserialize(payload);
+        entity.deserializeFromStorage(payload);
 
         addEntity(std::move(entity));
     }
@@ -931,7 +931,7 @@ void ServerWorld::savePlayer(UUID entity_id)
 
     BBT root(player.identity.display_name);
 
-    root.root() = entities.at(entity_id).serialize().get<TagCompound>();
+    root.root() = entities.at(entity_id).serializeForStorage().get<TagCompound>();
 
 
     std::ofstream stream(playerFilePath(path, player.identity.id), std::ios::binary);
@@ -995,7 +995,7 @@ UUID ServerWorld::loadPlayer(const PlayerIdentity& identity)
 
     Tag tag = Tag(root.root());
 
-    entity.deserialize(tag);
+    entity.deserializeFromStorage(tag);
 
     // Save files predate the identity_id field; stamp the current identity on
     // the loaded component so subsequent saves migrate correctly.

@@ -19,6 +19,13 @@ namespace
         return e;
     }
 
+    SpawnEntry cowEntry()
+    {
+        SpawnEntry e = pigEntry();
+        e.prefab = "blockbit:cow";
+        return e;
+    }
+
     MobSpawnConfig makeDefault()
     {
         MobSpawnConfig cfg;
@@ -39,15 +46,17 @@ namespace
             {.cap = 5, .spawn_interval = 1.0f, .min_radius = 24.0f, .max_radius = 128.0f,
              .despawn_radius = 128.0f, .attempts_per_cycle = 1};
 
-        // Only Pig exists today; drop it in a few plausible overworld biomes.
+        // Drop passive animals in a few plausible overworld biomes.
         // Hostile/Ambient/Water tables stay empty — new entries added here will
         // start spawning without touching the system code.
         const SpawnEntry pig = pigEntry();
+        const SpawnEntry cow = cowEntry();
 
         for (Biome b : {Biome::Plains, Biome::Forest, Biome::Savanna,
                         Biome::Taiga, Biome::Jungle})
         {
             cfg.biome_tables[b].entries[MobCategory::Passive].push_back(pig);
+            cfg.biome_tables[b].entries[MobCategory::Passive].push_back(cow);
         }
 
         return cfg;

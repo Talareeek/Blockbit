@@ -1,5 +1,6 @@
 #include "../include/LobbyPlayerElement.hpp"
 #include "../include/AssetManager.hpp"
+#include "../include/ContentProfiles.hpp"
 
 constexpr int HEIGHT_FACTOR = 5;
 constexpr float STEP_LENGTH = 0.5f;
@@ -48,7 +49,7 @@ void LobbyPlayerElement::render(sf::RenderWindow& window)
     sf::RectangleShape rect(size);
     rect.setPosition(position);
 
-    rect.setTexture(&AssetManager::getGameTexture(AssetManager::GameTextureID::Player));
+    rect.setTexture(&AssetManager::getGameTexture(ContentProfiles::textureFromName("blockbit:player").value()));
 
     // player.png is 48x16: idle frames 0,1 at x=0,12 and walking frames 2,3 at x=24,36.
     // Walking frames natively face left; RIGHT mirrors them via a negative-width texture rect.

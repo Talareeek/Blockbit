@@ -36,32 +36,32 @@ const std::unordered_map<std::type_index, std::unique_ptr<Component>>& Entity::g
     return components;
 }
 
-Tag Entity::serialize() const
+Tag Entity::serializeForStorage() const
 {
     TagCompound compound;
 
     for (const auto& [type_index, component] : components)
     {
-        compound[component->name()] = component->serialize();
+        compound[component->name()] = component->serializeForStorage();
     }
 
     return Tag(compound);
 }
 
-Tag Entity::serializeForClient() const
+Tag Entity::serializeForClientInit() const
 {
     TagCompound compound;
 
     for (const auto& [type_index, component] : components)
     {
         if (component->side() == ComponentSide::Server) continue;
-        compound[component->name()] = component->serialize();
+        compound[component->name()] = component->serializeForTransport();
     }
 
     return Tag(compound);
 }
 
-Tag Entity::serializeDirtyForClient() const
+Tag Entity::serializeForClientUpdate() const
 {
     TagCompound compound;
 
@@ -69,7 +69,7 @@ Tag Entity::serializeDirtyForClient() const
     {
         if (component->side() == ComponentSide::Server) continue;
         if (!component->dirty) continue;
-        compound[component->name()] = component->serialize();
+        compound[component->name()] = component->serializeForTransport();
     }
 
     return Tag(compound);
@@ -84,7 +84,7 @@ void Entity::applyUpdate(const Tag& tag)
         auto it = compound.find(component->name());
         if (it == compound.end()) continue;
 
-        component->deserialize(it->second);
+        component->deserializeFromTransport(it->second);
     }
 }
 
@@ -96,92 +96,183 @@ void Entity::clearDirty()
     }
 }
 
-void Entity::deserialize(Tag& tag)
+void Entity::deserializeFromStorage(Tag& tag)
 {
     for(auto& [name, payload] : tag.get<TagCompound>())
     {
         if (name == "PhysicsComponent")
         {
             PhysicsComponent c;
-            c.deserialize(payload);
+            c.deserializeFromStorage(payload);
             addComponent<PhysicsComponent>(c);
         }
         else if (name == "RenderComponent")
         {
             RenderComponent c;
-            c.deserialize(payload);
+            c.deserializeFromStorage(payload);
             addComponent<RenderComponent>(c);
         }
         else if (name == "AnimationComponent")
         {
             AnimationComponent c;
-            c.deserialize(payload);
+            c.deserializeFromStorage(payload);
             addComponent<AnimationComponent>(c);
         }
         else if (name == "InventoryComponent")
         {
             InventoryComponent c(1);
-            c.deserialize(payload);
+            c.deserializeFromStorage(payload);
             addComponent<InventoryComponent>(c);
         }
         else if (name == "HealthComponent")
         {
             HealthComponent c;
-            c.deserialize(payload);
+            c.deserializeFromStorage(payload);
             addComponent<HealthComponent>(c);
         }
         else if (name == "StaminaComponent")
         {
             StaminaComponent c;
-            c.deserialize(payload);
+            c.deserializeFromStorage(payload);
             addComponent<StaminaComponent>(c);
         }
         else if (name == "ItemComponent")
         {
             ItemComponent c;
-            c.deserialize(payload);
+            c.deserializeFromStorage(payload);
             addComponent<ItemComponent>(c);
         }
         else if (name == "ExplosiveComponent")
         {
             ExplosiveComponent c;
-            c.deserialize(payload);
+            c.deserializeFromStorage(payload);
             addComponent<ExplosiveComponent>(c);
         }
         else if (name == "TransformComponent")
         {
             TransformComponent c;
-            c.deserialize(payload);
+            c.deserializeFromStorage(payload);
             addComponent<TransformComponent>(c);
         }
         else if (name == "AIComponent")
         {
             AIComponent c;
-            c.deserialize(payload);
+            c.deserializeFromStorage(payload);
             addComponent<AIComponent>(c);
         }
         else if (name == "PlayerControlledComponent")
         {
             PlayerControlledComponent c;
-            c.deserialize(payload);
+            c.deserializeFromStorage(payload);
             addComponent<PlayerControlledComponent>(std::move(c));
         }
         else if (name == "FallingBlockComponent")
         {
             FallingBlockComponent c;
-            c.deserialize(payload);
+            c.deserializeFromStorage(payload);
             addComponent<FallingBlockComponent>(c);
         }
         else if (name == "LightningBoltComponent")
         {
             LightningBoltComponent c;
-            c.deserialize(payload);
+            c.deserializeFromStorage(payload);
             addComponent<LightningBoltComponent>(c);
         }
         else if (name == "EffectsComponent")
         {
             EffectsComponent c;
-            c.deserialize(payload);
+            c.deserializeFromStorage(payload);
+            addComponent<EffectsComponent>(c);
+        }
+    }
+}
+
+void Entity::deserializeFromClientInit(Tag& tag)
+{
+    for(auto& [name, payload] : tag.get<TagCompound>())
+    {
+        if (name == "PhysicsComponent")
+        {
+            PhysicsComponent c;
+            c.deserializeFromTransport(payload);
+            addComponent<PhysicsComponent>(c);
+        }
+        else if (name == "RenderComponent")
+        {
+            RenderComponent c;
+            c.deserializeFromTransport(payload);
+            addComponent<RenderComponent>(c);
+        }
+        else if (name == "AnimationComponent")
+        {
+            AnimationComponent c;
+            c.deserializeFromTransport(payload);
+            addComponent<AnimationComponent>(c);
+        }
+        else if (name == "InventoryComponent")
+        {
+            InventoryComponent c(1);
+            c.deserializeFromTransport(payload);
+            addComponent<InventoryComponent>(c);
+        }
+        else if (name == "HealthComponent")
+        {
+            HealthComponent c;
+            c.deserializeFromTransport(payload);
+            addComponent<HealthComponent>(c);
+        }
+        else if (name == "StaminaComponent")
+        {
+            StaminaComponent c;
+            c.deserializeFromTransport(payload);
+            addComponent<StaminaComponent>(c);
+        }
+        else if (name == "ItemComponent")
+        {
+            ItemComponent c;
+            c.deserializeFromTransport(payload);
+            addComponent<ItemComponent>(c);
+        }
+        else if (name == "ExplosiveComponent")
+        {
+            ExplosiveComponent c;
+            c.deserializeFromTransport(payload);
+            addComponent<ExplosiveComponent>(c);
+        }
+        else if (name == "TransformComponent")
+        {
+            TransformComponent c;
+            c.deserializeFromTransport(payload);
+            addComponent<TransformComponent>(c);
+        }
+        else if (name == "AIComponent")
+        {
+            AIComponent c;
+            c.deserializeFromTransport(payload);
+            addComponent<AIComponent>(c);
+        }
+        else if (name == "PlayerControlledComponent")
+        {
+            PlayerControlledComponent c;
+            c.deserializeFromTransport(payload);
+            addComponent<PlayerControlledComponent>(std::move(c));
+        }
+        else if (name == "FallingBlockComponent")
+        {
+            FallingBlockComponent c;
+            c.deserializeFromTransport(payload);
+            addComponent<FallingBlockComponent>(c);
+        }
+        else if (name == "LightningBoltComponent")
+        {
+            LightningBoltComponent c;
+            c.deserializeFromTransport(payload);
+            addComponent<LightningBoltComponent>(c);
+        }
+        else if (name == "EffectsComponent")
+        {
+            EffectsComponent c;
+            c.deserializeFromTransport(payload);
             addComponent<EffectsComponent>(c);
         }
     }

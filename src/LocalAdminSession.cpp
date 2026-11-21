@@ -57,7 +57,7 @@ void LocalAdminSession::readEntity(UUID id, ReadCallback cb)
         return;
     }
 
-    cb(true, server->getWorld().getEntity(id).serialize());
+    cb(true, server->getWorld().getEntity(id).serializeForStorage());
 }
 
 void LocalAdminSession::listBans(ListBansCallback cb)

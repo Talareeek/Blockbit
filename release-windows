@@ -4,13 +4,15 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="${ROOT}/build-release-windows"
 TOOLCHAIN="${ROOT}/toolchain-mingw.cmake"
+VCPKG_ROOT="${VCPKG_ROOT:-$ROOT/.vcpkg}"
 
 cmake -S "$ROOT" -B "$BUILD_DIR" -G Ninja \
-    -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN" \
+    -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE="$TOOLCHAIN" \
+    -DVCPKG_TARGET_TRIPLET=x64-mingw-static \
+    -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_SHARED_LIBS=OFF \
     -DSFML_BUILD_SHARED_LIBS=OFF \
-    -DBLOCKBIT_WITH_GNS=OFF \
     -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++"
 cmake --build "$BUILD_DIR" --parallel "${JOBS:-$(nproc)}"
 

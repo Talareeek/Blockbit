@@ -1,7 +1,7 @@
 #include "../include/BlockAtlas.hpp"
 #include "../include/AssetManager.hpp"
 
-void BlockAtlas::add(AssetManager::GameTextureID textureID)
+void BlockAtlas::add(RuntimeID textureID)
 {
     textureIDs.push_back(textureID);
 }
@@ -13,7 +13,7 @@ bool BlockAtlas::build()
     uint32_t atlasWidth = 0;
     uint32_t atlasHeight = 0;
 
-    for (AssetManager::GameTextureID id : textureIDs)
+    for (RuntimeID id : textureIDs)
     {
         const sf::Vector2u size = AssetManager::getGameTexture(id).getSize();
 
@@ -26,7 +26,7 @@ bool BlockAtlas::build()
 
     uint32_t x = 0;
 
-    for (AssetManager::GameTextureID id : textureIDs)
+    for (RuntimeID id : textureIDs)
     {
         const sf::Texture& tex = AssetManager::getGameTexture(id);
 
@@ -75,12 +75,12 @@ const sf::Texture& BlockAtlas::getTexture()
     return *atlasTexture;
 }
 
-const sf::IntRect& BlockAtlas::getUV(AssetManager::GameTextureID textureID)
+const sf::IntRect& BlockAtlas::getUV(RuntimeID textureID)
 {
     return uvMap.at(textureID);
 }
 
-sf::Color BlockAtlas::getAverageColor(AssetManager::GameTextureID textureID)
+sf::Color BlockAtlas::getAverageColor(RuntimeID textureID)
 {
     auto it = averageColors.find(textureID);
     if (it == averageColors.end()) return sf::Color::Transparent;

@@ -54,7 +54,7 @@ struct EffectsComponent : public Component
         return ComponentSide::Both;
     }
 
-    Tag serialize() const override
+    Tag serializeForStorage() const override
     {
         TagCompound compound;
 
@@ -75,7 +75,7 @@ struct EffectsComponent : public Component
         return Tag(compound);
     }
 
-    void deserialize(const Tag& tag) override
+    void deserializeFromStorage(const Tag& tag) override
     {
         effects.clear();
 

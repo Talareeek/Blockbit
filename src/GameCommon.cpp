@@ -7,6 +7,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <codecvt>
+#include <locale>
 #include <stdexcept>
 #include <string>
 
@@ -118,7 +120,14 @@ std::filesystem::path getHomePath()
 
 std::string wstringToString(const std::wstring wstring)
 {
-    return std::string(wstring.begin(), wstring.end());
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+    return converter.to_bytes(wstring);
+}
+
+std::wstring stringToWstring(const std::string& string)
+{
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+    return converter.from_bytes(string);
 }
 
 ImVec4 SFMLColorToImGuiColor(const sf::Color color)

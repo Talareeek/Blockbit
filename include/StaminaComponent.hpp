@@ -27,7 +27,7 @@ struct StaminaComponent : public Component
         return "StaminaComponent";
     }
 
-    Tag serialize() const override
+    Tag serializeForStorage() const override
     {
         TagCompound compound;
 
@@ -37,7 +37,7 @@ struct StaminaComponent : public Component
         return Tag(compound);
     }
 
-    void deserialize(const Tag& tag) override
+    void deserializeFromStorage(const Tag& tag) override
     {
         stamina = tag["stamina"].get<float>();
         maxStamina = tag["max_stamina"].get<float>();

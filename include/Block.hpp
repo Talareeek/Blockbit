@@ -118,7 +118,7 @@ struct BlockAnimation
 
 struct RenderProperties
 {
-    AssetManager::GameTextureID texture;
+    RuntimeID texture;
     std::function<sf::FloatRect(Block block_instance)> render_bounds = [](Block block_instance) -> sf::FloatRect{return {{0.0f, 0.0f}, {0.0f, 0.0f}};};
     std::function<sf::IntRect(Block block_instance, const BlockNeighbors& neighbors)> rect = [](Block, const BlockNeighbors&) -> sf::IntRect{return {{0, 0}, {0, 0}};};
     std::function<BlockAnimation(Block block_instance)> animation = [](Block) -> BlockAnimation { return {}; };

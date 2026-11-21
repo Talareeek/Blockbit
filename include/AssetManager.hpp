@@ -6,108 +6,11 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 #include <unordered_map>
+#include "Registry.hpp"
 
 class AssetManager
 {
 public:
-
-    enum class GameTextureID : uint32_t
-    {
-        // BLOCKS
-        Stone,
-        Grass,
-        Dirt,
-        Cobblestone,
-        Obsidian,
-        Bedrock,
-        Water,
-        Lava,
-        Coal_Ore,
-        Iron_Ore,
-        Gold_Ore,
-        Diamond_Ore,
-        Ruby_Ore,
-        Iron_Block,
-        Gold_Block,
-        Ruby_Block,
-        Coal_Block,
-        Oak_Log,
-        Oak_Leaves,
-        Oak_Planks,
-        Birch_Log,
-        Birch_Leaves,
-        Spruce_Log,
-        Spruce_Leaves,
-        Woodcutter,
-        Fire,
-        Sand,
-        Coarse_Dirt,
-        Snow,
-        Chest,
-        Bricks,
-        Furnace,
-        Workbench,
-        Gravel,
-        Cactus,
-        Dead_Bush,
-        Smooth_Stone,
-        Diorite,
-        Granite,
-        Glass,
-        Output_Bulb,
-        Ruby_Wire,
-        Coreheart_Of_Blockbit,
-        Upgrade_Table,
-
-
-        // ITEMS
-        Dynamite,
-        Bucket,
-        Water_Bucket,
-        Lighter,
-        Bottle,
-        Coal,
-        Raw_Iron,
-        Raw_Gold,
-        Iron_Ingot,
-        Gold_Ingot,
-        Diamond,
-        Ruby,
-        Stick,
-        Flint,
-
-
-        // ENTITIES
-        Player,
-        Pig,
-        Cube,
-
-        Wooden_Pickaxe,
-        Stone_Pickaxe,
-        Iron_Pickaxe,
-        Gold_Pickaxe,
-        Diamond_Pickaxe,
-        Ruby_Pickaxe,
-
-        Wooden_Axe,
-        Stone_Axe,
-        Iron_Axe,
-        Gold_Axe,
-        Diamond_Axe,
-        Ruby_Axe,
-
-        Wooden_Shovel,
-        Stone_Shovel,
-        Iron_Shovel,
-        Gold_Shovel,
-        Diamond_Shovel,
-        Ruby_Shovel,
-        Birch_Planks,
-        Spruce_Planks,
-        Copper_Ore,
-        Copper_Ingot,
-        Copper_Block
-    };
 
     enum class UITextureID : uint32_t
     {
@@ -151,7 +54,7 @@ public:
 //private:
 
     static std::unordered_map<uint32_t, sf::Texture> textures;
-    static std::unordered_map<GameTextureID, sf::Texture> game_textures;
+    static std::unordered_map<RuntimeID, sf::Texture> game_textures;
     static std::unordered_map<UITextureID, sf::Texture> ui_textures;
     static std::unordered_map<FontID, sf::Font> fonts;
     static std::unordered_map<ShaderID, sf::Shader> shaders;
@@ -161,7 +64,7 @@ public:
 public:    
 
     //[[deprecated]] static void loadTexture(uint32_t id, const std::string& path);
-    static void loadGameTexture(GameTextureID id, const std::string& path);
+    static void loadGameTexture(RuntimeID id, const std::string& path);
     static void loadUITexture(UITextureID id, const std::string& path);
     static void loadFont(FontID id, const std::string& path);
     static void loadShader(ShaderID id, const std::string& path);
@@ -169,7 +72,7 @@ public:
     static void loadMusic(MusicID id, const std::string& path);
 
     //[[deprecated]] static sf::Texture& getTexture(uint32_t id);
-    static sf::Texture& getGameTexture(GameTextureID id);
+    static sf::Texture& getGameTexture(RuntimeID id);
     static sf::Texture& getUITexture(UITextureID id);
     static sf::Font& getFont(FontID id);
     static sf::Shader& getShader(ShaderID id);

@@ -105,7 +105,7 @@ struct AnimationComponent : public Component
         return "AnimationComponent";
     }
 
-    Tag serialize() const override
+    Tag serializeForStorage() const override
     {
         TagCompound compound;
 
@@ -136,7 +136,7 @@ struct AnimationComponent : public Component
         return Tag(compound);
     }
 
-    void deserialize(const Tag& tag) override
+    void deserializeFromStorage(const Tag& tag) override
     {
         animations.clear();
 

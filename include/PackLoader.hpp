@@ -77,11 +77,11 @@ struct LoadResult
 // Full load. A failed load returns `ok=false` with `error` describing the
 // first failure — partial state in `blocks`/`items` is not applied. All
 // content keys must begin with "<manifest.id>:" or the load is rejected.
-// `next_texture_id` is advanced for each PNG file discovered under the
+// `next_texture_id` is advanced for each new texture key discovered under the
 // pack's textures/ directory; AssetManager::loadGameTexture is called
 // before block/item JSON parsing so cross-references resolve.
 LoadResult loadPack(const std::filesystem::path& dir,
-                    AssetManager::GameTextureID& next_texture_id);
+                    RuntimeID& next_texture_id);
 
 struct WorldPackCheck
 {
@@ -171,13 +171,13 @@ std::size_t scanPackSpawnRules(const std::filesystem::path& packDir,
                                MobSpawnConfig&              out);
 
 // Recursively scans <packDir>/textures/**/*.png and loads each file into
-// AssetManager with a dynamic GameTextureID allocated from the counter.
+// AssetManager with a dynamic RuntimeID allocated from the counter.
 // Registers "<ns>:<relative-path-sans-extension>" in the texture key map
 // so JSON references like {"texture": "ruby_mod:blocks/ruby_ore"} resolve.
 // Returns the number of textures loaded. `next_texture_id` is advanced.
 std::size_t scanPackTextures(const std::filesystem::path& packDir,
                              const std::string& packNamespace,
-                             AssetManager::GameTextureID& next_texture_id);
+                             RuntimeID& next_texture_id);
 
 } // namespace PackLoader
 

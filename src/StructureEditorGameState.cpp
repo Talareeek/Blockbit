@@ -110,9 +110,10 @@ namespace
         }
     }
 
-    constexpr std::array<PrefabID, 5> SPAWN_OPTIONS
+    constexpr std::array<PrefabID, 6> SPAWN_OPTIONS
     {
         PrefabID::Pig,
+        PrefabID::Cow,
         PrefabID::Dynamite,
         PrefabID::Cube,
         PrefabID::DroppedItem,
@@ -124,6 +125,7 @@ namespace
         switch (id)
         {
             case PrefabID::Pig:          return "Pig";
+            case PrefabID::Cow:          return "Cow";
             case PrefabID::Dynamite:     return "Dynamite";
             case PrefabID::Cube:         return "Cube (boss)";
             case PrefabID::DroppedItem:  return "Dropped item";

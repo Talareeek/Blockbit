@@ -23,7 +23,7 @@ struct FallingBlockComponent : public Component
 
     ComponentSide side() const override { return ComponentSide::Server; }
 
-    Tag serialize() const override
+    Tag serializeForStorage() const override
     {
         TagCompound c;
         c["block_id"] = Tag(static_cast<uint32_t>(block_id));
@@ -31,7 +31,7 @@ struct FallingBlockComponent : public Component
         return Tag(c);
     }
 
-    void deserialize(const Tag& tag) override
+    void deserializeFromStorage(const Tag& tag) override
     {
         block_id = static_cast<BlockID>(tag["block_id"].get<uint32_t>());
         metadata = tag["metadata"].get<uint16_t>();

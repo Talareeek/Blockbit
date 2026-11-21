@@ -70,7 +70,7 @@ struct PhysicsComponent : public Component
         return "PhysicsComponent";
     }
 
-    Tag serialize() const override
+    Tag serializeForStorage() const override
     {
         TagCompound compound;
 
@@ -87,7 +87,7 @@ struct PhysicsComponent : public Component
         return Tag(compound);
     }
 
-    void deserialize(const Tag& tag) override
+    void deserializeFromStorage(const Tag& tag) override
     {
         const auto& compound = tag.get<TagCompound>();
         velocity = tag["velocity"].get<sf::Vector2<double>>();

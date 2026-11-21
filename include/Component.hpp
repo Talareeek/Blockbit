@@ -20,8 +20,11 @@ struct Component
 
     virtual ComponentSide side() const { return ComponentSide::Both; }
 
-    virtual Tag serialize() const = 0;
-    virtual void deserialize(const Tag& tag) = 0;
+    virtual Tag serializeForStorage() const = 0;
+    virtual void deserializeFromStorage(const Tag& tag) = 0;
+
+    virtual Tag serializeForTransport() const { return serializeForStorage(); }
+    virtual void deserializeFromTransport(const Tag& tag) { deserializeFromStorage(tag); }
 
     virtual std::unique_ptr<Component> clone() const = 0;
 

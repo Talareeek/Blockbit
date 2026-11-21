@@ -20,12 +20,12 @@ struct ItemComponent : public Component
         return "ItemComponent";
     }
 
-    Tag serialize() const override
+    Tag serializeForStorage() const override
     {
         return stackToTag(item);
     }
 
-    void deserialize(const Tag& tag) override
+    void deserializeFromStorage(const Tag& tag) override
     {
         item = stackFromTag(tag, /*write_instance_data=*/true);
     }

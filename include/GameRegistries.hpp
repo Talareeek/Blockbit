@@ -32,6 +32,8 @@ struct GameRegistries
 {
     Registry<BlockData>            blocks;
     Registry<ItemData>             items;
+    // Maps texture registry keys to the RuntimeID used by AssetManager.
+    Registry<RuntimeID>            textures;
     std::vector<LoadedPackSummary> loaded_packs;
 
     // Prefab templates keyed by RegistryKey (e.g. "blockbit:pig",

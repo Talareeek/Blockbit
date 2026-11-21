@@ -232,12 +232,13 @@ void registerVanillaContent()
     // can start from zero every time this function runs.
     reg.blocks.clear();
     reg.items.clear();
+    reg.textures.clear();
     reg.prefabs.clear();
     reg.loaded_packs.clear();
     blockDatabase.clear();
     itemDatabase.clear();
 
-    AssetManager::GameTextureID next_texture = ContentProfiles::firstDynamicTextureId();
+    RuntimeID next_texture = ContentProfiles::firstDynamicTextureId();
 
     // --- vanilla ----------------------------------------------------------
     auto vanilla = PackLoader::loadPack("resources/packs/blockbit", next_texture);

@@ -13,6 +13,7 @@ enum class PrefabID : uint8_t
 {
     Player,
     Pig,
+    Cow,
     Dynamite,
     DroppedItem,
     FallingBlock,

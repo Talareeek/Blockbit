@@ -226,7 +226,7 @@ void ClientGameState::applySnapshot(const SnapshotPacket& snapshot)
 
         Entity entity(id);
         Tag payload = tag;
-        entity.deserialize(payload);
+        entity.deserializeFromClientInit(payload);
 
         // Trigger a screen flash the first time we see each lightning entity.
         // Not gated on viewer position — storms light up the whole sky.
@@ -671,6 +671,7 @@ void ClientGameState::updateViewTransform()
             shift.y = (dy * inv_dist) * (scale - 1.0) * half_h_world;
         }
     }
+
 #endif
 
     camera = base_center + shift;

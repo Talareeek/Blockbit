@@ -28,13 +28,8 @@ endif()
 # no debug info. Driven by build-headless.sh (sets BLOCKBIT_HEADLESS_STRIP=ON).
 option(BLOCKBIT_HEADLESS_STRIP "Build BlockbitServer with release flags stripped of debug info" OFF)
 
-# Primary network transport: ValveSoftware/GameNetworkingSockets (open-source,
-# no Steam account required). ON by default — the legacy asio TCP transport is
-# still compiled in and reachable at runtime with --legacy.
-option(BLOCKBIT_WITH_GNS "Build with GameNetworkingSockets transport" ON)
-if(DEFINED ENV{BLOCKBIT_WITH_GNS})
-    set(BLOCKBIT_WITH_GNS $ENV{BLOCKBIT_WITH_GNS} CACHE BOOL "" FORCE)
-endif()
+# Desktop builds always include ValveSoftware/GameNetworkingSockets. Android
+# returns from its dedicated build branch below before desktop dependencies.
 
 # Third-party CMake dependencies are fetched from their upstream repositories.
 # Threads is provided by CMake; OpenSSL and Protobuf are system dependencies
@@ -222,7 +217,7 @@ endif()
 FetchContent_MakeAvailable(SFML)
 find_package(Threads REQUIRED)
 
-if(BLOCKBIT_WITH_GNS)
+if(NOT ANDROID)
     # Standalone GameNetworkingSockets — same ISteamNetworkingSockets API that
     # the Steam SDK's SDR transport plugs into later, so callsites don't move.
     # Built from source via FetchContent and linked statically.
@@ -234,7 +229,7 @@ if(BLOCKBIT_WITH_GNS)
             "the comment near the top of this file).\n"
             "  Arch:   sudo pacman -S openssl\n"
             "  Debian: sudo apt install libssl-dev\n"
-            "Re-run cmake after installing, or configure with -DBLOCKBIT_WITH_GNS=OFF.")
+            "Install OpenSSL development files and re-run cmake.")
     endif()
 
     # GNS expects Protobuf's installed CMake package (including protoc). Its
@@ -270,6 +265,17 @@ if(BLOCKBIT_WITH_GNS)
         set(GNS_TARGET GameNetworkingSockets)
     else()
         message(FATAL_ERROR "FetchContent pulled GameNetworkingSockets but no expected target was defined.")
+    endif()
+
+    # GNS spells this Windows system library with mixed case. MinGW's linker
+    # runs on case-sensitive filesystems, where the import library is lowercase.
+    if(WIN32 AND MINGW)
+        get_target_property(_gns_links ${GNS_TARGET} INTERFACE_LINK_LIBRARIES)
+        if(_gns_links)
+            list(TRANSFORM _gns_links REPLACE "^Iphlpapi$" "iphlpapi")
+            set_target_properties(${GNS_TARGET} PROPERTIES
+                INTERFACE_LINK_LIBRARIES "${_gns_links}")
+        endif()
     endif()
 endif()
 
@@ -411,14 +417,6 @@ foreach(_src ${_ALL_SOURCES})
     endif()
 endforeach()
 
-# GNS sources are only compiled when BLOCKBIT_WITH_GNS is ON. Factory TU stays
-# in regardless and guards GNS references with #ifdef so the build is clean
-# either way.
-if(NOT BLOCKBIT_WITH_GNS)
-    list(FILTER BLOCKBIT_CLIENT_ONLY_SOURCES EXCLUDE REGEX ".*/GnsClientTransport\\.cpp$")
-    list(FILTER BLOCKBIT_CORE_SOURCES       EXCLUDE REGEX ".*/GnsServerTransport\\.cpp$")
-endif()
-
 # Interface target that factors out the common include dirs, defines, and
 # transitive link deps the two bb_core variants share. Avoids repeating the
 # find_package targets on both OBJECT libraries.
@@ -452,10 +450,8 @@ if(WIN32)
     )
 endif()
 
-if(BLOCKBIT_WITH_GNS)
-    target_compile_definitions(bb_core_deps INTERFACE BLOCKBIT_WITH_GNS=1)
-    target_link_libraries(bb_core_deps INTERFACE ${GNS_TARGET})
-endif()
+target_compile_definitions(bb_core_deps INTERFACE BLOCKBIT_WITH_GNS=1)
+target_link_libraries(bb_core_deps INTERFACE ${GNS_TARGET})
 
 # -----------------------------------------------------------------------------
 # bb_core_client: shared core compiled WITHOUT HEADLESS_BUILD.

@@ -78,7 +78,7 @@ struct PlayerControlledComponent : public Component
         return "PlayerControlledComponent";
     }
 
-    Tag serialize() const override
+    Tag serializeForStorage() const override
     {
         TagCompound compound;
 
@@ -96,7 +96,7 @@ struct PlayerControlledComponent : public Component
         return Tag(compound);
     }
 
-    void deserialize(const Tag& tag) override
+    void deserializeFromStorage(const Tag& tag) override
     {
         const TagCompound& compound = tag.get<TagCompound>();
 
