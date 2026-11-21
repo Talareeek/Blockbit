@@ -104,7 +104,7 @@ void ServerPreview::render(sf::RenderWindow& window)
     ImGui::TextColored(ImVec4(0.78f, 0.78f, 0.78f, 1.0f), "%s", packet->description.c_str());
     ImGui::EndGroup();
 
-    std::string players = std::to_string(packet->players) + " / " + std::to_string(packet->max_players);
+    std::string players = std::to_string(packet->players_amount) + " / " + std::to_string(packet->max_players);
     ImVec2 players_size = ImGui::CalcTextSize(players.c_str());
     ImGui::SetCursorScreenPos(ImVec2(window_pos.x + size.x - padding - players_size.x,
                                       window_pos.y + size.y - padding - players_size.y));

@@ -488,9 +488,22 @@ std::vector<char> serializePacket(const StatusResponsePacket& p)
     PacketWriter writer(PacketType::StatusResponse);
     writer.writeString(p.name);
     writer.writeString(p.description);
-    writer.write(p.players);
-    writer.write(p.max_players);
     writer.writeBytes(p.icon, 8192);
+
+    writer.write(static_cast<uint32_t>(p.tags.size()));
+    for(const auto& tag : p.tags)
+    {
+        writer.writeString(tag);
+    } 
+
+    writer.write(p.players_amount);
+    writer.write(p.max_players);
+
+    writer.write(static_cast<uint32_t>(p.players.size()));
+    for(const auto& nickname : p.players)
+    {
+        writer.writeString(nickname);
+    }    
 
     writer.write(p.date.day);
     writer.write(static_cast<uint8_t>(p.date.month));
@@ -704,11 +717,24 @@ StatusResponsePacket deserializeStatusResponse(PacketReader& r)
 
     p.name = r.readString();
     p.description = r.readString();
+    r.readBytes(p.icon, sizeof(p.icon));
 
-    p.players = r.read<uint32_t>();
+    const uint32_t tag_count = r.read<uint32_t>();
+    if (tag_count > 10000) throw std::runtime_error("StatusResponse: tag count too large");
+    for (uint32_t i = 0; i < tag_count; ++i)
+    {
+        p.tags.insert(r.readString());
+    }
+
+    p.players_amount = r.read<uint32_t>();
     p.max_players = r.read<uint32_t>();
 
-    r.readBytes(p.icon, 8192);
+    const uint32_t player_count = r.read<uint32_t>();
+    if (player_count > 10000) throw std::runtime_error("StatusResponse: player count too large");
+    for (uint32_t i = 0; i < player_count; ++i)
+    {
+        p.players.insert(r.readString());
+    }
 
     p.date.day = r.read<uint8_t>();
     p.date.month = static_cast<Date::Month>(r.read<uint8_t>());

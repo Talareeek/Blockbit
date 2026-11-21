@@ -359,9 +359,17 @@ void GameServer::processIncoming()
 
                     response.name = server_name;
                     response.description = server_description;
+                    response.tags = {"pvp", "smp", "blockbit", "official"};
 
-                    response.players = static_cast<uint32_t>(clients.size());
+                    response.players_amount = static_cast<uint32_t>(clients.size());
                     response.max_players = max_players;
+                    
+                    std::unordered_set<std::string> players;
+
+                    for(auto& [index, client] : clients)
+                    {
+                        players.emplace(client.identity.display_name);
+                    }
 
                     response.date = daysToDate(world.days);
                     response.hour = daytimeToHour(world.dayTime);

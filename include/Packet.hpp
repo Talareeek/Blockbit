@@ -193,10 +193,13 @@ struct StatusResponsePacket
 {
     std::string name;
     std::string description;
-    uint32_t players;
-    uint32_t max_players;
-
+    std::unordered_set<std::string> tags;
     uint8_t icon[8192];
+
+    uint32_t players_amount;
+    uint32_t max_players;
+    std::unordered_set<std::string> players;
+    
 
     Date date;
     Hour hour;
