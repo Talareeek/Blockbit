@@ -15,7 +15,6 @@
     },
     "hardness": 0.6000000238418579,
     "id": "blockbit:gravel",
-    "legacy_id": 34,
     "mining": {
         "level": 1,
         "resistance": 2,

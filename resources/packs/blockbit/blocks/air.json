@@ -1,7 +1,6 @@
 {
     "breakable": false,
     "id": "blockbit:air",
-    "legacy_id": 0,
     "lets_light": true,
     "light_opacity": 1
 }

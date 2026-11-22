@@ -90,24 +90,24 @@ namespace
     struct OreDef
     {
         FeatureType type;
-        BlockID block;
+        BlockKey block;
         int min_y;
         int max_y;
         int veins_per_chunk;
         int size;
     };
 
-    constexpr OreDef ORES[] =
+    const OreDef ORES[] =
     {
-        {FeatureType::CoalOre,    BlockID::Coal_Ore,    5, 110, 10, 10},
-        {FeatureType::IronOre,    BlockID::Iron_Ore,    5, 90, 8, 8},
-        {FeatureType::GoldOre,    BlockID::Gold_Ore,    5, 60, 4, 6},
-        {FeatureType::DiamondOre, BlockID::Diamond_Ore, 5, 25, 2, 5},
-        {FeatureType::RubyOre,    BlockID::Ruby_Ore,    5, 15, 1, 4},
-        {FeatureType::CopperOre,  BlockID::Copper_Ore,  5, 100, 8, 8},
-        {FeatureType::Gravel,     BlockID::Gravel,      5, 120, 8, 14},
-        {FeatureType::Diorite,    BlockID::Diorite,     5, 110, 7, 20},
-        {FeatureType::Granite,    BlockID::Granite,     5, 110, 7, 20},
+        {FeatureType::CoalOre,    Blocks::Coal_Ore,    5, 110, 10, 10},
+        {FeatureType::IronOre,    Blocks::Iron_Ore,    5, 90, 8, 8},
+        {FeatureType::GoldOre,    Blocks::Gold_Ore,    5, 60, 4, 6},
+        {FeatureType::DiamondOre, Blocks::Diamond_Ore, 5, 25, 2, 5},
+        {FeatureType::RubyOre,    Blocks::Ruby_Ore,    5, 15, 1, 4},
+        {FeatureType::CopperOre,  Blocks::Copper_Ore,  5, 100, 8, 8},
+        {FeatureType::Gravel,     Blocks::Gravel,      5, 120, 8, 14},
+        {FeatureType::Diorite,    Blocks::Diorite,     5, 110, 7, 20},
+        {FeatureType::Granite,    Blocks::Granite,     5, 110, 7, 20},
     };
 
     const OreDef* findOre(FeatureType type)
@@ -158,8 +158,8 @@ namespace
 
     struct TreeSpecies
     {
-        BlockID log;
-        BlockID leaves;
+        BlockKey log;
+        BlockKey leaves;
     };
 
     // Species picker consumes one rng draw for the Forest oak/birch roll so
@@ -174,15 +174,15 @@ namespace
             case Biome::Taiga:
             case Biome::SnowyTaiga:
             case Biome::GiantTaiga:
-                return {BlockID::Spruce_Log, BlockID::Spruce_Leaves};
+                return {Blocks::Spruce_Log, Blocks::Spruce_Leaves};
 
             case Biome::Forest:
                 if (roll < 0.3)
-                    return {BlockID::Birch_Log, BlockID::Birch_Leaves};
-                return {BlockID::Oak_Log, BlockID::Oak_Leaves};
+                    return {Blocks::Birch_Log, Blocks::Birch_Leaves};
+                return {Blocks::Oak_Log, Blocks::Oak_Leaves};
 
             default:
-                return {BlockID::Oak_Log, BlockID::Oak_Leaves};
+                return {Blocks::Oak_Log, Blocks::Oak_Leaves};
         }
     }
 }
@@ -357,7 +357,7 @@ ColumnData NormalWorldGenerator::getColumn(int world_x) const
 
     if (underwater || (beach && !keeps_biome_surface))
     {
-        const BlockID shore_block = (col.climate.temperature < -0.1) ? BlockID::Gravel : BlockID::Sand;
+        const BlockKey shore_block = (col.climate.temperature < -0.1) ? Blocks::Gravel : Blocks::Sand;
         col.top_block = Block{shore_block, 0};
 
         for (int i = 0; i < 3; i++)
@@ -383,9 +383,9 @@ Chunk NormalWorldGenerator::generateChunk(int chunk_position)
     {
         for (int y = 1; y < LAVA_LEVEL; y++)
         {
-            if (chunk.blocks[y][x].id == BlockID::Air)
+            if (chunk.blocks[y][x].id == Blocks::Air)
             {
-                chunk.blocks[y][x] = {BlockID::Lava, LavaState{LavaState::SOURCE}.pack()};
+                chunk.blocks[y][x] = {Blocks::Lava, LavaState{LavaState::SOURCE}.pack()};
             }
         }
     }
@@ -422,7 +422,7 @@ void NormalWorldGenerator::generateTerrain(Chunk& chunk, std::array<int, CHUNK_W
         {
             if (y == 0)
             {
-                chunk.blocks[y][x] = {BlockID::Bedrock, 0};
+                chunk.blocks[y][x] = {Blocks::Bedrock, 0};
             }
             else if (y <= 4)
             {
@@ -438,11 +438,11 @@ void NormalWorldGenerator::generateTerrain(Chunk& chunk, std::array<int, CHUNK_W
 
                 if (roll < threshold)
                 {
-                    chunk.blocks[y][x] = {BlockID::Bedrock, 0};
+                    chunk.blocks[y][x] = {Blocks::Bedrock, 0};
                 }
                 else if (y < col.height - 4)
                 {
-                    chunk.blocks[y][x] = {BlockID::Stone, 0};
+                    chunk.blocks[y][x] = {Blocks::Stone, 0};
                 }
                 else if (y < col.height - 1)
                 {
@@ -454,12 +454,12 @@ void NormalWorldGenerator::generateTerrain(Chunk& chunk, std::array<int, CHUNK_W
                 }
                 else
                 {
-                    chunk.blocks[y][x] = {BlockID::Air, 0};
+                    chunk.blocks[y][x] = {Blocks::Air, 0};
                 }
             }
             else if (y < col.height - 4)
             {
-                chunk.blocks[y][x] = {BlockID::Stone, 0};
+                chunk.blocks[y][x] = {Blocks::Stone, 0};
             }
             else if (y < col.height - 1)
             {
@@ -471,11 +471,11 @@ void NormalWorldGenerator::generateTerrain(Chunk& chunk, std::array<int, CHUNK_W
             }
             else if (y < SEA_LEVEL)
             {
-                chunk.blocks[y][x] = {BlockID::Water, WaterState{WaterState::SOURCE}.pack()};
+                chunk.blocks[y][x] = {Blocks::Water, WaterState{WaterState::SOURCE}.pack()};
             }
             else
             {
-                chunk.blocks[y][x] = {BlockID::Air, 0};
+                chunk.blocks[y][x] = {Blocks::Air, 0};
             }
         }
     }
@@ -497,7 +497,7 @@ void NormalWorldGenerator::generateCaves(Chunk& chunk, const std::array<int, CHU
         {
             // Bedrock crust (y=0..4) is honoured: cave carving stays non-
             // destructive against the scatter pattern laid down by terrain gen.
-            if (chunk.blocks[y][x].id == BlockID::Bedrock) continue;
+            if (chunk.blocks[y][x].id == Blocks::Bedrock) continue;
 
             const double noise = perlin.noise(world_x * 0.05, y * 0.05);
 
@@ -507,7 +507,7 @@ void NormalWorldGenerator::generateCaves(Chunk& chunk, const std::array<int, CHU
 
             if (noise > threshold)
             {
-                chunk.blocks[y][x] = {BlockID::Air, 0};
+                chunk.blocks[y][x] = {Blocks::Air, 0};
             }
         }
     }
@@ -534,7 +534,7 @@ void NormalWorldGenerator::setFeatureBlock(Chunk& chunk, int world_x, int y, Blo
     if (y < 0 || y >= CHUNK_HEIGHT)
         return;
 
-    if (only_replace_air && chunk.blocks[y][local_x].id != BlockID::Air)
+    if (only_replace_air && chunk.blocks[y][local_x].id != Blocks::Air)
         return;
 
     chunk.blocks[y][local_x] = block;
@@ -624,11 +624,11 @@ std::vector<FeaturePlacement> NormalWorldGenerator::getTreePlacements(int chunk_
 
         const ColumnData col = getColumn(world_x);
 
-        const BlockID top = col.top_block.id;
+        const BlockKey top = col.top_block.id;
 
         const bool snowy_tree_biome = col.top_biome == Biome::SnowyTaiga;
 
-        if (top != BlockID::Grass && top != BlockID::Coarse_Dirt && !(snowy_tree_biome && top == BlockID::Snow))
+        if (top != Blocks::Grass && top != Blocks::Coarse_Dirt && !(snowy_tree_biome && top == Blocks::Snow))
             continue;
 
         if (col.height <= SEA_LEVEL + 2)
@@ -730,7 +730,7 @@ std::vector<FeaturePlacement> NormalWorldGenerator::getCactusPlacements(int chun
         if (col.top_biome != Biome::Desert)
             continue;
 
-        if (col.top_block.id != BlockID::Sand)
+        if (col.top_block.id != Blocks::Sand)
             continue;
 
         if (col.height <= SEA_LEVEL + 2)
@@ -762,10 +762,10 @@ void NormalWorldGenerator::generateCactus(Chunk& chunk, const FeaturePlacement& 
     {
         const int y = feature.y + i;
         if (y < 0 || y >= CHUNK_HEIGHT) return;
-        if (chunk.blocks[y][local_x].id != BlockID::Air) return;
+        if (chunk.blocks[y][local_x].id != Blocks::Air) return;
 
         const bool is_top = (i == height - 1);
-        chunk.blocks[y][local_x] = {BlockID::Cactus, CactusState{is_top}.pack()};
+        chunk.blocks[y][local_x] = {Blocks::Cactus, CactusState{is_top}.pack()};
     }
 }
 
@@ -796,7 +796,7 @@ std::vector<FeaturePlacement> NormalWorldGenerator::getDeadBushPlacements(int ch
         if (col.top_biome != Biome::Desert)
             continue;
 
-        if (col.top_block.id != BlockID::Sand)
+        if (col.top_block.id != Blocks::Sand)
             continue;
 
         if (col.height <= SEA_LEVEL + 2)
@@ -822,12 +822,12 @@ void NormalWorldGenerator::generateDeadBush(Chunk& chunk, const FeaturePlacement
     if (y < 0 || y >= CHUNK_HEIGHT) return;
 
     // Don't trample a cactus or other feature that landed on the same column.
-    if (chunk.blocks[y][local_x].id != BlockID::Air) return;
+    if (chunk.blocks[y][local_x].id != Blocks::Air) return;
 
-    chunk.blocks[y][local_x] = {BlockID::Dead_Bush, 0};
+    chunk.blocks[y][local_x] = {Blocks::Dead_Bush, 0};
 }
 
-void NormalWorldGenerator::generateOreVein(Chunk& chunk, const FeaturePlacement& feature, BlockID ore, int size)
+void NormalWorldGenerator::generateOreVein(Chunk& chunk, const FeaturePlacement& feature, BlockKey ore, int size)
 {
     SmallRng rng(feature.seed);
 
@@ -842,7 +842,7 @@ void NormalWorldGenerator::generateOreVein(Chunk& chunk, const FeaturePlacement&
 
         if (local_x >= 0 && local_x < CHUNK_WIDTH && y >= 1 && y < CHUNK_HEIGHT)
         {
-            if (chunk.blocks[y][local_x].id == BlockID::Stone)
+            if (chunk.blocks[y][local_x].id == Blocks::Stone)
             {
                 chunk.blocks[y][local_x] = {ore, 0};
             }
@@ -863,18 +863,18 @@ void NormalWorldGenerator::generateOreVein(Chunk& chunk, const FeaturePlacement&
     }
 }
 
-uint32_t NormalWorldGenerator::structureSeed(int grid_x, StructureID id) const
+uint32_t NormalWorldGenerator::structureSeed(int grid_x, const StructureKey& id) const
 {
     uint32_t h = mix32(static_cast<uint32_t>(seed) + 0x165667B1u);
 
     h = mix32(h ^ (static_cast<uint32_t>(grid_x) * 374761393u));
-    h = mix32(h ^ (static_cast<uint32_t>(id) * 2246822519u + 0x9E3779B9u));
+    h = mix32(h ^ (([&] { uint32_t key_hash = 2166136261u; for (unsigned char c : id) { key_hash ^= c; key_hash *= 16777619u; } return key_hash; }()) * 2246822519u + 0x9E3779B9u));
 
     return h;
 }
 
 std::vector<NormalWorldGenerator::StructurePlacement>
-NormalWorldGenerator::getStructurePlacementsInCell(int grid_x, StructureID id) const
+NormalWorldGenerator::getStructurePlacementsInCell(int grid_x, const StructureKey& id) const
 {
     std::vector<StructurePlacement> result;
 
@@ -996,13 +996,13 @@ void NormalWorldGenerator::expandJigsawChain(const StructurePlacement& root, int
             rng = mix32(rng + 0x9E3779B9u);
             const uint32_t pick = rng % total_w;
             uint32_t acc = 0;
-            StructureID chosen_id = 0;
+            StructureKey chosen_id;
             for (const auto& e : *pool)
             {
                 acc += e.weight;
                 if (pick < acc) { chosen_id = e.id; break; }
             }
-            if (chosen_id == 0) continue;
+            if (chosen_id.empty()) continue;
 
             // Source jigsaw's absolute world facing + position.
             int sx = 0, sy = 0;

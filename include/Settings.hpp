@@ -2,6 +2,7 @@
 #define SETTINGS_HPP
 
 #include <cstdint>
+#include <string>
 
 #include <SFML/Graphics/Color.hpp>
 
@@ -87,10 +88,8 @@ public:
         sf::Color color{255, 190, 60};
         uint32_t size = 32;   // pixel edge of the cursor image
 
-        // Item id (underlying type of ItemID) used when mode == Item. Stored
-        // as uint32_t so this header does not depend on Item.hpp. 0 is
-        // ItemID::None and is treated as "no selection".
-        std::uint32_t item_id = 0;
+        // Full namespaced item key used when mode == Item.
+        std::string item_id;
     };
 
     struct Gamepad

@@ -6,7 +6,6 @@
 #include "AccountWidget.hpp"
 #include "Slot.hpp"
 #include "WorldList.hpp"
-#include "LobbyPlayerElement.hpp"
 #include "Slider.hpp"
 #include "InputField.hpp"
 #include "ServerPreview.hpp"
@@ -27,14 +26,12 @@ private:
 
     sf::Texture blockbit_logo;
 
-
     AccountWidget account;
     TextButton quit;
     TextButton settings;
     TextButton structure_editor;
     TextButton packs;
     WorldList worldList;
-    LobbyPlayerElement player;
 
     // Loaded on demand the first time the Packs window opens; indexed by
     // pack id so ImGui::Image can bind the sf::Texture directly.

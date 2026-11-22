@@ -1,7 +1,6 @@
 {
     "category": "tool",
     "id": "blockbit:diamond_pickaxe",
-    "legacy_id": 43,
     "max_durability": 1561,
     "max_stack_size": 1,
     "name": "Diamond Pickaxe",

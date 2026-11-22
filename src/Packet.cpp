@@ -166,10 +166,8 @@ std::wstring PacketReader::readWideString()
     return result;
 }
 
-// Wire format V2 — palette + indexes. Both ends run the same registry
-// (identical runtime ids per Phase 1a-A, and after Phase 1a-E guaranteed by
-// RegistrySyncPacket), so the palette carries bare RuntimeIDs instead of the
-// RegistryKey strings used by on-disk saves.
+// Palette + indexes keep chunks compact while each palette entry carries a
+// full block key, so runtime registry ordering never affects world packets.
 void PacketWriter::writeChunk(const Chunk& chunk)
 {
     write(chunk.chunk_position);
@@ -178,8 +176,8 @@ void PacketWriter::writeChunk(const Chunk& chunk)
 
     constexpr int kCells = CHUNK_WIDTH * CHUNK_HEIGHT;
 
-    std::unordered_map<uint32_t, uint8_t> seen;
-    std::vector<uint16_t> palette;
+    std::unordered_map<BlockKey, uint8_t> seen;
+    std::vector<BlockKey> palette;
     std::vector<uint8_t>  indexes(kCells);
     std::vector<uint16_t> metadata(kCells);
     palette.reserve(32);
@@ -189,13 +187,13 @@ void PacketWriter::writeChunk(const Chunk& chunk)
         for (int x = 0; x < CHUNK_WIDTH; ++x, ++cell)
         {
             const Block& b = chunk.blocks[y][x];
-            const uint32_t raw_id = static_cast<uint32_t>(b.id);
-            auto [it, inserted] = seen.try_emplace(raw_id, static_cast<uint8_t>(palette.size()));
+            const BlockKey& key = b.id.empty() ? Blocks::Air : b.id;
+            auto [it, inserted] = seen.try_emplace(key, static_cast<uint8_t>(palette.size()));
             if (inserted)
             {
                 if (palette.size() >= 256)
                     throw std::runtime_error("writeChunk: palette overflow (> 256 unique blocks per chunk)");
-                palette.push_back(static_cast<uint16_t>(raw_id));
+                palette.push_back(key);
             }
             indexes[cell]  = it->second;
             metadata[cell] = b.metadata;
@@ -203,7 +201,7 @@ void PacketWriter::writeChunk(const Chunk& chunk)
     }
 
     write(static_cast<uint16_t>(palette.size()));
-    writeBytes(palette.data(), palette.size() * sizeof(uint16_t));
+    for (const auto& key : palette) writeString(key);
     writeBytes(indexes.data(), indexes.size());
     writeBytes(metadata.data(), metadata.size() * sizeof(uint16_t));
 
@@ -224,8 +222,8 @@ Chunk PacketReader::readChunk()
     readBytes(chunk.biomes, CHUNK_WIDTH * sizeof(Biome));
 
     const uint16_t palette_size = read<uint16_t>();
-    std::vector<uint16_t> palette(palette_size);
-    if (palette_size > 0) readBytes(palette.data(), palette_size * sizeof(uint16_t));
+    std::vector<BlockKey> palette(palette_size);
+    for (auto& key : palette) key = readString();
 
     constexpr int kCells = CHUNK_WIDTH * CHUNK_HEIGHT;
     std::vector<uint8_t>  indexes(kCells);
@@ -240,7 +238,7 @@ Chunk PacketReader::readChunk()
             const uint8_t idx = indexes[cell];
             if (idx >= palette.size())
                 throw std::runtime_error("readChunk: palette index out of range");
-            chunk.blocks[y][x].id       = static_cast<BlockID>(palette[idx]);
+            chunk.blocks[y][x].id       = palette[idx];
             chunk.blocks[y][x].metadata = metadata[cell];
         }
     }
@@ -316,7 +314,8 @@ std::vector<char> serializePacket(const BlockUpdatePacket& p)
     PacketWriter w(PacketType::BlockUpdate);
     w.write<int32_t>(static_cast<int32_t>(p.position.x));
     w.write<int32_t>(static_cast<int32_t>(p.position.y));
-    w.write(p.block);
+    w.writeString(p.block.id);
+    w.write(p.block.metadata);
     return w.release();
 }
 
@@ -649,7 +648,8 @@ BlockUpdatePacket deserializeBlockUpdate(PacketReader& r)
     BlockUpdatePacket p;
     p.position.x = r.read<int32_t>();
     p.position.y = r.read<int32_t>();
-    p.block = r.read<Block>();
+    p.block.id = r.readString();
+    p.block.metadata = r.read<uint16_t>();
     return p;
 }
 
@@ -878,7 +878,7 @@ std::vector<char> serializePacket(const ParticleBurstPacket& p)
     w.write(p.effect);
     w.write(p.count);
     w.write(p.spread);
-    w.write(p.arg);
+    w.writeString(p.arg);
     return w.release();
 }
 
@@ -889,6 +889,6 @@ ParticleBurstPacket deserializeParticleBurst(PacketReader& r)
     p.effect   = r.read<uint16_t>();
     p.count    = r.read<uint16_t>();
     p.spread   = r.read<float>();
-    p.arg      = r.read<uint32_t>();
+    p.arg      = r.readString();
     return p;
 }

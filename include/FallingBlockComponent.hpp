@@ -13,11 +13,11 @@
 // "this is a thrown item" — it just draws whatever RenderComponent says.
 struct FallingBlockComponent : public Component
 {
-    BlockID  block_id = BlockID::Air;
+    BlockKey  block_id = Blocks::Air;
     uint16_t metadata = 0;
 
     FallingBlockComponent() = default;
-    FallingBlockComponent(BlockID id, uint16_t meta) : block_id(id), metadata(meta) {}
+    FallingBlockComponent(BlockKey id, uint16_t meta) : block_id(id), metadata(meta) {}
 
     std::string name() const override { return "FallingBlockComponent"; }
 
@@ -26,14 +26,17 @@ struct FallingBlockComponent : public Component
     Tag serializeForStorage() const override
     {
         TagCompound c;
-        c["block_id"] = Tag(static_cast<uint32_t>(block_id));
+        c["block_id"] = Tag(block_id);
         c["metadata"] = Tag(metadata);
         return Tag(c);
     }
 
     void deserializeFromStorage(const Tag& tag) override
     {
-        block_id = static_cast<BlockID>(tag["block_id"].get<uint32_t>());
+        if (tag["block_id"].type() == TagType::T_STRING)
+            block_id = tag["block_id"].get<std::string>();
+        else
+            block_id = blockKeyFromLegacySave(tag["block_id"].get<uint32_t>());
         metadata = tag["metadata"].get<uint16_t>();
     }
 

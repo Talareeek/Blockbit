@@ -3,7 +3,6 @@
     "category": "tool",
     "damage": 7,
     "id": "blockbit:stone_axe",
-    "legacy_id": 46,
     "max_durability": 131,
     "max_stack_size": 1,
     "name": "Stone Axe",

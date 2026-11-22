@@ -10,7 +10,6 @@
     "callbacks": "water",
     "drag": 4.0,
     "id": "blockbit:water",
-    "legacy_id": 7,
     "lets_light": true,
     "light_opacity": 3,
     "liquid": true,

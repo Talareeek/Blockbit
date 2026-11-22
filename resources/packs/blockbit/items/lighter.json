@@ -7,7 +7,6 @@
         "type": "ignite"
     },
     "id": "blockbit:lighter",
-    "legacy_id": 33,
     "max_stack_size": 1,
     "name": "Lighter",
     "rarity": "rare",

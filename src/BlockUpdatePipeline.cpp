@@ -97,7 +97,7 @@ void BlockUpdatePipeline::processOneEvent(
     // onBreak fires only when a different block replaced a real previous one.
     // Pure metadata changes within the same id don't fire onBreak — those are
     // state changes, not removals.
-    if (ev.previous.id != BlockID::Air
+    if (ev.previous.id != Blocks::Air
         && ev.previous.id != ev.current.id
         && prev_data_it != blockDatabase.end()
         && prev_data_it->second.callbacks.onBreak != nullptr)
@@ -112,7 +112,7 @@ void BlockUpdatePipeline::processOneEvent(
     // writes a NEW event onto the stack; we drain nested events before continuing
     // the fan-out below, but our captured ev.previous/ev.current remain the
     // originals — the fan-out based on them is NOT "eaten" by self-mutation.
-    if (ev.current.id != BlockID::Air
+    if (ev.current.id != Blocks::Air
         && ev.previous.id != ev.current.id
         && cur_data_it != blockDatabase.end()
         && cur_data_it->second.callbacks.onPlace != nullptr)
@@ -145,7 +145,7 @@ void BlockUpdatePipeline::processOneEvent(
             const bool supported = std::find(ids.begin(), ids.end(), ev.current.id) != ids.end();
             if (!supported)
             {
-                world.setBlock(neighbor_pos.x, neighbor_pos.y, {BlockID::Air, 0});
+                world.setBlock(neighbor_pos.x, neighbor_pos.y, {Blocks::Air, 0});
                 if (neighbor_data.drop.has_value())
                 {
                     const auto& drop = neighbor_data.drop.value();

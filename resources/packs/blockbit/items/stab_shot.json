@@ -8,7 +8,6 @@
         "type": "throw_projectile"
     },
     "id": "blockbit:stab_shot",
-    "legacy_id": 8,
     "max_stack_size": 16,
     "name": "Stab Shot",
     "rarity": "epic",

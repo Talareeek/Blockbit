@@ -180,35 +180,6 @@ RuntimeID firstDynamicTextureId()
     return static_cast<RuntimeID>(textureMap().entries.size());
 }
 
-// --- Prefab ---------------------------------------------------------------
-
-std::optional<PrefabID> prefabFromName(std::string_view name)
-{
-    if (name == "player")        return PrefabID::Player;
-    if (name == "pig")           return PrefabID::Pig;
-    if (name == "cow")           return PrefabID::Cow;
-    if (name == "dynamite")      return PrefabID::Dynamite;
-    if (name == "dropped_item")  return PrefabID::DroppedItem;
-    if (name == "falling_block") return PrefabID::FallingBlock;
-    if (name == "cube")          return PrefabID::Cube;
-    return std::nullopt;
-}
-
-std::string nameFromPrefab(PrefabID id)
-{
-    switch (id)
-    {
-        case PrefabID::Player:        return "player";
-        case PrefabID::Pig:           return "pig";
-        case PrefabID::Cow:           return "cow";
-        case PrefabID::Dynamite:      return "dynamite";
-        case PrefabID::DroppedItem:   return "dropped_item";
-        case PrefabID::FallingBlock:  return "falling_block";
-        case PrefabID::Cube:          return "cube";
-    }
-    return "";
-}
-
 // --- Tool / category / rarity --------------------------------------------
 
 std::optional<ToolType> toolTypeFromName(std::string_view name)
@@ -423,7 +394,7 @@ bool applyRenderProfile(RenderProperties& out, std::string_view profile)
 std::string renderProfileOf(const RenderProperties& /*props*/)
 {
     // std::function has no comparable identity — the exporter uses an
-    // explicit BlockID → profile table instead. Returning "default" here
+    // explicit BlockKey → profile table instead. Returning "default" here
     // is a safe placeholder that loaders would accept.
     return "default";
 }

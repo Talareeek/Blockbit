@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:gravel",
-    "legacy_id": 37,
     "max_stack_size": 64,
     "name": "Gravel",
     "texture": "gravel"

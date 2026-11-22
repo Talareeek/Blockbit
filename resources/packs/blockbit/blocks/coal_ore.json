@@ -4,7 +4,6 @@
     },
     "hardness": 2.0,
     "id": "blockbit:coal_ore",
-    "legacy_id": 9,
     "mining": {
         "level": 1,
         "resistance": 5,

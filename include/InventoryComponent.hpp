@@ -7,6 +7,7 @@
 #include "ItemUtils.hpp"
 
 #include <cstdint>
+#include <charconv>
 #include <string>
 #include <sstream>
 
@@ -24,7 +25,7 @@ struct InventoryComponent : public Component
 
         for(const auto& slot : inventory.slots)
         {
-            output += std::to_string(static_cast<uint32_t>(slot.itemID)) + ' ';
+            output += slot.itemID + ' ';
             output += std::to_string(slot.quantity) + '\n';
         }
 
@@ -45,7 +46,7 @@ struct InventoryComponent : public Component
             selectedSlot = static_cast<uint8_t>(slot);
             if(inventory.slots.size() != size)
             {
-                inventory.slots.resize(size, {ItemID::None, 0});
+                inventory.slots.resize(size, {Items::None, 0});
             }
         }
 
@@ -53,10 +54,15 @@ struct InventoryComponent : public Component
         while(std::getline(iss, line) && index < inventory.slots.size())
         {
             std::istringstream lineStream(line);
-            uint32_t itemIDInt;
+            std::string item_key;
             uint32_t quantity;
-            lineStream >> itemIDInt >> quantity;
-            inventory.slots[index].itemID = static_cast<ItemID>(itemIDInt);
+            lineStream >> item_key >> quantity;
+            uint32_t old_item_id = 0;
+            const auto [end, error] = std::from_chars(item_key.data(),
+                item_key.data() + item_key.size(), old_item_id);
+            if (error == std::errc{} && end == item_key.data() + item_key.size())
+                item_key = itemKeyFromLegacySave(old_item_id);
+            inventory.slots[index].itemID = item_key;
             inventory.slots[index].quantity = quantity;
             index++;
         }
@@ -92,7 +98,7 @@ struct InventoryComponent : public Component
 
         if (inventory.slots.size() != slots.size())
         {
-            inventory.slots.resize(slots.size(), {ItemID::None, 0});
+            inventory.slots.resize(slots.size(), {Items::None, 0});
         }
 
         for (size_t i = 0; i < slots.size(); ++i)

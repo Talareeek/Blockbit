@@ -25,7 +25,7 @@ constexpr int CHUNK_HEIGHT = 256;
 // materialised via ServerWorld::loadOrCreateChunk and never saves it to disk.
 struct PendingSpawn
 {
-    PrefabID              prefab;
+    std::string           prefab;
     sf::Vector2<double>   position;
 };
 
@@ -96,7 +96,9 @@ private:
     {
         chunk_position = other.chunk_position;
         entity_ids = other.entity_ids;
-        std::memcpy(blocks, other.blocks, sizeof(blocks));
+        for (int y = 0; y < CHUNK_HEIGHT; ++y)
+            for (int x = 0; x < CHUNK_WIDTH; ++x)
+                blocks[y][x] = other.blocks[y][x];
         std::memcpy(climates, other.climates, sizeof(climates));
         std::memcpy(biomes, other.biomes, sizeof(biomes));
         light = other.light;

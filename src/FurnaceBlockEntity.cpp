@@ -5,7 +5,7 @@
 
 namespace
 {
-    bool canAcceptOutput(const ItemStack& output, ItemID smelted)
+    bool canAcceptOutput(const ItemStack& output, ItemKey smelted)
     {
         if (output.empty()) return true;
         if (output.itemID != smelted) return false;
@@ -70,7 +70,7 @@ void FurnaceBlockEntity::tick(World& world, float dt)
                     output.quantity += 1;
                 }
 
-                if (--input.quantity == 0) input = {ItemID::None, 0};
+                if (--input.quantity == 0) input = {Items::None, 0};
 
                 cook_time_total     = 0.0f;
                 cook_time_remaining = 0.0f;
@@ -92,7 +92,7 @@ void FurnaceBlockEntity::tick(World& world, float dt)
                 burn_time_total     = fuel_it->second;
                 burn_time_remaining = fuel_it->second;
 
-                if (--fuel.quantity == 0) fuel = {ItemID::None, 0};
+                if (--fuel.quantity == 0) fuel = {Items::None, 0};
             }
             else
             {
@@ -108,12 +108,12 @@ void FurnaceBlockEntity::tick(World& world, float dt)
     if (was_lit != now_lit)
     {
         Block current = world.getBlock(this->position.x, this->position.y);
-        if (current.id == BlockID::Furnace)
+        if (current.id == Blocks::Furnace)
         {
             const uint16_t desired_meta = FurnaceState{now_lit}.pack();
             if (current.metadata != desired_meta)
             {
-                world.setBlock(this->position.x, this->position.y, {BlockID::Furnace, desired_meta});
+                world.setBlock(this->position.x, this->position.y, {Blocks::Furnace, desired_meta});
             }
         }
     }
@@ -143,7 +143,7 @@ void FurnaceBlockEntity::deserialize(const Tag& tag)
     auto decodeStack = [](const TagCompound& compound, const std::string& key) -> ItemStack
     {
         auto it = compound.find(key);
-        if (it == compound.end()) return {ItemID::None, 0};
+        if (it == compound.end()) return {Items::None, 0};
         return stackFromTag(it->second, /*write_instance_data=*/true);
     };
 

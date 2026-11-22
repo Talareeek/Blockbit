@@ -4,7 +4,6 @@
     },
     "hardness": 2.0,
     "id": "blockbit:cobblestone",
-    "legacy_id": 4,
     "mining": {
         "level": 1,
         "resistance": 5,

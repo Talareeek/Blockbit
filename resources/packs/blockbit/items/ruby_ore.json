@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:ruby_ore",
-    "legacy_id": 14,
     "max_stack_size": 64,
     "name": "Ruby Ore",
     "texture": "ruby_ore"

@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:cactus",
-    "legacy_id": 65,
     "max_stack_size": 64,
     "name": "Cactus",
     "texture": "cactus"

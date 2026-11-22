@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:oak_planks",
-    "legacy_id": 25,
     "max_stack_size": 64,
     "name": "Oak Planks",
     "texture": "oak_planks"

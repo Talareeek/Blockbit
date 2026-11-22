@@ -79,8 +79,6 @@ public:
     const std::string& getName() const { return name; }
     void setName(const std::string& name) { this->name = name; }
 
-    UUID spawn(PrefabID prefab_id, sf::Vector2<double> position);
-
     // Spawn by RegistryKey — resolves against gameRegistries().prefabs
     // (which includes vanilla prefabs under "blockbit:<name>" plus any
     // modpack prefabs). Returns UUID{} when the key is not registered.

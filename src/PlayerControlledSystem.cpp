@@ -162,11 +162,11 @@ void PlayerControlledSystem(World& world, float dt)
                 float wrong_tool_penalty = correct_type ? 1.0f : 1.5f;
                 float block_mining_time = (block_data.hardness < 0.0f) ? std::numeric_limits<float>::infinity() : (block_data.hardness * wrong_tool_penalty) / speed;
 
-                if(player.mining_time >= block_mining_time && world.getBlock(block_position.x, block_position.y).id != BlockID::Air && blockDatabase[world.getBlock(block_position.x, block_position.y).id].breakable && isBlockInRange(transform, block_position, 4.0f))
+                if(player.mining_time >= block_mining_time && world.getBlock(block_position.x, block_position.y).id != Blocks::Air && blockDatabase[world.getBlock(block_position.x, block_position.y).id].breakable && isBlockInRange(transform, block_position, 4.0f))
                 {
                     player.dirty = true;
 
-                    world.setBlock(block_position.x, block_position.y, {BlockID::Air, 0});
+                    world.setBlock(block_position.x, block_position.y, {Blocks::Air, 0});
 
                     if(block_data.drop.has_value() && (proper_tool || block_data.drop->always_drop))
                     {
@@ -203,7 +203,7 @@ void PlayerControlledSystem(World& world, float dt)
         {
             sf::Vector2i block_position = block_from_position(player.cursor_position);
 
-            if(world.getBlock(block_position.x, block_position.y).id == BlockID::Chest && isBlockInRange(transform, block_position, 4.0f))
+            if(world.getBlock(block_position.x, block_position.y).id == Blocks::Chest && isBlockInRange(transform, block_position, 4.0f))
             {
                 player.pending_view_opens.push_back(std::make_unique<ServerChestView>(block_position, id));
                 player.mid_usage = false;
@@ -212,7 +212,7 @@ void PlayerControlledSystem(World& world, float dt)
                 continue;
             }
 
-            if(world.getBlock(block_position.x, block_position.y).id == BlockID::Workbench && isBlockInRange(transform, block_position, 4.0f))
+            if(world.getBlock(block_position.x, block_position.y).id == Blocks::Workbench && isBlockInRange(transform, block_position, 4.0f))
             {
                 player.pending_view_opens.push_back(std::make_unique<ServerCraftingView>(block_position, id));
                 player.mid_usage = false;
@@ -221,7 +221,7 @@ void PlayerControlledSystem(World& world, float dt)
                 continue;
             }
 
-            if(world.getBlock(block_position.x, block_position.y).id == BlockID::Upgrade_Table && isBlockInRange(transform, block_position, 4.0f))
+            if(world.getBlock(block_position.x, block_position.y).id == Blocks::Upgrade_Table && isBlockInRange(transform, block_position, 4.0f))
             {
                 player.pending_view_opens.push_back(std::make_unique<ServerUpgradeView>(block_position, id));
                 player.mid_usage = false;
@@ -230,14 +230,14 @@ void PlayerControlledSystem(World& world, float dt)
                 continue;
             }
 
-            if(world.getBlock(block_position.x, block_position.y).id == BlockID::Furnace && isBlockInRange(transform, block_position, 4.0f))
+            if(world.getBlock(block_position.x, block_position.y).id == Blocks::Furnace && isBlockInRange(transform, block_position, 4.0f))
             {
                 auto& selected = inventory.inventory.slots[inventory.selectedSlot];
 
                 // Clicking a furnace with a Lighter or Flint in hand should
                 // still light it, not pop open the UI. Fall through to the
                 // item-use path.
-                bool lights_furnace = !selected.empty() && (selected.itemID == ItemID::Lighter || selected.itemID == ItemID::Flint);
+                bool lights_furnace = !selected.empty() && (selected.itemID == Items::Lighter || selected.itemID == Items::Flint);
                 if(!lights_furnace)
                 {
                     player.pending_view_opens.push_back(std::make_unique<ServerFurnaceView>(block_position, id));
@@ -252,7 +252,7 @@ void PlayerControlledSystem(World& world, float dt)
 
             if(selected.empty()) break;
 
-            if(block_position.y >= 0 && block_position.y < CHUNK_HEIGHT && (world.getBlock(block_position.x, block_position.y).id == BlockID::Air || world.getBlock(block_position.x, block_position.y).id == BlockID::Water || world.getBlock(block_position.x, block_position.y).id == BlockID::Lava) && isBlockInRange(transform, block_position, 4.0f) && itemDatabase[selected.itemID].category == ItemCategory::Block)
+            if(block_position.y >= 0 && block_position.y < CHUNK_HEIGHT && (world.getBlock(block_position.x, block_position.y).id == Blocks::Air || world.getBlock(block_position.x, block_position.y).id == Blocks::Water || world.getBlock(block_position.x, block_position.y).id == Blocks::Lava) && isBlockInRange(transform, block_position, 4.0f) && itemDatabase[selected.itemID].category == ItemCategory::Block)
             {
                 bool collides = false;
 
@@ -274,7 +274,7 @@ void PlayerControlledSystem(World& world, float dt)
                     }
                 }
 
-                const BlockID placing = itemToBlock(selected.itemID);
+                const BlockKey placing = itemToBlock(selected.itemID);
 
                 if(!collides && canPlaceBlock(world, placing, block_position))
                 {
@@ -322,14 +322,14 @@ void PlayerControlledSystem(World& world, float dt)
             if(player.drops_full_stack || stack.isUnique())
             {
                 to_drop = stack;
-                stack = {ItemID::None, 0};
+                stack = {Items::None, 0};
             }
             else
             {
                 to_drop = {stack.itemID, 1};
                 if(--stack.quantity == 0)
                 {
-                    stack.itemID = ItemID::None;
+                    stack.itemID = Items::None;
                 }
             }
 

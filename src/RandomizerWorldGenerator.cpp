@@ -1,7 +1,7 @@
 #include "../include/RandomizerWorldGenerator.hpp"
 #include "../include/Block.hpp"
 
-#include <iterator>
+#include <algorithm>
 
 RandomizerWorldGenerator::RandomizerWorldGenerator(unsigned int seed) : seed(seed) {}
 
@@ -17,16 +17,17 @@ uint32_t RandomizerWorldGenerator::cellHash(int32_t x, int32_t y) const
     return h;
 }
 
-static BlockID pickBlock(uint32_t h)
+static BlockKey pickBlock(uint32_t h)
 {
-    BlockID candidate = static_cast<BlockID>(h % blockDatabase.size());
-    if (blockDatabase.find(candidate) == blockDatabase.end())
+    static const std::vector<BlockKey> ids = []
     {
-        auto it = blockDatabase.begin();
-        std::advance(it, h % blockDatabase.size());
-        candidate = it->first;
-    }
-    return candidate;
+        std::vector<BlockKey> keys;
+        keys.reserve(blockDatabase.size());
+        for (const auto& [key, _] : blockDatabase) keys.push_back(key);
+        std::sort(keys.begin(), keys.end());
+        return keys;
+    }();
+    return ids[h % ids.size()];
 }
 
 Chunk RandomizerWorldGenerator::generateChunk(int chunk_position)
@@ -49,7 +50,7 @@ Chunk RandomizerWorldGenerator::generateChunk(int chunk_position)
         {
             for (int x = 0; x < CHUNK_WIDTH; ++x)
             {
-                chunk.blocks[y][x] = {BlockID::Air, 0};
+                chunk.blocks[y][x] = {Blocks::Air, 0};
             }
         }
         return chunk;

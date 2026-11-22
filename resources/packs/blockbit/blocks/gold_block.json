@@ -4,7 +4,6 @@
     },
     "hardness": 4.0,
     "id": "blockbit:gold_block",
-    "legacy_id": 15,
     "mining": {
         "level": 4,
         "resistance": 6,

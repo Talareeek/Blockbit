@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:output_bulb",
-    "legacy_id": 71,
     "max_stack_size": 64,
     "name": "Output Bulb",
     "texture": "output_bulb"

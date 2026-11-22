@@ -424,7 +424,7 @@ std::unordered_map<std::wstring, Command> commandDatabase =
             uint32_t given = 0;
             for (uint32_t i = 0; i < count; ++i)
             {
-                ItemStack stack{ItemID::Magic_Bottle, 1};
+                ItemStack stack{Items::Magic_Bottle, 1};
                 stack.instanceID = generateUUID();
                 auto& data = getOrCreateInstance(*stack.instanceID);
                 auto& bottle = data.ensure<MagicEffectItemComponent>();
@@ -743,7 +743,7 @@ std::unordered_map<std::wstring, Command> commandDatabase =
             double x = parseFloat(tokens[1], "x");
             double y = parseFloat(tokens[2], "y");
 
-            Entity entity = PrefabRegistry::get(PrefabID::Cube).cloneAs(generateUUID());
+            Entity entity = PrefabRegistry::get("blockbit:cube").cloneAs(generateUUID());
 
             auto& transform = entity.getComponent<TransformComponent>();
             transform.position          = {x, y};
@@ -861,13 +861,13 @@ std::unordered_map<std::wstring, Command> commandDatabase =
             entity.addComponent(PhysicsComponent{{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, 1.0f, true, true, false, true});
 
             InventoryComponent inv(36);
-            inv.inventory.slots[0] = {ItemID::Dynamite, 16};
-            inv.inventory.slots[1] = {ItemID::Bucket, 1};
-            inv.inventory.slots[2] = {ItemID::Workbench, 64};
-            inv.inventory.slots[3] = {ItemID::Lighter, 1};
-            inv.inventory.slots[4] = {ItemID::Diamond_Pickaxe, 1};
-            inv.inventory.slots[5] = {ItemID::Diamond_Axe, 1};
-            inv.inventory.slots[6] = {ItemID::Diamond_Shovel, 1};
+            inv.inventory.slots[0] = {Items::Dynamite, 16};
+            inv.inventory.slots[1] = {Items::Bucket, 1};
+            inv.inventory.slots[2] = {Items::Workbench, 64};
+            inv.inventory.slots[3] = {Items::Lighter, 1};
+            inv.inventory.slots[4] = {Items::Diamond_Pickaxe, 1};
+            inv.inventory.slots[5] = {Items::Diamond_Axe, 1};
+            inv.inventory.slots[6] = {Items::Diamond_Shovel, 1};
             entity.addComponent(std::move(inv));
             entity.addComponent(RenderComponent{ContentProfiles::textureFromName("blockbit:player").value(), {{0, 0}, {16, 16}}, {1.0f, 1.0f}});
             entity.addComponent(HealthComponent{100, 100});

@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:dirt",
-    "legacy_id": 3,
     "max_stack_size": 64,
     "name": "Dirt",
     "texture": "dirt"

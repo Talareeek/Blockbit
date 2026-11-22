@@ -4,7 +4,6 @@
     },
     "hardness": 6.0,
     "id": "blockbit:ruby_block",
-    "legacy_id": 16,
     "mining": {
         "level": 5,
         "resistance": 7,

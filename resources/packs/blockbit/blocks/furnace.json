@@ -4,7 +4,6 @@
     },
     "hardness": 3.5,
     "id": "blockbit:furnace",
-    "legacy_id": 32,
     "mining": {
         "level": 1,
         "resistance": 5,

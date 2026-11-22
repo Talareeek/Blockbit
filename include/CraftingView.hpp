@@ -35,10 +35,10 @@ private:
     sf::Vector2i crafting_position;
     UUID inventory_owner;
 
-    ItemStack cursor_stack{ItemID::None, 0};
+    ItemStack cursor_stack{Items::None, 0};
 
     std::array<ItemStack, 36> last_inventory{};
-    ItemStack last_cursor{ItemID::None, 0};
+    ItemStack last_cursor{Items::None, 0};
 
     std::deque<SetContentData> pending;
 
@@ -72,12 +72,12 @@ class ClientCraftingView : public ClientView
 private:
 
     std::array<ItemStack, 36> inventory_stacks{};
-    ItemStack cursor_stack{ItemID::None, 0};
+    ItemStack cursor_stack{Items::None, 0};
 
     Slot slots[36];
 
     std::vector<Slot> crafting_slots;
-    ItemStack selected_recipe{ItemID::None, 0};
+    ItemStack selected_recipe{Items::None, 0};
 
     int recipe_scroll_offset = 0;
     sf::FloatRect recipe_area_bounds{};

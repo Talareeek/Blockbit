@@ -56,7 +56,7 @@ namespace
 
     bool isOpaqueForSky(const Block& b)
     {
-        if (b.id == BlockID::Air) return false;
+        if (b.id == Blocks::Air) return false;
         auto it = blockDatabase.find(b.id);
         if (it == blockDatabase.end()) return true;
         return !it->second.transparent;
@@ -151,8 +151,8 @@ namespace
 
         for (int y = CHUNK_HEIGHT - 2; y >= 1; --y)
         {
-            if (world.getBlock(wx, y).id == BlockID::Air
-                && world.getBlock(wx, y - 1).id != BlockID::Air)
+            if (world.getBlock(wx, y).id == Blocks::Air
+                && world.getBlock(wx, y - 1).id != Blocks::Air)
             {
                 return y;
             }
@@ -178,11 +178,11 @@ namespace
         return false;
     }
 
-    bool groundAllowed(const SurfaceRule& rule, BlockID ground)
+    bool groundAllowed(const SurfaceRule& rule, BlockKey ground)
     {
         if (rule.allowed_ground.empty())
         {
-            if (ground == BlockID::Air) return false;
+            if (ground == Blocks::Air) return false;
             auto it = blockDatabase.find(ground);
             if (it == blockDatabase.end()) return false;
             return it->second.solid;
@@ -193,8 +193,7 @@ namespace
         const auto& reg = gameRegistries().blocks;
         for (const auto& key : rule.allowed_ground)
         {
-            if (auto rid = reg.find(key); rid.has_value()
-                && static_cast<BlockID>(*rid) == ground)
+            if (reg.find(key).has_value() && key == ground)
                 return true;
         }
         return false;
@@ -209,17 +208,17 @@ namespace
         // Headroom.
         for (int i = 0; i < entry.surface.required_air_above; ++i)
         {
-            if (world.getBlock(wx, wy + i).id != BlockID::Air) return false;
+            if (world.getBlock(wx, wy + i).id != Blocks::Air) return false;
         }
 
         // Water-surface mobs want the spawn tile itself to be water.
         if (entry.surface.requires_water)
         {
-            if (world.getBlock(wx, wy).id != BlockID::Water) return false;
+            if (world.getBlock(wx, wy).id != Blocks::Water) return false;
         }
         else
         {
-            BlockID ground = world.getBlock(wx, wy - 1).id;
+            BlockKey ground = world.getBlock(wx, wy - 1).id;
             if (!groundAllowed(entry.surface, ground)) return false;
         }
 

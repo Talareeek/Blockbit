@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:diamond_ore",
-    "legacy_id": 13,
     "max_stack_size": 64,
     "name": "Diamond Ore",
     "texture": "diamond_ore"

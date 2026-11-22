@@ -58,7 +58,7 @@ Chunk NoodleWorldGenerator::generateChunk(int chunk_position)
         {
             if (!isNoodle(world_x, y))
             {
-                chunk.blocks[y][x] = {BlockID::Air, 0};
+                chunk.blocks[y][x] = {Blocks::Air, 0};
                 continue;
             }
 
@@ -88,7 +88,7 @@ Chunk NoodleWorldGenerator::generateChunk(int chunk_position)
             }
             else
             {
-                chunk.blocks[y][x] = {BlockID::Stone, 0};
+                chunk.blocks[y][x] = {Blocks::Stone, 0};
             }
         }
     }

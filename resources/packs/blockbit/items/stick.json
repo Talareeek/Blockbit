@@ -1,6 +1,5 @@
 {
     "id": "blockbit:stick",
-    "legacy_id": 58,
     "max_stack_size": 64,
     "name": "Stick",
     "texture": "stick"

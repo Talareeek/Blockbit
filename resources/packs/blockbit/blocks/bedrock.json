@@ -2,7 +2,6 @@
     "breakable": false,
     "hardness": -1.0,
     "id": "blockbit:bedrock",
-    "legacy_id": 6,
     "mining": {
         "level": 2147483647,
         "resistance": 2147483647,

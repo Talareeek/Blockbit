@@ -202,7 +202,6 @@ void MenuGameState::handleEvent(const sf::Event& event)
     settings.handleEvent(event);
     structure_editor.handleEvent(event);
     packs.handleEvent(event);
-    player.handleEvent(event);
 }
 
 void MenuGameState::update(float dt)
@@ -235,8 +234,6 @@ void MenuGameState::update(float dt)
     settings.update(dt);
     structure_editor.update(dt);
     packs.update(dt);
-
-    player.update(dt);
 
     if (activeProbe && activeProbe->done)
     {
@@ -324,7 +321,20 @@ void MenuGameState::render(sf::RenderWindow& window)
     quit.render(window);
     structure_editor.render(window);
     packs.render(window);
-    player.render(window);
+
+
+    float height = static_cast<float>(window.getSize().y);
+    float center_x = static_cast<float>(window.getSize().x / 2);
+
+    sf::Sprite logo_sprite(blockbit_logo);
+
+    logo_sprite.setScale({(height * 0.25f) / static_cast<float>(blockbit_logo.getSize().y), (height * 0.25f) / static_cast<float>(blockbit_logo.getSize().y)});
+
+    logo_sprite.setOrigin({logo_sprite.getLocalBounds().size.x / 2.0f, 0.0f});
+
+    logo_sprite.setPosition({center_x, 0.0f});
+
+    //window.draw(logo_sprite);
 
     account.performImGui(accountSlotPosition, accountSlotSize);
 

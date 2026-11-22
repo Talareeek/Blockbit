@@ -4,7 +4,6 @@
     },
     "hardness": 1.5,
     "id": "blockbit:stone",
-    "legacy_id": 1,
     "mining": {
         "level": 1,
         "resistance": 5,

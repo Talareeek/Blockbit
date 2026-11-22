@@ -39,11 +39,11 @@ private:
     sf::Vector2i furnace_position;
     UUID inventory_owner;
 
-    ItemStack cursor_stack{ItemID::None, 0};
+    ItemStack cursor_stack{Items::None, 0};
 
     std::array<ItemStack, 3>  last_furnace{};
     std::array<ItemStack, 36> last_inventory{};
-    ItemStack last_cursor{ItemID::None, 0};
+    ItemStack last_cursor{Items::None, 0};
     float last_burn_remaining = -1.0f;
     float last_burn_total     = -1.0f;
     float last_cook_remaining = -1.0f;
@@ -80,7 +80,7 @@ private:
 
     std::array<ItemStack, 3>  furnace_stacks{};
     std::array<ItemStack, 36> inventory_stacks{};
-    ItemStack cursor_stack{ItemID::None, 0};
+    ItemStack cursor_stack{Items::None, 0};
 
     float burn_remaining = 0.0f;
     float burn_total     = 0.0f;

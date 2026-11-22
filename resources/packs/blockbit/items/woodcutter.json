@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:woodcutter",
-    "legacy_id": 32,
     "max_stack_size": 64,
     "name": "Woodcutter",
     "texture": "woodcutter"

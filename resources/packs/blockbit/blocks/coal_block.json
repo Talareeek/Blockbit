@@ -4,7 +4,6 @@
     },
     "hardness": 3.0,
     "id": "blockbit:coal_block",
-    "legacy_id": 17,
     "mining": {
         "level": 1,
         "resistance": 5,

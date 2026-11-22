@@ -5,7 +5,6 @@
     },
     "hardness": 2.0,
     "id": "blockbit:smooth_stone",
-    "legacy_id": 37,
     "mining": {
         "level": 1,
         "resistance": 5,

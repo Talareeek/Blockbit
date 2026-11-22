@@ -45,7 +45,7 @@ Chunk DungeonShooterWorldGenerator::generateChunk(int chunk_position)
     {
         for (int x = 0; x < CHUNK_WIDTH; ++x)
         {
-            chunk.blocks[y][x] = {BlockID::Bricks, 0};
+            chunk.blocks[y][x] = {Blocks::Bricks, 0};
         }
     }
 
@@ -67,7 +67,7 @@ Chunk DungeonShooterWorldGenerator::generateChunk(int chunk_position)
             {
                 for (int lx = 1; lx < ROOM_SIZE - 1; ++lx)
                 {
-                    chunk.blocks[base_y + ly][base_x + lx] = {BlockID::Air, 0};
+                    chunk.blocks[base_y + ly][base_x + lx] = {Blocks::Air, 0};
                 }
             }
 
@@ -75,7 +75,7 @@ Chunk DungeonShooterWorldGenerator::generateChunk(int chunk_position)
             {
                 for (int lx = 1; lx < ROOM_SIZE - 1; ++lx)
                 {
-                    chunk.blocks[base_y + ROOM_SIZE - 1][base_x + lx] = {BlockID::Air, 0};
+                    chunk.blocks[base_y + ROOM_SIZE - 1][base_x + lx] = {Blocks::Air, 0};
                 }
             }
 
@@ -83,7 +83,7 @@ Chunk DungeonShooterWorldGenerator::generateChunk(int chunk_position)
             {
                 for (int lx = 1; lx < ROOM_SIZE - 1; ++lx)
                 {
-                    chunk.blocks[base_y][base_x + lx] = {BlockID::Air, 0};
+                    chunk.blocks[base_y][base_x + lx] = {Blocks::Air, 0};
                 }
             }
 
@@ -91,7 +91,7 @@ Chunk DungeonShooterWorldGenerator::generateChunk(int chunk_position)
             {
                 for (int ly = 1; ly < ROOM_SIZE - 1; ++ly)
                 {
-                    chunk.blocks[base_y + ly][base_x] = {BlockID::Air, 0};
+                    chunk.blocks[base_y + ly][base_x] = {Blocks::Air, 0};
                 }
             }
 
@@ -99,7 +99,7 @@ Chunk DungeonShooterWorldGenerator::generateChunk(int chunk_position)
             {
                 for (int ly = 1; ly < ROOM_SIZE - 1; ++ly)
                 {
-                    chunk.blocks[base_y + ly][base_x + ROOM_SIZE - 1] = {BlockID::Air, 0};
+                    chunk.blocks[base_y + ly][base_x + ROOM_SIZE - 1] = {Blocks::Air, 0};
                 }
             }
         }

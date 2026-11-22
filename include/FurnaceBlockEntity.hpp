@@ -13,9 +13,9 @@ class FurnaceBlockEntity : public BlockEntity
 {
 public:
 
-    ItemStack fuel  {ItemID::None, 0};
-    ItemStack input {ItemID::None, 0};
-    ItemStack output{ItemID::None, 0};
+    ItemStack fuel  {Items::None, 0};
+    ItemStack input {Items::None, 0};
+    ItemStack output{Items::None, 0};
 
     float burn_time_remaining = 0.0f;
     float burn_time_total     = 0.0f;

@@ -9,7 +9,6 @@
         "type": "fluid_bucket"
     },
     "id": "blockbit:bucket",
-    "legacy_id": 30,
     "max_stack_size": 1,
     "name": "Bucket",
     "rarity": "rare",

@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:iron_ore",
-    "legacy_id": 11,
     "max_stack_size": 64,
     "name": "Iron Ore",
     "texture": "iron_ore"

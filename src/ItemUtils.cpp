@@ -2,7 +2,14 @@
 
 #include "../include/ItemDataComponents.hpp"
 
-uint32_t getMaxDurability(ItemID id)
+ItemKey itemKeyFromLegacySave(uint32_t old_id)
+{
+    static const std::vector<ItemKey> old_item_order = {Items::None, Items::Stone, Items::Grass, Items::Dirt, Items::Cobblestone, Items::Obsidian, Items::Bedrock, Items::Dynamite, Items::StabShot, Items::NukeShot, Items::Coal_Ore, Items::Iron_Ore, Items::Gold_Ore, Items::Diamond_Ore, Items::Ruby_Ore, Items::Iron_Block, Items::Gold_Block, Items::Ruby_Block, Items::Coal_Block, Items::Coal, Items::Raw_Iron, Items::Raw_Gold, Items::Diamond, Items::Oak_Log, Items::Oak_Leaves, Items::Oak_Planks, Items::Birch_Log, Items::Birch_Leaves, Items::Spruce_Log, Items::Spruce_Leaves, Items::Bucket, Items::Water_Bucket, Items::Woodcutter, Items::Lighter, Items::Sand, Items::Coarse_Dirt, Items::Snow, Items::Gravel, Items::Flint, Items::Wooden_Pickaxe, Items::Stone_Pickaxe, Items::Iron_Pickaxe, Items::Gold_Pickaxe, Items::Diamond_Pickaxe, Items::Ruby_Pickaxe, Items::Wooden_Axe, Items::Stone_Axe, Items::Iron_Axe, Items::Gold_Axe, Items::Diamond_Axe, Items::Ruby_Axe, Items::Wooden_Shovel, Items::Stone_Shovel, Items::Iron_Shovel, Items::Gold_Shovel, Items::Diamond_Shovel, Items::Ruby_Shovel, Items::Ruby, Items::Stick, Items::Chest, Items::Bricks, Items::Furnace, Items::Iron_Ingot, Items::Gold_Ingot, Items::Workbench, Items::Cactus, Items::Dead_Bush, Items::Smooth_Stone, Items::Diorite, Items::Granite, Items::Glass, Items::Output_Bulb, Items::Ruby_Wire, Items::Coreheart_Of_Blockbit, Items::Upgrade_Table, Items::Magic_Bottle, Items::Birch_Planks, Items::Spruce_Planks, Items::Copper_Ore, Items::Copper_Ingot, Items::Copper_Block};
+    return old_id < old_item_order.size() ? old_item_order[old_id] : Items::None;
+}
+
+
+uint32_t getMaxDurability(ItemKey id)
 {
     auto it = itemDatabase.find(id);
     if (it == itemDatabase.end()) return 0;
@@ -67,7 +74,7 @@ bool damageItem(ItemStack& stack, uint32_t amount)
     {
         removeInstance(*stack.instanceID);
         stack.instanceID.reset();
-        stack.itemID = ItemID::None;
+        stack.itemID = Items::None;
         stack.quantity = 0;
         return false;
     }
@@ -115,17 +122,9 @@ void addEnchantment(ItemStack& stack, Enchantment enchantment)
 
 // ---- Rubyness ----
 
-bool isRubyTool(ItemID id)
+bool isRubyTool(ItemKey id)
 {
-    switch (id)
-    {
-        case ItemID::Ruby_Pickaxe:
-        case ItemID::Ruby_Axe:
-        case ItemID::Ruby_Shovel:
-            return true;
-        default:
-            return false;
-    }
+    return id == Items::Ruby_Pickaxe || id == Items::Ruby_Axe || id == Items::Ruby_Shovel;
 }
 
 uint8_t getRubynessLevel(const ItemStack& stack)
@@ -199,7 +198,7 @@ Tag stackToTag(const ItemStack& stack)
 {
     TagCompound compound;
 
-    compound["item_id"]  = Tag(static_cast<uint32_t>(stack.itemID));
+    compound["item_id"]  = Tag(stack.itemID);
     compound["quantity"] = Tag(stack.quantity);
 
     if (stack.instanceID.has_value())
@@ -217,13 +216,16 @@ Tag stackToTag(const ItemStack& stack)
 
 ItemStack stackFromTag(const Tag& tag, bool write_instance_data)
 {
-    ItemStack out{ItemID::None, 0};
+    ItemStack out{Items::None, 0};
 
     const auto& compound = tag.get<TagCompound>();
 
     if (auto it = compound.find("item_id"); it != compound.end())
     {
-        out.itemID = static_cast<ItemID>(it->second.get<uint32_t>());
+        if (it->second.type() == TagType::T_STRING)
+            out.itemID = it->second.get<std::string>();
+        else if (it->second.type() == TagType::T_UINT32)
+            out.itemID = itemKeyFromLegacySave(it->second.get<uint32_t>());
     }
 
     if (auto it = compound.find("quantity"); it != compound.end())

@@ -82,7 +82,7 @@ namespace
     {
         for (int y = CHUNK_HEIGHT - 1; y >= 0; --y)
         {
-            if (world.getBlock(wx, y).id != BlockID::Air) return y;
+            if (world.getBlock(wx, y).id != Blocks::Air) return y;
         }
         return -1;
     }

@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:grass",
-    "legacy_id": 2,
     "max_stack_size": 64,
     "name": "Grass",
     "texture": "grass"

@@ -1,6 +1,5 @@
 {
     "id": "blockbit:ruby",
-    "legacy_id": 57,
     "max_stack_size": 64,
     "name": "Ruby",
     "texture": "ruby"

@@ -1,6 +1,5 @@
 {
     "id": "blockbit:fire",
-    "legacy_id": 26,
     "lets_light": true,
     "light_emission": 15,
     "light_opacity": 1,

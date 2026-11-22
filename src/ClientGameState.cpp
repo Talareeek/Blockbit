@@ -33,6 +33,7 @@
 #include "../include/FurnaceView.hpp"
 #include "../include/CraftingView.hpp"
 #include "../include/UpgradeView.hpp"
+#include <unordered_set>
 #include "../include/LocalAdminSession.hpp"
 #include "../include/NetworkAdminSession.hpp"
 #include "../include/Settings.hpp"
@@ -354,9 +355,11 @@ void ClientGameState::processIncoming()
                     auto list = deserializePackList(reader);
                     const auto& loaded = gameRegistries().loaded_packs;
                     std::size_t mismatches = 0;
+                    std::unordered_set<std::string> server_pack_ids;
 
                     for (const auto& server_pack : list.packs)
                     {
+                        server_pack_ids.insert(server_pack.id);
                         const LoadedPackSummary* local = nullptr;
                         for (const auto& p : loaded)
                             if (p.id == server_pack.id) { local = &p; break; }
@@ -380,6 +383,16 @@ void ClientGameState::processIncoming()
                         }
                     }
 
+                    for (const auto& local : loaded)
+                    {
+                        if (!server_pack_ids.contains(local.id))
+                        {
+                            std::cerr << "[Client] PackList: extra local pack '"
+                                      << local.id << "' is not loaded by the server\n";
+                            ++mismatches;
+                        }
+                    }
+
                     if (mismatches > 0)
                     {
                         std::cerr << "[Client] " << mismatches
@@ -395,12 +408,11 @@ void ClientGameState::processIncoming()
                 }
                 case PacketType::RegistrySync:
                 {
-                    // Phase 1a-E validation: every server-advertised key must
-                    // map to the same runtime id locally. Vanilla content is
-                    // hardcoded on both sides, so a mismatch here almost
-                    // certainly means the server runs a different Blockbit
-                    // build; Phase 2 will replace this with a proper pack-hash
-                    // check before this packet is even sent.
+                    // The server's registry map is authoritative for this
+                    // connection. Until runtime ID remapping is supported,
+                    // reject a client whose local map differs instead of
+                    // letting subsequent chunk and inventory packets use
+                    // incompatible IDs.
                     auto sync = deserializeRegistrySync(reader);
                     const auto& reg = gameRegistries();
                     std::size_t mismatches = 0;
@@ -409,8 +421,16 @@ void ClientGameState::processIncoming()
                                         const std::vector<RegistrySyncPacket::Entry>& entries,
                                         const auto& local)
                     {
+                        std::unordered_set<RegistryKey> server_keys;
                         for (const auto& e : entries)
                         {
+                            if (!server_keys.insert(e.key).second)
+                            {
+                                std::cerr << "[Client] RegistrySync: duplicate "
+                                          << kind << " key '" << e.key << "'\n";
+                                ++mismatches;
+                                continue;
+                            }
                             auto local_id = local.find(e.key);
                             if (!local_id.has_value())
                             {
@@ -418,13 +438,27 @@ void ClientGameState::processIncoming()
                                           << " key '" << e.key << "' locally\n";
                                 ++mismatches;
                             }
-                            else if (*local_id != e.runtime_id)
+                        }
+
+                        std::size_t local_count = 0;
+                        for (RuntimeID id = 0; id < local.size(); ++id)
+                        {
+                            if (!local.contains(id)) continue;
+                            ++local_count;
+                            if (!server_keys.contains(local.keyOf(id)))
                             {
-                                std::cerr << "[Client] RegistrySync: " << kind
-                                          << " '" << e.key << "' server id=" << e.runtime_id
-                                          << " local id=" << *local_id << '\n';
+                                std::cerr << "[Client] RegistrySync: local " << kind
+                                          << " key '" << local.keyOf(id)
+                                          << "' is absent from server registry\n";
                                 ++mismatches;
                             }
+                        }
+                        if (local_count != entries.size())
+                        {
+                            std::cerr << "[Client] RegistrySync: " << kind
+                                      << " registry size differs (server " << entries.size()
+                                      << " / local " << local_count << ")\n";
+                            ++mismatches;
                         }
                     };
 
@@ -436,6 +470,12 @@ void ClientGameState::processIncoming()
                         std::cout << "[Client] RegistrySync OK — "
                                   << sync.blocks.size() << " blocks, "
                                   << sync.items.size()  << " items\n";
+                    }
+                    else
+                    {
+                        std::cerr << "[Client] RegistrySync found " << mismatches
+                                  << " mismatch(es) — disconnecting before world data is applied.\n";
+                        if (transport) transport->disconnect();
                     }
 
                     break;
@@ -477,7 +517,7 @@ void ClientGameState::processIncoming()
                             static_cast<double>(block_update.position.y) + 0.5
                         };
 
-                        if (block_update.block.id == BlockID::Air && old_block.id != BlockID::Air)
+                        if (block_update.block.id == Blocks::Air && old_block.id != Blocks::Air)
                         {
                             ParticleSpawnParams params;
                             params.effect   = ParticleEffect::BlockDust;
@@ -487,7 +527,7 @@ void ClientGameState::processIncoming()
                             params.block_id = old_block.id;
                             particles.spawn(params);
                         }
-                        else if (old_block.id == BlockID::Air && block_update.block.id != BlockID::Air)
+                        else if (old_block.id == Blocks::Air && block_update.block.id != Blocks::Air)
                         {
                             ParticleSpawnParams params;
                             params.effect   = ParticleEffect::BlockDust;
@@ -581,7 +621,7 @@ void ClientGameState::processIncoming()
                     params.position = burst.position;
                     params.count    = burst.count;
                     params.spread   = burst.spread;
-                    params.block_id = static_cast<BlockID>(burst.arg);
+                    params.block_id = burst.arg;
                     particles.spawn(params);
                     break;
                 }
@@ -1155,7 +1195,7 @@ void ClientGameState::update(float dt)
             {
                 for (int x = 0; x < CHUNK_WIDTH; ++x)
                 {
-                    if (chunk.blocks[y][x].id == BlockID::Furnace &&
+                    if (chunk.blocks[y][x].id == Blocks::Furnace &&
                         !FurnaceState::unpack(chunk.blocks[y][x].metadata).lit)
                     {
                         chunk.meshDirty = true;
@@ -1591,9 +1631,8 @@ void ClientGameState::updateAmbientParticles(float dt)
             Block block = local_world.getBlock(bx, by);
             sf::Vector2<double> pos{static_cast<double>(bx) + 0.5, static_cast<double>(by) + 0.9};
 
-            switch (block.id)
+            if (block.id == Blocks::Fire)
             {
-                case BlockID::Fire:
                     if (unit(ambient_rng) < 0.5f)
                     {
                         ParticleSpawnParams p;
@@ -1614,9 +1653,9 @@ void ClientGameState::updateAmbientParticles(float dt)
                         p.base_velocity = {0.0, 1.0};
                         particles.spawn(p);
                     }
-                    break;
-                case BlockID::Furnace:
-                {
+            }
+            else if (block.id == Blocks::Furnace)
+            {
                     auto state = FurnaceState::unpack(block.metadata);
                     if (state.lit && unit(ambient_rng) < 0.35f)
                     {
@@ -1637,9 +1676,9 @@ void ClientGameState::updateAmbientParticles(float dt)
                             particles.spawn(ember);
                         }
                     }
-                    break;
-                }
-                case BlockID::Lava:
+            }
+            else if (block.id == Blocks::Lava)
+            {
                     if (unit(ambient_rng) < 0.04f)
                     {
                         ParticleSpawnParams p;
@@ -1650,13 +1689,14 @@ void ClientGameState::updateAmbientParticles(float dt)
                         p.base_velocity = {0.0, 1.5};
                         particles.spawn(p);
                     }
-                    break;
-                case BlockID::Water:
+            }
+            else if (block.id == Blocks::Water)
+            {
                     // Bubble only at surface air cells — cheap heuristic
                     if (unit(ambient_rng) < 0.02f)
                     {
                         Block above = local_world.getBlock(bx, by + 1);
-                        if (above.id == BlockID::Air)
+                        if (above.id == Blocks::Air)
                         {
                             ParticleSpawnParams p;
                             p.effect = ParticleEffect::Bubble;
@@ -1667,9 +1707,6 @@ void ClientGameState::updateAmbientParticles(float dt)
                             particles.spawn(p);
                         }
                     }
-                    break;
-                default:
-                    break;
             }
         }
     }

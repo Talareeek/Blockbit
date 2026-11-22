@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:gold_ore",
-    "legacy_id": 12,
     "max_stack_size": 64,
     "name": "Gold Ore",
     "texture": "gold_ore"

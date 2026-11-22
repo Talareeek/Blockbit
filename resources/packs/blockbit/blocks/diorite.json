@@ -5,7 +5,6 @@
     },
     "hardness": 1.5,
     "id": "blockbit:diorite",
-    "legacy_id": 38,
     "mining": {
         "level": 1,
         "resistance": 5,

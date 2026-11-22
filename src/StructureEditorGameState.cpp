@@ -8,6 +8,7 @@
 #include "../include/Item.hpp"
 #include "../include/BBT.hpp"
 #include "../include/World.hpp"
+#include "../include/GameRegistries.hpp"
 
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/Sprite.hpp>
@@ -26,68 +27,64 @@
 
 namespace
 {
-    // Every BlockID the engine knows about. Order mirrors the enum declaration
+    // Every BlockKey the engine knows about. Order mirrors the enum declaration
     // in Block.hpp — if you add a block there, add it here too so the editor
     // palette stays complete. Air is included so the user can explicitly mark
     // "this cell MUST be air" via Overwrite mode.
-    constexpr std::array<BlockID, 44> BLOCK_OPTIONS
+    const std::array<BlockKey, 44> BLOCK_OPTIONS
     {
-        BlockID::Air,
-        BlockID::Stone,
-        BlockID::Grass,
-        BlockID::Dirt,
-        BlockID::Cobblestone,
-        BlockID::Obsidian,
-        BlockID::Bedrock,
-        BlockID::Water,
-        BlockID::Lava,
-        BlockID::Coal_Ore,
-        BlockID::Iron_Ore,
-        BlockID::Gold_Ore,
-        BlockID::Diamond_Ore,
-        BlockID::Ruby_Ore,
-        BlockID::Iron_Block,
-        BlockID::Gold_Block,
-        BlockID::Ruby_Block,
-        BlockID::Coal_Block,
-        BlockID::Oak_Log,
-        BlockID::Oak_Leaves,
-        BlockID::Oak_Planks,
-        BlockID::Birch_Log,
-        BlockID::Birch_Leaves,
-        BlockID::Spruce_Log,
-        BlockID::Spruce_Leaves,
-        BlockID::Woodcutter,
-        BlockID::Fire,
-        BlockID::Sand,
-        BlockID::Coarse_Dirt,
-        BlockID::Snow,
-        BlockID::Chest,
-        BlockID::Bricks,
-        BlockID::Furnace,
-        BlockID::Workbench,
-        BlockID::Gravel,
-        BlockID::Cactus,
-        BlockID::Dead_Bush,
-        BlockID::Smooth_Stone,
-        BlockID::Diorite,
-        BlockID::Granite,
-        BlockID::Glass,
-        BlockID::Output_Bulb,
-        BlockID::Ruby_Wire,
-        BlockID::Coreheart_Of_Blockbit
+        Blocks::Air,
+        Blocks::Stone,
+        Blocks::Grass,
+        Blocks::Dirt,
+        Blocks::Cobblestone,
+        Blocks::Obsidian,
+        Blocks::Bedrock,
+        Blocks::Water,
+        Blocks::Lava,
+        Blocks::Coal_Ore,
+        Blocks::Iron_Ore,
+        Blocks::Gold_Ore,
+        Blocks::Diamond_Ore,
+        Blocks::Ruby_Ore,
+        Blocks::Iron_Block,
+        Blocks::Gold_Block,
+        Blocks::Ruby_Block,
+        Blocks::Coal_Block,
+        Blocks::Oak_Log,
+        Blocks::Oak_Leaves,
+        Blocks::Oak_Planks,
+        Blocks::Birch_Log,
+        Blocks::Birch_Leaves,
+        Blocks::Spruce_Log,
+        Blocks::Spruce_Leaves,
+        Blocks::Woodcutter,
+        Blocks::Fire,
+        Blocks::Sand,
+        Blocks::Coarse_Dirt,
+        Blocks::Snow,
+        Blocks::Chest,
+        Blocks::Bricks,
+        Blocks::Furnace,
+        Blocks::Workbench,
+        Blocks::Gravel,
+        Blocks::Cactus,
+        Blocks::Dead_Bush,
+        Blocks::Smooth_Stone,
+        Blocks::Diorite,
+        Blocks::Granite,
+        Blocks::Glass,
+        Blocks::Output_Bulb,
+        Blocks::Ruby_Wire,
+        Blocks::Coreheart_Of_Blockbit
     };
 
-    const char* blockName(BlockID id)
+    const char* blockName(BlockKey id)
     {
-        switch (id)
-        {
-            case BlockID::Air:   return "Air";
-            case BlockID::Water: return "Water";
-            case BlockID::Lava:  return "Lava";
-            case BlockID::Fire:  return "Fire";
-            default: break;
-        }
+        if (id == Blocks::Air) return "Air";
+        if (id == Blocks::Water) return "Water";
+        if (id == Blocks::Lava) return "Lava";
+        if (id == Blocks::Fire) return "Fire";
         auto item = blockToItem(id);
         auto iter = itemDatabase.find(item);
         if (iter == itemDatabase.end()) return "?";
@@ -110,28 +107,14 @@ namespace
         }
     }
 
-    constexpr std::array<PrefabID, 6> SPAWN_OPTIONS
+    std::vector<std::string> prefabOptions()
     {
-        PrefabID::Pig,
-        PrefabID::Cow,
-        PrefabID::Dynamite,
-        PrefabID::Cube,
-        PrefabID::DroppedItem,
-        PrefabID::FallingBlock,
-    };
-
-    const char* prefabName(PrefabID id)
-    {
-        switch (id)
-        {
-            case PrefabID::Pig:          return "Pig";
-            case PrefabID::Cow:          return "Cow";
-            case PrefabID::Dynamite:     return "Dynamite";
-            case PrefabID::Cube:         return "Cube (boss)";
-            case PrefabID::DroppedItem:  return "Dropped item";
-            case PrefabID::FallingBlock: return "Falling block";
-            default:                     return "?";
-        }
+        std::vector<std::string> result;
+        result.reserve(gameRegistries().prefabs.size());
+        for (const auto& [key, prefab] : gameRegistries().prefabs)
+            result.push_back(key);
+        std::sort(result.begin(), result.end());
+        return result;
     }
 
     const char* toolName(StructureEditorGameState::Tool tool)
@@ -164,7 +147,7 @@ namespace
         return "?";
     }
 
-    int paletteIndexOf(BlockID id)
+    int paletteIndexOf(BlockKey id)
     {
         for (std::size_t i = 0; i < BLOCK_OPTIONS.size(); i++)
             if (BLOCK_OPTIONS[i] == id) return static_cast<int>(i);
@@ -207,7 +190,7 @@ void StructureEditorGameState::resetToBlank(int w, int h)
     tmpl.anchor_x = w / 2;
     tmpl.anchor_y = 0;
     tmpl.cells.assign(static_cast<std::size_t>(w * h),
-                      StructureCell{Block{BlockID::Air, 0},
+                      StructureCell{Block{Blocks::Air, 0},
                                     StructurePlacementMode::Skip,
                                     static_cast<int16_t>(-1), static_cast<uint8_t>(255)});
     tmpl.palettes.clear();
@@ -233,7 +216,7 @@ void StructureEditorGameState::resizeTemplate(int new_w, int new_h)
     if (new_w == tmpl.width && new_h == tmpl.height) return;
 
     std::vector<StructureCell> new_cells(static_cast<std::size_t>(new_w * new_h),
-        StructureCell{Block{BlockID::Air, 0}, StructurePlacementMode::Skip,
+        StructureCell{Block{Blocks::Air, 0}, StructurePlacementMode::Skip,
                       static_cast<int16_t>(-1), static_cast<uint8_t>(255)});
 
     const int copy_w = std::min(new_w, tmpl.width);
@@ -403,7 +386,7 @@ void StructureEditorGameState::drawCellIntoCanvas(sf::RenderTexture& rt, int tx,
         // Air shows as a soft blue — most authors expect "air" to be visible,
         // not invisible, otherwise they can't tell a painted-air cell apart
         // from a Skip cell.
-        if (cell.block.id == BlockID::Air)
+        if (cell.block.id == Blocks::Air)
         {
             sf::RectangleShape bg(sz);
             bg.setPosition(pos);
@@ -422,9 +405,9 @@ void StructureEditorGameState::drawCellIntoCanvas(sf::RenderTexture& rt, int tx,
                 // (water level, chest open) preview exactly as placed. Cells
                 // outside the template read as Air — same rule chunk borders
                 // use in the live mesh builder.
-                auto id_at = [&](int ox, int oy) -> BlockID
+                auto id_at = [&](int ox, int oy) -> BlockKey
                 {
-                    if (!inBounds(ox, oy)) return BlockID::Air;
+                    if (!inBounds(ox, oy)) return Blocks::Air;
                     return tmpl.cellAt(ox, oy).block.id;
                 };
                 const BlockNeighbors neighbors{
@@ -677,7 +660,7 @@ void StructureEditorGameState::handleCanvasClick(int tx, int ty, bool /*shift_do
         case Tool::Erase:
         {
             StructureCell& cell = tmpl.cells[ty * tmpl.width + tx];
-            cell.block = Block{BlockID::Air, 0};
+            cell.block = Block{Blocks::Air, 0};
             cell.mode  = StructurePlacementMode::Skip;
             cell.palette = -1;
             cell.probability = 255;
@@ -747,7 +730,12 @@ void StructureEditorGameState::handleCanvasClick(int tx, int ty, bool /*shift_do
         }
         case Tool::AddSpawn:
         {
-            tmpl.spawns.push_back({tx, ty, SPAWN_OPTIONS[spawn_prefab_index]});
+            const auto options = prefabOptions();
+            if (!options.empty())
+            {
+                spawn_prefab_index = std::clamp(spawn_prefab_index, 0, static_cast<int>(options.size()) - 1);
+                tmpl.spawns.push_back({tx, ty, options[spawn_prefab_index]});
+            }
             dirty = true;
             break;
         }
@@ -902,54 +890,45 @@ void StructureEditorGameState::drawLeftPanel()
     // Metadata editor — fields depend on the selected block. Sliders use the
     // same packed layout as BlockStates so the preview in drawCellIntoCanvas
     // matches what the live chunk mesh produces from the same metadata byte.
-    const BlockID selected_id = BLOCK_OPTIONS[palette_index];
-    switch (selected_id)
+    const BlockKey selected_id = BLOCK_OPTIONS[palette_index];
+    if (selected_id == Blocks::Water)
     {
-        case BlockID::Water:
-        {
             int level = WaterState::unpack(paint_metadata).level;
             if (ImGui::SliderInt("Water level", &level, 0, WaterState::SOURCE))
                 paint_metadata = WaterState{static_cast<uint8_t>(level)}.pack();
             ImGui::TextDisabled("%d = source, %d = full flow", WaterState::SOURCE, WaterState::FULL);
-            break;
-        }
-        case BlockID::Lava:
-        {
+    }
+    else if (selected_id == Blocks::Lava)
+    {
             int level = LavaState::unpack(paint_metadata).level;
             if (ImGui::SliderInt("Lava level", &level, 0, LavaState::SOURCE))
                 paint_metadata = LavaState{static_cast<uint8_t>(level)}.pack();
             ImGui::TextDisabled("%d = source, %d = full flow", LavaState::SOURCE, LavaState::FULL);
-            break;
-        }
-        case BlockID::Chest:
-        {
+    }
+    else if (selected_id == Blocks::Chest)
+    {
             bool open = ChestState::unpack(paint_metadata).open;
             if (ImGui::Checkbox("Open", &open))
                 paint_metadata = ChestState{open}.pack();
-            break;
-        }
-        case BlockID::Furnace:
-        {
+    }
+    else if (selected_id == Blocks::Furnace)
+    {
             bool lit = FurnaceState::unpack(paint_metadata).lit;
             if (ImGui::Checkbox("Lit", &lit))
                 paint_metadata = FurnaceState{lit}.pack();
-            break;
-        }
-        case BlockID::Cactus:
-        {
+    }
+    else if (selected_id == Blocks::Cactus)
+    {
             bool is_top = CactusState::unpack(paint_metadata).is_top;
             if (ImGui::Checkbox("Top segment", &is_top))
                 paint_metadata = CactusState{is_top}.pack();
-            break;
-        }
-        default:
-        {
+    }
+    else
+    {
             int raw = static_cast<int>(paint_metadata);
             ImGui::SetNextItemWidth(100.0f);
             if (ImGui::InputInt("Metadata", &raw))
                 paint_metadata = static_cast<uint16_t>(std::clamp(raw, 0, 0xFFFF));
-            break;
-        }
     }
 
     int mode_int = static_cast<int>(paint_mode);
@@ -1008,17 +987,22 @@ void StructureEditorGameState::drawLeftPanel()
     else if (tool == Tool::AddSpawn)
     {
         ImGui::TextUnformatted("Entity to spawn");
-        if (ImGui::BeginCombo("##sp", prefabName(SPAWN_OPTIONS[spawn_prefab_index])))
+        const auto options = prefabOptions();
+        if (!options.empty())
         {
-            for (int i = 0; i < static_cast<int>(SPAWN_OPTIONS.size()); i++)
+            spawn_prefab_index = std::clamp(spawn_prefab_index, 0, static_cast<int>(options.size()) - 1);
+            if (ImGui::BeginCombo("##sp", options[spawn_prefab_index].c_str()))
             {
-                const bool is_selected = (i == spawn_prefab_index);
-                if (ImGui::Selectable(prefabName(SPAWN_OPTIONS[i]), is_selected))
-                    spawn_prefab_index = i;
-                if (is_selected) ImGui::SetItemDefaultFocus();
+                for (int i = 0; i < static_cast<int>(options.size()); i++)
+                {
+                    const bool is_selected = (i == spawn_prefab_index);
+                    if (ImGui::Selectable(options[i].c_str(), is_selected)) spawn_prefab_index = i;
+                    if (is_selected) ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
             }
-            ImGui::EndCombo();
         }
+        else ImGui::TextDisabled("No prefabs loaded");
     }
     else if (tool == Tool::AddJigsaw)
     {
@@ -1116,7 +1100,7 @@ void StructureEditorGameState::drawRightPanel()
     {
         const auto& sp = tmpl.spawns[i];
         ImGui::PushID(1000 + i);
-        ImGui::Text("(%d,%d) %s", sp.rx, sp.ry, prefabName(sp.prefab));
+        ImGui::Text("(%d,%d) %s", sp.rx, sp.ry, sp.prefab.c_str());
         ImGui::SameLine();
         if (ImGui::SmallButton("X")) sp_remove = i;
         ImGui::PopID();
@@ -1330,7 +1314,7 @@ void StructureEditorGameState::drawCanvasPanel()
                 // mental model from in-game building. Clears any block entity
                 // or spawn attached to the cell too, so the cell is fully blank.
                 StructureCell& cell = tmpl.cells[hover_ty * tmpl.width + hover_tx];
-                cell.block       = Block{BlockID::Air, 0};
+                cell.block       = Block{Blocks::Air, 0};
                 cell.mode        = StructurePlacementMode::Skip;
                 cell.palette     = -1;
                 cell.probability = 255;

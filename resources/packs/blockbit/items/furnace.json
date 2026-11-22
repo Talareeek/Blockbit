@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:furnace",
-    "legacy_id": 61,
     "max_stack_size": 64,
     "name": "Furnace",
     "texture": "furnace"

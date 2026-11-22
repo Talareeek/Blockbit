@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:obsidian",
-    "legacy_id": 5,
     "max_stack_size": 64,
     "name": "Obsidian",
     "texture": "obsidian"

@@ -8,7 +8,6 @@
         "type": "throw_projectile"
     },
     "id": "blockbit:dynamite",
-    "legacy_id": 7,
     "max_stack_size": 16,
     "name": "Dynamite",
     "rarity": "rare",

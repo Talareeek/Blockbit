@@ -3,7 +3,6 @@
     "category": "tool",
     "damage": 6,
     "id": "blockbit:wooden_axe",
-    "legacy_id": 45,
     "max_durability": 59,
     "max_stack_size": 1,
     "name": "Wooden Axe",

@@ -1,7 +1,6 @@
 {
     "category": "tool",
     "id": "blockbit:iron_shovel",
-    "legacy_id": 53,
     "max_durability": 250,
     "max_stack_size": 1,
     "name": "Iron Shovel",

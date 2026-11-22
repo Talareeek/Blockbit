@@ -37,7 +37,7 @@ struct ParticleSpawnParams
     sf::Vector2<double> base_velocity{}; // bias applied on top of jitter
 
     // For BlockDust: source block supplies the sprite. Ignored otherwise.
-    BlockID             block_id = BlockID::Air;
+    BlockKey             block_id = Blocks::Air;
 };
 
 class ParticleManager

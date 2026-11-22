@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:coal_ore",
-    "legacy_id": 10,
     "max_stack_size": 64,
     "name": "Coal Ore",
     "texture": "coal_ore"

@@ -122,7 +122,10 @@ void Settings::load()
             int sz = p.value("size", static_cast<int>(pointer.size));
             pointer.size = static_cast<uint32_t>(std::clamp(sz, 8, 128));
 
-            pointer.item_id = p.value("item_id", pointer.item_id);
+            if (p.contains("item_id") && p["item_id"].is_string())
+                pointer.item_id = p["item_id"].get<std::string>();
+            else
+                pointer.item_id.clear();
         }
 
         if(data.contains("gamepad"))

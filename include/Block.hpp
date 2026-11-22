@@ -10,79 +10,27 @@
 #include "AssetManager.hpp"
 #include "Behavior.hpp"
 #include "BlockStates.hpp"
+#include "ContentKeys.hpp"
 
 // Forward decls so client-only translation units can include Block.hpp without
 // pulling in the whole server-side update pipeline. Concrete type lives in
 // BlockUpdate.hpp (BlockUpdateContext) which only server code needs.
 struct BlockUpdateContext;
 
-enum class BlockID : uint16_t
-{
-    Air,
-    Stone,
-    Grass,
-    Dirt,
-    Cobblestone,
-    Obsidian,
-    Bedrock,
-    Water,
-    Lava,
-    Coal_Ore,
-    Iron_Ore,
-    Gold_Ore,
-    Diamond_Ore,
-    Ruby_Ore,
-    Iron_Block,
-    Gold_Block,
-    Ruby_Block,
-    Coal_Block,
-    Oak_Log,
-    Oak_Leaves,
-    Oak_Planks,
-    Birch_Log,
-    Birch_Leaves,
-    Spruce_Log,
-    Spruce_Leaves,
-    Woodcutter,
-    Fire,
-    Sand,
-    Coarse_Dirt,
-    Snow,
-    Chest,
-    Bricks,
-    Furnace,
-    Workbench,
-    Gravel,
-    Cactus,
-    Dead_Bush,
-    Smooth_Stone,
-    Diorite,
-    Granite,
-    Glass,
-    Output_Bulb,
-    Ruby_Wire,
-    Coreheart_Of_Blockbit,
-    Upgrade_Table,
-    Birch_Planks,
-    Spruce_Planks,
-    Copper_Ore,
-    Copper_Block
-};
-
 // Cardinal-neighbor IDs supplied to the per-tile rect() so a block can pick a
 // variant based on which sides it connects to. See smooth_stone_render_rect
 // for the 4-bit connected-texture use case.
 struct BlockNeighbors
 {
-    BlockID up;
-    BlockID right;
-    BlockID down;
-    BlockID left;
+    BlockKey up;
+    BlockKey right;
+    BlockKey down;
+    BlockKey left;
 };
 
 struct Block
 {
-    BlockID  id;
+    BlockKey  id = Blocks::Air;
     uint16_t metadata;
 };
 
@@ -96,7 +44,7 @@ struct MiningProperties
 struct DropProperties
 {
     bool always_drop = false;
-    ItemID drop;
+    ItemKey drop;
 
     uint8_t min_amount = 1;
     uint8_t max_amount = 1;
@@ -104,7 +52,7 @@ struct DropProperties
     // Rolled per break: with probability `alternative_drop_chance` the normal
     // drop is replaced by a single `alternative_drop`. 0.0 disables the roll.
     float alternative_drop_chance = 0.0f;
-    ItemID alternative_drop = ItemID::None;
+    ItemKey alternative_drop = Items::None;
 };
 
 // Shader-side animation descriptor. frame_count == 1 means "no animation";
@@ -183,7 +131,7 @@ struct BlockData
     // Enforced at two layers so plants, torches, etc. need no bespoke code:
     //   - canPlaceBlock() rejects placement when the ground doesn't match.
     //   - BlockUpdatePipeline drops this block when its support disappears.
-    std::vector<BlockID> support_blocks_below;
+    std::vector<BlockKey> support_blocks_below;
 
     // Light behaviour. See LightingSystem.hpp for the model.
     //   light_emission  0..15, 0 = not a source.
@@ -200,7 +148,7 @@ struct BlockData
     bool lets_light = false;
 };
 
-extern std::unordered_map<BlockID, BlockData> blockDatabase;
+extern std::unordered_map<BlockKey, BlockData> blockDatabase;
 
 inline auto default_render_bounds = [](Block block_instance) -> sf::FloatRect
 {
@@ -343,14 +291,14 @@ inline auto output_bulb_render_rect = [](Block, const BlockNeighbors&) -> sf::In
     return {{0, 0}, {16, 16}};
 };
 
-extern ItemID blockToItem(BlockID block);
+extern ItemKey blockToItem(BlockKey block);
 
-extern BlockID itemToBlock(ItemID item);
+extern BlockKey itemToBlock(ItemKey item);
 
 class World;
 
 // Consults BlockData::support_blocks_below. Returns true for blocks that
 // declare no support requirement, so the caller can use it unconditionally.
-extern bool canPlaceBlock(World& world, BlockID id, sf::Vector2i position);
+extern bool canPlaceBlock(World& world, BlockKey id, sf::Vector2i position);
 
 #endif // BLOCK_HPP

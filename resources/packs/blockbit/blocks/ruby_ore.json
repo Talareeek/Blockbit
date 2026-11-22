@@ -4,7 +4,6 @@
     },
     "hardness": 5.0,
     "id": "blockbit:ruby_ore",
-    "legacy_id": 13,
     "mining": {
         "level": 5,
         "resistance": 6,

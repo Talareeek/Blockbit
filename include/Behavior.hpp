@@ -4,14 +4,12 @@
 #include <cstdint>
 #include <string>
 #include <variant>
+#include "ContentKeys.hpp"
 
 // Forward decls — Behavior.hpp is included by Item.hpp, so pulling in
-// Prefab.hpp (which transitively needs ItemStack and BlockID) or Block.hpp
+// Prefab.hpp (which transitively needs ItemStack and BlockKey) or Block.hpp
 // would introduce a cycle. The underlying types make these forward decls
 // usable as value types in the params structs below.
-enum class BlockID  : uint16_t;
-enum class ItemID   : uint16_t;
-enum class PrefabID : uint8_t;
 
 // ----- Items ---------------------------------------------------------------
 
@@ -48,10 +46,10 @@ struct ThrowProjectileParams
 
 struct FluidBucketParams
 {
-    BlockID fluid;              // e.g. Water
+    BlockKey fluid;              // e.g. Water
     uint8_t source_level_value; // raw metadata value representing "source"
-    ItemID  empty_variant;      // item to swap to when depositing fluid
-    ItemID  filled_variant;     // item to swap to when picking up fluid
+    ItemKey  empty_variant;      // item to swap to when depositing fluid
+    ItemKey  filled_variant;     // item to swap to when picking up fluid
 };
 
 struct IgniteParams
@@ -102,14 +100,14 @@ struct CascadeFluidParams
 struct GravityBlockParams
 {
     uint32_t fall_delay_ticks = 0;
-    PrefabID falling_prefab;        // defaults filled at construction; forward
+    std::string falling_prefab = "blockbit:falling_block";
                                      // decl prevents using an enumerator here.
 };
 
 struct PlantGrowthParams
 {
     uint8_t max_height = 1;
-    BlockID grows_as;         // the block id written by growth (usually == self)
+    BlockKey grows_as;         // the block id written by growth (usually == self)
 };
 
 struct BlockBehavior

@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:coreheart_of_blockbit",
-    "legacy_id": 73,
     "max_stack_size": 64,
     "name": "Coreheart Of Blockbit",
     "rarity": "mythic",

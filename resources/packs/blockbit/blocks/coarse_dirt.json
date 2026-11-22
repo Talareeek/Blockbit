@@ -4,7 +4,6 @@
         "item": "blockbit:coarse_dirt"
     },
     "id": "blockbit:coarse_dirt",
-    "legacy_id": 28,
     "mining": {
         "level": 1,
         "resistance": 2,

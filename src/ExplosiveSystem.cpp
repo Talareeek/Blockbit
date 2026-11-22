@@ -28,7 +28,7 @@ void ExplosiveSystem(ServerWorld& world, float dt)
     struct PendingBlockBreak
     {
         sf::Vector2i position;
-        BlockID id;
+        BlockKey id;
         bool drop_loot;
     };
     struct PendingDrop
@@ -64,7 +64,7 @@ void ExplosiveSystem(ServerWorld& world, float dt)
         burst.effect   = 1; // ParticleEffect::Explosion
         burst.count    = static_cast<uint16_t>(std::clamp<int>(static_cast<int>(force * 12.0f), 12, 80));
         burst.spread   = force * 2.0f;
-        burst.arg      = 0;
+        burst.arg      = {};
         world.pending_particle_bursts.push_back(burst);
 
         if(explosive.damageEntities)
@@ -125,7 +125,7 @@ void ExplosiveSystem(ServerWorld& world, float dt)
                 if(dist > effective_radius) continue;
 
                 Block block = world.getBlock(x, y);
-                if(block.id == BlockID::Air) continue;
+                if(block.id == Blocks::Air) continue;
 
                 auto& block_data = blockDatabase[block.id];
                 if(!block_data.breakable) continue;
@@ -148,7 +148,7 @@ void ExplosiveSystem(ServerWorld& world, float dt)
     {
         if(world.getBlock(brk.position.x, brk.position.y).id == brk.id)
         {
-            world.setBlock(brk.position.x, brk.position.y, {BlockID::Air, 0});
+            world.setBlock(brk.position.x, brk.position.y, {Blocks::Air, 0});
         }
     }
 

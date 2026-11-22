@@ -1,7 +1,6 @@
 {
     "category": "tool",
     "id": "blockbit:ruby_shovel",
-    "legacy_id": 56,
     "max_durability": 2048,
     "max_stack_size": 1,
     "name": "Ruby Shovel",

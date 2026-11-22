@@ -50,9 +50,8 @@ struct GameRegistries
 
 GameRegistries& gameRegistries();
 
-// Called once from Game::Game() after asset loading. Walks the hardcoded
-// blockDatabase / itemDatabase and registers every entry under the "blockbit"
-// namespace with RuntimeID = the entry's legacy enum value.
+// Called once from Game::Game() after asset loading. Loads pack definitions
+// and registers blocks/items by their full namespaced keys.
 void registerVanillaContent();
 
 #endif // GAME_REGISTRIES_HPP

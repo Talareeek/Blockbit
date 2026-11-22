@@ -129,7 +129,7 @@ void ParticleManager::emitOne(const ParticleSpawnParams& params)
     p.color        = lerpColor(profile.color_min, profile.color_max, unit(rng));
     p.flags        = profile.flags;
 
-    if (params.effect == ParticleEffect::BlockDust && params.block_id != BlockID::Air)
+    if (params.effect == ParticleEffect::BlockDust && params.block_id != Blocks::Air)
     {
         auto it = blockDatabase.find(params.block_id);
         if (it != blockDatabase.end() && it->second.render.has_value())

@@ -63,7 +63,7 @@ void InventorySystem(ServerWorld& world)
 
                 if(bItem.item.quantity == 0)
                 {
-                    bItem.item = ItemStack{ItemID::None, 0};
+                    bItem.item = ItemStack{Items::None, 0};
                 }
             }
         }
@@ -97,7 +97,7 @@ void InventorySystem(ServerWorld& world)
 
         if(item.item.empty())
         {
-            entity.getComponent<ItemComponent>() = ItemComponent{{ItemID::None, 0}};
+            entity.getComponent<ItemComponent>() = ItemComponent{{Items::None, 0}};
             item.dirty = true;
         }
     }

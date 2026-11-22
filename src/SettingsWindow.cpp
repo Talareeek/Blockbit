@@ -186,13 +186,13 @@ void SettingsWindow::render()
         {
             // Build a sorted list of (id, name) once per frame — itemDatabase
             // is an unordered_map so we need deterministic ordering for the
-            // combo. Skips ItemID::None so the user cannot pick "nothing".
-            std::vector<std::pair<uint32_t, const std::string*>> items;
+            // combo. Skips Items::None so the user cannot pick "nothing".
+            std::vector<std::pair<ItemKey, const std::string*>> items;
             items.reserve(itemDatabase.size());
             for(const auto& [id, data] : itemDatabase)
             {
-                if(id == ItemID::None) continue;
-                items.emplace_back(static_cast<uint32_t>(id), &data.name);
+                if(id == Items::None) continue;
+                items.emplace_back(id, &data.name);
             }
             std::sort(items.begin(), items.end(),
                 [](const auto& a, const auto& b) { return *a.second < *b.second; });

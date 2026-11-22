@@ -2,7 +2,6 @@
     "breakable": false,
     "hardness": -1.0,
     "id": "blockbit:coreheart_of_blockbit",
-    "legacy_id": 43,
     "mining": {
         "level": 2147483647,
         "resistance": 2147483647,

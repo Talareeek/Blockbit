@@ -1,7 +1,6 @@
 {
     "category": "tool",
     "id": "blockbit:wooden_shovel",
-    "legacy_id": 51,
     "max_durability": 59,
     "max_stack_size": 1,
     "name": "Wooden Shovel",

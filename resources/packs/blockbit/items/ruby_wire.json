@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:ruby_wire",
-    "legacy_id": 72,
     "max_stack_size": 64,
     "name": "Ruby Wire",
     "texture": "ruby_wire"

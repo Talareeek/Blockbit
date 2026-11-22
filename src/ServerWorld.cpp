@@ -130,7 +130,7 @@ void ServerWorld::setBlock(int wx, int wy, Block block, BlockUpdateFlags flags)
 
     if (previous.id != block.id)
     {
-        if (previous.id == BlockID::Chest)
+        if (previous.id == Blocks::Chest)
         {
             if (auto* chest = dynamic_cast<ChestBlockEntity*>(getBlockEntity(wx, wy)))
             {
@@ -142,7 +142,7 @@ void ServerWorld::setBlock(int wx, int wy, Block block, BlockUpdateFlags flags)
             }
             removeBlockEntity(wx, wy);
         }
-        else if (previous.id == BlockID::Furnace)
+        else if (previous.id == Blocks::Furnace)
         {
             if (auto* furnace = dynamic_cast<FurnaceBlockEntity*>(getBlockEntity(wx, wy)))
             {
@@ -155,11 +155,11 @@ void ServerWorld::setBlock(int wx, int wy, Block block, BlockUpdateFlags flags)
             removeBlockEntity(wx, wy);
         }
 
-        if (block.id == BlockID::Chest)
+        if (block.id == Blocks::Chest)
         {
             setBlockEntity(wx, wy, std::make_unique<ChestBlockEntity>(sf::Vector2i{wx, wy}));
         }
-        else if (block.id == BlockID::Furnace)
+        else if (block.id == Blocks::Furnace)
         {
             setBlockEntity(wx, wy, std::make_unique<FurnaceBlockEntity>(sf::Vector2i{wx, wy}));
         }
@@ -467,24 +467,22 @@ void ServerWorld::saveChunkEnvironment(int chunk_position)
 
     constexpr int kCells = CHUNK_WIDTH * CHUNK_HEIGHT;
 
-    // Build the palette once: map BlockID → small palette index in first-seen
+    // Build the palette once: map BlockKey → small palette index in first-seen
     // order. The on-disk palette entries are RegistryKey strings so the save
     // keeps working if a later game version shifts runtime ids around.
-    std::unordered_map<uint32_t, uint8_t> seen;
+    std::unordered_map<BlockKey, uint8_t> seen;
     std::vector<std::string>              palette_keys;
     std::vector<uint8_t>                  indexes(kCells);
     std::vector<uint16_t>                 metadata(kCells);
     palette_keys.reserve(32);
-
-    const auto& reg = gameRegistries().blocks;
 
     for (int y = 0, cell = 0; y < CHUNK_HEIGHT; ++y)
     {
         for (int x = 0; x < CHUNK_WIDTH; ++x, ++cell)
         {
             const Block& block = iterator->second.blocks[y][x];
-            const uint32_t raw_id = static_cast<uint32_t>(block.id);
-            auto [it, inserted] = seen.try_emplace(raw_id, static_cast<uint8_t>(palette_keys.size()));
+            const BlockKey& key = block.id.empty() ? Blocks::Air : block.id;
+            auto [it, inserted] = seen.try_emplace(key, static_cast<uint8_t>(palette_keys.size()));
             if (inserted)
             {
                 if (palette_keys.size() >= 256)
@@ -492,18 +490,7 @@ void ServerWorld::saveChunkEnvironment(int chunk_position)
                     std::cerr << "saveChunkEnvironment: palette overflow at chunk " << chunk_position << '\n';
                     return;
                 }
-                if (raw_id < reg.size() && reg.contains(static_cast<RuntimeID>(raw_id)))
-                {
-                    palette_keys.push_back(reg.keyOf(static_cast<RuntimeID>(raw_id)));
-                }
-                else
-                {
-                    // Unknown id — log and fall back to air so the chunk still
-                    // round-trips rather than silently corrupting a save.
-                    std::cerr << "saveChunkEnvironment: unknown BlockID " << raw_id
-                              << " in chunk " << chunk_position << " — writing as blockbit:air\n";
-                    palette_keys.push_back("blockbit:air");
-                }
+                palette_keys.push_back(key);
             }
             indexes[cell]  = it->second;
             metadata[cell] = block.metadata;
@@ -794,9 +781,7 @@ void ServerWorld::loadChunkEnvironment(int chunk_position)
         return;
     }
 
-    std::vector<BlockID> palette_to_id(palette_count, BlockID::Air);
-    const auto& reg = gameRegistries().blocks;
-
+    std::vector<BlockKey> palette_to_id(palette_count, Blocks::Air);
     for (uint16_t i = 0; i < palette_count; ++i)
     {
         uint16_t len = 0;
@@ -813,15 +798,13 @@ void ServerWorld::loadChunkEnvironment(int chunk_position)
         std::string key(ptr, ptr + len);
         ptr += len;
 
-        if (auto rid = reg.find(key); rid.has_value())
-        {
-            palette_to_id[i] = static_cast<BlockID>(*rid);
-        }
+        if (blockDatabase.contains(key))
+            palette_to_id[i] = key;
         else
         {
             std::cerr << "loadChunkEnvironment: unknown block key '" << key
                       << "' in chunk " << chunk_position << " — substituting blockbit:air\n";
-            palette_to_id[i] = BlockID::Air;
+            palette_to_id[i] = Blocks::Air;
         }
     }
 
@@ -1122,8 +1105,8 @@ sf::Vector2<double> ServerWorld::getSpawnPoint()
     // floor underneath, otherwise physics shoves the player into the terrain.
     auto chunkOf = [](int x) { return (x >= 0) ? x / CHUNK_WIDTH : (x - CHUNK_WIDTH + 1) / CHUNK_WIDTH; };
 
-    auto isPassable = [](Block b) { return b.id == BlockID::Air; };
-    auto isFloor    = [](Block b) { return b.id != BlockID::Air && b.id != BlockID::Water && b.id != BlockID::Lava; };
+    auto isPassable = [](Block b) { return b.id == Blocks::Air; };
+    auto isFloor    = [](Block b) { return b.id != Blocks::Air && b.id != Blocks::Water && b.id != Blocks::Lava; };
 
     auto findSpawnY = [&](int wx) -> std::optional<int>
     {
@@ -1189,7 +1172,7 @@ void ServerWorld::placeStarterItemChestColumn()
 
     for (int y = CHUNK_HEIGHT - 2; y >= 1; --y)
     {
-        if (getBlock(0, y).id != BlockID::Air)
+        if (getBlock(0, y).id != Blocks::Air)
         {
             surface_y = y;
             break;
@@ -1198,31 +1181,30 @@ void ServerWorld::placeStarterItemChestColumn()
 
     if (surface_y < 0) return;
 
-    std::vector<ItemID> items;
+    std::vector<ItemKey> items;
     items.reserve(itemDatabase.size());
 
     for (const auto& [id, data] : itemDatabase)
     {
-        if (id == ItemID::None) continue;
+        if (id == Items::None) continue;
         items.push_back(id);
     }
 
-    std::sort(items.begin(), items.end(),
-        [](ItemID a, ItemID b) { return static_cast<uint32_t>(a) < static_cast<uint32_t>(b); });
+    std::sort(items.begin(), items.end());
 
     size_t placed = 0;
     int y = surface_y + 1;
 
     while (placed < items.size() && y < CHUNK_HEIGHT - 1)
     {
-        setBlock(0, y, {BlockID::Chest, 0});
+        setBlock(0, y, {Blocks::Chest, 0});
 
         auto* chest = dynamic_cast<ChestBlockEntity*>(getBlockEntity(0, y));
         if (!chest) { ++y; continue; }
 
         for (size_t slot = 0; slot < chest->stacks.size() && placed < items.size(); ++slot, ++placed)
         {
-            ItemID id = items[placed];
+            ItemKey id = items[placed];
             uint32_t stack_size = itemDatabase.at(id).maxStackSize;
             if (stack_size == 0) stack_size = 1;
             chest->stacks[slot] = ItemStack{id, stack_size, std::nullopt};
@@ -1230,17 +1212,6 @@ void ServerWorld::placeStarterItemChestColumn()
 
         ++y;
     }
-}
-
-UUID ServerWorld::spawn(PrefabID prefab_id, sf::Vector2<double> position)
-{
-    Entity entity = PrefabRegistry::get(prefab_id).cloneAs(generateUUID());
-
-    if(entity.hasComponent<TransformComponent>()) entity.getComponent<TransformComponent>().position = position;
-
-    addEntity(std::move(entity));
-
-    return entity.getID();
 }
 
 UUID ServerWorld::spawn(const RegistryKey& prefab_key, sf::Vector2<double> position)

@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:granite",
-    "legacy_id": 69,
     "max_stack_size": 64,
     "name": "Granite",
     "texture": "granite"

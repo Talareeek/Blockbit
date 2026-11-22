@@ -7,7 +7,6 @@
         "type": "ignite"
     },
     "id": "blockbit:flint",
-    "legacy_id": 38,
     "max_stack_size": 64,
     "name": "Flint",
     "texture": "flint"

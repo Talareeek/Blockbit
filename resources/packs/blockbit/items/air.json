@@ -1,6 +1,5 @@
 {
     "id": "blockbit:air",
-    "legacy_id": 0,
     "max_stack_size": 0,
     "name": "None",
     "texture": "stone"

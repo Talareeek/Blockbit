@@ -2,8 +2,8 @@
 #include "../include/ChestBlockEntity.hpp"
 #include "../include/Chunk.hpp"
 
-std::unordered_map<StructureID, StructureTemplate>            StructureRegistry::templates;
-std::unordered_map<StructureID, StructureRule>                StructureRegistry::rule_map;
+std::unordered_map<StructureKey, StructureTemplate>            StructureRegistry::templates;
+std::unordered_map<StructureKey, StructureRule>                StructureRegistry::rule_map;
 std::unordered_map<std::string, LootTable>                    StructureRegistry::loot_tables;
 std::unordered_map<std::string, std::vector<JigsawPoolEntry>> StructureRegistry::jigsaw_pools;
 
@@ -26,37 +26,24 @@ namespace
     }
 }
 
-StructureID structureIdFromKey(const std::string& key)
-{
-    constexpr uint32_t offset = 2166136261u;
-    constexpr uint32_t prime  = 16777619u;
-    uint32_t h = offset;
-    for (char c : key)
-    {
-        h ^= static_cast<uint8_t>(c);
-        h *= prime;
-    }
-    return h;
-}
-
-void StructureRegistry::add(StructureID id, StructureTemplate tmpl, StructureRule rule)
+void StructureRegistry::add(const StructureKey& id, StructureTemplate tmpl, StructureRule rule)
 {
     rule.id = id;
     templates[id] = std::move(tmpl);
     rule_map[id]  = rule;
 }
 
-const StructureTemplate& StructureRegistry::getTemplate(StructureID id)
+const StructureTemplate& StructureRegistry::getTemplate(const StructureKey& id)
 {
     return templates.at(id);
 }
 
-const StructureRule& StructureRegistry::getRule(StructureID id)
+const StructureRule& StructureRegistry::getRule(const StructureKey& id)
 {
     return rule_map.at(id);
 }
 
-const std::unordered_map<StructureID, StructureRule>& StructureRegistry::rules()
+const std::unordered_map<StructureKey, StructureRule>& StructureRegistry::rules()
 {
     return rule_map;
 }
@@ -87,7 +74,7 @@ int StructureRegistry::maxChainReach()
 }
 
 void StructureRegistry::stamp(Chunk& chunk,
-                              StructureID id,
+                              const StructureKey& id,
                               int origin_x,
                               int anchor_y,
                               StructureRotation rotation,
@@ -134,10 +121,10 @@ void StructureRegistry::stamp(Chunk& chunk,
                 to_place = tmpl.pickFromPalette(cell.palette, rng);
 
             if (cell.mode == StructurePlacementMode::AirOnly &&
-                chunk.blocks[wy][local_x].id != BlockID::Air)
+                chunk.blocks[wy][local_x].id != Blocks::Air)
                 continue;
 
-            if (chunk.blocks[wy][local_x].id == BlockID::Bedrock) continue;
+            if (chunk.blocks[wy][local_x].id == Blocks::Bedrock) continue;
 
             chunk.blocks[wy][local_x] = to_place;
         }
@@ -211,7 +198,7 @@ void StructureRegistry::applyLootToChest(ChestBlockEntity& chest,
 
     // Keep author-placed loot (if any) — only roll when the chest is empty.
     for (const auto& s : chest.stacks)
-        if (s.itemID != ItemID::None && s.quantity > 0) return;
+        if (s.itemID != Items::None && s.quantity > 0) return;
 
     uint32_t total_weight = 0;
     for (const auto& e : table->entries) total_weight += e.weight;
@@ -238,13 +225,13 @@ void StructureRegistry::applyLootToChest(ChestBlockEntity& chest,
         const uint16_t cspan = static_cast<uint16_t>(
             std::max<uint16_t>(picked->max_count, picked->min_count) - picked->min_count + 1);
         const uint16_t count = static_cast<uint16_t>(picked->min_count + (advance(rng) % cspan));
-        if (count == 0 || picked->item == ItemID::None) continue;
+        if (count == 0 || picked->item == Items::None) continue;
 
         // Drop into the first empty slot — avoids stacking across multiple
         // rolls so chests look varied rather than one huge pile.
         for (auto& s : chest.stacks)
         {
-            if (s.itemID == ItemID::None || s.quantity == 0)
+            if (s.itemID == Items::None || s.quantity == 0)
             {
                 s = ItemStack{picked->item, count, std::nullopt};
                 break;

@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:oak_log",
-    "legacy_id": 23,
     "max_stack_size": 64,
     "name": "Oak Log",
     "texture": "oak_log"

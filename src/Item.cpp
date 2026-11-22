@@ -18,11 +18,11 @@
 // itemDatabase is now populated by PackLoader at startup from
 // resources/packs/blockbit/items/*.json. The old static initializer
 // was removed in Phase 1c-E — see registerVanillaContent().
-std::unordered_map<ItemID, ItemData> itemDatabase;
+std::unordered_map<ItemKey, ItemData> itemDatabase;
 
 bool ItemStack::empty() const
 {
-    return itemID == ItemID::None || quantity == 0;
+    return itemID == Items::None || quantity == 0;
 }
 
 bool canStack(const ItemStack& a, const ItemStack& b)
@@ -33,10 +33,10 @@ bool canStack(const ItemStack& a, const ItemStack& b)
 
 Inventory::Inventory(size_t size)
 {
-    slots.resize(size, {ItemID::None, 0});
+    slots.resize(size, {Items::None, 0});
 }
 
-std::optional<ItemID> findItemIdByName(const std::string& name)
+std::optional<ItemKey> findItemIdByName(const std::string& name)
 {
     auto normalize = [](const std::string& s)
     {
@@ -59,7 +59,7 @@ std::optional<ItemID> findItemIdByName(const std::string& name)
     return std::nullopt;
 }
 
-bool addItem(Inventory& inventory, ItemID itemID, uint32_t quantity)
+bool addItem(Inventory& inventory, ItemKey itemID, uint32_t quantity)
 {
     auto& data = itemDatabase[itemID];
 
@@ -95,7 +95,7 @@ bool addItem(Inventory& inventory, ItemID itemID, uint32_t quantity)
     return false;
 }
 
-ItemStack Inventory::addItemWithLeftover(ItemID itemID, uint32_t quantity)
+ItemStack Inventory::addItemWithLeftover(ItemKey itemID, uint32_t quantity)
 {
     auto& data = itemDatabase[itemID];
 
@@ -110,7 +110,7 @@ ItemStack Inventory::addItemWithLeftover(ItemID itemID, uint32_t quantity)
             quantity -= add;
 
             if(quantity == 0)
-                return {ItemID::None, 0};
+                return {Items::None, 0};
         }
     }
 
@@ -124,7 +124,7 @@ ItemStack Inventory::addItemWithLeftover(ItemID itemID, uint32_t quantity)
             quantity -= slot.quantity;
 
             if(quantity == 0)
-                return {ItemID::None, 0};
+                return {Items::None, 0};
         }
     }
 
@@ -133,7 +133,7 @@ ItemStack Inventory::addItemWithLeftover(ItemID itemID, uint32_t quantity)
 
 ItemStack Inventory::addStackWithLeftover(ItemStack stack)
 {
-    if (stack.empty()) return {ItemID::None, 0};
+    if (stack.empty()) return {Items::None, 0};
 
     if (stack.instanceID.has_value())
     {
@@ -142,7 +142,7 @@ ItemStack Inventory::addStackWithLeftover(ItemStack stack)
             if (slot.empty())
             {
                 slot = stack;
-                return {ItemID::None, 0};
+                return {Items::None, 0};
             }
         }
         return stack;
@@ -152,11 +152,11 @@ ItemStack Inventory::addStackWithLeftover(ItemStack stack)
     return leftover;
 }
 
-ItemStack Inventory::removeItemWithLeftover(ItemID itemID, uint32_t quantity)
+ItemStack Inventory::removeItemWithLeftover(ItemKey itemID, uint32_t quantity)
 {
     for(auto& slot : slots)
     {
-        if(quantity == 0) return {ItemID::None, 0};
+        if(quantity == 0) return {Items::None, 0};
 
         if(slot.itemID == itemID && !slot.instanceID.has_value())
         {
@@ -165,11 +165,11 @@ ItemStack Inventory::removeItemWithLeftover(ItemID itemID, uint32_t quantity)
             slot.quantity -= remove;
             quantity -= remove;
 
-            if(slot.quantity == 0) slot.itemID = ItemID::None;
+            if(slot.quantity == 0) slot.itemID = Items::None;
         }
     }
 
-    if(quantity == 0) return {ItemID::None, 0};
+    if(quantity == 0) return {Items::None, 0};
 
     return {itemID, quantity};
 }
@@ -177,5 +177,5 @@ ItemStack Inventory::removeItemWithLeftover(ItemID itemID, uint32_t quantity)
 // Populated at startup by PackLoader::scanPackRecipes from
 // resources/packs/blockbit/recipes/*.json (and any modpack recipes/).
 std::unordered_map<ItemStack, Recipe> recipes;
-std::unordered_map<ItemID, SmeltRecipe> smeltingRecipes;
-std::unordered_map<ItemID, float> fuelBurnTimes;
+std::unordered_map<ItemKey, SmeltRecipe> smeltingRecipes;
+std::unordered_map<ItemKey, float> fuelBurnTimes;

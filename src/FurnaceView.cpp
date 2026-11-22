@@ -125,7 +125,7 @@ void ServerFurnaceView::handleLeftClick(World& world, uint16_t slot)
     if (cursor_stack.empty())
     {
         cursor_stack = stack;
-        stack = {ItemID::None, 0};
+        stack = {Items::None, 0};
     }
     else if (stack.empty())
     {
@@ -133,7 +133,7 @@ void ServerFurnaceView::handleLeftClick(World& world, uint16_t slot)
         if (slot == FURNACE_VIEW_OUTPUT_SLOT) return;
 
         stack = cursor_stack;
-        cursor_stack = {ItemID::None, 0};
+        cursor_stack = {Items::None, 0};
     }
     else if (canStack(stack, cursor_stack))
     {
@@ -141,7 +141,7 @@ void ServerFurnaceView::handleLeftClick(World& world, uint16_t slot)
         uint32_t can_add = std::min(cursor_stack.quantity, (max_stack > stack.quantity) ? (max_stack - stack.quantity) : 0u);
         stack.quantity += can_add;
         cursor_stack.quantity -= can_add;
-        if (cursor_stack.quantity == 0) cursor_stack = {ItemID::None, 0};
+        if (cursor_stack.quantity == 0) cursor_stack = {Items::None, 0};
     }
     else
     {
@@ -165,14 +165,14 @@ void ServerFurnaceView::handleRightClick(World& world, uint16_t slot)
         if (stack.isUnique())
         {
             cursor_stack = stack;
-            stack = {ItemID::None, 0};
+            stack = {Items::None, 0};
         }
         else
         {
             uint32_t half = (stack.quantity + 1) / 2;
             cursor_stack = {stack.itemID, half};
             stack.quantity -= half;
-            if (stack.quantity == 0) stack.itemID = ItemID::None;
+            if (stack.quantity == 0) stack.itemID = Items::None;
         }
     }
     else if (stack.empty())
@@ -182,12 +182,12 @@ void ServerFurnaceView::handleRightClick(World& world, uint16_t slot)
         if (cursor_stack.isUnique())
         {
             stack = cursor_stack;
-            cursor_stack = {ItemID::None, 0};
+            cursor_stack = {Items::None, 0};
         }
         else
         {
             stack = {cursor_stack.itemID, 1};
-            if (--cursor_stack.quantity == 0) cursor_stack = {ItemID::None, 0};
+            if (--cursor_stack.quantity == 0) cursor_stack = {Items::None, 0};
         }
     }
     else if (canStack(stack, cursor_stack))
@@ -196,7 +196,7 @@ void ServerFurnaceView::handleRightClick(World& world, uint16_t slot)
         if (stack.quantity < max_stack)
         {
             stack.quantity++;
-            if (--cursor_stack.quantity == 0) cursor_stack = {ItemID::None, 0};
+            if (--cursor_stack.quantity == 0) cursor_stack = {Items::None, 0};
         }
     }
     else
@@ -301,7 +301,7 @@ void ServerFurnaceView::onOpen(World& world)
         const auto& slots = inventory->inventory.slots;
         for (uint16_t i = 0; i < 36; ++i)
         {
-            ItemStack stack = (i < slots.size()) ? slots[i] : ItemStack{ItemID::None, 0};
+            ItemStack stack = (i < slots.size()) ? slots[i] : ItemStack{Items::None, 0};
             last_inventory[i] = stack;
             pushSlotUpdate(FURNACE_VIEW_PLAYER_OFFSET + i, stack);
         }
@@ -328,7 +328,7 @@ void ServerFurnaceView::onClose(World& world)
     ItemStack leftover = inventory.addStackWithLeftover(cursor_stack);
     player.getComponent<InventoryComponent>().dirty = true;
 
-    cursor_stack = {ItemID::None, 0};
+    cursor_stack = {Items::None, 0};
 
     if (leftover.empty() || !player.hasComponent<TransformComponent>()) return;
 
@@ -587,7 +587,7 @@ void ClientFurnaceView::handleContentUpdate(const SetContentData& set_content_da
         return;
     }
 
-    ItemStack stack{ItemID::None, 0};
+    ItemStack stack{Items::None, 0};
     if (!decodeStack(set_content_data.payload, stack)) return;
 
     if (set_content_data.target == FURNACE_VIEW_CURSOR_SLOT)

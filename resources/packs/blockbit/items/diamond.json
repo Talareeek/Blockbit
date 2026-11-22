@@ -1,6 +1,5 @@
 {
     "id": "blockbit:diamond",
-    "legacy_id": 22,
     "max_stack_size": 64,
     "name": "Diamond",
     "rarity": "rare",

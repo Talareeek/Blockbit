@@ -1,6 +1,5 @@
 {
     "id": "blockbit:raw_copper",
-    "legacy_id": 81,
     "max_stack_size": 64,
     "name": "Raw Copper",
     "texture": "blockbit:raw_copper"

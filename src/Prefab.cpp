@@ -1,5 +1,4 @@
 #include "../include/Prefab.hpp"
-#include "../include/ContentProfiles.hpp"
 #include "../include/GameRegistries.hpp"
 #include "../include/TransformComponent.hpp"
 #include "../include/PhysicsComponent.hpp"
@@ -12,12 +11,9 @@
 #include <random>
 #include <stdexcept>
 
-const Entity& PrefabRegistry::get(PrefabID prefab_id)
+const Entity& PrefabRegistry::get(const std::string& key)
 {
-    // Vanilla prefabs live in the pack now (resources/packs/blockbit/prefabs/).
-    // Look them up by their "blockbit:<name>" key in the shared registry that
-    // the pack loader populates.
-    const std::string key = "blockbit:" + ContentProfiles::nameFromPrefab(prefab_id);
+    // Resolve directly by the full key supplied by the pack or caller.
     const auto& prefabs = gameRegistries().prefabs;
     auto it = prefabs.find(key);
     if (it == prefabs.end())
@@ -41,7 +37,7 @@ sf::Vector2f randomDropSpread(float spread_factor)
 
 UUID spawnDroppedItem(World& world, sf::Vector2<double> position, const ItemStack& stack, sf::Vector2f force)
 {
-    Entity entity = PrefabRegistry::get(PrefabID::DroppedItem).cloneAs(generateUUID());
+    Entity entity = PrefabRegistry::get("blockbit:dropped_item").cloneAs(generateUUID());
 
     auto& transform = entity.getComponent<TransformComponent>();
     transform.position = position;
@@ -57,9 +53,9 @@ UUID spawnDroppedItem(World& world, sf::Vector2<double> position, const ItemStac
     return id;
 }
 
-UUID spawnFallingBlock(World& world, sf::Vector2<double> position, BlockID block_id, uint16_t metadata)
+UUID spawnFallingBlock(World& world, sf::Vector2<double> position, BlockKey block_id, uint16_t metadata)
 {
-    Entity entity = PrefabRegistry::get(PrefabID::FallingBlock).cloneAs(generateUUID());
+    Entity entity = PrefabRegistry::get("blockbit:falling_block").cloneAs(generateUUID());
 
     auto& transform = entity.getComponent<TransformComponent>();
     transform.position = position;

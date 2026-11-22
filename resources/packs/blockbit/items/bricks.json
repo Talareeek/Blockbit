@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:bricks",
-    "legacy_id": 60,
     "max_stack_size": 64,
     "name": "Bricks",
     "texture": "bricks"

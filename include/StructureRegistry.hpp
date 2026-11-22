@@ -11,14 +11,12 @@
 #include <unordered_map>
 #include <vector>
 
-using StructureID = uint32_t;
-
-StructureID structureIdFromKey(const std::string& key);
+using StructureKey = std::string;
 
 // Placement rule set attached to a template.
 struct StructureRule
 {
-    StructureID id = 0;
+    StructureKey id;
     std::string key;
 
     int   grid         = 128;
@@ -50,7 +48,7 @@ struct StructureRule
 // uniformly. `weight` is the relative chance against the pool's total.
 struct LootTableEntry
 {
-    ItemID   item      = ItemID::None;
+    ItemKey   item      = Items::None;
     uint16_t min_count = 1;
     uint16_t max_count = 1;
     uint16_t weight    = 1;
@@ -71,7 +69,7 @@ struct LootTable
 // using the chain's RNG state.
 struct JigsawPoolEntry
 {
-    StructureID id     = 0;
+    StructureKey id;
     uint16_t    weight = 1;
 };
 
@@ -83,12 +81,12 @@ class StructureRegistry
 {
 public:
 
-    static void add(StructureID id, StructureTemplate tmpl, StructureRule rule);
+    static void add(const StructureKey& id, StructureTemplate tmpl, StructureRule rule);
 
-    static const StructureTemplate& getTemplate(StructureID id);
-    static const StructureRule&     getRule(StructureID id);
+    static const StructureTemplate& getTemplate(const StructureKey& id);
+    static const StructureRule&     getRule(const StructureKey& id);
 
-    static const std::unordered_map<StructureID, StructureRule>& rules();
+    static const std::unordered_map<StructureKey, StructureRule>& rules();
 
     static int maxTemplateWidth();
     static int maxTemplateHeight();
@@ -98,7 +96,7 @@ public:
     // (palette picks, probability gates, loot) so every client/server
     // generating the same chunk reproduces the same stamp output.
     static void stamp(Chunk& chunk,
-                      StructureID id,
+                      const StructureKey& id,
                       int origin_x,
                       int anchor_y,
                       StructureRotation rotation,
@@ -124,8 +122,8 @@ public:
 
 private:
 
-    static std::unordered_map<StructureID, StructureTemplate>            templates;
-    static std::unordered_map<StructureID, StructureRule>                rule_map;
+    static std::unordered_map<StructureKey, StructureTemplate>            templates;
+    static std::unordered_map<StructureKey, StructureRule>                rule_map;
     static std::unordered_map<std::string, LootTable>                    loot_tables;
     static std::unordered_map<std::string, std::vector<JigsawPoolEntry>> jigsaw_pools;
 };

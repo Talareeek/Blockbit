@@ -17,17 +17,17 @@
 
 inline std::unordered_map<Biome, std::pair<Block, Block>> surface_blocks =
 {
-    {Biome::Plains,     {{BlockID::Grass, 0},       {BlockID::Dirt, 0}}},
-    {Biome::Forest,     {{BlockID::Grass, 0},       {BlockID::Dirt, 0}}},
-    {Biome::Ocean,      {{BlockID::Sand, 0},        {BlockID::Sand, 0}}},
-    {Biome::Desert,     {{BlockID::Sand, 0},        {BlockID::Sand, 0}}},
-    {Biome::Savanna,    {{BlockID::Coarse_Dirt, 0}, {BlockID::Coarse_Dirt, 0}}},
-    {Biome::Mountains,  {{BlockID::Gravel, 0},      {BlockID::Stone, 0}}},
-    {Biome::Snow,       {{BlockID::Snow, 0},        {BlockID::Snow, 0}}},
-    {Biome::Jungle,     {{BlockID::Grass, 0},       {BlockID::Dirt, 0}}},
-    {Biome::Taiga,      {{BlockID::Grass, 0},       {BlockID::Dirt, 0}}},
-    {Biome::SnowyTaiga, {{BlockID::Snow, 0},        {BlockID::Dirt, 0}}},
-    {Biome::GiantTaiga, {{BlockID::Coarse_Dirt, 0}, {BlockID::Dirt, 0}}},
+    {Biome::Plains,     {{Blocks::Grass, 0},       {Blocks::Dirt, 0}}},
+    {Biome::Forest,     {{Blocks::Grass, 0},       {Blocks::Dirt, 0}}},
+    {Biome::Ocean,      {{Blocks::Sand, 0},        {Blocks::Sand, 0}}},
+    {Biome::Desert,     {{Blocks::Sand, 0},        {Blocks::Sand, 0}}},
+    {Biome::Savanna,    {{Blocks::Coarse_Dirt, 0}, {Blocks::Coarse_Dirt, 0}}},
+    {Biome::Mountains,  {{Blocks::Gravel, 0},      {Blocks::Stone, 0}}},
+    {Biome::Snow,       {{Blocks::Snow, 0},        {Blocks::Snow, 0}}},
+    {Biome::Jungle,     {{Blocks::Grass, 0},       {Blocks::Dirt, 0}}},
+    {Biome::Taiga,      {{Blocks::Grass, 0},       {Blocks::Dirt, 0}}},
+    {Biome::SnowyTaiga, {{Blocks::Snow, 0},        {Blocks::Dirt, 0}}},
+    {Biome::GiantTaiga, {{Blocks::Coarse_Dirt, 0}, {Blocks::Dirt, 0}}},
 };
 
 struct NormalWorldGeneratorProperties
@@ -100,7 +100,7 @@ private:
     ColumnData getColumn(int world_x) const;
 
     uint32_t featureSeed(int x, int y, FeatureType type) const;
-    uint32_t structureSeed(int grid_x, StructureID id) const;
+    uint32_t structureSeed(int grid_x, const StructureKey& id) const;
 
     void setFeatureBlock(Chunk& chunk, int world_x, int y, Block block, bool only_replace_air = false);
 
@@ -113,7 +113,7 @@ private:
     void generateFeature(Chunk& chunk, const FeaturePlacement& feature);
 
     void generateTree(Chunk& chunk, const FeaturePlacement& feature);
-    void generateOreVein(Chunk& chunk, const FeaturePlacement& feature, BlockID ore, int size);
+    void generateOreVein(Chunk& chunk, const FeaturePlacement& feature, BlockKey ore, int size);
     void generateCactus(Chunk& chunk, const FeaturePlacement& feature);
     void generateDeadBush(Chunk& chunk, const FeaturePlacement& feature);
 
@@ -122,14 +122,14 @@ private:
 
     struct StructurePlacement
     {
-        StructureID       id;
+        StructureKey      id;
         int               origin_x;
         int               anchor_y;
         StructureRotation rotation;
         uint32_t          seed; // mixed into per-cell rolls at stamp time
     };
 
-    std::vector<StructurePlacement> getStructurePlacementsInCell(int grid_x, StructureID id) const;
+    std::vector<StructurePlacement> getStructurePlacementsInCell(int grid_x, const StructureKey& id) const;
 
     // Walks the jigsaw graph starting from `root` and appends every connected
     // piece (up to the rule's max_chain_depth) to `out`. Deterministic via the

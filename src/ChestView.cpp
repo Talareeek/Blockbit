@@ -93,12 +93,12 @@ void ServerChestView::handleLeftClick(World& world, uint16_t slot)
     if (cursor_stack.empty())
     {
         cursor_stack = stack;
-        stack = {ItemID::None, 0};
+        stack = {Items::None, 0};
     }
     else if (stack.empty())
     {
         stack = cursor_stack;
-        cursor_stack = {ItemID::None, 0};
+        cursor_stack = {Items::None, 0};
     }
     else if (canStack(stack, cursor_stack))
     {
@@ -106,7 +106,7 @@ void ServerChestView::handleLeftClick(World& world, uint16_t slot)
         uint32_t can_add = std::min(cursor_stack.quantity, (max_stack > stack.quantity) ? (max_stack - stack.quantity) : 0u);
         stack.quantity += can_add;
         cursor_stack.quantity -= can_add;
-        if (cursor_stack.quantity == 0) cursor_stack = {ItemID::None, 0};
+        if (cursor_stack.quantity == 0) cursor_stack = {Items::None, 0};
     }
     else
     {
@@ -143,14 +143,14 @@ void ServerChestView::handleRightClick(World& world, uint16_t slot)
         if (stack.isUnique())
         {
             cursor_stack = stack;
-            stack = {ItemID::None, 0};
+            stack = {Items::None, 0};
         }
         else
         {
             uint32_t half = (stack.quantity + 1) / 2;
             cursor_stack = {stack.itemID, half};
             stack.quantity -= half;
-            if (stack.quantity == 0) stack.itemID = ItemID::None;
+            if (stack.quantity == 0) stack.itemID = Items::None;
         }
     }
     else if (stack.empty())
@@ -158,12 +158,12 @@ void ServerChestView::handleRightClick(World& world, uint16_t slot)
         if (cursor_stack.isUnique())
         {
             stack = cursor_stack;
-            cursor_stack = {ItemID::None, 0};
+            cursor_stack = {Items::None, 0};
         }
         else
         {
             stack = {cursor_stack.itemID, 1};
-            if (--cursor_stack.quantity == 0) cursor_stack = {ItemID::None, 0};
+            if (--cursor_stack.quantity == 0) cursor_stack = {Items::None, 0};
         }
     }
     else if (canStack(stack, cursor_stack))
@@ -172,7 +172,7 @@ void ServerChestView::handleRightClick(World& world, uint16_t slot)
         if (stack.quantity < max_stack)
         {
             stack.quantity++;
-            if (--cursor_stack.quantity == 0) cursor_stack = {ItemID::None, 0};
+            if (--cursor_stack.quantity == 0) cursor_stack = {Items::None, 0};
         }
     }
     else
@@ -246,9 +246,9 @@ void ServerChestView::onOpen(World& world)
         // Mirror open state onto the block's metadata so clients can render it
         // without needing to know about block entities.
         Block current = world.getBlock(chest_position.x, chest_position.y);
-        if (current.id == BlockID::Chest && !ChestState::unpack(current.metadata).open)
+        if (current.id == Blocks::Chest && !ChestState::unpack(current.metadata).open)
         {
-            world.setBlock(chest_position.x, chest_position.y, {BlockID::Chest, ChestState{true}.pack()});
+            world.setBlock(chest_position.x, chest_position.y, {Blocks::Chest, ChestState{true}.pack()});
         }
 
         for (uint16_t i = 0; i < 36 && i < chest->stacks.size(); ++i)
@@ -264,7 +264,7 @@ void ServerChestView::onOpen(World& world)
         const auto& slots = inventory->inventory.slots;
         for (uint16_t i = 0; i < 36; ++i)
         {
-            ItemStack stack = (i < slots.size()) ? slots[i] : ItemStack{ItemID::None, 0};
+            ItemStack stack = (i < slots.size()) ? slots[i] : ItemStack{Items::None, 0};
             last_inventory[i] = stack;
             inventory_stacks[i] = stack;
             pushSlotUpdate(CHEST_VIEW_PLAYER_OFFSET + i, stack);
@@ -285,9 +285,9 @@ void ServerChestView::onClose(World& world)
         if (chest->viewers == 0)
         {
             Block current = world.getBlock(chest_position.x, chest_position.y);
-            if (current.id == BlockID::Chest && ChestState::unpack(current.metadata).open)
+            if (current.id == Blocks::Chest && ChestState::unpack(current.metadata).open)
             {
-                world.setBlock(chest_position.x, chest_position.y, {BlockID::Chest, ChestState{false}.pack()});
+                world.setBlock(chest_position.x, chest_position.y, {Blocks::Chest, ChestState{false}.pack()});
             }
         }
     }
@@ -302,7 +302,7 @@ void ServerChestView::onClose(World& world)
     ItemStack leftover = inventory.addStackWithLeftover(cursor_stack);
     player.getComponent<InventoryComponent>().dirty = true;
 
-    cursor_stack = {ItemID::None, 0};
+    cursor_stack = {Items::None, 0};
 
     if (leftover.empty() || !player.hasComponent<TransformComponent>()) return;
 
@@ -475,7 +475,7 @@ void ClientChestView::renderCursor(sf::RenderWindow& window)
 
 void ClientChestView::handleContentUpdate(const SetContentData& set_content_data)
 {
-    ItemStack stack{ItemID::None, 0};
+    ItemStack stack{Items::None, 0};
     if (!decodeStack(set_content_data.payload, stack)) return;
 
     if (set_content_data.target == CHEST_VIEW_CURSOR_SLOT)

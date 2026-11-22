@@ -20,7 +20,7 @@ namespace
     // (matches MC: sand lands on open torch → torch pops as item, sand lays down).
     bool is_landable(Block b)
     {
-        return b.id == BlockID::Air || b.id == BlockID::Water || b.id == BlockID::Lava;
+        return b.id == Blocks::Air || b.id == Blocks::Water || b.id == Blocks::Lava;
     }
 }
 
@@ -32,7 +32,7 @@ void FallingBlockSystem(ServerWorld& world)
     {
         UUID         entity_id;
         sf::Vector2i cell;
-        BlockID      block_id;
+        BlockKey      block_id;
         uint16_t     metadata;
         bool         place_block;   // false → drop as item instead
     };
@@ -85,8 +85,8 @@ void FallingBlockSystem(ServerWorld& world)
         {
             // Can't place here: pop as an item at the entity's position so the
             // player doesn't just lose it.
-            ItemID drop_item = blockToItem(r.block_id);
-            if (drop_item != ItemID::None)
+            ItemKey drop_item = blockToItem(r.block_id);
+            if (drop_item != Items::None)
             {
                 sf::Vector2<double> drop_pos{
                     static_cast<double>(r.cell.x) + 0.25,

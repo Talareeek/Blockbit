@@ -5,7 +5,7 @@
 #include "../include/ClientGameState.hpp"
 #include "../include/CreateWorldState.hpp"
 #include "../include/BBT.hpp"
-#include "../include/PackLoader.hpp"
+#include "../include/PackManager.hpp"
 
 #include <algorithm>
 #include <cstdint>

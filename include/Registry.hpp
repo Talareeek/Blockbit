@@ -53,9 +53,6 @@ public:
     }
 
     // Places `data` at a specific RuntimeID, growing the storage if needed.
-    // Used during Phase 1a-A to keep RuntimeIDs aligned with the legacy
-    // BlockID/ItemID enum values — so the wire protocol doesn't shift before
-    // chunks switch to palette storage.
     RuntimeID registerAt(RuntimeID id, RegistryKey key, TData data)
     {
         if (entries.size() <= id) entries.resize(id + 1);

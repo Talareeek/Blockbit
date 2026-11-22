@@ -5,7 +5,6 @@
     },
     "hardness": 2.0,
     "id": "blockbit:oak_log",
-    "legacy_id": 18,
     "mining": {
         "level": 1,
         "resistance": 5,

@@ -4,7 +4,6 @@
     },
     "hardness": 2.0,
     "id": "blockbit:bricks",
-    "legacy_id": 31,
     "mining": {
         "level": 1,
         "resistance": 5,

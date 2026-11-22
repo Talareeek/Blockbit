@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:spruce_leaves",
-    "legacy_id": 29,
     "max_stack_size": 64,
     "name": "Spruce Leaves",
     "texture": "spruce_leaves"

@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:snow",
-    "legacy_id": 36,
     "max_stack_size": 64,
     "name": "Snow",
     "texture": "snow"

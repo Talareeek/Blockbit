@@ -4,7 +4,6 @@
         "item": "blockbit:snow"
     },
     "id": "blockbit:snow",
-    "legacy_id": 29,
     "mining": {
         "level": 1,
         "resistance": 1,

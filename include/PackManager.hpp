@@ -1,32 +1,29 @@
-#ifndef PACK_LOADER_HPP
-#define PACK_LOADER_HPP
+#ifndef PACK_MANAGER_HPP
+#define PACK_MANAGER_HPP
 
-#include <filesystem>
+#include <unordered_map>
 #include <string>
+#include <filesystem>
 #include <vector>
 
-#include "AssetManager.hpp"
 #include "Block.hpp"
-#include "Climate.hpp"
 #include "Item.hpp"
+#include "AssetManager.hpp"
+#include "StructureTemplate.hpp"
+#include "Climate.hpp"
 #include "MobSpawnConfig.hpp"
 #include "Registry.hpp"
 
-// Loads a content pack from disk: scans <dir>/pack.json for metadata, then
-// <dir>/blocks/*.json and <dir>/items/*.json for content. Each file is a
-// single entry keyed by its "id" field (e.g. "blockbit:stone"). Produces
-// BlockData / ItemData suitable for inserting into blockDatabase and
-// itemDatabase and registering with GameRegistries.
 namespace PackLoader
 {
 
 struct PackManifest
 {
-    std::string              id;          // "blockbit"
-    std::string              name;        // display
-    std::string              version;     // semver-ish
-    std::string              description; // free-form blurb for the menu
-    uint32_t                 format = 1;
+    std::string id;          // "blockbit"
+    std::string name;        // display
+    std::string version;     // semver-ish
+    std::string description; // free-form blurb for the menu
+    uint32_t format = 1;
     std::vector<std::string> depends;     // other pack ids this one needs before load
 };
 
@@ -39,8 +36,6 @@ using PackHash = uint64_t;
 struct LoadedBlock
 {
     RegistryKey key;                           // "blockbit:stone"
-    BlockID     legacy_id     = BlockID{};     // valid only when has_legacy_id
-    bool        has_legacy_id = false;         // JSON explicitly set legacy_id
     BlockData   data;
 
     // String-form refs collected during parse; resolved after every pack is
@@ -55,8 +50,6 @@ struct LoadedBlock
 struct LoadedItem
 {
     RegistryKey key;
-    ItemID      legacy_id     = ItemID{};
-    bool        has_legacy_id = false;
     ItemData    data;
 
     std::string fluid_bucket_fluid;           // -> FluidBucketParams::fluid
@@ -117,8 +110,8 @@ WorldPackCheck validateWorldPacks(const std::filesystem::path& worldDir);
 // in the editor and persisted inside the .bbt file — no JSON knob here.
 //
 // Namespace scoping is enforced on "id". The structure's RuntimeID in the
-// registry is structureIdFromKey(id) — same across platforms, so world-gen
-// placement RNG stays deterministic.
+// registry is the full namespaced structure key, so world-gen placement RNG
+// stays deterministic without a numeric structure identifier.
 std::size_t scanPackStructures(const std::filesystem::path& packDir,
                                const std::string&           packNamespace);
 
@@ -129,8 +122,8 @@ std::size_t scanPackLootTables(const std::filesystem::path& packDir,
                                const std::string&           packNamespace);
 
 // Reads <packDir>/jigsaw_pools/*.json and registers each pool. Entries are
-// structure RegistryKeys that get hashed via structureIdFromKey — no
-// cross-pack validation at scan time, missing IDs just produce empty rolls
+// structure RegistryKeys — no cross-pack validation at scan time, missing
+// keys just produce empty rolls
 // during chain expansion.
 std::size_t scanPackJigsawPools(const std::filesystem::path& packDir,
                                 const std::string&           packNamespace);
@@ -156,8 +149,8 @@ std::size_t scanPackJigsawPools(const std::filesystem::path& packDir,
 //     "item":      "blockbit:coal",
 //     "burn_time": 80.0 }
 //
-// Must run after item parsing + resolution so RegistryKey refs land on live
-// ItemIDs. Namespace scoping is enforced on the "id" field.
+// Must run after item parsing + resolution so registry keys land on live
+// items. Namespace scoping is enforced on the "id" field.
 std::size_t scanPackRecipes(const std::filesystem::path& packDir,
                             const std::string&           packNamespace);
 
@@ -181,4 +174,41 @@ std::size_t scanPackTextures(const std::filesystem::path& packDir,
 
 } // namespace PackLoader
 
-#endif // PACK_LOADER_HPP
+class Pack
+{
+private:
+
+    std::filesystem::path path;
+
+    bool loaded;
+
+    std::unordered_map<std::string, sf::Texture> textures;
+    std::unordered_map<std::string, BlockData> blocks;
+    std::unordered_map<std::string, ItemData> items;
+    
+
+public:
+
+    Pack(std::filesystem::path path);
+
+    void load();
+
+};
+
+class PackManager
+{
+private:
+
+    std::unordered_map<std::string, Pack> packs;
+
+public:
+
+    // Loads and registers vanilla content and discovered modpacks.
+    static void loadAllContent();
+
+    void findPacks();
+
+    void loadPack(std::string id);
+};
+
+#endif // PACK_MANAGER_HPP

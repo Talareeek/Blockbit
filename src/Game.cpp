@@ -241,9 +241,9 @@ namespace
 
         if(Settings::pointer.mode == Settings::Pointer::Mode::Item)
         {
-            ItemID id = static_cast<ItemID>(Settings::pointer.item_id);
+            ItemKey id = Settings::pointer.item_id;
             auto it = itemDatabase.find(id);
-            if(id != ItemID::None && it != itemDatabase.end())
+            if(id != Items::None && it != itemDatabase.end())
             {
                 const sf::Texture& tex = AssetManager::getGameTexture(it->second.texture);
                 sf::Image src = tex.copyToImage();

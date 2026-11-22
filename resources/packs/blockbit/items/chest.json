@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:chest",
-    "legacy_id": 59,
     "max_stack_size": 64,
     "name": "Chest",
     "texture": "chest"

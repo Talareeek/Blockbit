@@ -4,7 +4,6 @@
     },
     "hardness": 3.0,
     "id": "blockbit:iron_ore",
-    "legacy_id": 10,
     "mining": {
         "level": 2,
         "resistance": 5,

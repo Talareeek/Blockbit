@@ -1,7 +1,6 @@
 {
     "category": "tool",
     "id": "blockbit:gold_shovel",
-    "legacy_id": 54,
     "max_durability": 32,
     "max_stack_size": 1,
     "name": "Gold Shovel",

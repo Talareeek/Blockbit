@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:oak_leaves",
-    "legacy_id": 24,
     "max_stack_size": 64,
     "name": "Oak Leaves",
     "texture": "oak_leaves"

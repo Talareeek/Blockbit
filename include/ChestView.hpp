@@ -41,11 +41,11 @@ private:
     sf::Vector2i chest_position;
     UUID inventory_owner;
 
-    ItemStack cursor_stack{ItemID::None, 0};
+    ItemStack cursor_stack{Items::None, 0};
 
     std::array<ItemStack, 36> last_chest{};
     std::array<ItemStack, 36> last_inventory{};
-    ItemStack last_cursor{ItemID::None, 0};
+    ItemStack last_cursor{Items::None, 0};
 
     std::deque<SetContentData> pending;
 
@@ -74,7 +74,7 @@ class ClientChestView : public BaseChestView, public ClientView
 {
 private:
 
-    ItemStack cursor_stack{ItemID::None, 0};
+    ItemStack cursor_stack{Items::None, 0};
 
     std::deque<ViewEventData> pending;
 

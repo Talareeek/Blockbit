@@ -91,7 +91,7 @@ struct RubynessItemComponent : public ItemDataComponent
     bool equals(const ItemDataComponent& other) const override;
 };
 
-// Payload for a single Magic Bottle. Multiple bottles share one ItemID
+// Payload for a single Magic Bottle. Multiple bottles share one ItemKey
 // (Magic_Bottle); the effect, duration and strength live here so a stack with
 // this component is uniquely identified by its instance UUID.
 struct MagicEffectItemComponent : public ItemDataComponent

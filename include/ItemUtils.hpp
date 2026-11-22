@@ -10,7 +10,7 @@
 #include "Item.hpp"
 #include "ItemInstance.hpp"
 
-uint32_t getMaxDurability(ItemID id);
+uint32_t getMaxDurability(ItemKey id);
 uint32_t getCurrentDurability(const ItemStack& stack);
 std::string getDisplayName(const ItemStack& stack);
 
@@ -26,7 +26,7 @@ void addEnchantment(ItemStack& stack, Enchantment enchantment);
 // stacks still merge; the component is only materialised once the stack
 // diverges upward. Non-tool ruby items (ore, block, wire, raw ruby) have no
 // Rubyness.
-bool     isRubyTool(ItemID id);
+bool     isRubyTool(ItemKey id);
 uint8_t  getRubynessLevel(const ItemStack& stack);
 void     setRubynessLevel(ItemStack& stack, uint8_t level);
 float    rubynessMultiplier(uint8_t level);
@@ -45,6 +45,8 @@ std::string greekLetterName(uint8_t level);
 // decoding client-sent payloads (click/craft requests) because the server is
 // authoritative over instance data and must not let clients inject it. The
 // client passes true because that is how it learns durability/enchants/names.
+ItemKey itemKeyFromLegacySave(uint32_t old_id);
+
 Tag stackToTag(const ItemStack& stack);
 ItemStack stackFromTag(const Tag& tag, bool write_instance_data);
 

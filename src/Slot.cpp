@@ -125,7 +125,7 @@ void Slot::render(sf::RenderWindow& window)
     {
         // Two-pass bottle render: tinted liquid (x=16..32) first, then opaque
         // frame (x=0..16) on top. Colour comes from the stack's instance
-        // data so one bottle.png + one ItemID covers every potion variant.
+        // data so one bottle.png + one ItemKey covers every potion variant.
         sprite.setTextureRect({{16, 0}, {16, 16}});
         sprite.setColor(bottleLiquidColor(item_stack));
         window.draw(sprite);
@@ -180,7 +180,7 @@ void Slot::render(sf::RenderTarget& window)
     {
         // Two-pass bottle render: tinted liquid (x=16..32) first, then opaque
         // frame (x=0..16) on top. Colour comes from the stack's instance
-        // data so one bottle.png + one ItemID covers every potion variant.
+        // data so one bottle.png + one ItemKey covers every potion variant.
         sprite.setTextureRect({{16, 0}, {16, 16}});
         sprite.setColor(bottleLiquidColor(item_stack));
         window.draw(sprite);

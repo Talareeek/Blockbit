@@ -25,7 +25,7 @@
 #include "../include/EffectRegistry.hpp"
 #include "../include/StructureRegistry.hpp"
 #include "../include/GameRegistries.hpp"
-#include "../include/PackLoader.hpp"
+#include "../include/PackManager.hpp"
 #include "../include/ServerConfig.hpp"
 #include "../include/ServerWorld.hpp"
 #include "../include/Block.hpp"
@@ -758,21 +758,21 @@ namespace
 
     void runFlatLayerEditor(std::vector<FlatWorldLayer>& layers)
     {
-        struct Choice { const char* label; BlockID id; };
-        static constexpr std::array<Choice, 10> options{{
-            {"bedrock",     BlockID::Bedrock},
-            {"stone",       BlockID::Stone},
-            {"dirt",        BlockID::Dirt},
-            {"grass",       BlockID::Grass},
-            {"sand",        BlockID::Sand},
-            {"coarse dirt", BlockID::Coarse_Dirt},
-            {"snow",        BlockID::Snow},
-            {"cobblestone", BlockID::Cobblestone},
-            {"obsidian",    BlockID::Obsidian},
-            {"oak planks",  BlockID::Oak_Planks},
+        struct Choice { const char* label; BlockKey id; };
+        static const std::array<Choice, 10> options{{
+            {"bedrock",     Blocks::Bedrock},
+            {"stone",       Blocks::Stone},
+            {"dirt",        Blocks::Dirt},
+            {"grass",       Blocks::Grass},
+            {"sand",        Blocks::Sand},
+            {"coarse dirt", Blocks::Coarse_Dirt},
+            {"snow",        Blocks::Snow},
+            {"cobblestone", Blocks::Cobblestone},
+            {"obsidian",    Blocks::Obsidian},
+            {"oak planks",  Blocks::Oak_Planks},
         }};
 
-        auto blockLabel = [&](BlockID id) -> const char*
+        auto blockLabel = [&](BlockKey id) -> const char*
         {
             for (const auto& o : options) if (o.id == id) return o.label;
             return "?";

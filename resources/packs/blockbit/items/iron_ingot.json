@@ -1,6 +1,5 @@
 {
     "id": "blockbit:iron_ingot",
-    "legacy_id": 62,
     "max_stack_size": 64,
     "name": "Iron Ingot",
     "texture": "iron_ingot"

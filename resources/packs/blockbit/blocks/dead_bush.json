@@ -4,7 +4,6 @@
         "item": "blockbit:dead_bush"
     },
     "id": "blockbit:dead_bush",
-    "legacy_id": 36,
     "lets_light": true,
     "light_opacity": 1,
     "mining": {

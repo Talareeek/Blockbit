@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:spruce_log",
-    "legacy_id": 28,
     "max_stack_size": 64,
     "name": "Spruce Log",
     "texture": "spruce_log"

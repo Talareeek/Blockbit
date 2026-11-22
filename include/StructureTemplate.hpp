@@ -54,7 +54,7 @@ struct StructureSpawn
 {
     int       rx;
     int       ry;
-    PrefabID  prefab;
+    std::string prefab;
 };
 
 // Facing of a jigsaw connector. The generator joins two jigsaws when the

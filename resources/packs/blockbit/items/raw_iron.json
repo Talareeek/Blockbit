@@ -1,6 +1,5 @@
 {
     "id": "blockbit:raw_iron",
-    "legacy_id": 20,
     "max_stack_size": 64,
     "name": "Raw Iron",
     "texture": "raw_iron"

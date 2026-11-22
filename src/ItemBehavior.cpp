@@ -140,7 +140,7 @@ bool handleFluidBucket(const FluidBucketParams& p,
         if (target.id != p.fluid) return false;
         if (WaterState::unpack(target.metadata).level != p.source_level_value) return false;
 
-        world.setBlock(block_pos.x, block_pos.y, {BlockID::Air, 0});
+        world.setBlock(block_pos.x, block_pos.y, {Blocks::Air, 0});
         inventory.removeItemWithLeftover(p.empty_variant, 1);
         inventory.addItemWithLeftover(p.filled_variant, 1);
         return false;
@@ -149,7 +149,7 @@ bool handleFluidBucket(const FluidBucketParams& p,
     // Filled bucket: deposit into air or partial-fluid, swap back to empty.
     if (stack.itemID == p.filled_variant)
     {
-        const bool is_air          = (target.id == BlockID::Air);
+        const bool is_air          = (target.id == Blocks::Air);
         const bool is_partial_fluid = (target.id == p.fluid)
             && (WaterState::unpack(target.metadata).level < p.source_level_value);
         if (!is_air && !is_partial_fluid) return false;
@@ -170,7 +170,7 @@ bool handleFluidBucket(const FluidBucketParams& p,
 bool tryIgniteFurnace(World& world, sf::Vector2i position)
 {
     Block target = world.getBlock(position.x, position.y);
-    if (target.id != BlockID::Furnace) return false;
+    if (target.id != Blocks::Furnace) return false;
 
     auto* furnace = dynamic_cast<FurnaceBlockEntity*>(
         world.getBlockEntity(position.x, position.y));
@@ -190,12 +190,12 @@ bool tryIgniteFurnace(World& world, sf::Vector2i position)
     furnace->cook_time_total     = smelt_it->second.cook_time;
     furnace->cook_time_remaining = smelt_it->second.cook_time;
 
-    if (--furnace->fuel.quantity == 0) furnace->fuel = {ItemID::None, 0};
+    if (--furnace->fuel.quantity == 0) furnace->fuel = {Items::None, 0};
 
     if (!FurnaceState::unpack(target.metadata).lit)
     {
         world.setBlock(position.x, position.y,
-                       {BlockID::Furnace, FurnaceState{true}.pack()});
+                       {Blocks::Furnace, FurnaceState{true}.pack()});
     }
     return true;
 }
@@ -203,12 +203,12 @@ bool tryIgniteFurnace(World& world, sf::Vector2i position)
 bool tryPlaceFire(World& world, sf::Vector2i position)
 {
     const Block target = world.getBlock(position.x, position.y);
-    if (target.id != BlockID::Air) return false;
+    if (target.id != Blocks::Air) return false;
 
     const Block below = world.getBlock(position.x, position.y - 1);
     if (!blockDatabase[below.id].solid) return false;
 
-    world.setBlock(position.x, position.y, {BlockID::Fire, 0});
+    world.setBlock(position.x, position.y, {Blocks::Fire, 0});
     return true;
 }
 

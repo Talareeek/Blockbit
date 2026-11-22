@@ -4,6 +4,14 @@
 
 namespace
 {
+    uint32_t legacyIdAt(const std::vector<uint8_t>& ids, std::size_t i)
+    {
+        return static_cast<uint32_t>(ids[i * 4])
+             | (static_cast<uint32_t>(ids[i * 4 + 1]) << 8)
+             | (static_cast<uint32_t>(ids[i * 4 + 2]) << 16)
+             | (static_cast<uint32_t>(ids[i * 4 + 3]) << 24);
+    }
+
     inline uint32_t mix32(uint32_t h)
     {
         h ^= h >> 16;
@@ -53,15 +61,15 @@ bool StructureTemplate::fromWorld(StructureRotation rot, int origin_x, int place
 Block StructureTemplate::pickFromPalette(int palette_index, uint32_t& rng_state) const
 {
     if (palette_index < 0 || palette_index >= static_cast<int>(palettes.size()))
-        return Block{BlockID::Air, 0};
+        return Block{Blocks::Air, 0};
 
     const StructurePalette& p = palettes[static_cast<std::size_t>(palette_index)];
-    if (p.blocks.empty()) return Block{BlockID::Air, 0};
+    if (p.blocks.empty()) return Block{Blocks::Air, 0};
 
     uint32_t total = 0;
     const std::size_t n = std::min(p.blocks.size(), p.weights.size());
     for (std::size_t i = 0; i < n; i++) total += p.weights[i];
-    if (total == 0) return Block{BlockID::Air, 0};
+    if (total == 0) return Block{Blocks::Air, 0};
 
     rng_state = mix32(rng_state + 0x9E3779B9u);
     const uint32_t roll = rng_state % total;
@@ -108,14 +116,14 @@ Tag StructureTemplate::serialize() const
     // dense. Two new optional arrays (palette index + probability) are written
     // only when any cell actually uses them so old-style templates stay
     // byte-for-byte compatible.
-    std::vector<uint8_t> ids;
+    TagList ids;
     std::vector<uint8_t> metas;
     std::vector<uint8_t> modes;
     std::vector<uint8_t> palette_indices; // 2 bytes LE per cell, 0xFFFF = none
     std::vector<uint8_t> probabilities;   // 1 byte per cell
 
     const std::size_t n = cells.size();
-    ids.reserve(n * 4);
+    ids.reserve(n);
     metas.reserve(n * 2);
     modes.reserve(n);
     palette_indices.reserve(n * 2);
@@ -126,11 +134,7 @@ Tag StructureTemplate::serialize() const
 
     for (const StructureCell& cell : cells)
     {
-        const uint32_t id = static_cast<uint32_t>(cell.block.id);
-        ids.push_back(static_cast<uint8_t>(id & 0xFF));
-        ids.push_back(static_cast<uint8_t>((id >> 8) & 0xFF));
-        ids.push_back(static_cast<uint8_t>((id >> 16) & 0xFF));
-        ids.push_back(static_cast<uint8_t>((id >> 24) & 0xFF));
+        ids.emplace_back(cell.block.id);
 
         const uint16_t meta = cell.block.metadata;
         metas.push_back(static_cast<uint8_t>(meta & 0xFF));
@@ -161,20 +165,16 @@ Tag StructureTemplate::serialize() const
         for (const StructurePalette& p : palettes)
         {
             TagCompound entry;
-            std::vector<uint8_t> pids;
+            TagList pids;
             std::vector<uint8_t> pmetas;
             std::vector<uint8_t> pweights;
             const std::size_t m = std::min(p.blocks.size(), p.weights.size());
-            pids.reserve(m * 4);
+            pids.reserve(m);
             pmetas.reserve(m * 2);
             pweights.reserve(m * 2);
             for (std::size_t i = 0; i < m; i++)
             {
-                const uint32_t id = static_cast<uint32_t>(p.blocks[i].id);
-                pids.push_back(static_cast<uint8_t>(id & 0xFF));
-                pids.push_back(static_cast<uint8_t>((id >> 8) & 0xFF));
-                pids.push_back(static_cast<uint8_t>((id >> 16) & 0xFF));
-                pids.push_back(static_cast<uint8_t>((id >> 24) & 0xFF));
+                pids.emplace_back(p.blocks[i].id);
 
                 const uint16_t meta = p.blocks[i].metadata;
                 pmetas.push_back(static_cast<uint8_t>(meta & 0xFF));
@@ -212,7 +212,7 @@ Tag StructureTemplate::serialize() const
         TagCompound entry;
         entry["rx"]     = Tag(static_cast<int32_t>(sp.rx));
         entry["ry"]     = Tag(static_cast<int32_t>(sp.ry));
-        entry["prefab"] = Tag(static_cast<int32_t>(sp.prefab));
+        entry["prefab"] = Tag(sp.prefab);
         spawn_list.emplace_back(entry);
     }
     c["spawns"] = Tag(spawn_list);
@@ -248,13 +248,18 @@ void StructureTemplate::deserialize(const Tag& tag)
     anchor_x = c.at("anchor_x").get<int32_t>();
     anchor_y = c.at("anchor_y").get<int32_t>();
 
-    const auto& ids   = c.at("cell_ids").get<std::vector<uint8_t>>();
+    const Tag& ids_tag = c.at("cell_ids");
     const auto& metas = c.at("cell_metas").get<std::vector<uint8_t>>();
     const auto& modes = c.at("cell_modes").get<std::vector<uint8_t>>();
 
     const std::size_t n = static_cast<std::size_t>(width) * static_cast<std::size_t>(height);
 
-    if (ids.size() != n * 4 || metas.size() != n * 2 || modes.size() != n)
+    const TagList* named_ids = ids_tag.type() == TagType::T_LIST ? &ids_tag.get<TagList>() : nullptr;
+    const std::vector<uint8_t>* numeric_ids = ids_tag.type() == TagType::T_BYTEARRAY
+        ? &ids_tag.get<std::vector<uint8_t>>() : nullptr;
+    if ((!named_ids && (!numeric_ids || numeric_ids->size() != n * 4))
+        || (named_ids && named_ids->size() != n)
+        || metas.size() != n * 2 || modes.size() != n)
         throw std::runtime_error("StructureTemplate: cell array size mismatch");
 
     cells.resize(n);
@@ -274,17 +279,13 @@ void StructureTemplate::deserialize(const Tag& tag)
 
     for (std::size_t i = 0; i < n; i++)
     {
-        const uint32_t id =
-              static_cast<uint32_t>(ids[i * 4 + 0])
-            | (static_cast<uint32_t>(ids[i * 4 + 1]) << 8)
-            | (static_cast<uint32_t>(ids[i * 4 + 2]) << 16)
-            | (static_cast<uint32_t>(ids[i * 4 + 3]) << 24);
-
         const uint16_t meta =
               static_cast<uint16_t>(metas[i * 2 + 0])
             | static_cast<uint16_t>(static_cast<uint16_t>(metas[i * 2 + 1]) << 8);
 
-        cells[i].block.id       = static_cast<BlockID>(id);
+        cells[i].block.id       = named_ids
+            ? (*named_ids)[i].get<std::string>()
+            : blockKeyFromLegacySave(legacyIdAt(*numeric_ids, i));
         cells[i].block.metadata = meta;
         cells[i].mode           = static_cast<StructurePlacementMode>(modes[i]);
 
@@ -310,20 +311,18 @@ void StructureTemplate::deserialize(const Tag& tag)
         {
             const TagCompound& entry = entry_tag.get<TagCompound>();
             StructurePalette p;
-            const auto& pids     = entry.at("ids").get<std::vector<uint8_t>>();
+            const Tag& pids_tag  = entry.at("ids");
+            const TagList* named_pids = pids_tag.type() == TagType::T_LIST ? &pids_tag.get<TagList>() : nullptr;
+            const std::vector<uint8_t>* numeric_pids = pids_tag.type() == TagType::T_BYTEARRAY
+                ? &pids_tag.get<std::vector<uint8_t>>() : nullptr;
             const auto& pmetas   = entry.at("metas").get<std::vector<uint8_t>>();
             const auto& pweights = entry.at("weights").get<std::vector<uint8_t>>();
-            const std::size_t m = pids.size() / 4;
+            const std::size_t m = named_pids ? named_pids->size()
+                : (numeric_pids ? numeric_pids->size() / 4 : 0);
             p.blocks.reserve(m);
             p.weights.reserve(m);
             for (std::size_t i = 0; i < m; i++)
             {
-                const uint32_t id =
-                      static_cast<uint32_t>(pids[i * 4 + 0])
-                    | (static_cast<uint32_t>(pids[i * 4 + 1]) << 8)
-                    | (static_cast<uint32_t>(pids[i * 4 + 2]) << 16)
-                    | (static_cast<uint32_t>(pids[i * 4 + 3]) << 24);
-
                 const uint16_t meta =
                       static_cast<uint16_t>(pmetas[i * 2 + 0])
                     | static_cast<uint16_t>(static_cast<uint16_t>(pmetas[i * 2 + 1]) << 8);
@@ -332,7 +331,9 @@ void StructureTemplate::deserialize(const Tag& tag)
                       static_cast<uint16_t>(pweights[i * 2 + 0])
                     | static_cast<uint16_t>(static_cast<uint16_t>(pweights[i * 2 + 1]) << 8);
 
-                p.blocks.push_back(Block{static_cast<BlockID>(id), meta});
+                const BlockKey key = named_pids ? (*named_pids)[i].get<std::string>()
+                    : blockKeyFromLegacySave(legacyIdAt(*numeric_pids, i));
+                p.blocks.push_back(Block{key, meta});
                 p.weights.push_back(w);
             }
             palettes.push_back(std::move(p));
@@ -367,7 +368,7 @@ void StructureTemplate::deserialize(const Tag& tag)
             StructureSpawn sp;
             sp.rx     = entry.at("rx").get<int32_t>();
             sp.ry     = entry.at("ry").get<int32_t>();
-            sp.prefab = static_cast<PrefabID>(entry.at("prefab").get<int32_t>());
+            sp.prefab = entry.at("prefab").get<std::string>();
             spawns.push_back(sp);
         }
     }

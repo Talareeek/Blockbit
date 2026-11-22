@@ -1,7 +1,6 @@
 {
     "category": "tool",
     "id": "blockbit:stone_shovel",
-    "legacy_id": 52,
     "max_durability": 131,
     "max_stack_size": 1,
     "name": "Stone Shovel",

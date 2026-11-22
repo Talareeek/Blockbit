@@ -41,15 +41,15 @@ private:
     sf::Vector2i table_position;
     UUID inventory_owner;
 
-    ItemStack input_stack{ItemID::None, 0};
-    ItemStack ruby_stack{ItemID::None, 0};
-    ItemStack cursor_stack{ItemID::None, 0};
+    ItemStack input_stack{Items::None, 0};
+    ItemStack ruby_stack{Items::None, 0};
+    ItemStack cursor_stack{Items::None, 0};
 
-    ItemStack last_input{ItemID::None, 0};
-    ItemStack last_ruby{ItemID::None, 0};
-    ItemStack last_output{ItemID::None, 0};
+    ItemStack last_input{Items::None, 0};
+    ItemStack last_ruby{Items::None, 0};
+    ItemStack last_output{Items::None, 0};
     std::array<ItemStack, 36> last_inventory{};
-    ItemStack last_cursor{ItemID::None, 0};
+    ItemStack last_cursor{Items::None, 0};
 
     std::deque<SetContentData> pending;
 
@@ -82,11 +82,11 @@ class ClientUpgradeView : public ClientView
 {
 private:
 
-    ItemStack input_stack{ItemID::None, 0};
-    ItemStack ruby_stack{ItemID::None, 0};
-    ItemStack output_stack{ItemID::None, 0};
+    ItemStack input_stack{Items::None, 0};
+    ItemStack ruby_stack{Items::None, 0};
+    ItemStack output_stack{Items::None, 0};
     std::array<ItemStack, 36> inventory_stacks{};
-    ItemStack cursor_stack{ItemID::None, 0};
+    ItemStack cursor_stack{Items::None, 0};
 
     std::deque<ViewEventData> pending;
 

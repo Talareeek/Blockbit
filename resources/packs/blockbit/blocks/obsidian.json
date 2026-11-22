@@ -4,7 +4,6 @@
     },
     "hardness": 50.0,
     "id": "blockbit:obsidian",
-    "legacy_id": 5,
     "mining": {
         "level": 5,
         "resistance": 50,

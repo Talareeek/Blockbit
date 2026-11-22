@@ -1,7 +1,6 @@
 {
     "category": "misc",
     "id": "blockbit:copper_ingot",
-    "legacy_id": 79,
     "max_stack_size": 64,
     "name": "Copper Ingot",
     "texture": "copper_ingot"

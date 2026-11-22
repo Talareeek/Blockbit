@@ -10,7 +10,6 @@
         "type": "throw_projectile"
     },
     "id": "blockbit:nuke_shot",
-    "legacy_id": 9,
     "max_stack_size": 16,
     "name": "Nuke Shot",
     "rarity": "mythic",

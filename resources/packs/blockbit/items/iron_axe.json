@@ -3,7 +3,6 @@
     "category": "tool",
     "damage": 9,
     "id": "blockbit:iron_axe",
-    "legacy_id": 47,
     "max_durability": 250,
     "max_stack_size": 1,
     "name": "Iron Axe",

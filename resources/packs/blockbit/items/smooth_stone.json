@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:smooth_stone",
-    "legacy_id": 67,
     "max_stack_size": 64,
     "name": "Smooth Stone",
     "texture": "smooth_stone"

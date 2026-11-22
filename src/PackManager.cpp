@@ -1,4 +1,389 @@
-#include "../include/PackLoader.hpp"
+#include "../include/PackManager.hpp"
+#include "../include/GameRegistries.hpp"
+
+#include <algorithm>
+#include <cstdlib>
+#include <filesystem>
+#include <iostream>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
+#include "../include/AssetManager.hpp"
+#include "../include/ContentProfiles.hpp"
+#include "../include/GameCommon.hpp"
+#include "../include/Item.hpp"
+#include "../include/Prefab.hpp"
+#include "../include/PrefabLoader.hpp"
+
+namespace
+{
+
+// Install entries under their canonical names. RuntimeIDs are an internal
+// lookup detail; world data and wire payloads carry these full names.
+void installPack(const PackLoader::LoadResult& pack)
+{
+    auto& reg = gameRegistries();
+
+    for (const auto& lb : pack.blocks)
+    {
+        blockDatabase[lb.key] = lb.data;
+        reg.blocks.registerEntry(lb.key, lb.data);
+    }
+
+    for (const auto& li : pack.items)
+    {
+        itemDatabase[li.key] = li.data;
+        reg.items.registerEntry(li.key, li.data);
+    }
+}
+
+// Resolve the string refs captured during JSON parse into concrete BlockKey
+// / ItemKey values. Runs after every pack is installed so cross-pack refs
+// (vanilla block dropping a modpack item, modpack block whose grows_as is
+// a vanilla block) resolve through the fully-populated registry.
+void resolveRefs(const PackLoader::LoadResult& pack)
+{
+    auto& reg = gameRegistries();
+
+    auto resolveItem = [&](const std::string& key,
+                           const std::string& context) -> ItemKey
+    {
+        if (key.empty()) return ItemKey{};
+        if (reg.items.find(key).has_value()) return key;
+        std::cerr << "[Pack] unresolved item ref '" << key
+                  << "' in " << context << " — falling back to air\n";
+        return ItemKey{};
+    };
+
+    auto resolveBlock = [&](const std::string& key,
+                            const std::string& context) -> BlockKey
+    {
+        if (key.empty()) return BlockKey{};
+        if (reg.blocks.find(key).has_value()) return key;
+        std::cerr << "[Pack] unresolved block ref '" << key
+                  << "' in " << context << " — falling back to air\n";
+        return BlockKey{};
+    };
+
+    for (const auto& lb : pack.blocks)
+    {
+        auto it = blockDatabase.find(lb.key);
+        if (it == blockDatabase.end()) continue;
+        auto& bd = it->second;
+
+        // Empty string refs mean the corresponding behavior is not configured.
+        if (bd.drop.has_value())
+        {
+            if (!lb.drop_item.empty())
+                bd.drop->drop = resolveItem(lb.drop_item, lb.key + ".drop.item");
+            if (!lb.drop_alternative_item.empty())
+                bd.drop->alternative_drop = resolveItem(lb.drop_alternative_item, lb.key + ".drop.alternative_item");
+        }
+
+        if (!lb.support_blocks_below.empty())
+        {
+            bd.support_blocks_below.clear();
+            bd.support_blocks_below.reserve(lb.support_blocks_below.size());
+            for (const auto& key : lb.support_blocks_below)
+                bd.support_blocks_below.push_back(resolveBlock(key, lb.key + ".support_blocks_below"));
+        }
+
+        if (bd.behavior.type == BlockBehaviorType::PlantGrowth && !lb.plant_grows_as.empty())
+        {
+            if (auto* p = std::get_if<PlantGrowthParams>(&bd.behavior.params))
+                p->grows_as = resolveBlock(lb.plant_grows_as, lb.key + ".behavior.grows_as");
+        }
+    }
+
+    for (const auto& li : pack.items)
+    {
+        auto it = itemDatabase.find(li.key);
+        if (it == itemDatabase.end()) continue;
+        auto& id = it->second;
+
+        if (id.behavior.type == ItemBehaviorType::FluidBucket)
+        {
+            if (auto* p = std::get_if<FluidBucketParams>(&id.behavior.params))
+            {
+                if (!li.fluid_bucket_fluid.empty())
+                    p->fluid = resolveBlock(li.fluid_bucket_fluid, li.key + ".behavior.fluid");
+                if (!li.fluid_bucket_empty_variant.empty())
+                    p->empty_variant = resolveItem(li.fluid_bucket_empty_variant, li.key + ".behavior.empty_variant");
+                if (!li.fluid_bucket_filled_variant.empty())
+                    p->filled_variant = resolveItem(li.fluid_bucket_filled_variant, li.key + ".behavior.filled_variant");
+            }
+        }
+    }
+}
+
+void installPrefabs(const std::filesystem::path& dir, const std::string& ns)
+{
+    auto scan = PrefabLoader::scanPrefabs(dir, ns);
+    if (!scan.ok)
+    {
+        std::cerr << "[Pack] prefab load error in '" << ns << "': " << scan.error << '\n';
+        return;
+    }
+    auto& reg = gameRegistries();
+    for (auto& lp : scan.prefabs)
+    {
+        // Entity is move-only; store via the UUID-remapping clone so the
+        // registry's template never aliases a live world entity's UUID.
+        reg.prefabs.insert_or_assign(lp.key, lp.data.cloneAs(UUID{}));
+    }
+    if (!scan.prefabs.empty())
+        std::cout << "[Pack] '" << ns << "' contributed "
+                  << scan.prefabs.size() << " prefab(s)\n";
+}
+
+// Kahn's algorithm. Returns a dependency-respecting order over the modpack
+// list, or an empty vector with an error message written to std::cerr when
+// something is missing / cyclic. Vanilla ('blockbit') is NEVER listed here —
+// callers load it first and treat it as a synthetic root. Any modpack
+// listing 'blockbit' in its depends is satisfied automatically since vanilla
+// is loaded before this returns.
+std::vector<PackLoader::LoadResult>
+topoSortModpacks(std::vector<PackLoader::LoadResult> packs)
+{
+    std::unordered_map<std::string, std::size_t> index_by_id;
+    for (std::size_t i = 0; i < packs.size(); ++i) index_by_id[packs[i].manifest.id] = i;
+
+    // Count unmet (non-self) deps for each node. "blockbit" is assumed met.
+    std::vector<std::size_t> indeg(packs.size(), 0);
+    std::vector<std::vector<std::size_t>> adj(packs.size());
+
+    for (std::size_t i = 0; i < packs.size(); ++i)
+    {
+        for (const auto& dep : packs[i].manifest.depends)
+        {
+            if (dep == "blockbit") continue;
+            auto it = index_by_id.find(dep);
+            if (it == index_by_id.end())
+            {
+                std::cerr << "[Pack] '" << packs[i].manifest.id
+                          << "' depends on missing pack '" << dep
+                          << "' — skipping the dependent and its dependers.\n";
+                return {};
+            }
+            adj[it->second].push_back(i);
+            ++indeg[i];
+        }
+    }
+
+    std::vector<std::size_t> ready;
+    for (std::size_t i = 0; i < packs.size(); ++i) if (indeg[i] == 0) ready.push_back(i);
+
+    std::vector<PackLoader::LoadResult> out;
+    out.reserve(packs.size());
+    while (!ready.empty())
+    {
+        const auto n = ready.back();
+        ready.pop_back();
+        out.push_back(std::move(packs[n]));
+        for (auto m : adj[n])
+            if (--indeg[m] == 0) ready.push_back(m);
+    }
+
+    if (out.size() != packs.size())
+    {
+        std::cerr << "[Pack] dependency cycle detected — "
+                  << (packs.size() - out.size())
+                  << " pack(s) skipped. Remaining in sort: " << out.size() << ".\n";
+    }
+    return out;
+}
+
+} // namespace
+
+void PackManager::loadAllContent()
+{
+    auto& reg = gameRegistries();
+
+    reg.blocks.clear();
+    reg.items.clear();
+    reg.textures.clear();
+    reg.prefabs.clear();
+    reg.loaded_packs.clear();
+    blockDatabase.clear();
+    itemDatabase.clear();
+
+    RuntimeID next_texture = ContentProfiles::firstDynamicTextureId();
+
+    // --- vanilla ----------------------------------------------------------
+    auto vanilla = PackLoader::loadPack("resources/packs/blockbit", next_texture);
+    if (!vanilla.ok)
+    {
+        std::cerr << "[Pack] FATAL: cannot load vanilla pack: " << vanilla.error << '\n';
+        std::cerr << "[Pack] Expected at resources/packs/blockbit/ (relative to CWD).\n";
+        std::exit(1);
+    }
+    std::cout << "[Pack] Loaded '" << vanilla.manifest.id
+              << "' v" << vanilla.manifest.version
+              << " hash=" << std::hex << vanilla.hash << std::dec
+              << " — " << vanilla.blocks.size() << " blocks, "
+              << vanilla.items.size() << " items\n";
+
+    // --- modpack discovery ------------------------------------------------
+    std::vector<PackLoader::LoadResult> modpacks;
+    const std::filesystem::path packs_root = getHomePath() / "Blockbit" / "packs";
+    if (std::filesystem::exists(packs_root))
+    {
+        std::error_code ec;
+        std::vector<std::filesystem::path> pack_dirs;
+        for (const auto& entry : std::filesystem::directory_iterator(packs_root, ec))
+        {
+            if (!entry.is_directory()) continue;
+            if (!std::filesystem::exists(entry.path() / "pack.json")) continue;
+            pack_dirs.push_back(entry.path());
+        }
+        std::sort(pack_dirs.begin(), pack_dirs.end());
+
+        for (const auto& pack_dir : pack_dirs)
+        {
+
+            auto mod = PackLoader::loadPack(pack_dir, next_texture);
+            if (!mod.ok)
+            {
+                std::cerr << "[Pack] Skipping " << pack_dir
+                          << ": " << mod.error << '\n';
+                continue;
+            }
+            if (mod.manifest.id == "blockbit")
+            {
+                std::cerr << "[Pack] Skipping " << pack_dir
+                          << ": reserved namespace 'blockbit'\n";
+                continue;
+            }
+            std::cout << "[Pack] Loaded '" << mod.manifest.id
+                      << "' v" << mod.manifest.version
+                      << " hash=" << std::hex << mod.hash << std::dec
+                      << " — " << mod.blocks.size() << " blocks, "
+                      << mod.items.size() << " items\n";
+            modpacks.push_back(std::move(mod));
+        }
+    }
+
+    // --- install vanilla first, then modpacks in dependency order. -------
+    installPack(vanilla);
+
+    // Seed the live spawn table with vanilla defaults — modpack
+    // spawn_rules/*.json files append on top.
+    reg.spawn_config = defaultMobSpawnConfig();
+
+    installPrefabs("resources/packs/blockbit", vanilla.manifest.id);
+    {
+        LoadedPackSummary s{vanilla.manifest.id, vanilla.manifest.version,
+                            vanilla.manifest.description, vanilla.hash, {}};
+        const std::filesystem::path icon = std::filesystem::path("resources/packs/blockbit") / "icon.png";
+        if (std::filesystem::exists(icon)) s.icon_path = std::filesystem::absolute(icon).string();
+        reg.loaded_packs.push_back(std::move(s));
+    }
+
+    modpacks = topoSortModpacks(std::move(modpacks));
+    for (const auto& mod : modpacks)
+    {
+        std::cout << "[Pack] Installing '" << mod.manifest.id << "'\n";
+        installPack(mod);
+        installPrefabs(packs_root / mod.manifest.id, mod.manifest.id);
+        if (const auto added = PackLoader::scanPackSpawnRules(
+                packs_root / mod.manifest.id, mod.manifest.id, reg.spawn_config))
+        {
+            std::cout << "[Pack] '" << mod.manifest.id
+                      << "' contributed " << added << " spawn entr(y|ies)\n";
+        }
+
+        LoadedPackSummary s{mod.manifest.id, mod.manifest.version,
+                            mod.manifest.description, mod.hash, {}};
+        const std::filesystem::path icon = packs_root / mod.manifest.id / "icon.png";
+        if (std::filesystem::exists(icon)) s.icon_path = std::filesystem::absolute(icon).string();
+        reg.loaded_packs.push_back(std::move(s));
+    }
+
+    // Every pack is now registered — resolve string cross-refs (drops,
+    // support blocks, plant_growth target, fluid-bucket variants) against
+    // the fully-populated registry.
+    resolveRefs(vanilla);
+    for (const auto& mod : modpacks) resolveRefs(mod);
+
+    // Recipes rely on item-key resolution, so they load after resolveRefs.
+    recipes.clear();
+    smeltingRecipes.clear();
+    fuelBurnTimes.clear();
+    {
+        const auto added = PackLoader::scanPackRecipes("resources/packs/blockbit",
+                                                       vanilla.manifest.id);
+        if (added > 0)
+            std::cout << "[Pack] 'blockbit' loaded " << added << " recipe(s)\n";
+    }
+    for (const auto& mod : modpacks)
+    {
+        const auto added = PackLoader::scanPackRecipes(packs_root / mod.manifest.id,
+                                                       mod.manifest.id);
+        if (added > 0)
+            std::cout << "[Pack] '" << mod.manifest.id << "' loaded "
+                      << added << " recipe(s)\n";
+    }
+
+    // Structures — loaded last so modpacks referencing vanilla biomes/blocks
+    // work. Templates stay in their original .bbt format; only the placement
+    // rule and the pointer-to-.bbt live in JSON.
+    {
+        const auto added = PackLoader::scanPackStructures("resources/packs/blockbit",
+                                                          vanilla.manifest.id);
+        if (added > 0)
+            std::cout << "[Pack] 'blockbit' loaded " << added << " structure(s)\n";
+    }
+    for (const auto& mod : modpacks)
+    {
+        const auto added = PackLoader::scanPackStructures(packs_root / mod.manifest.id,
+                                                          mod.manifest.id);
+        if (added > 0)
+            std::cout << "[Pack] '" << mod.manifest.id << "' loaded "
+                      << added << " structure(s)\n";
+    }
+
+    // Loot tables + jigsaw pools follow structures. Pool entries resolve to
+    // Structure keys resolve when chain expansion runs; if a modpack declares
+    // a pool before its structures are registered, it simply yields no match at
+    // runtime instead of crashing.
+    {
+        const auto added = PackLoader::scanPackLootTables("resources/packs/blockbit",
+                                                          vanilla.manifest.id);
+        if (added > 0)
+            std::cout << "[Pack] 'blockbit' loaded " << added << " loot table(s)\n";
+    }
+    for (const auto& mod : modpacks)
+    {
+        const auto added = PackLoader::scanPackLootTables(packs_root / mod.manifest.id,
+                                                          mod.manifest.id);
+        if (added > 0)
+            std::cout << "[Pack] '" << mod.manifest.id << "' loaded "
+                      << added << " loot table(s)\n";
+    }
+    {
+        const auto added = PackLoader::scanPackJigsawPools("resources/packs/blockbit",
+                                                           vanilla.manifest.id);
+        if (added > 0)
+            std::cout << "[Pack] 'blockbit' loaded " << added << " jigsaw pool(s)\n";
+    }
+    for (const auto& mod : modpacks)
+    {
+        const auto added = PackLoader::scanPackJigsawPools(packs_root / mod.manifest.id,
+                                                           mod.manifest.id);
+        if (added > 0)
+            std::cout << "[Pack] '" << mod.manifest.id << "' loaded "
+                      << added << " jigsaw pool(s)\n";
+    }
+
+    std::cout << "[Pack] " << reg.loaded_packs.size() << " packs active — "
+              << reg.blocks.size() << " blocks, "
+              << reg.items.size()  << " items total\n";
+}
+
+
+// Pack file parsing and auxiliary content scanners.
+#include "../include/PackManager.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -68,10 +453,10 @@ bool parseItemBehaviorJson(const nlohmann::json& j, ItemBehavior& out, std::stri
         case ItemBehaviorType::FluidBucket:
         {
             FluidBucketParams p{};
-            p.fluid              = BlockID{};  // patched during resolution
+            p.fluid              = BlockKey{};  // patched during resolution
             p.source_level_value = static_cast<uint8_t>(params.value("source_level_value", 0));
-            p.empty_variant      = ItemID{};
-            p.filled_variant     = ItemID{};
+            p.empty_variant      = ItemKey{};
+            p.filled_variant     = ItemKey{};
             out.params = p;
             return true;
         }
@@ -123,10 +508,15 @@ bool parseBlockBehaviorJson(const nlohmann::json& j, BlockBehavior& out, std::st
         {
             GravityBlockParams p{};
             p.fall_delay_ticks = params.value("fall_delay_ticks", 0u);
-            const std::string prefab_name = params.value("falling_prefab", "falling_block");
-            if (auto pr = ContentProfiles::prefabFromName(prefab_name); pr.has_value())
-                p.falling_prefab = *pr;
-            else { err = "unknown falling_prefab '" + prefab_name + "'"; return false; }
+            const std::string prefab_name = params.value("falling_prefab", "blockbit:falling_block");
+            p.falling_prefab = prefab_name.find(':') == std::string::npos
+                ? "blockbit:" + prefab_name
+                : prefab_name;
+            if (!gameRegistries().prefabs.contains(p.falling_prefab))
+            {
+                err = "unknown falling_prefab '" + p.falling_prefab + "'";
+                return false;
+            }
             out.params = p;
             return true;
         }
@@ -135,7 +525,7 @@ bool parseBlockBehaviorJson(const nlohmann::json& j, BlockBehavior& out, std::st
         {
             PlantGrowthParams p{};
             p.max_height = static_cast<uint8_t>(params.value("max_height", 1));
-            p.grows_as   = BlockID{}; // patched during resolution
+            p.grows_as   = BlockKey{}; // patched during resolution
             out.params = p;
             return true;
         }
@@ -234,12 +624,6 @@ bool parseBlock(const std::filesystem::path& file, LoadedBlock& out, std::string
         return false;
     }
 
-    if (j.contains("legacy_id"))
-    {
-        out.legacy_id     = static_cast<decltype(out.legacy_id)>(j["legacy_id"].get<int>());
-        out.has_legacy_id = true;
-    }
-
     BlockData& b = out.data;
     b.solid       = j.value("solid", false);
     b.transparent = j.value("transparent", true);
@@ -297,11 +681,11 @@ bool parseBlock(const std::filesystem::path& file, LoadedBlock& out, std::string
         const auto& d = j["drop"];
         DropProperties dp{};
         dp.always_drop             = d.value("always", false);
-        dp.drop                    = ItemID{}; // patched during resolution
+        dp.drop                    = ItemKey{}; // patched during resolution
         dp.min_amount              = static_cast<uint8_t>(d.value("min", 1));
         dp.max_amount              = static_cast<uint8_t>(d.value("max", 1));
         dp.alternative_drop_chance = d.value("alternative_chance", 0.0f);
-        dp.alternative_drop        = ItemID{}; // patched during resolution
+        dp.alternative_drop        = ItemKey{}; // patched during resolution
         b.drop = dp;
         out.drop_item             = d.value("item",             std::string{});
         out.drop_alternative_item = d.value("alternative_item", std::string{});
@@ -374,12 +758,6 @@ bool parseItem(const std::filesystem::path& file, LoadedItem& out, std::string& 
     {
         err = file.string() + ": invalid key '" + out.key + "'";
         return false;
-    }
-
-    if (j.contains("legacy_id"))
-    {
-        out.legacy_id     = static_cast<decltype(out.legacy_id)>(j["legacy_id"].get<int>());
-        out.has_legacy_id = true;
     }
 
     ItemData& it = out.data;
@@ -825,8 +1203,7 @@ std::size_t scanPackStructures(const std::filesystem::path& packDir,
         if (j.contains("allow_mirror_y") && j["allow_mirror_y"].is_boolean())
             tmpl.allow_mirror_y = j["allow_mirror_y"].get<bool>();
 
-        const auto id = structureIdFromKey(key);
-        StructureRegistry::add(id, std::move(tmpl), std::move(rule));
+        StructureRegistry::add(key, std::move(tmpl), std::move(rule));
         ++count;
     }
     return count;
@@ -912,7 +1289,7 @@ std::size_t scanPackLootTables(const std::filesystem::path& packDir,
                 continue;
             }
             LootTableEntry le;
-            le.item      = static_cast<ItemID>(*rid);
+            le.item      = item_key;
             le.min_count = static_cast<uint16_t>(e.value("min",    1));
             le.max_count = static_cast<uint16_t>(e.value("max",    1));
             le.weight    = static_cast<uint16_t>(e.value("weight", 1));
@@ -993,7 +1370,7 @@ std::size_t scanPackJigsawPools(const std::filesystem::path& packDir,
                 const std::string skey = e.value("structure", std::string{});
                 if (skey.empty()) continue;
                 JigsawPoolEntry pe;
-                pe.id     = structureIdFromKey(skey);
+                pe.id     = skey;
                 pe.weight = static_cast<uint16_t>(e.value("weight", 1));
                 entries.push_back(pe);
             }
@@ -1021,11 +1398,11 @@ std::size_t scanPackRecipes(const std::filesystem::path& packDir,
 
     auto resolveItem = [&](const std::string& key,
                            const std::string& context,
-                           ItemID& out) -> bool
+                           ItemKey& out) -> bool
     {
         if (auto rid = item_reg.find(key); rid.has_value())
         {
-            out = static_cast<ItemID>(*rid);
+            out = key;
             return true;
         }
         std::cerr << "[Pack] recipe unresolved item '" << key
@@ -1075,7 +1452,7 @@ std::size_t scanPackRecipes(const std::filesystem::path& packDir,
                 std::cerr << "[Pack] recipe " << ctx << ": crafting needs output+ingredients\n";
                 continue;
             }
-            ItemID out_item{};
+            ItemKey out_item{};
             if (!resolveItem(j["output"].value("item", std::string{}), ctx + ".output", out_item))
                 continue;
             ItemStack output{out_item, j["output"].value("quantity", 1u)};
@@ -1086,7 +1463,7 @@ std::size_t scanPackRecipes(const std::filesystem::path& packDir,
             bool ok = true;
             for (const auto& ing : j["ingredients"])
             {
-                ItemID iid{};
+                ItemKey iid{};
                 if (!resolveItem(ing.value("item", std::string{}), ctx + ".ingredient", iid))
                 { ok = false; break; }
                 r.ingredients.push_back({iid, ing.value("quantity", 1u)});
@@ -1098,7 +1475,7 @@ std::size_t scanPackRecipes(const std::filesystem::path& packDir,
         }
         else if (type == "smelting")
         {
-            ItemID in_item{}, out_item{};
+            ItemKey in_item{}, out_item{};
             if (!resolveItem(j.value("input",  std::string{}), ctx + ".input",  in_item))  continue;
             if (!resolveItem(j.value("output", std::string{}), ctx + ".output", out_item)) continue;
             smeltingRecipes[in_item] = SmeltRecipe{out_item, j.value("cook_time", 10.0f)};
@@ -1106,7 +1483,7 @@ std::size_t scanPackRecipes(const std::filesystem::path& packDir,
         }
         else if (type == "fuel")
         {
-            ItemID iid{};
+            ItemKey iid{};
             if (!resolveItem(j.value("item", std::string{}), ctx + ".item", iid)) continue;
             fuelBurnTimes[iid] = j.value("burn_time", 1.0f);
             ++count;

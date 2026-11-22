@@ -3,7 +3,7 @@
 
 ChestBlockEntity::ChestBlockEntity(sf::Vector2i position) : BlockEntity(position)
 {
-    for (auto& stack : stacks) stack = {ItemID::None, 0};
+    for (auto& stack : stacks) stack = {Items::None, 0};
 }
 
 void ChestBlockEntity::tick(World&, float)
@@ -29,7 +29,7 @@ Tag ChestBlockEntity::serialize() const
 
 void ChestBlockEntity::deserialize(const Tag& tag)
 {
-    for (auto& stack : stacks) stack = {ItemID::None, 0};
+    for (auto& stack : stacks) stack = {Items::None, 0};
 
     const auto& compound = tag.get<TagCompound>();
     auto it = compound.find("stacks");

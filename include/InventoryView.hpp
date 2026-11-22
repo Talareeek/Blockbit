@@ -33,10 +33,10 @@ private:
 
     UUID owner;
 
-    ItemStack cursor_stack{ItemID::None, 0};
+    ItemStack cursor_stack{Items::None, 0};
 
     std::array<ItemStack, INVENTORY_VIEW_SLOT_COUNT> last_slots{};
-    ItemStack last_cursor{ItemID::None, 0};
+    ItemStack last_cursor{Items::None, 0};
 
     std::deque<SetContentData> pending;
 
@@ -68,12 +68,12 @@ class ClientInventoryView : public ClientView
 private:
 
     ItemStack slot_stacks[INVENTORY_VIEW_SLOT_COUNT]{};
-    ItemStack cursor_stack{ItemID::None, 0};
+    ItemStack cursor_stack{Items::None, 0};
 
     Slot slots[INVENTORY_VIEW_SLOT_COUNT];
 
     std::vector<Slot> crafting_slots;
-    ItemStack selected_recipe{ItemID::None, 0};
+    ItemStack selected_recipe{Items::None, 0};
 
     sf::FloatRect craft_button_bounds{};
     sf::FloatRect craft_all_button_bounds{};

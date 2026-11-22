@@ -9,7 +9,6 @@
 #include "Block.hpp"
 #include "Behavior.hpp"
 #include "Item.hpp"
-#include "Prefab.hpp"
 
 // String ↔ enum lookups used by the JSON pack loader (PackLoader) and its
 // one-shot counterpart (VanillaExporter). The strings here are the canonical
@@ -37,8 +36,6 @@ void registerTextureKey(const std::string& key, RuntimeID id);
 RuntimeID firstDynamicTextureId();
 
 // --- Prefab ----------------------------------------------------------------
-std::optional<PrefabID> prefabFromName(std::string_view name);
-std::string             nameFromPrefab(PrefabID id);
 
 // --- Tool / category / rarity ---------------------------------------------
 std::optional<ToolType>     toolTypeFromName(std::string_view name);

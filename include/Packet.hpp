@@ -56,9 +56,8 @@ enum class PacketType : uint8_t
 
     // Sent by the server immediately after Initialization and before any
     // chunks/snapshots. Carries the server's live block+item registries
-    // (RegistryKey → RuntimeID) so the client can align its own runtime ids.
-    // For Phase 1a-E the client just validates its hardcoded vanilla matches;
-    // Phase 2 will drive content-pack sync off this packet.
+    // (RegistryKey → RuntimeID). Content-bearing packets use full keys, so
+    // RuntimeIDs can differ between client and server without corrupting data.
     RegistrySync,
 
     // Server → client, sent before RegistrySync. Lists every pack the
@@ -251,16 +250,15 @@ struct ViewEventPacket
     std::vector<uint8_t> payload;
 };
 
-// One-shot visual effect broadcast. effect/arg are kept opaque at the protocol
-// layer; the client maps `effect` to ParticleEffect (ParticleManager.hpp) and
-// uses `arg` per-effect (e.g. BlockID for BlockDust).
+// One-shot visual effect broadcast. `arg` carries a full block key when the
+// effect uses block-specific visuals.
 struct ParticleBurstPacket
 {
     sf::Vector2<double> position;
     uint16_t            effect;
     uint16_t            count;
     float               spread;
-    uint32_t            arg;
+    BlockKey            arg;
 };
 
 class PacketWriter

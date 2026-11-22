@@ -51,9 +51,9 @@ namespace
         return &entity.getComponent<InventoryComponent>();
     }
 
-    bool isUpgradableTool(ItemID id)
+    bool isUpgradableTool(ItemKey id)
     {
-        return id == ItemID::Ruby_Pickaxe || id == ItemID::Ruby_Axe || id == ItemID::Ruby_Shovel;
+        return id == Items::Ruby_Pickaxe || id == Items::Ruby_Axe || id == Items::Ruby_Shovel;
     }
 }
 
@@ -73,14 +73,14 @@ ItemStack ServerUpgradeView::computeOutputPreview() const
     // The output slot is a read-only mirror: it shows the input item at
     // level+1 when there is enough ruby in the catalyst slot. Nothing is
     // actually consumed until the player clicks the output.
-    if (!isUpgradableTool(input_stack.itemID)) return {ItemID::None, 0};
-    if (input_stack.quantity == 0) return {ItemID::None, 0};
+    if (!isUpgradableTool(input_stack.itemID)) return {Items::None, 0};
+    if (input_stack.quantity == 0) return {Items::None, 0};
 
     uint8_t current = getRubynessLevel(input_stack);
-    if (current >= RUBYNESS_MAX_LEVEL) return {ItemID::None, 0};
+    if (current >= RUBYNESS_MAX_LEVEL) return {Items::None, 0};
 
     uint32_t cost = current;  // alpha(1)->beta = 1 ruby, beta(2)->gamma = 2, ...
-    if (ruby_stack.itemID != ItemID::Ruby || ruby_stack.quantity < cost) return {ItemID::None, 0};
+    if (ruby_stack.itemID != Items::Ruby || ruby_stack.quantity < cost) return {Items::None, 0};
 
     // Preview stack: same item, quantity 1, no instanceID — the preview is
     // transient and shouldn't be confused with a real stacked item.
@@ -115,7 +115,7 @@ void ServerUpgradeView::takeOutput(World& world)
     if (current >= RUBYNESS_MAX_LEVEL) return;
 
     uint32_t cost = current;
-    if (ruby_stack.itemID != ItemID::Ruby || ruby_stack.quantity < cost) return;
+    if (ruby_stack.itemID != Items::Ruby || ruby_stack.quantity < cost) return;
 
     // The upgraded tool has to be the one in the input slot (keeping its
     // durability / enchantments). We just bump its Rubyness level and hand
@@ -141,10 +141,10 @@ void ServerUpgradeView::takeOutput(World& world)
 
     // Consume exactly one tool and the ruby cost.
     input_stack.quantity -= 1;
-    if (input_stack.quantity == 0) input_stack = {ItemID::None, 0};
+    if (input_stack.quantity == 0) input_stack = {Items::None, 0};
 
     ruby_stack.quantity -= cost;
-    if (ruby_stack.quantity == 0) ruby_stack = {ItemID::None, 0};
+    if (ruby_stack.quantity == 0) ruby_stack = {Items::None, 0};
 
     if (auto* inv = getInventoryComponent(world, inventory_owner)) inv->dirty = true;
 }
@@ -170,7 +170,7 @@ void ServerUpgradeView::handleLeftClick(World& world, uint16_t slot)
     }
     if (slot == UPGRADE_VIEW_RUBY_SLOT
         && !cursor_stack.empty()
-        && cursor_stack.itemID != ItemID::Ruby)
+        && cursor_stack.itemID != Items::Ruby)
     {
         return;
     }
@@ -180,12 +180,12 @@ void ServerUpgradeView::handleLeftClick(World& world, uint16_t slot)
     if (cursor_stack.empty())
     {
         cursor_stack = stack;
-        stack = {ItemID::None, 0};
+        stack = {Items::None, 0};
     }
     else if (stack.empty())
     {
         stack = cursor_stack;
-        cursor_stack = {ItemID::None, 0};
+        cursor_stack = {Items::None, 0};
     }
     else if (canStack(stack, cursor_stack))
     {
@@ -193,7 +193,7 @@ void ServerUpgradeView::handleLeftClick(World& world, uint16_t slot)
         uint32_t can_add = std::min(cursor_stack.quantity, (max_stack > stack.quantity) ? (max_stack - stack.quantity) : 0u);
         stack.quantity += can_add;
         cursor_stack.quantity -= can_add;
-        if (cursor_stack.quantity == 0) cursor_stack = {ItemID::None, 0};
+        if (cursor_stack.quantity == 0) cursor_stack = {Items::None, 0};
     }
     else
     {
@@ -218,7 +218,7 @@ void ServerUpgradeView::handleRightClick(World& world, uint16_t slot)
     }
     if (slot == UPGRADE_VIEW_RUBY_SLOT
         && !cursor_stack.empty()
-        && cursor_stack.itemID != ItemID::Ruby)
+        && cursor_stack.itemID != Items::Ruby)
     {
         return;
     }
@@ -231,14 +231,14 @@ void ServerUpgradeView::handleRightClick(World& world, uint16_t slot)
         if (stack.isUnique())
         {
             cursor_stack = stack;
-            stack = {ItemID::None, 0};
+            stack = {Items::None, 0};
         }
         else
         {
             uint32_t half = (stack.quantity + 1) / 2;
             cursor_stack = {stack.itemID, half};
             stack.quantity -= half;
-            if (stack.quantity == 0) stack.itemID = ItemID::None;
+            if (stack.quantity == 0) stack.itemID = Items::None;
         }
     }
     else if (stack.empty())
@@ -246,12 +246,12 @@ void ServerUpgradeView::handleRightClick(World& world, uint16_t slot)
         if (cursor_stack.isUnique())
         {
             stack = cursor_stack;
-            cursor_stack = {ItemID::None, 0};
+            cursor_stack = {Items::None, 0};
         }
         else
         {
             stack = {cursor_stack.itemID, 1};
-            if (--cursor_stack.quantity == 0) cursor_stack = {ItemID::None, 0};
+            if (--cursor_stack.quantity == 0) cursor_stack = {Items::None, 0};
         }
     }
     else if (canStack(stack, cursor_stack))
@@ -260,7 +260,7 @@ void ServerUpgradeView::handleRightClick(World& world, uint16_t slot)
         if (stack.quantity < max_stack)
         {
             stack.quantity++;
-            if (--cursor_stack.quantity == 0) cursor_stack = {ItemID::None, 0};
+            if (--cursor_stack.quantity == 0) cursor_stack = {Items::None, 0};
         }
     }
     else
@@ -336,7 +336,7 @@ void ServerUpgradeView::onOpen(World& world)
         const auto& slots = inv->inventory.slots;
         for (uint16_t i = 0; i < 36; ++i)
         {
-            ItemStack stack = (i < slots.size()) ? slots[i] : ItemStack{ItemID::None, 0};
+            ItemStack stack = (i < slots.size()) ? slots[i] : ItemStack{Items::None, 0};
             last_inventory[i] = stack;
             pushSlotUpdate(UPGRADE_VIEW_PLAYER_OFFSET + i, stack);
         }
@@ -359,7 +359,7 @@ void ServerUpgradeView::onClose(World& world)
     {
         if (stack.empty()) return;
         ItemStack leftover = inventory.addStackWithLeftover(stack);
-        stack = {ItemID::None, 0};
+        stack = {Items::None, 0};
         if (!leftover.empty() && player.hasComponent<TransformComponent>())
         {
             const auto& transform = player.getComponent<TransformComponent>();

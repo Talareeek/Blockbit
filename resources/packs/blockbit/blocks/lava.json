@@ -10,7 +10,6 @@
     "callbacks": "lava",
     "drag": 8.0,
     "id": "blockbit:lava",
-    "legacy_id": 8,
     "lets_light": true,
     "light_emission": 15,
     "light_opacity": 3,

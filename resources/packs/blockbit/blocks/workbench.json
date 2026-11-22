@@ -5,7 +5,6 @@
     },
     "hardness": 2.0,
     "id": "blockbit:workbench",
-    "legacy_id": 33,
     "mining": {
         "level": 1,
         "resistance": 5,

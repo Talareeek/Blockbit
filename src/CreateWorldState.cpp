@@ -41,50 +41,50 @@
 
 namespace
 {
-    constexpr std::array<BlockID, 39> BLOCK_OPTIONS
+    const std::array<BlockKey, 39> BLOCK_OPTIONS
     {
-        BlockID::Air,
-        BlockID::Bedrock,
-        BlockID::Stone,
-        BlockID::Smooth_Stone,
-        BlockID::Diorite,
-        BlockID::Granite,
-        BlockID::Dirt,
-        BlockID::Grass,
-        BlockID::Sand,
-        BlockID::Coarse_Dirt,
-        BlockID::Snow,
-        BlockID::Cobblestone,
-        BlockID::Obsidian,
-        BlockID::Gravel,
-        BlockID::Bricks,
-        BlockID::Glass,
-        BlockID::Oak_Log,
-        BlockID::Oak_Leaves,
-        BlockID::Oak_Planks,
-        BlockID::Cactus,
-        BlockID::Dead_Bush,
-        BlockID::Coal_Ore,
-        BlockID::Iron_Ore,
-        BlockID::Gold_Ore,
-        BlockID::Diamond_Ore,
-        BlockID::Ruby_Ore,
-        BlockID::Coal_Block,
-        BlockID::Iron_Block,
-        BlockID::Gold_Block,
-        BlockID::Ruby_Block,
-        BlockID::Water,
-        BlockID::Lava,
-        BlockID::Fire,
-        BlockID::Chest,
-        BlockID::Furnace,
-        BlockID::Workbench,
-        BlockID::Woodcutter,
-        BlockID::Output_Bulb,
-        BlockID::Ruby_Wire
+        Blocks::Air,
+        Blocks::Bedrock,
+        Blocks::Stone,
+        Blocks::Smooth_Stone,
+        Blocks::Diorite,
+        Blocks::Granite,
+        Blocks::Dirt,
+        Blocks::Grass,
+        Blocks::Sand,
+        Blocks::Coarse_Dirt,
+        Blocks::Snow,
+        Blocks::Cobblestone,
+        Blocks::Obsidian,
+        Blocks::Gravel,
+        Blocks::Bricks,
+        Blocks::Glass,
+        Blocks::Oak_Log,
+        Blocks::Oak_Leaves,
+        Blocks::Oak_Planks,
+        Blocks::Cactus,
+        Blocks::Dead_Bush,
+        Blocks::Coal_Ore,
+        Blocks::Iron_Ore,
+        Blocks::Gold_Ore,
+        Blocks::Diamond_Ore,
+        Blocks::Ruby_Ore,
+        Blocks::Coal_Block,
+        Blocks::Iron_Block,
+        Blocks::Gold_Block,
+        Blocks::Ruby_Block,
+        Blocks::Water,
+        Blocks::Lava,
+        Blocks::Fire,
+        Blocks::Chest,
+        Blocks::Furnace,
+        Blocks::Workbench,
+        Blocks::Woodcutter,
+        Blocks::Output_Bulb,
+        Blocks::Ruby_Wire
     };
 
-    int blockOptionIndex(BlockID id)
+    int blockOptionIndex(BlockKey id)
     {
         for (size_t i = 0; i < BLOCK_OPTIONS.size(); ++i)
         {
@@ -93,16 +93,12 @@ namespace
         return 0;
     }
 
-    const char* blockName(BlockID id)
+    const char* blockName(BlockKey id)
     {
-        switch (id)
-        {
-            case BlockID::Air:   return "Air";
-            case BlockID::Water: return "Water";
-            case BlockID::Lava:  return "Lava";
-            case BlockID::Fire:  return "Fire";
-            default: break;
-        }
+        if (id == Blocks::Air) return "Air";
+        if (id == Blocks::Water) return "Water";
+        if (id == Blocks::Lava) return "Lava";
+        if (id == Blocks::Fire) return "Fire";
         auto item = blockToItem(id);
         auto iter = itemDatabase.find(item);
         if (iter == itemDatabase.end()) return "?";
@@ -227,7 +223,7 @@ void CreateWorldState::rebuildPreview()
                 int top = 0;
                 for (int y = CHUNK_HEIGHT - 1; y >= 0; --y)
                 {
-                    if (it->second.blocks[y][x].id != BlockID::Air) { top = y; break; }
+                    if (it->second.blocks[y][x].id != Blocks::Air) { top = y; break; }
                 }
                 sum += top;
                 ++count;
@@ -462,7 +458,7 @@ void CreateWorldState::update(float dt)
             ImGui::SameLine();
             if (ImGui::Button("Add layer"))
             {
-                flat_layers.push_back({BlockID::Stone, 1});
+                flat_layers.push_back({Blocks::Stone, 1});
                 flat_changed = true;
             }
 

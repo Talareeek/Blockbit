@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:birch_leaves",
-    "legacy_id": 27,
     "max_stack_size": 64,
     "name": "Birch Leaves",
     "texture": "birch_leaves"

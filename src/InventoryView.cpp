@@ -57,12 +57,12 @@ void ServerInventoryView::handleLeftClick(World& world, uint16_t slot)
     if (cursor_stack.empty())
     {
         cursor_stack = stack;
-        stack = {ItemID::None, 0};
+        stack = {Items::None, 0};
     }
     else if (stack.empty())
     {
         stack = cursor_stack;
-        cursor_stack = {ItemID::None, 0};
+        cursor_stack = {Items::None, 0};
     }
     else if (canStack(stack, cursor_stack))
     {
@@ -70,7 +70,7 @@ void ServerInventoryView::handleLeftClick(World& world, uint16_t slot)
         uint32_t can_add = std::min(cursor_stack.quantity, (max_stack > stack.quantity) ? (max_stack - stack.quantity) : 0u);
         stack.quantity += can_add;
         cursor_stack.quantity -= can_add;
-        if (cursor_stack.quantity == 0) cursor_stack = {ItemID::None, 0};
+        if (cursor_stack.quantity == 0) cursor_stack = {Items::None, 0};
     }
     else
     {
@@ -96,14 +96,14 @@ void ServerInventoryView::handleRightClick(World& world, uint16_t slot)
         if (stack.isUnique())
         {
             cursor_stack = stack;
-            stack = {ItemID::None, 0};
+            stack = {Items::None, 0};
         }
         else
         {
             uint32_t half = (stack.quantity + 1) / 2;
             cursor_stack = {stack.itemID, half};
             stack.quantity -= half;
-            if (stack.quantity == 0) stack.itemID = ItemID::None;
+            if (stack.quantity == 0) stack.itemID = Items::None;
         }
     }
     else if (stack.empty())
@@ -111,12 +111,12 @@ void ServerInventoryView::handleRightClick(World& world, uint16_t slot)
         if (cursor_stack.isUnique())
         {
             stack = cursor_stack;
-            cursor_stack = {ItemID::None, 0};
+            cursor_stack = {Items::None, 0};
         }
         else
         {
             stack = {cursor_stack.itemID, 1};
-            if (--cursor_stack.quantity == 0) cursor_stack = {ItemID::None, 0};
+            if (--cursor_stack.quantity == 0) cursor_stack = {Items::None, 0};
         }
     }
     else if (canStack(stack, cursor_stack))
@@ -125,7 +125,7 @@ void ServerInventoryView::handleRightClick(World& world, uint16_t slot)
         if (stack.quantity < max_stack)
         {
             stack.quantity++;
-            if (--cursor_stack.quantity == 0) cursor_stack = {ItemID::None, 0};
+            if (--cursor_stack.quantity == 0) cursor_stack = {Items::None, 0};
         }
     }
     else
@@ -138,7 +138,7 @@ void ServerInventoryView::handleRightClick(World& world, uint16_t slot)
 
 namespace
 {
-    uint32_t availableOf(const Inventory& inventory, ItemID id)
+    uint32_t availableOf(const Inventory& inventory, ItemKey id)
     {
         uint32_t available = 0;
         for (const auto& slot : inventory.slots)
@@ -148,7 +148,7 @@ namespace
         return available;
     }
 
-    uint32_t freeSpaceFor(const Inventory& inventory, ItemID id)
+    uint32_t freeSpaceFor(const Inventory& inventory, ItemKey id)
     {
         const uint32_t max_stack = itemDatabase[id].maxStackSize;
         uint32_t space = 0;
@@ -246,7 +246,7 @@ void ServerInventoryView::handleViewEvent(World& world, const ViewEventData& eve
             break;
         case InventoryViewAction::Craft:
         {
-            ItemStack requested{ItemID::None, 0};
+            ItemStack requested{Items::None, 0};
             if (decodeStack(event_data.payload, requested))
             {
                 handleCraft(world, requested);
@@ -255,7 +255,7 @@ void ServerInventoryView::handleViewEvent(World& world, const ViewEventData& eve
         }
         case InventoryViewAction::CraftAll:
         {
-            ItemStack requested{ItemID::None, 0};
+            ItemStack requested{Items::None, 0};
             if (decodeStack(event_data.payload, requested))
             {
                 handleCraftAll(world, requested);
@@ -306,7 +306,7 @@ void ServerInventoryView::onClose(World& world)
     ItemStack leftover = inventory.addStackWithLeftover(cursor_stack);
     player.getComponent<InventoryComponent>().dirty = true;
 
-    cursor_stack = {ItemID::None, 0};
+    cursor_stack = {Items::None, 0};
 
     if (leftover.empty() || !player.hasComponent<TransformComponent>()) return;
 

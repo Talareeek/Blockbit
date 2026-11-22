@@ -471,7 +471,7 @@ namespace
         const int y_start = std::min(y_ceiling, CHUNK_HEIGHT - 1);
         for (int y = y_start; y >= 0; --y)
         {
-            if (world.getBlock(wx, y).id != BlockID::Air) return y;
+            if (world.getBlock(wx, y).id != Blocks::Air) return y;
         }
         return -1;
     }
@@ -989,7 +989,7 @@ void RenderBlockOverlay(World& world, const sf::Vector2<double> camera, sf::Rend
     int blockY = static_cast<int>(std::floor(mouseWorldY));
     sf::Vector2i blockPos{blockX, blockY};
 
-    if(world.getBlock(blockX, blockY).id != BlockID::Air && isBlockInRange(world.getEntity(viewerEntityId).getComponent<TransformComponent>(), blockPos, 4.0f))
+    if(world.getBlock(blockX, blockY).id != Blocks::Air && isBlockInRange(world.getEntity(viewerEntityId).getComponent<TransformComponent>(), blockPos, 4.0f))
     {
         sf::Sprite sprite(AssetManager::getUITexture(AssetManager::UITextureID::Block_Overlay));
         sprite.setPosition({
@@ -1036,7 +1036,7 @@ void RenderBlockOutline(World& world, const sf::Vector2<double> camera, const sf
     }
 
     const Block hovered_block = world.getBlock(block.x, block.y);
-    const bool is_air = hovered_block.id == BlockID::Air;
+    const bool is_air = hovered_block.id == Blocks::Air;
 
     auto resolveBounds = [&]() -> sf::FloatRect
     {
@@ -1421,7 +1421,7 @@ void RenderBlockDestruction(World& world, sf::Vector2<double> camera, sf::Render
 
         const sf::Vector2i bp = player.mining_block;
         const Block block = world.getBlock(bp.x, bp.y);
-        if (block.id == BlockID::Air) continue;
+        if (block.id == Blocks::Air) continue;
 
         auto bd_it = blockDatabase.find(block.id);
         if (bd_it == blockDatabase.end()) continue;
@@ -1567,7 +1567,7 @@ static void buildLitTriangles(World& world, sf::Vector2f source, sf::Vector2f ca
             if(t >= maxDistance) break;
 
             Block block = world.getBlock(bx, by);
-            if(block.id != BlockID::Air && blockDatabase[block.id].transparent == false)
+            if(block.id != Blocks::Air && blockDatabase[block.id].transparent == false)
             {
                 hit_t = t;
                 break;
@@ -1763,10 +1763,10 @@ sf::Texture generateBackground()
 
     auto getBlock = [&](int wx, int wy) -> Block
     {
-        if (wy < 0 || wy >= CHUNK_HEIGHT) return {BlockID::Air, 0};
+        if (wy < 0 || wy >= CHUNK_HEIGHT) return {Blocks::Air, 0};
         const int cp = chunkOf(wx);
         auto it = chunks.find(cp);
-        if (it == chunks.end()) return {BlockID::Air, 0};
+        if (it == chunks.end()) return {Blocks::Air, 0};
         return it->second.blocks[wy][wx - cp * CHUNK_WIDTH];
     };
 
@@ -1786,7 +1786,7 @@ sf::Texture generateBackground()
         {
             for (int wy = CHUNK_HEIGHT - 1; wy >= 0; --wy)
             {
-                if (getBlock(wx, wy).id != BlockID::Air)
+                if (getBlock(wx, wy).id != Blocks::Air)
                 {
                     minTop = std::min(minTop, wy);
                     found = true;
@@ -1826,7 +1826,7 @@ sf::Texture generateBackground()
         for (int wy = minY; wy <= maxY; ++wy)
         {
             const Block block = getBlock(wx, wy);
-            if (block.id == BlockID::Air) continue;
+            if (block.id == Blocks::Air) continue;
 
             const auto& data = blockDatabase[block.id];
             if (!data.render.has_value()) continue;
@@ -2227,7 +2227,7 @@ void renderItemInfo(sf::Vector2f position, const ItemStack& item, sf::RenderTarg
     }
 
     lines.push_back({
-        "ID: " + std::to_string(static_cast<uint32_t>(item.itemID)),
+        "ID: " + item.itemID,
         sf::Color(160, 160, 160)
     });
 
@@ -2471,7 +2471,7 @@ void RenderMinimap(ClientWorld& world, sf::Vector2<double> camera, sf::RenderTar
                 for(int lx = 0; lx < CHUNK_WIDTH; ++lx)
                 {
                     const Block& b = chunk.blocks[y][lx];
-                    if(b.id == BlockID::Air) continue;
+                    if(b.id == Blocks::Air) continue;
                     const auto& data = blockDatabase[b.id];
                     if(!data.render.has_value()) continue;
 

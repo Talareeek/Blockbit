@@ -130,11 +130,11 @@ Chunk& World::getChunk(int chunk_position)
 
 Block World::getBlock(int world_x, int world_y)
 {
-    if(world_y < 0 || world_y >= CHUNK_HEIGHT) return {BlockID::Air, 0};
+    if(world_y < 0 || world_y >= CHUNK_HEIGHT) return {Blocks::Air, 0};
 
     int chunk_position = (world_x >= 0) ? world_x / CHUNK_WIDTH : (world_x - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
 
-    if(!chunks.contains(chunk_position)) return {BlockID::Air, 0};
+    if(!chunks.contains(chunk_position)) return {Blocks::Air, 0};
 
     int local_x = world_x - chunk_position * CHUNK_WIDTH;
     int local_y = world_y;

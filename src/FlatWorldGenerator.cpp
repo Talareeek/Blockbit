@@ -3,7 +3,7 @@
 Tag FlatWorldLayer::serialize() const
 {
     TagCompound compound;
-    compound["block"] = Tag(static_cast<uint32_t>(block));
+    compound["block"] = Tag(block);
     compound["count"] = Tag(static_cast<int32_t>(count));
     return Tag(compound);
 }
@@ -12,7 +12,10 @@ FlatWorldLayer FlatWorldLayer::deserialize(const Tag& tag)
 {
     const TagCompound& compound = tag.get<TagCompound>();
     FlatWorldLayer layer;
-    layer.block = static_cast<BlockID>(compound.at("block").get<uint32_t>());
+    const Tag& block_tag = compound.at("block");
+    layer.block = block_tag.type() == TagType::T_STRING
+        ? block_tag.get<std::string>()
+        : blockKeyFromLegacySave(block_tag.get<uint32_t>());
     layer.count = static_cast<int>(compound.at("count").get<int32_t>());
     return layer;
 }
@@ -61,7 +64,7 @@ Chunk FlatWorldGenerator::generateChunk(int chunk_position)
     {
         for (int x = 0; x < CHUNK_WIDTH; ++x)
         {
-            chunk.blocks[y][x] = {BlockID::Air, 0};
+            chunk.blocks[y][x] = {Blocks::Air, 0};
         }
     }
 

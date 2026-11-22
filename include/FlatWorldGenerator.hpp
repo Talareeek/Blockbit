@@ -9,7 +9,7 @@
 
 struct FlatWorldLayer
 {
-    BlockID block;
+    BlockKey block;
     int count;
 
     Tag serialize() const;
@@ -25,10 +25,10 @@ struct FlatWorldProperties
         return FlatWorldProperties
         {
             {
-                {BlockID::Bedrock, 1},
-                {BlockID::Stone,   4},
-                {BlockID::Dirt,    4},
-                {BlockID::Grass,   1}
+                {Blocks::Bedrock, 1},
+                {Blocks::Stone,   4},
+                {Blocks::Dirt,    4},
+                {Blocks::Grass,   1}
             }
         };
     }

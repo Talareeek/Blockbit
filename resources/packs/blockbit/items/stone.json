@@ -1,7 +1,6 @@
 {
     "category": "block",
     "id": "blockbit:stone",
-    "legacy_id": 1,
     "max_stack_size": 64,
     "name": "Stone",
     "texture": "stone"

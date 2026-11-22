@@ -17,110 +17,10 @@
 
 #include "AssetManager.hpp"
 #include "Behavior.hpp"
+#include "ContentKeys.hpp"
 
 class World;
 struct ItemStack;
-
-enum class ItemID : uint16_t
-{
-    None = 0,
-    Stone,
-    Grass,
-    Dirt,
-    Cobblestone,
-    Obsidian,
-    Bedrock,
-    Dynamite,
-    StabShot,
-    NukeShot,
-
-    Coal_Ore,
-    Iron_Ore,
-    Gold_Ore,
-    Diamond_Ore,
-    Ruby_Ore,
-
-    Iron_Block,
-    Gold_Block,
-    Ruby_Block,
-    Coal_Block,
-
-    Coal,
-    Raw_Iron,
-    Raw_Gold,
-    Diamond,
-
-    Oak_Log,
-    Oak_Leaves,
-    Oak_Planks,
-    Birch_Log,
-    Birch_Leaves,
-    Spruce_Log,
-    Spruce_Leaves,
-    Bucket,
-    Water_Bucket,
-    Woodcutter,
-    Lighter,
-    Sand,
-    Coarse_Dirt,
-    Snow,
-    Gravel,
-    Flint,
-
-    // TOOLS
-    Wooden_Pickaxe,
-    Stone_Pickaxe,
-    Iron_Pickaxe,
-    Gold_Pickaxe,
-    Diamond_Pickaxe,
-    Ruby_Pickaxe,
-
-    Wooden_Axe,
-    Stone_Axe,
-    Iron_Axe,
-    Gold_Axe,
-    Diamond_Axe,
-    Ruby_Axe,
-
-    Wooden_Shovel,
-    Stone_Shovel,
-    Iron_Shovel,
-    Gold_Shovel,
-    Diamond_Shovel,
-    Ruby_Shovel,
-
-    Ruby,
-    Stick,
-
-    Chest,
-    Bricks,
-    Furnace,
-
-    Iron_Ingot,
-    Gold_Ingot,
-
-    Workbench,
-    Cactus,
-    Dead_Bush,
-    Smooth_Stone,
-    Diorite,
-    Granite,
-    Glass,
-    Output_Bulb,
-    Ruby_Wire,
-    Coreheart_Of_Blockbit,
-    Upgrade_Table,
-
-    // Single ItemID for every potion. The actual effect, duration, and
-    // magnitude live in a MagicEffectItemComponent on the stack's instance
-    // data, so stacks never auto-merge and each bottle is unique.
-    Magic_Bottle,
-    Birch_Planks,
-    Spruce_Planks,
-    Copper_Ore,
-    Copper_Ingot,
-    Copper_Block
-};
 
 enum class ItemRarity
 {
@@ -199,7 +99,7 @@ struct ItemData
     // (frame at x=0..16, white liquid at x=16..32); Slot.cpp draws the liquid
     // half tinted by the stack's MagicEffectItemComponent (via EffectRegistry
     // colour), then the frame half on top — so one bottle.png produces any
-    // potion colour without a separate ItemID per effect.
+    // potion colour without a separate ItemKey per effect.
     bool is_bottle = false;
 
     // Declarative behavior — read by dispatchItemUse. `type = None` falls
@@ -215,11 +115,11 @@ struct ItemData
         [](World&, sf::Vector2<double>, UUID, const ItemStack&) -> bool { return false; };
 };
 
-extern std::unordered_map<ItemID, ItemData> itemDatabase;
+extern std::unordered_map<ItemKey, ItemData> itemDatabase;
 
 struct ItemStack
 {
-    ItemID itemID;
+    ItemKey itemID;
     uint32_t quantity;
 
     std::optional<UUID> instanceID;
@@ -235,20 +135,20 @@ struct Inventory
 
     Inventory(size_t size);
 
-    ItemStack addItemWithLeftover(ItemID itemID, uint32_t quantity);
+    ItemStack addItemWithLeftover(ItemKey itemID, uint32_t quantity);
 
     ItemStack addStackWithLeftover(ItemStack stack);
 
-    ItemStack removeItemWithLeftover(ItemID itemID, uint32_t quantity);
+    ItemStack removeItemWithLeftover(ItemKey itemID, uint32_t quantity);
 };
 
-extern bool addItem(Inventory& inventory, ItemID itemID, uint32_t quantity);
+extern bool addItem(Inventory& inventory, ItemKey itemID, uint32_t quantity);
 
 // Linear scan over itemDatabase matching ItemData::name. Comparison is
 // case-insensitive and treats '_' as equivalent to ' ' so both
 // "Diamond_Pickaxe" and "diamond pickaxe" resolve. Returns std::nullopt when
 // nothing matches.
-std::optional<ItemID> findItemIdByName(const std::string& name);
+std::optional<ItemKey> findItemIdByName(const std::string& name);
 
 
 struct Recipe
@@ -269,7 +169,7 @@ namespace std
     {
         size_t operator()(const ItemStack& stack) const noexcept
         {
-            size_t h1 = std::hash<uint32_t>{}(static_cast<uint32_t>(stack.itemID));
+            size_t h1 = std::hash<std::string>{}(stack.itemID);
             size_t h2 = std::hash<uint32_t>{}(stack.quantity);
             size_t h = h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
 
@@ -288,16 +188,16 @@ extern std::unordered_map<ItemStack, Recipe> recipes;
 
 extern bool canStack(const ItemStack& a, const ItemStack& b);
 
-// Smelting: input ItemID -> (output ItemID, seconds required).
+// Smelting: input ItemKey -> (output ItemKey, seconds required).
 struct SmeltRecipe
 {
-    ItemID output;
+    ItemKey output;
     float  cook_time;
 };
 
-extern std::unordered_map<ItemID, SmeltRecipe> smeltingRecipes;
+extern std::unordered_map<ItemKey, SmeltRecipe> smeltingRecipes;
 
-// Fuel: ItemID -> seconds of burn each unit provides.
-extern std::unordered_map<ItemID, float> fuelBurnTimes;
+// Fuel: ItemKey -> seconds of burn each unit provides.
+extern std::unordered_map<ItemKey, float> fuelBurnTimes;
 
 #endif // ITEM_HPP

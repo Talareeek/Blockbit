@@ -60,17 +60,17 @@ void LegacyWorldGenerator::generateTerrain(Chunk& chunk)
         for (int y = 0; y < CHUNK_HEIGHT; y++)
         {
             if (y == 0)
-                chunk.blocks[y][x] = {BlockID::Bedrock, 0};
+                chunk.blocks[y][x] = {Blocks::Bedrock, 0};
             else if (y < height - 4)
-                chunk.blocks[y][x] = {BlockID::Stone, 0};
+                chunk.blocks[y][x] = {Blocks::Stone, 0};
             else if (y < height - 1)
-                chunk.blocks[y][x] = {BlockID::Dirt, 0};
+                chunk.blocks[y][x] = {Blocks::Dirt, 0};
             else if (y == height - 1)
-                chunk.blocks[y][x] = {height < SEA_LEVEL ? BlockID::Dirt : BlockID::Grass, 0};
+                chunk.blocks[y][x] = {height < SEA_LEVEL ? Blocks::Dirt : Blocks::Grass, 0};
             else if (y < SEA_LEVEL)
-                chunk.blocks[y][x] = {BlockID::Water, WaterState{WaterState::SOURCE}.pack()};
+                chunk.blocks[y][x] = {Blocks::Water, WaterState{WaterState::SOURCE}.pack()};
             else
-                chunk.blocks[y][x] = {BlockID::Air, 0};
+                chunk.blocks[y][x] = {Blocks::Air, 0};
         }
     }
 }
@@ -83,8 +83,8 @@ void LegacyWorldGenerator::generateCaves(Chunk& chunk)
         for (int y = 5; y < CHUNK_HEIGHT; y++)
         {
             const float n = perlin.noise(world_x * 0.05f, y * 0.05f);
-            if (n > 0.65f && chunk.blocks[y][x].id == BlockID::Stone)
-                chunk.blocks[y][x] = {BlockID::Air, 0};
+            if (n > 0.65f && chunk.blocks[y][x].id == Blocks::Stone)
+                chunk.blocks[y][x] = {Blocks::Air, 0};
         }
     }
 }
@@ -94,14 +94,14 @@ void LegacyWorldGenerator::generateOres(Chunk& chunk)
     const std::uint32_t chunk_seed = static_cast<std::uint32_t>(chunk.chunk_position);
     std::mt19937 rng(seed + chunk_seed);
 
-    const auto vein = [&](int start_x, int start_y, BlockID ore, int size, std::mt19937& random)
+    const auto vein = [&](int start_x, int start_y, BlockKey ore, int size, std::mt19937& random)
     {
         int x = start_x;
         int y = start_y;
         for (int i = 0; i < size; i++)
         {
             if (x >= 0 && x < CHUNK_WIDTH && y > 0 && y < CHUNK_HEIGHT &&
-                chunk.blocks[y][x].id == BlockID::Stone)
+                chunk.blocks[y][x].id == Blocks::Stone)
                 chunk.blocks[y][x] = {ore, 0};
 
             x += static_cast<int>(random() % 3) - 1;
@@ -112,9 +112,9 @@ void LegacyWorldGenerator::generateOres(Chunk& chunk)
     const int diamond_y = static_cast<int>(rng() % 14) + 1;
     const int gold_y = static_cast<int>(rng() % 34) + 16;
     const int iron_y = static_cast<int>(rng() % 204) + 51;
-    vein(static_cast<int>(rng() % CHUNK_WIDTH), diamond_y, BlockID::Diamond_Ore, 8, rng);
-    vein(static_cast<int>(rng() % CHUNK_WIDTH), gold_y, BlockID::Gold_Ore, 10, rng);
-    vein(static_cast<int>(rng() % CHUNK_WIDTH), iron_y, BlockID::Iron_Ore, 12, rng);
+    vein(static_cast<int>(rng() % CHUNK_WIDTH), diamond_y, Blocks::Diamond_Ore, 8, rng);
+    vein(static_cast<int>(rng() % CHUNK_WIDTH), gold_y, Blocks::Gold_Ore, 10, rng);
+    vein(static_cast<int>(rng() % CHUNK_WIDTH), iron_y, Blocks::Iron_Ore, 12, rng);
 }
 
 void LegacyWorldGenerator::generateNature(Chunk& chunk)
@@ -125,14 +125,14 @@ void LegacyWorldGenerator::generateNature(Chunk& chunk)
 
     const int x = static_cast<int>(rng() % CHUNK_WIDTH);
     int surface_y = CHUNK_HEIGHT - 1;
-    while (surface_y > 0 && chunk.blocks[surface_y][x].id != BlockID::Grass)
+    while (surface_y > 0 && chunk.blocks[surface_y][x].id != Blocks::Grass)
         surface_y--;
     if (surface_y <= 0)
         return;
 
     const int log_height = static_cast<int>(rng() % 5) + 3;
     for (int dy = 1; dy <= log_height && surface_y + dy < CHUNK_HEIGHT; dy++)
-        chunk.blocks[surface_y + dy][x] = {BlockID::Oak_Log, 0};
+        chunk.blocks[surface_y + dy][x] = {Blocks::Oak_Log, 0};
 
     const int crown_y = surface_y + log_height - 1;
     for (int dx = -2; dx <= 2; dx++)
@@ -147,8 +147,8 @@ void LegacyWorldGenerator::generateNature(Chunk& chunk)
                 if (std::abs(dx) + std::abs(dy) + std::abs(dz) > 3)
                     continue;
                 const int leaf_y = crown_y + dy;
-                if (leaf_y >= 0 && leaf_y < CHUNK_HEIGHT && chunk.blocks[leaf_y][leaf_x].id == BlockID::Air)
-                    chunk.blocks[leaf_y][leaf_x] = {BlockID::Oak_Leaves, 0};
+                if (leaf_y >= 0 && leaf_y < CHUNK_HEIGHT && chunk.blocks[leaf_y][leaf_x].id == Blocks::Air)
+                    chunk.blocks[leaf_y][leaf_x] = {Blocks::Oak_Leaves, 0};
             }
         }
     }

@@ -891,7 +891,7 @@ void GameServer::spawnPlayerFor(const PlayerIdentity& identity)
     }
     else
     {
-        Entity entity = PrefabRegistry::get(PrefabID::Player).cloneAs(generateUUID());
+        Entity entity = PrefabRegistry::get("blockbit:player").cloneAs(generateUUID());
 
         if(entity.hasComponent<TransformComponent>()) entity.getComponent<TransformComponent>().position = world.getSpawnPoint();
 
@@ -907,7 +907,7 @@ void GameServer::spawnPlayerFor(const PlayerIdentity& identity)
 
 void GameServer::respawnPlayerFor(const PlayerIdentity& identity)
 {
-    Entity entity = PrefabRegistry::get(PrefabID::Player).cloneAs(generateUUID());
+    Entity entity = PrefabRegistry::get("blockbit:player").cloneAs(generateUUID());
 
     if(entity.hasComponent<TransformComponent>()) entity.getComponent<TransformComponent>().position = world.getSpawnPoint();
 

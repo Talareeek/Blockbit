@@ -9,7 +9,6 @@
         "type": "fluid_bucket"
     },
     "id": "blockbit:water_bucket",
-    "legacy_id": 31,
     "max_stack_size": 1,
     "name": "Water Bucket",
     "rarity": "rare",
