@@ -5,7 +5,7 @@
     "max_stack_size": 1,
     "name": "Ruby Pickaxe",
     "rarity": "epic",
-    "texture": "ruby_pickaxe",
+    "texture": "blockbit:ruby_pickaxe",
     "tool": {
         "level": 6,
         "type": "pickaxe"

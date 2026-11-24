@@ -4,7 +4,7 @@
     "max_durability": 59,
     "max_stack_size": 1,
     "name": "Wooden Pickaxe",
-    "texture": "wooden_pickaxe",
+    "texture": "blockbit:wooden_pickaxe",
     "tool": {
         "level": 1,
         "type": "pickaxe"

@@ -3,5 +3,5 @@
     "id": "blockbit:furnace",
     "max_stack_size": 64,
     "name": "Furnace",
-    "texture": "furnace"
+    "texture": "blockbit:furnace"
 }

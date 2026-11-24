@@ -12,7 +12,7 @@
         "tool": "pickaxe"
     },
     "render": {
-        "texture": "glass"
+        "texture": "blockbit:glass"
     },
     "solid": true
 }

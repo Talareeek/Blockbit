@@ -3,5 +3,5 @@
     "id": "blockbit:spruce_planks",
     "max_stack_size": 64,
     "name": "Spruce Planks",
-    "texture": "spruce_planks"
+    "texture": "blockbit:spruce_planks"
 }

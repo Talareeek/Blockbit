@@ -6,7 +6,7 @@
     "max_durability": 250,
     "max_stack_size": 1,
     "name": "Iron Axe",
-    "texture": "iron_axe",
+    "texture": "blockbit:iron_axe",
     "tool": {
         "level": 4,
         "type": "axe"

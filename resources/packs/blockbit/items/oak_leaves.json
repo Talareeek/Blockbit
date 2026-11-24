@@ -3,5 +3,5 @@
     "id": "blockbit:oak_leaves",
     "max_stack_size": 64,
     "name": "Oak Leaves",
-    "texture": "oak_leaves"
+    "texture": "blockbit:oak_leaves"
 }

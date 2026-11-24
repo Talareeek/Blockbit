@@ -3,5 +3,5 @@
     "id": "blockbit:bedrock",
     "max_stack_size": 64,
     "name": "Bedrock",
-    "texture": "bedrock"
+    "texture": "blockbit:bedrock"
 }

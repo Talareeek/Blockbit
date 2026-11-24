@@ -3,5 +3,5 @@
     "id": "blockbit:copper_block",
     "max_stack_size": 64,
     "name": "Copper Block",
-    "texture": "copper_block"
+    "texture": "blockbit:copper_block"
 }

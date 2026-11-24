@@ -182,6 +182,15 @@ namespace blockbit_callbacks
         auto try_flow = [&](int tx, int ty)
         {
             Block target = ctx.world.getBlock(tx, ty);
+            // Water flowing into lava reacts with the lava cell. The water
+            // remains in its current cell; flowing lava becomes cobblestone,
+            // while a lava source becomes obsidian.
+            if (target.id == Blocks::Lava)
+            {
+                const bool source = LavaState::unpack(target.metadata).level == LavaState::SOURCE;
+                ctx.world.setBlock(tx, ty, {source ? Blocks::Obsidian : Blocks::Cobblestone, 0});
+                return;
+            }
             if (!water_cell_passable(target)) return;
             if (target.id == Blocks::Water && WaterState::unpack(target.metadata).level >= new_level) return;
             ctx.world.setBlock(tx, ty, {Blocks::Water, WaterState{new_level}.pack()});
@@ -250,6 +259,30 @@ namespace blockbit_callbacks
         // what is logically a self-contained growth step.
         ctx.pipeline.setBlockSuppressNC(pos, {grown, CactusState{false}.pack()});
         ctx.pipeline.setBlockSuppressNC({pos.x, pos.y + 1}, {grown, CactusState{true}.pack()});
+    }
+
+    // Leaves stay alive while a matching trunk is within four blocks. Random
+    // ticks make detached canopies decay over time without a separate sweep.
+    void leaves_on_random_tick(BlockUpdateContext& ctx, sf::Vector2i pos)
+    {
+        const BlockKey leaf = ctx.world.getBlock(pos.x, pos.y).id;
+        BlockKey log = Blocks::Air;
+        if (leaf == Blocks::Oak_Leaves) log = Blocks::Oak_Log;
+        else if (leaf == Blocks::Birch_Leaves) log = Blocks::Birch_Log;
+        else if (leaf == Blocks::Spruce_Leaves) log = Blocks::Spruce_Log;
+        else return;
+
+        for (int dx = -4; dx <= 4; ++dx)
+        {
+            for (int dy = -4; dy <= 4; ++dy)
+            {
+                if (ctx.world.getBlock(pos.x + dx, pos.y + dy).id == log) return;
+            }
+        }
+
+        // Direct world edits from scheduled/random ticks do not create drops;
+        // propagating the removal also lets neighboring leaves decay naturally.
+        ctx.world.setBlock(pos.x, pos.y, {Blocks::Air, 0});
     }
 
     // Lava uses the same cascade as water but ticks three times slower and
@@ -331,6 +364,36 @@ namespace blockbit_callbacks
 
         try_flow(pos.x - 1, pos.y);
         try_flow(pos.x + 1, pos.y);
+    }
+
+    void lava_on_post_placement(BlockUpdateContext& ctx, sf::Vector2i pos, uint8_t /*from_direction*/)
+    {
+        Block self = ctx.world.getBlock(pos.x, pos.y);
+        if (self.id != Blocks::Lava) return;
+
+        bool source = LavaState::unpack(self.metadata).level == LavaState::SOURCE;
+
+        Block top = ctx.world.getBlock(pos.x, pos.y + 1);
+        Block bottom = ctx.world.getBlock(pos.x, pos.y - 1);
+        Block left = ctx.world.getBlock(pos.x - 1, pos.y);
+        Block right = ctx.world.getBlock(pos.x + 1, pos.y);
+
+        if(top.id == Blocks::Water || left.id == Blocks::Water || right.id == Blocks::Water) ctx.world.setBlock(pos.x, pos.y, Block{(source) ? Blocks::Obsidian : Blocks::Cobblestone});
+    }
+
+    void water_on_post_placement(BlockUpdateContext& ctx, sf::Vector2i pos, uint8_t /*from_direction*/)
+    {
+        constexpr sf::Vector2i offsets[] = {{0, 1}, {0, -1}, {-1, 0}, {1, 0}};
+        for (const sf::Vector2i offset : offsets)
+        {
+            const sf::Vector2i lava_pos = pos + offset;
+            const Block lava = ctx.world.getBlock(lava_pos.x, lava_pos.y);
+            if (lava.id != Blocks::Lava) continue;
+
+            const bool source = LavaState::unpack(lava.metadata).level == LavaState::SOURCE;
+            ctx.world.setBlock(lava_pos.x, lava_pos.y,
+                               {source ? Blocks::Obsidian : Blocks::Cobblestone, 0});
+        }
     }
 }
 

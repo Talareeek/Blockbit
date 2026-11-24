@@ -10,7 +10,7 @@
         "tool": "shovel"
     },
     "render": {
-        "texture": "coarse_dirt"
+        "texture": "blockbit:coarse_dirt"
     },
     "solid": true,
     "transparent": false

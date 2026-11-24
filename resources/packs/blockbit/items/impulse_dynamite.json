@@ -1,0 +1,15 @@
+{
+    "behavior": {
+        "params": {
+            "pattern": "single",
+            "projectile": "blockbit:impulse_dynamite",
+            "throw_speed": 3.0
+        },
+        "type": "throw_projectile"
+    },
+    "id": "blockbit:impulse_dynamite",
+    "max_stack_size": 16,
+    "name": "Impulse Dynamite",
+    "rarity": "rare",
+    "texture": "blockbit:dynamite"
+}

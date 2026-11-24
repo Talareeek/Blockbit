@@ -3,5 +3,5 @@
     "id": "blockbit:glass",
     "max_stack_size": 64,
     "name": "Glass",
-    "texture": "glass"
+    "texture": "blockbit:glass"
 }

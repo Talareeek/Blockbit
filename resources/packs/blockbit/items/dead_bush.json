@@ -3,5 +3,5 @@
     "id": "blockbit:dead_bush",
     "max_stack_size": 64,
     "name": "Dead Bush",
-    "texture": "dead_bush"
+    "texture": "blockbit:dead_bush"
 }

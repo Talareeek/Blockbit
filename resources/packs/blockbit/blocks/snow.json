@@ -10,7 +10,7 @@
         "tool": "shovel"
     },
     "render": {
-        "texture": "snow"
+        "texture": "blockbit:snow"
     },
     "solid": true,
     "transparent": false

@@ -3,5 +3,5 @@
     "id": "blockbit:spruce_leaves",
     "max_stack_size": 64,
     "name": "Spruce Leaves",
-    "texture": "spruce_leaves"
+    "texture": "blockbit:spruce_leaves"
 }

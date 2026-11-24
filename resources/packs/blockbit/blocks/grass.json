@@ -1,18 +1,22 @@
 {
     "drop": {
         "always": true,
-        "item": "blockbit:dirt"
+        "item": "blockbit:grass"
     },
-    "hardness": 0.6000000238418579,
     "id": "blockbit:grass",
+    "lets_light": true,
+    "light_opacity": 1,
     "mining": {
-        "level": 1,
-        "resistance": 2,
-        "tool": "shovel"
+        "level": 0,
+        "resistance": 0,
+        "tool": "none"
     },
     "render": {
-        "texture": "grass"
+        "texture": "blockbit:grass"
     },
-    "solid": true,
-    "transparent": false
+    "support_blocks_below": [
+        "blockbit:grass_block",
+        "blockbit:dirt",
+        "blockbit:coarse_dirt"
+    ]
 }

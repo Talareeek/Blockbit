@@ -4,7 +4,7 @@
     "max_durability": 131,
     "max_stack_size": 1,
     "name": "Stone Pickaxe",
-    "texture": "stone_pickaxe",
+    "texture": "blockbit:stone_pickaxe",
     "tool": {
         "level": 2,
         "type": "pickaxe"

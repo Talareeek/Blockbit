@@ -1,0 +1,16 @@
+{
+    "behavior": {
+        "params": {
+            "empty_variant": "blockbit:bucket",
+            "filled_variant": "blockbit:lava_bucket",
+            "fluid": "blockbit:lava",
+            "source_level_value": 5
+        },
+        "type": "fluid_bucket"
+    },
+    "id": "blockbit:lava_bucket",
+    "max_stack_size": 1,
+    "name": "Lava Bucket",
+    "rarity": "rare",
+    "texture": "blockbit:water_bucket"
+}

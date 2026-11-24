@@ -4,5 +4,5 @@
     "max_stack_size": 64,
     "name": "Upgrade Table",
     "rarity": "rare",
-    "texture": "upgrade_table"
+    "texture": "blockbit:upgrade_table"
 }

@@ -8,7 +8,7 @@
         "tool": "pickaxe"
     },
     "render": {
-        "texture": "bedrock"
+        "texture": "blockbit:bedrock"
     },
     "solid": true,
     "transparent": false

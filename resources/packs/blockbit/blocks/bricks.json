@@ -10,7 +10,7 @@
         "tool": "pickaxe"
     },
     "render": {
-        "texture": "bricks"
+        "texture": "blockbit:bricks"
     },
     "solid": true,
     "transparent": false

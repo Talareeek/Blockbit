@@ -763,7 +763,7 @@ namespace
             {"bedrock",     Blocks::Bedrock},
             {"stone",       Blocks::Stone},
             {"dirt",        Blocks::Dirt},
-            {"grass",       Blocks::Grass},
+            {"grass_block", Blocks::Grass},
             {"sand",        Blocks::Sand},
             {"coarse dirt", Blocks::Coarse_Dirt},
             {"snow",        Blocks::Snow},

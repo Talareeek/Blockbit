@@ -9,5 +9,5 @@
     "id": "blockbit:flint",
     "max_stack_size": 64,
     "name": "Flint",
-    "texture": "flint"
+    "texture": "blockbit:flint"
 }

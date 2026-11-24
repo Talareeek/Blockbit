@@ -3,5 +3,5 @@
     "id": "blockbit:copper_ore",
     "max_stack_size": 64,
     "name": "Copper Ore",
-    "texture": "copper_ore"
+    "texture": "blockbit:copper_ore"
 }

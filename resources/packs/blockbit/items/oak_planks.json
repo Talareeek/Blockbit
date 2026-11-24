@@ -3,5 +3,5 @@
     "id": "blockbit:oak_planks",
     "max_stack_size": 64,
     "name": "Oak Planks",
-    "texture": "oak_planks"
+    "texture": "blockbit:oak_planks"
 }

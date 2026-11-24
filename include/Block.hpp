@@ -1,6 +1,7 @@
 #ifndef BLOCK_HPP
 #define BLOCK_HPP
 
+#include <algorithm>
 #include <cstdint>
 #include <unordered_map>
 #include <climits>
@@ -165,25 +166,37 @@ inline auto default_render_rect = [](Block block_instance, const BlockNeighbors&
 inline auto water_render_bounds = [](Block block_instance) -> sf::FloatRect
 {
     const uint8_t level = WaterState::unpack(block_instance.metadata).level;
-    return {{0.0f, 0.0f}, {1.0f, static_cast<float>(16 - (9 - level)) / 16.0f}};
+    const uint8_t fill_level = (level == WaterState::SOURCE)
+        ? WaterState::FULL
+        : std::min(level, WaterState::FULL);
+    return {{0.0f, 0.0f}, {1.0f, static_cast<float>(fill_level) / WaterState::FULL}};
 };
 
 inline auto water_render_rect = [](Block block_instance, const BlockNeighbors&) -> sf::IntRect
 {
     const uint8_t level = WaterState::unpack(block_instance.metadata).level;
-    return {{0, 0}, {16, 16 - (9 - level)}};
+    const uint8_t fill_level = (level == WaterState::SOURCE)
+        ? WaterState::FULL
+        : std::min(level, WaterState::FULL);
+    return {{0, 0}, {16, static_cast<int>(16 * fill_level / WaterState::FULL)}};
 };
 
 inline auto lava_render_bounds = [](Block block_instance) -> sf::FloatRect
 {
     const uint8_t level = LavaState::unpack(block_instance.metadata).level;
-    return {{0.0f, 0.0f}, {1.0f, static_cast<float>(16 - (LavaState::SOURCE - level) * 3) / 16.0f}};
+    const uint8_t fill_level = (level == LavaState::SOURCE)
+        ? LavaState::FULL
+        : std::min(level, LavaState::FULL);
+    return {{0.0f, 0.0f}, {1.0f, static_cast<float>(fill_level) / LavaState::FULL}};
 };
 
 inline auto lava_render_rect = [](Block block_instance, const BlockNeighbors&) -> sf::IntRect
 {
     const uint8_t level = LavaState::unpack(block_instance.metadata).level;
-    return {{0, 0}, {16, 16 - (LavaState::SOURCE - level) * 3}};
+    const uint8_t fill_level = (level == LavaState::SOURCE)
+        ? LavaState::FULL
+        : std::min(level, LavaState::FULL);
+    return {{0, 0}, {16, static_cast<int>(16 * fill_level / LavaState::FULL)}};
 };
 
 inline auto chest_render_bounds = [](Block block_instance) -> sf::FloatRect

@@ -4,7 +4,7 @@
     "max_durability": 1561,
     "max_stack_size": 1,
     "name": "Diamond Pickaxe",
-    "texture": "diamond_pickaxe",
+    "texture": "blockbit:diamond_pickaxe",
     "tool": {
         "level": 5,
         "type": "pickaxe"

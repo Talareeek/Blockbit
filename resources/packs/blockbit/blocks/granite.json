@@ -11,7 +11,7 @@
         "tool": "pickaxe"
     },
     "render": {
-        "texture": "granite"
+        "texture": "blockbit:granite"
     },
     "solid": true,
     "transparent": false

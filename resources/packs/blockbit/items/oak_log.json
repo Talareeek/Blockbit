@@ -3,5 +3,5 @@
     "id": "blockbit:oak_log",
     "max_stack_size": 64,
     "name": "Oak Log",
-    "texture": "oak_log"
+    "texture": "blockbit:oak_log"
 }

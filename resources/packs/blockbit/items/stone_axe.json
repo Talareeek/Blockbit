@@ -6,7 +6,7 @@
     "max_durability": 131,
     "max_stack_size": 1,
     "name": "Stone Axe",
-    "texture": "stone_axe",
+    "texture": "blockbit:stone_axe",
     "tool": {
         "level": 2,
         "type": "axe"

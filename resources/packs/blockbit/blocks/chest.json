@@ -13,7 +13,7 @@
     },
     "render": {
         "profile": "chest",
-        "texture": "chest"
+        "texture": "blockbit:chest"
     },
     "solid": true,
     "transparent": false

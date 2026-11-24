@@ -3,5 +3,5 @@
     "id": "blockbit:grass",
     "max_stack_size": 64,
     "name": "Grass",
-    "texture": "grass"
+    "texture": "blockbit:grass"
 }

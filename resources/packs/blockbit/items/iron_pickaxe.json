@@ -4,7 +4,7 @@
     "max_durability": 250,
     "max_stack_size": 1,
     "name": "Iron Pickaxe",
-    "texture": "iron_pickaxe",
+    "texture": "blockbit:iron_pickaxe",
     "tool": {
         "level": 4,
         "type": "pickaxe"

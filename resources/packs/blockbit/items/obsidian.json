@@ -3,5 +3,5 @@
     "id": "blockbit:obsidian",
     "max_stack_size": 64,
     "name": "Obsidian",
-    "texture": "obsidian"
+    "texture": "blockbit:obsidian"
 }

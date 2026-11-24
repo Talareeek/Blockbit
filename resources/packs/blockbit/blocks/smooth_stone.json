@@ -12,7 +12,7 @@
     },
     "render": {
         "profile": "connected",
-        "texture": "smooth_stone"
+        "texture": "blockbit:smooth_stone"
     },
     "solid": true,
     "transparent": false

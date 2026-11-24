@@ -4,7 +4,7 @@
     "max_durability": 59,
     "max_stack_size": 1,
     "name": "Wooden Shovel",
-    "texture": "wooden_shovel",
+    "texture": "blockbit:wooden_shovel",
     "tool": {
         "level": 1,
         "type": "shovel"

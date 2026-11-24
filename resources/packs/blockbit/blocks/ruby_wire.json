@@ -14,6 +14,6 @@
     },
     "render": {
         "profile": "connected",
-        "texture": "ruby_wire"
+        "texture": "blockbit:ruby_wire"
     }
 }

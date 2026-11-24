@@ -6,7 +6,7 @@
     "max_durability": 59,
     "max_stack_size": 1,
     "name": "Wooden Axe",
-    "texture": "wooden_axe",
+    "texture": "blockbit:wooden_axe",
     "tool": {
         "level": 1,
         "type": "axe"

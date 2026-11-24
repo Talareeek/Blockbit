@@ -3,5 +3,5 @@
     "id": "blockbit:gold_ore",
     "max_stack_size": 64,
     "name": "Gold Ore",
-    "texture": "gold_ore"
+    "texture": "blockbit:gold_ore"
 }

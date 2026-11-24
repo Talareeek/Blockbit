@@ -12,7 +12,7 @@
         "tool": "none"
     },
     "render": {
-        "texture": "dead_bush"
+        "texture": "blockbit:dead_bush"
     },
     "support_blocks_below": [
         "blockbit:sand"

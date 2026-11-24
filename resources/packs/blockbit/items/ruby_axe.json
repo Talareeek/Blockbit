@@ -7,7 +7,7 @@
     "max_stack_size": 1,
     "name": "Ruby Axe",
     "rarity": "epic",
-    "texture": "ruby_axe",
+    "texture": "blockbit:ruby_axe",
     "tool": {
         "level": 6,
         "type": "axe"

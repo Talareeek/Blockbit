@@ -10,7 +10,7 @@
         "tool": "pickaxe"
     },
     "render": {
-        "texture": "copper_ore"
+        "texture": "blockbit:copper_ore"
     },
     "solid": true,
     "transparent": false

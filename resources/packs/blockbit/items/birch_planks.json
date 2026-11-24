@@ -3,5 +3,5 @@
     "id": "blockbit:birch_planks",
     "max_stack_size": 64,
     "name": "Birch Planks",
-    "texture": "birch_planks"
+    "texture": "blockbit:birch_planks"
 }

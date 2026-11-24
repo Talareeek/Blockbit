@@ -11,7 +11,7 @@
         "tool": "axe"
     },
     "render": {
-        "texture": "birch_planks"
+        "texture": "blockbit:birch_planks"
     },
     "solid": true,
     "transparent": false

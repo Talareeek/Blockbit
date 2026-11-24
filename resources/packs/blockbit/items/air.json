@@ -2,5 +2,5 @@
     "id": "blockbit:air",
     "max_stack_size": 0,
     "name": "None",
-    "texture": "stone"
+    "texture": "blockbit:stone"
 }

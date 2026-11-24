@@ -60,4 +60,12 @@ struct CactusState
     static CactusState unpack(uint16_t v) { return { (v & 0x1) == 0 }; }
 };
 
+struct LeafState
+{
+    bool supported = true;
+
+    uint16_t pack() const { return supported ? uint16_t{0} : uint16_t{1}; }
+    static CactusState unpack(uint16_t v) { return { (v & 0x1) == 0 }; }
+};
+
 #endif // BLOCK_STATES_HPP

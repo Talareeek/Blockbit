@@ -3,5 +3,5 @@
     "max_stack_size": 64,
     "name": "Gold Ingot",
     "rarity": "rare",
-    "texture": "gold_ingot"
+    "texture": "blockbit:gold_ingot"
 }

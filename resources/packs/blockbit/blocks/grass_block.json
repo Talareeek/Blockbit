@@ -1,0 +1,18 @@
+{
+    "drop": {
+        "always": true,
+        "item": "blockbit:dirt"
+    },
+    "hardness": 0.6000000238418579,
+    "id": "blockbit:grass_block",
+    "mining": {
+        "level": 1,
+        "resistance": 2,
+        "tool": "shovel"
+    },
+    "render": {
+        "texture": "blockbit:grass_block"
+    },
+    "solid": true,
+    "transparent": false
+}

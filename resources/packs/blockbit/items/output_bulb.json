@@ -3,5 +3,5 @@
     "id": "blockbit:output_bulb",
     "max_stack_size": 64,
     "name": "Output Bulb",
-    "texture": "output_bulb"
+    "texture": "blockbit:output_bulb"
 }

@@ -13,5 +13,5 @@
     "max_stack_size": 16,
     "name": "Nuke Shot",
     "rarity": "mythic",
-    "texture": "bedrock"
+    "texture": "blockbit:bedrock"
 }

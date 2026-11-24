@@ -24,7 +24,7 @@
     "random_tickable": true,
     "render": {
         "profile": "cactus",
-        "texture": "cactus"
+        "texture": "blockbit:cactus"
     },
     "solid": true,
     "support_blocks_below": [

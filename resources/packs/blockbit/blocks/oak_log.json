@@ -11,7 +11,7 @@
         "tool": "axe"
     },
     "render": {
-        "texture": "oak_log"
+        "texture": "blockbit:oak_log"
     },
     "solid": true,
     "transparent": false

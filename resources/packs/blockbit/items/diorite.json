@@ -3,5 +3,5 @@
     "id": "blockbit:diorite",
     "max_stack_size": 64,
     "name": "Diorite",
-    "texture": "diorite"
+    "texture": "blockbit:diorite"
 }

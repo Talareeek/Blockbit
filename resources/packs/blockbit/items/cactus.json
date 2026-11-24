@@ -3,5 +3,5 @@
     "id": "blockbit:cactus",
     "max_stack_size": 64,
     "name": "Cactus",
-    "texture": "cactus"
+    "texture": "blockbit:cactus"
 }

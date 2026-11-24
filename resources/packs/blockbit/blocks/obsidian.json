@@ -10,7 +10,7 @@
         "tool": "pickaxe"
     },
     "render": {
-        "texture": "obsidian"
+        "texture": "blockbit:obsidian"
     },
     "solid": true,
     "transparent": false

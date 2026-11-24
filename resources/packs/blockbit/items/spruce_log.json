@@ -3,5 +3,5 @@
     "id": "blockbit:spruce_log",
     "max_stack_size": 64,
     "name": "Spruce Log",
-    "texture": "spruce_log"
+    "texture": "blockbit:spruce_log"
 }

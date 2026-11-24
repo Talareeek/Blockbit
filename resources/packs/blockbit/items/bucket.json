@@ -12,5 +12,5 @@
     "max_stack_size": 1,
     "name": "Bucket",
     "rarity": "rare",
-    "texture": "bucket"
+    "texture": "blockbit:bucket"
 }

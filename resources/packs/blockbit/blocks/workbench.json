@@ -11,7 +11,7 @@
         "tool": "axe"
     },
     "render": {
-        "texture": "workbench"
+        "texture": "blockbit:workbench"
     },
     "solid": true,
     "transparent": false

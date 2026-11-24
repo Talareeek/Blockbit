@@ -21,7 +21,7 @@
         "tool": "shovel"
     },
     "render": {
-        "texture": "gravel"
+        "texture": "blockbit:gravel"
     },
     "solid": true,
     "transparent": false

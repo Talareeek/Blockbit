@@ -27,11 +27,9 @@
 
 namespace
 {
-    // Every BlockKey the engine knows about. Order mirrors the enum declaration
-    // in Block.hpp — if you add a block there, add it here too so the editor
-    // palette stays complete. Air is included so the user can explicitly mark
+    // Every built-in BlockKey the engine knows about. Air is included so the user can explicitly mark
     // "this cell MUST be air" via Overwrite mode.
-    const std::array<BlockKey, 44> BLOCK_OPTIONS
+    const std::array<BlockKey, 49> BLOCK_OPTIONS
     {
         Blocks::Air,
         Blocks::Stone,
@@ -76,7 +74,12 @@ namespace
         Blocks::Glass,
         Blocks::Output_Bulb,
         Blocks::Ruby_Wire,
-        Blocks::Coreheart_Of_Blockbit
+        Blocks::Coreheart_Of_Blockbit,
+        Blocks::Upgrade_Table,
+        Blocks::Birch_Planks,
+        Blocks::Spruce_Planks,
+        Blocks::Copper_Ore,
+        Blocks::Copper_Block
     };
 
     const char* blockName(BlockKey id)

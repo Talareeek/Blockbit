@@ -12,7 +12,7 @@
     },
     "render": {
         "profile": "output_bulb",
-        "texture": "output_bulb"
+        "texture": "blockbit:output_bulb"
     },
     "solid": true,
     "transparent": false

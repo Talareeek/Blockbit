@@ -3,5 +3,5 @@
     "id": "blockbit:ruby_wire",
     "max_stack_size": 64,
     "name": "Ruby Wire",
-    "texture": "ruby_wire"
+    "texture": "blockbit:ruby_wire"
 }

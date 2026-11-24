@@ -1,0 +1,7 @@
+{
+    "category": "block",
+    "id": "blockbit:sugar_cane",
+    "max_stack_size": 64,
+    "name": "Sugar Cane",
+    "texture": "blockbit:sugar_cane"
+}

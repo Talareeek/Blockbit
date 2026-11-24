@@ -380,7 +380,7 @@ Game::Game()
     window.setVerticalSyncEnabled(Settings::graphics.vsync);
     if(Settings::graphics.fps_limit > 0) window.setFramerateLimit(Settings::graphics.fps_limit);
 
-	if (!icon.loadFromFile("resources/packs/blockbit/textures/grass.png")) throw std::runtime_error("Failed loading an icon");
+	if (!icon.loadFromFile("resources/packs/blockbit/textures/grass_block.png")) throw std::runtime_error("Failed loading an icon");
 
 	window.setIcon(icon);
 

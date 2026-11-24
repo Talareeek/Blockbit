@@ -1,128 +1,6 @@
 #include "../include/ContentProfiles.hpp"
 #include "../include/GameRegistries.hpp"
 
-#include <array>
-
-namespace
-{
-
-// Shared bidirectional map built from a flat list. The on-disk string is
-// what's baked into JSON; changing a column here is a format break.
-template <typename Enum>
-struct BiMap
-{
-    std::vector<std::pair<Enum, std::string>> entries;
-
-    std::optional<Enum> fromName(std::string_view name) const
-    {
-        for (const auto& [e, s] : entries)
-            if (s == name) return e;
-        return std::nullopt;
-    }
-    std::string toName(Enum value) const
-    {
-        for (const auto& [e, s] : entries)
-            if (e == value) return s;
-        return "";
-    }
-};
-
-using TextureMap = BiMap<RuntimeID>;
-
-const TextureMap& textureMap()
-{
-    static const TextureMap m{{
-        {static_cast<RuntimeID>(0),                 "stone"},
-        {static_cast<RuntimeID>(1),                 "grass"},
-        {static_cast<RuntimeID>(2),                  "dirt"},
-        {static_cast<RuntimeID>(3),           "cobblestone"},
-        {static_cast<RuntimeID>(4),              "obsidian"},
-        {static_cast<RuntimeID>(5),               "bedrock"},
-        {static_cast<RuntimeID>(6),                 "water"},
-        {static_cast<RuntimeID>(7),                  "lava"},
-        {static_cast<RuntimeID>(8),              "coal_ore"},
-        {static_cast<RuntimeID>(9),              "iron_ore"},
-        {static_cast<RuntimeID>(10),              "gold_ore"},
-        {static_cast<RuntimeID>(11),           "diamond_ore"},
-        {static_cast<RuntimeID>(12),              "ruby_ore"},
-        {static_cast<RuntimeID>(13),            "iron_block"},
-        {static_cast<RuntimeID>(14),            "gold_block"},
-        {static_cast<RuntimeID>(15),            "ruby_block"},
-        {static_cast<RuntimeID>(16),            "coal_block"},
-        {static_cast<RuntimeID>(17),               "oak_log"},
-        {static_cast<RuntimeID>(18),            "oak_leaves"},
-        {static_cast<RuntimeID>(19),            "oak_planks"},
-        {static_cast<RuntimeID>(20),             "birch_log"},
-        {static_cast<RuntimeID>(21),          "birch_leaves"},
-        {static_cast<RuntimeID>(22),            "spruce_log"},
-        {static_cast<RuntimeID>(23),         "spruce_leaves"},
-        {static_cast<RuntimeID>(24),            "woodcutter"},
-        {static_cast<RuntimeID>(25),                  "fire"},
-        {static_cast<RuntimeID>(26),                  "sand"},
-        {static_cast<RuntimeID>(27),           "coarse_dirt"},
-        {static_cast<RuntimeID>(28),                  "snow"},
-        {static_cast<RuntimeID>(29),                 "chest"},
-        {static_cast<RuntimeID>(30),                "bricks"},
-        {static_cast<RuntimeID>(31),               "furnace"},
-        {static_cast<RuntimeID>(32),             "workbench"},
-        {static_cast<RuntimeID>(33),                "gravel"},
-        {static_cast<RuntimeID>(34),                "cactus"},
-        {static_cast<RuntimeID>(35),             "dead_bush"},
-        {static_cast<RuntimeID>(36),          "smooth_stone"},
-        {static_cast<RuntimeID>(37),               "diorite"},
-        {static_cast<RuntimeID>(38),               "granite"},
-        {static_cast<RuntimeID>(39),                 "glass"},
-        {static_cast<RuntimeID>(40),           "output_bulb"},
-        {static_cast<RuntimeID>(41),             "ruby_wire"},
-        {static_cast<RuntimeID>(42), "coreheart_of_blockbit"},
-        {static_cast<RuntimeID>(43),         "upgrade_table"},
-        {static_cast<RuntimeID>(44),          "birch_planks"},
-        {static_cast<RuntimeID>(45),         "spruce_planks"},
-        {static_cast<RuntimeID>(46),            "copper_ore"},
-        {static_cast<RuntimeID>(47),          "copper_ingot"},
-        {static_cast<RuntimeID>(48),          "copper_block"},
-        {static_cast<RuntimeID>(49),              "dynamite"},
-        {static_cast<RuntimeID>(50),                "bucket"},
-        {static_cast<RuntimeID>(51),          "water_bucket"},
-        {static_cast<RuntimeID>(52),               "lighter"},
-        {static_cast<RuntimeID>(53),                "bottle"},
-        {static_cast<RuntimeID>(54),                  "coal"},
-        {static_cast<RuntimeID>(55),              "raw_iron"},
-        {static_cast<RuntimeID>(56),              "raw_gold"},
-        {static_cast<RuntimeID>(57),            "iron_ingot"},
-        {static_cast<RuntimeID>(58),            "gold_ingot"},
-        {static_cast<RuntimeID>(59),               "diamond"},
-        {static_cast<RuntimeID>(60),                  "ruby"},
-        {static_cast<RuntimeID>(61),                 "stick"},
-        {static_cast<RuntimeID>(62),                 "flint"},
-        {static_cast<RuntimeID>(63),                "player"},
-        {static_cast<RuntimeID>(64),                   "pig"},
-        {static_cast<RuntimeID>(65),                   "cow"},
-        {static_cast<RuntimeID>(66),                  "cube"},
-        {static_cast<RuntimeID>(67),        "wooden_pickaxe"},
-        {static_cast<RuntimeID>(68),         "stone_pickaxe"},
-        {static_cast<RuntimeID>(69),          "iron_pickaxe"},
-        {static_cast<RuntimeID>(70),          "gold_pickaxe"},
-        {static_cast<RuntimeID>(71),       "diamond_pickaxe"},
-        {static_cast<RuntimeID>(72),          "ruby_pickaxe"},
-        {static_cast<RuntimeID>(73),            "wooden_axe"},
-        {static_cast<RuntimeID>(74),             "stone_axe"},
-        {static_cast<RuntimeID>(75),              "iron_axe"},
-        {static_cast<RuntimeID>(76),              "gold_axe"},
-        {static_cast<RuntimeID>(77),           "diamond_axe"},
-        {static_cast<RuntimeID>(78),              "ruby_axe"},
-        {static_cast<RuntimeID>(79),         "wooden_shovel"},
-        {static_cast<RuntimeID>(80),          "stone_shovel"},
-        {static_cast<RuntimeID>(81),           "iron_shovel"},
-        {static_cast<RuntimeID>(82),           "gold_shovel"},
-        {static_cast<RuntimeID>(83),        "diamond_shovel"},
-        {static_cast<RuntimeID>(84),           "ruby_shovel"},
-    }};
-    return m;
-}
-
-} // namespace
-
 // Forward decls for the five vanilla callback sets. Defined inside the
 // blockbit_callbacks namespace in Block.cpp (named, not anonymous) so packs
 // can wire them in by profile name. Must live at global scope so the
@@ -133,13 +11,16 @@ void falling_on_place(BlockUpdateContext&, sf::Vector2i);
 void falling_on_post_placement(BlockUpdateContext&, sf::Vector2i, uint8_t);
 void falling_on_scheduled_tick(BlockUpdateContext&, sf::Vector2i);
 void water_on_place(BlockUpdateContext&, sf::Vector2i);
+void water_on_post_placement(BlockUpdateContext&, sf::Vector2i, uint8_t);
 void water_on_neighbor_changed(BlockUpdateContext&, sf::Vector2i, sf::Vector2i);
 void water_on_scheduled_tick(BlockUpdateContext&, sf::Vector2i);
 void lava_on_place(BlockUpdateContext&, sf::Vector2i);
+void lava_on_post_placement(BlockUpdateContext&, sf::Vector2i, uint8_t);
 void lava_on_neighbor_changed(BlockUpdateContext&, sf::Vector2i, sf::Vector2i);
 void lava_on_scheduled_tick(BlockUpdateContext&, sf::Vector2i);
 void cactus_on_post_placement(BlockUpdateContext&, sf::Vector2i, uint8_t);
 void cactus_on_random_tick(BlockUpdateContext&, sf::Vector2i);
+void leaves_on_random_tick(BlockUpdateContext&, sf::Vector2i);
 }
 
 namespace ContentProfiles
@@ -149,25 +30,15 @@ using namespace blockbit_callbacks;
 
 std::optional<RuntimeID> textureFromName(std::string_view name)
 {
-    if (name.find(':') != std::string_view::npos)
-    {
-        if (auto id = gameRegistries().textures.find(std::string(name)); id.has_value())
-            return id;
-        constexpr std::string_view vanillaPrefix = "blockbit:";
-        if (name.starts_with(vanillaPrefix))
-            return textureMap().fromName(name.substr(vanillaPrefix.size()));
+    if (name.find(':') == std::string_view::npos)
         return std::nullopt;
-    }
-    return textureMap().fromName(name);
+    return gameRegistries().textures.find(std::string(name));
 }
 
 std::string nameFromTexture(RuntimeID id)
 {
     const auto& textures = gameRegistries().textures;
-    if (textures.contains(id)) return textures.keyOf(id);
-    if (const auto vanillaName = textureMap().toName(id); !vanillaName.empty())
-        return "blockbit:" + vanillaName;
-    return {};
+    return textures.contains(id) ? textures.keyOf(id) : std::string{};
 }
 
 void registerTextureKey(const std::string& key, RuntimeID id)
@@ -177,7 +48,7 @@ void registerTextureKey(const std::string& key, RuntimeID id)
 
 RuntimeID firstDynamicTextureId()
 {
-    return static_cast<RuntimeID>(textureMap().entries.size());
+    return RuntimeID{0};
 }
 
 // --- Tool / category / rarity --------------------------------------------
@@ -408,6 +279,7 @@ bool applyCallbackProfile(BlockUpdateCallbacks& out, std::string_view profile)
     if (profile == "water")
     {
         out.onPlace            = water_on_place;
+        out.onPostPlacement    = water_on_post_placement;
         out.onNeighborChanged  = water_on_neighbor_changed;
         out.onScheduledTick    = water_on_scheduled_tick;
         return true;
@@ -415,6 +287,7 @@ bool applyCallbackProfile(BlockUpdateCallbacks& out, std::string_view profile)
     if (profile == "lava")
     {
         out.onPlace            = lava_on_place;
+        out.onPostPlacement    = lava_on_post_placement;
         out.onNeighborChanged  = lava_on_neighbor_changed;
         out.onScheduledTick    = lava_on_scheduled_tick;
         return true;
@@ -432,6 +305,11 @@ bool applyCallbackProfile(BlockUpdateCallbacks& out, std::string_view profile)
         out.onRandomTick       = cactus_on_random_tick;
         return true;
     }
+    if (profile == "leaves")
+    {
+        out.onRandomTick = leaves_on_random_tick;
+        return true;
+    }
     return false;
 }
 
@@ -442,6 +320,7 @@ std::string callbackProfileOf(const BlockUpdateCallbacks& cb)
     if (cb.onPlace == lava_on_place)       return "lava";
     if (cb.onPlace == falling_on_place)    return "falling";
     if (cb.onPostPlacement == cactus_on_post_placement) return "cactus";
+    if (cb.onRandomTick == leaves_on_random_tick) return "leaves";
     return "none";
 }
 

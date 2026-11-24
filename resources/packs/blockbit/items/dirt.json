@@ -3,5 +3,5 @@
     "id": "blockbit:dirt",
     "max_stack_size": 64,
     "name": "Dirt",
-    "texture": "dirt"
+    "texture": "blockbit:dirt"
 }

@@ -10,7 +10,7 @@
         "tool": "pickaxe"
     },
     "render": {
-        "texture": "ruby_ore"
+        "texture": "blockbit:ruby_ore"
     },
     "solid": true,
     "transparent": false

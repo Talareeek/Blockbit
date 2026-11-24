@@ -67,43 +67,42 @@ void ExplosiveSystem(ServerWorld& world, float dt)
         burst.arg      = {};
         world.pending_particle_bursts.push_back(burst);
 
-        if(explosive.damageEntities)
+
+        for(auto& [other_id, other] : entities)
         {
-            for(auto& [other_id, other] : entities)
+            if(other_id == id) continue;
+            if(!other.hasComponent<TransformComponent>()) continue;
+
+            sf::Vector2<double> diff = other.getComponent<TransformComponent>().center() - center;
+            double dist = std::sqrt(diff.x * diff.x + diff.y * diff.y);
+
+            if(dist > static_cast<double>(force) || dist == 0.0) continue;
+
+            sf::Vector2<double> dir = diff / dist;
+
+            double factor = std::clamp(1.0 - dist / force, 0.0, 1.0);
+
+            if(explosive.damageEntities && other.hasComponent<HealthComponent>())
             {
-                if(other_id == id) continue;
-                if(!other.hasComponent<TransformComponent>()) continue;
+                auto& other_health = other.getComponent<HealthComponent>();
+                float damage = static_cast<float>(factor) * (20.0f + force * 10.0f);
+                damage *= 0.75f + unit_dist(rng) * 0.5f;
+                uint8_t dmg = static_cast<uint8_t>(std::min<float>(damage, 255.0f));
+                other_health.health = (other_health.health > dmg) ? static_cast<uint8_t>(other_health.health - dmg) : 0;
+                other_health.since_last_damaged = 0.0f;
+                other_health.dirty = true;
+            }
 
-                sf::Vector2<double> diff = other.getComponent<TransformComponent>().center() - center;
-                double dist = std::sqrt(diff.x * diff.x + diff.y * diff.y);
-
-                if(dist > static_cast<double>(force) || dist == 0.0) continue;
-
-                sf::Vector2<double> dir = diff / dist;
-
-                double factor = std::clamp(1.0 - dist / force, 0.0, 1.0);
-
-                if(other.hasComponent<HealthComponent>())
-                {
-                    auto& other_health = other.getComponent<HealthComponent>();
-                    float damage = static_cast<float>(factor) * (20.0f + force * 10.0f);
-                    damage *= 0.75f + unit_dist(rng) * 0.5f;
-                    uint8_t dmg = static_cast<uint8_t>(std::min<float>(damage, 255.0f));
-                    other_health.health = (other_health.health > dmg) ? static_cast<uint8_t>(other_health.health - dmg) : 0;
-                    other_health.since_last_damaged = 0.0f;
-                    other_health.dirty = true;
-                }
-
-                if(other.hasComponent<PhysicsComponent>())
-                {
-                    double impulse = std::sqrt(factor) * (2.0 + force * 0.5);
-                    impulse *= 0.85 + unit_dist(rng) * 0.3;
-                    auto& other_physics = other.getComponent<PhysicsComponent>();
-                    other_physics.velocity += sf::Vector2<double>(dir.x, dir.y - 0.6) * impulse;
-                    other_physics.dirty = true;
-                }
+            if(other.hasComponent<PhysicsComponent>())
+            {
+                double impulse = std::sqrt(factor) * (2.0 + force * 0.5);
+                impulse *= 0.85 + unit_dist(rng) * 0.3;
+                auto& other_physics = other.getComponent<PhysicsComponent>();
+                other_physics.velocity += sf::Vector2<double>(dir.x, dir.y - 0.6) * impulse;
+                other_physics.dirty = true;
             }
         }
+
 
         if(!explosive.destroyBlocks) continue;
 

@@ -12,5 +12,5 @@
     "max_stack_size": 1,
     "name": "Water Bucket",
     "rarity": "rare",
-    "texture": "water_bucket"
+    "texture": "blockbit:water_bucket"
 }

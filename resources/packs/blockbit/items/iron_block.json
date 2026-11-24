@@ -3,5 +3,5 @@
     "id": "blockbit:iron_block",
     "max_stack_size": 64,
     "name": "Iron Block",
-    "texture": "iron_block"
+    "texture": "blockbit:iron_block"
 }

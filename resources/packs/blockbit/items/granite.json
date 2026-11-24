@@ -3,5 +3,5 @@
     "id": "blockbit:granite",
     "max_stack_size": 64,
     "name": "Granite",
-    "texture": "granite"
+    "texture": "blockbit:granite"
 }

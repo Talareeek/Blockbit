@@ -11,7 +11,7 @@
         "tool": "pickaxe"
     },
     "render": {
-        "texture": "upgrade_table"
+        "texture": "blockbit:upgrade_table"
     },
     "solid": true,
     "transparent": false

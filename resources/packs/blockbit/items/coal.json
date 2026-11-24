@@ -2,5 +2,5 @@
     "id": "blockbit:coal",
     "max_stack_size": 64,
     "name": "Coal",
-    "texture": "coal"
+    "texture": "blockbit:coal"
 }

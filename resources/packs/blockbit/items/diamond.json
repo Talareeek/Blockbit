@@ -3,5 +3,5 @@
     "max_stack_size": 64,
     "name": "Diamond",
     "rarity": "rare",
-    "texture": "diamond"
+    "texture": "blockbit:diamond"
 }

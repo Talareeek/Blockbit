@@ -3,5 +3,5 @@
     "id": "blockbit:bricks",
     "max_stack_size": 64,
     "name": "Bricks",
-    "texture": "bricks"
+    "texture": "blockbit:bricks"
 }

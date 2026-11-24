@@ -9,7 +9,7 @@
     },
     "render": {
         "profile": "coreheart",
-        "texture": "coreheart_of_blockbit"
+        "texture": "blockbit:coreheart_of_blockbit"
     },
     "solid": true,
     "transparent": false

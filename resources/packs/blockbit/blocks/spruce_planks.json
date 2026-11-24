@@ -11,7 +11,7 @@
         "tool": "axe"
     },
     "render": {
-        "texture": "spruce_planks"
+        "texture": "blockbit:spruce_planks"
     },
     "solid": true,
     "transparent": false

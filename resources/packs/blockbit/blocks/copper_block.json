@@ -11,7 +11,7 @@
         "tool": "pickaxe"
     },
     "render": {
-        "texture": "copper_block"
+        "texture": "blockbit:copper_block"
     },
     "solid": true,
     "transparent": false

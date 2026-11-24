@@ -17,11 +17,8 @@ namespace ContentProfiles
 {
 
 // --- Texture ---------------------------------------------------------------
-// textureFromName accepts both:
-//   - a fully-qualified RegistryKey like "blockbit:stone" or "ruby_mod:gem"
-//     (checked against the runtime texture-key registry), and
-//   - a bare vanilla name like "stone" (checked against the built-in table,
-//     for back-compat with legacy JSON authored before Phase 4).
+// Texture references must be fully-qualified RegistryKeys such as
+// "blockbit:stone" or "ruby_mod:gem" and resolve through the runtime registry.
 std::optional<RuntimeID> textureFromName(std::string_view name);
 std::string                                 nameFromTexture(RuntimeID id);
 
@@ -30,9 +27,7 @@ std::string                                 nameFromTexture(RuntimeID id);
 // Overwriting a previously-registered key reassigns the id.
 void registerTextureKey(const std::string& key, RuntimeID id);
 
-// First unused TextureID the pack loader may hand out. The big gap past
-// the vanilla enum range leaves headroom for adding vanilla textures
-// without colliding with already-assigned modpack ids.
+// First unused TextureID the pack loader may hand out.
 RuntimeID firstDynamicTextureId();
 
 // --- Prefab ----------------------------------------------------------------

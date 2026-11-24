@@ -5,7 +5,7 @@
     "max_stack_size": 1,
     "name": "Ruby Shovel",
     "rarity": "epic",
-    "texture": "ruby_shovel",
+    "texture": "blockbit:ruby_shovel",
     "tool": {
         "level": 6,
         "type": "shovel"

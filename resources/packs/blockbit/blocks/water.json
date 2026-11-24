@@ -15,6 +15,6 @@
     "liquid": true,
     "render": {
         "profile": "water",
-        "texture": "water"
+        "texture": "blockbit:water"
     }
 }

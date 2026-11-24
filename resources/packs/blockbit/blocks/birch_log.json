@@ -11,7 +11,7 @@
         "tool": "axe"
     },
     "render": {
-        "texture": "birch_log"
+        "texture": "blockbit:birch_log"
     },
     "solid": true,
     "transparent": false

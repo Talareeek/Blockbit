@@ -5,6 +5,7 @@
     },
     "hardness": 0.20000000298023224,
     "id": "blockbit:oak_leaves",
+    "callbacks": "leaves",
     "lets_light": true,
     "light_opacity": 2,
     "mining": {
@@ -13,7 +14,8 @@
         "tool": "axe"
     },
     "render": {
-        "texture": "oak_leaves"
+        "texture": "blockbit:oak_leaves"
     },
-    "solid": true
+    "solid": true,
+    "random_tickable": true
 }

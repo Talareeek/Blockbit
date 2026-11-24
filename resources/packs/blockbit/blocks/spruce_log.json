@@ -11,7 +11,7 @@
         "tool": "axe"
     },
     "render": {
-        "texture": "spruce_log"
+        "texture": "blockbit:spruce_log"
     },
     "solid": true,
     "transparent": false

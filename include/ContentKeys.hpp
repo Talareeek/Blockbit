@@ -13,7 +13,7 @@ namespace Blocks
 {
 inline const BlockKey Air = "blockbit:air";
 inline const BlockKey Stone = "blockbit:stone";
-inline const BlockKey Grass = "blockbit:grass";
+inline const BlockKey Grass = "blockbit:grass_block";
 inline const BlockKey Dirt = "blockbit:dirt";
 inline const BlockKey Cobblestone = "blockbit:cobblestone";
 inline const BlockKey Obsidian = "blockbit:obsidian";
@@ -48,6 +48,7 @@ inline const BlockKey Workbench = "blockbit:workbench";
 inline const BlockKey Gravel = "blockbit:gravel";
 inline const BlockKey Cactus = "blockbit:cactus";
 inline const BlockKey Dead_Bush = "blockbit:dead_bush";
+inline const BlockKey Tall_Grass = "blockbit:grass";
 inline const BlockKey Smooth_Stone = "blockbit:smooth_stone";
 inline const BlockKey Diorite = "blockbit:diorite";
 inline const BlockKey Granite = "blockbit:granite";
@@ -65,7 +66,7 @@ inline const BlockKey Copper_Block = "blockbit:copper_block";
 namespace Items
 {
 inline const ItemKey Stone = "blockbit:stone";
-inline const ItemKey Grass = "blockbit:grass";
+inline const ItemKey Grass = "blockbit:grass_block";
 inline const ItemKey Dirt = "blockbit:dirt";
 inline const ItemKey Cobblestone = "blockbit:cobblestone";
 inline const ItemKey Obsidian = "blockbit:obsidian";
@@ -130,6 +131,7 @@ inline const ItemKey Gold_Ingot = "blockbit:gold_ingot";
 inline const ItemKey Workbench = "blockbit:workbench";
 inline const ItemKey Cactus = "blockbit:cactus";
 inline const ItemKey Dead_Bush = "blockbit:dead_bush";
+inline const ItemKey Tall_Grass = "blockbit:grass";
 inline const ItemKey Smooth_Stone = "blockbit:smooth_stone";
 inline const ItemKey Diorite = "blockbit:diorite";
 inline const ItemKey Granite = "blockbit:granite";

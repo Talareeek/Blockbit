@@ -4,7 +4,7 @@
     "max_durability": 250,
     "max_stack_size": 1,
     "name": "Iron Shovel",
-    "texture": "iron_shovel",
+    "texture": "blockbit:iron_shovel",
     "tool": {
         "level": 4,
         "type": "shovel"

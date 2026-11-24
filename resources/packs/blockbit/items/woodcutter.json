@@ -3,5 +3,5 @@
     "id": "blockbit:woodcutter",
     "max_stack_size": 64,
     "name": "Woodcutter",
-    "texture": "woodcutter"
+    "texture": "blockbit:woodcutter"
 }

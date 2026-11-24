@@ -11,5 +11,5 @@
     "max_stack_size": 16,
     "name": "Dynamite",
     "rarity": "rare",
-    "texture": "dynamite"
+    "texture": "blockbit:dynamite"
 }

@@ -76,10 +76,11 @@ void FurnaceBlockEntity::tick(World& world, float dt)
                 cook_time_remaining = 0.0f;
             }
         }
-        else
+        else if (!canSmelt(*this))
         {
             // Nothing valid to smelt — reset cook progress so a freshly placed
-            // input starts from zero.
+            // input starts from zero. When fuel runs out, keep the partial
+            // progress; the next fuel item can continue the current smelt.
             cook_time_total     = 0.0f;
             cook_time_remaining = 0.0f;
         }

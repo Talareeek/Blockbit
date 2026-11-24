@@ -10,7 +10,7 @@
         "tool": "pickaxe"
     },
     "render": {
-        "texture": "gold_block"
+        "texture": "blockbit:gold_block"
     },
     "solid": true,
     "transparent": false

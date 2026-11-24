@@ -266,12 +266,14 @@ void PackManager::loadAllContent()
 
     // --- install vanilla first, then modpacks in dependency order. -------
     installPack(vanilla);
+    // Prefabs with render components need texture IDs registered by the pack
+    // scan above. Load them before block behavior references are used.
+    installPrefabs("resources/packs/blockbit", vanilla.manifest.id);
 
     // Seed the live spawn table with vanilla defaults — modpack
     // spawn_rules/*.json files append on top.
     reg.spawn_config = defaultMobSpawnConfig();
 
-    installPrefabs("resources/packs/blockbit", vanilla.manifest.id);
     {
         LoadedPackSummary s{vanilla.manifest.id, vanilla.manifest.version,
                             vanilla.manifest.description, vanilla.hash, {}};
@@ -512,11 +514,6 @@ bool parseBlockBehaviorJson(const nlohmann::json& j, BlockBehavior& out, std::st
             p.falling_prefab = prefab_name.find(':') == std::string::npos
                 ? "blockbit:" + prefab_name
                 : prefab_name;
-            if (!gameRegistries().prefabs.contains(p.falling_prefab))
-            {
-                err = "unknown falling_prefab '" + p.falling_prefab + "'";
-                return false;
-            }
             out.params = p;
             return true;
         }
@@ -1521,8 +1518,8 @@ std::size_t scanPackTextures(const std::filesystem::path& packDir,
         const std::string rel_key = texture_file.stem().string();
         const std::string key     = packNamespace + ":" + rel_key;
 
-        // Vanilla keys are pre-seeded in the texture key map. Other keys get
-        // a fresh RuntimeID; duplicate basenames within a pack deliberately
+        // Registered keys keep their RuntimeID. New keys get a fresh ID;
+        // duplicate basenames within a pack deliberately
         // resolve to the same key, with sorted path order deciding the winner.
         RuntimeID id;
         if (auto existing = ContentProfiles::textureFromName(key); existing.has_value())

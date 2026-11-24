@@ -4,5 +4,5 @@
     "max_stack_size": 64,
     "name": "Gold Block",
     "rarity": "rare",
-    "texture": "gold_block"
+    "texture": "blockbit:gold_block"
 }

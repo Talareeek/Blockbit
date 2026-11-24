@@ -10,7 +10,7 @@
         "tool": "pickaxe"
     },
     "render": {
-        "texture": "cobblestone"
+        "texture": "blockbit:cobblestone"
     },
     "solid": true,
     "transparent": false

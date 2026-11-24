@@ -2,5 +2,5 @@
     "id": "blockbit:iron_ingot",
     "max_stack_size": 64,
     "name": "Iron Ingot",
-    "texture": "iron_ingot"
+    "texture": "blockbit:iron_ingot"
 }

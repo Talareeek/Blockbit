@@ -557,6 +557,16 @@ void NormalWorldGenerator::generateFeatures(Chunk& chunk)
         generateFeature(chunk, dead_bush);
     }
 
+    for (const FeaturePlacement& grass : getGrassPlacements(chunk.chunk_position))
+    {
+        generateFeature(chunk, grass);
+    }
+
+    for (const FeaturePlacement& sugar_cane : getSugarCanePlacements(chunk.chunk_position))
+    {
+        generateFeature(chunk, sugar_cane);
+    }
+
     const int neighbor_range = (MAX_VEIN_REACH + CHUNK_WIDTH - 1) / CHUNK_WIDTH;
 
     for (const OreDef& ore : ORES)
@@ -588,6 +598,18 @@ void NormalWorldGenerator::generateFeature(Chunk& chunk, const FeaturePlacement&
     if (feature.type == FeatureType::DeadBush)
     {
         generateDeadBush(chunk, feature);
+        return;
+    }
+
+    if (feature.type == FeatureType::Grass)
+    {
+        generateGrass(chunk, feature);
+        return;
+    }
+
+    if (feature.type == FeatureType::SugarCane)
+    {
+        generateSugarCane(chunk, feature);
         return;
     }
 
@@ -825,6 +847,86 @@ void NormalWorldGenerator::generateDeadBush(Chunk& chunk, const FeaturePlacement
     if (chunk.blocks[y][local_x].id != Blocks::Air) return;
 
     chunk.blocks[y][local_x] = {Blocks::Dead_Bush, 0};
+}
+
+std::vector<FeaturePlacement> NormalWorldGenerator::getGrassPlacements(int chunk_position) const
+{
+    std::vector<FeaturePlacement> result;
+    const int chunk_min = chunk_position * CHUNK_WIDTH;
+    const int chunk_max = chunk_min + CHUNK_WIDTH - 1;
+    const int grid_min = floorDiv(chunk_min, GRASS_GRID);
+    const int grid_max = floorDiv(chunk_max, GRASS_GRID);
+
+    for (int grid_x = grid_min; grid_x <= grid_max; ++grid_x)
+    {
+        SmallRng rng(featureSeed(grid_x, 0, FeatureType::Grass));
+        const int world_x = grid_x * GRASS_GRID + rng.range(GRASS_GRID);
+        const double roll = rng.unit();
+        const uint32_t grass_seed = rng.next();
+        if (world_x < chunk_min || world_x > chunk_max || roll > 0.35) continue;
+
+        const ColumnData col = getColumn(world_x);
+        if (col.height <= SEA_LEVEL + 1 || col.height >= CHUNK_HEIGHT - 1) continue;
+        if (col.top_biome != Biome::Plains && col.top_biome != Biome::Forest &&
+            col.top_biome != Biome::Jungle && col.top_biome != Biome::Taiga &&
+            col.top_biome != Biome::Savanna) continue;
+        if (col.top_block.id != Blocks::Grass && col.top_block.id != Blocks::Coarse_Dirt) continue;
+
+        result.push_back(FeaturePlacement{FeatureType::Grass, world_x, col.height, grass_seed});
+    }
+    return result;
+}
+
+void NormalWorldGenerator::generateGrass(Chunk& chunk, const FeaturePlacement& feature)
+{
+    const int local_x = feature.x - chunk.chunk_position * CHUNK_WIDTH;
+    if (local_x < 0 || local_x >= CHUNK_WIDTH || feature.y < 0 || feature.y >= CHUNK_HEIGHT) return;
+    if (!blockDatabase.contains(Blocks::Tall_Grass) || chunk.blocks[feature.y][local_x].id != Blocks::Air) return;
+    chunk.blocks[feature.y][local_x] = {Blocks::Tall_Grass, 0};
+}
+
+std::vector<FeaturePlacement> NormalWorldGenerator::getSugarCanePlacements(int chunk_position) const
+{
+    std::vector<FeaturePlacement> result;
+    const int chunk_min = chunk_position * CHUNK_WIDTH;
+    const int chunk_max = chunk_min + CHUNK_WIDTH - 1;
+    const BlockKey sugar_cane = "blockbit:sugar_cane";
+    if (!blockDatabase.contains(sugar_cane)) return result;
+
+    for (int world_x = chunk_min; world_x <= chunk_max; ++world_x)
+    {
+        const ColumnData col = getColumn(world_x);
+        if (col.height <= SEA_LEVEL || col.height >= CHUNK_HEIGHT - 1) continue;
+        if (col.top_block.id != Blocks::Sand && col.top_block.id != Blocks::Dirt &&
+            col.top_block.id != Blocks::Grass && col.top_block.id != Blocks::Coarse_Dirt) continue;
+
+        const ColumnData left = getColumn(world_x - 1);
+        const ColumnData right = getColumn(world_x + 1);
+        if (left.height > SEA_LEVEL && right.height > SEA_LEVEL) continue;
+
+        SmallRng rng(featureSeed(world_x, 0, FeatureType::SugarCane));
+        const double roll = rng.unit();
+        const uint32_t cane_seed = rng.next();
+        if (roll < 0.5)
+            result.push_back(FeaturePlacement{FeatureType::SugarCane, world_x, col.height, cane_seed});
+    }
+    return result;
+}
+
+void NormalWorldGenerator::generateSugarCane(Chunk& chunk, const FeaturePlacement& feature)
+{
+    const int local_x = feature.x - chunk.chunk_position * CHUNK_WIDTH;
+    if (local_x < 0 || local_x >= CHUNK_WIDTH || feature.y < 0 || feature.y >= CHUNK_HEIGHT) return;
+    const BlockKey sugar_cane = "blockbit:sugar_cane";
+    if (!blockDatabase.contains(sugar_cane) || chunk.blocks[feature.y][local_x].id != Blocks::Air) return;
+
+    SmallRng rng(feature.seed);
+    const int height = 1 + rng.range(3);
+    for (int i = 0; i < height && feature.y + i < CHUNK_HEIGHT; ++i)
+    {
+        if (chunk.blocks[feature.y + i][local_x].id != Blocks::Air) break;
+        chunk.blocks[feature.y + i][local_x] = {sugar_cane, 0};
+    }
 }
 
 void NormalWorldGenerator::generateOreVein(Chunk& chunk, const FeaturePlacement& feature, BlockKey ore, int size)

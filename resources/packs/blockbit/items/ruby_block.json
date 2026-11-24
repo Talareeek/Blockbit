@@ -4,5 +4,5 @@
     "max_stack_size": 64,
     "name": "Ruby Block",
     "rarity": "epic",
-    "texture": "ruby_block"
+    "texture": "blockbit:ruby_block"
 }

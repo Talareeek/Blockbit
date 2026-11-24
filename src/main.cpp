@@ -49,26 +49,43 @@ int main(int argc, char* argv[])
     std::string loadWorld;
     std::string joinAddress;
     std::string hostWorld;
-    std::string nickname;
+    std::string nickname = "Player";
 
     for (int i = 1; i < argc; i++)
     {
         std::string arg = argv[i];
-        if (arg == "--load" && i + 1 < argc)
+        if (arg == "--load")
         {
+            if (i + 1 >= argc)
+            {
+                std::cerr << "Usage: Blockbit --load <world> [nickname]\n";
+                return 1;
+            }
             loadWorld = argv[++i];
-            nickname = argv[++i];
+            if (i + 1 < argc && argv[i + 1][0] != '-')
+                nickname = argv[++i];
         }
-        else if (arg == "--join" && i + 1 < argc)
+        else if (arg == "--join")
         {
+            if (i + 1 >= argc)
+            {
+                std::cerr << "Usage: Blockbit --join <address[:port]> [nickname]\n";
+                return 1;
+            }
             joinAddress = argv[++i];
-            nickname = argv[++i];
-
+            if (i + 1 < argc && argv[i + 1][0] != '-')
+                nickname = argv[++i];
         }
-        else if (arg == "--host" && i + 1 < argc)
+        else if (arg == "--host")
         {
+            if (i + 1 >= argc)
+            {
+                std::cerr << "Usage: Blockbit --host <world> [nickname]\n";
+                return 1;
+            }
             hostWorld = argv[++i];
-            nickname = argv[++i];
+            if (i + 1 < argc && argv[i + 1][0] != '-')
+                nickname = argv[++i];
         }
         else if (arg == "--legacy")
         {

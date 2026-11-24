@@ -4,7 +4,7 @@
     "max_durability": 131,
     "max_stack_size": 1,
     "name": "Stone Shovel",
-    "texture": "stone_shovel",
+    "texture": "blockbit:stone_shovel",
     "tool": {
         "level": 2,
         "type": "shovel"

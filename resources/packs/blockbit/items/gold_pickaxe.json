@@ -4,7 +4,7 @@
     "max_durability": 32,
     "max_stack_size": 1,
     "name": "Gold Pickaxe",
-    "texture": "gold_pickaxe",
+    "texture": "blockbit:gold_pickaxe",
     "tool": {
         "level": 3,
         "type": "pickaxe"

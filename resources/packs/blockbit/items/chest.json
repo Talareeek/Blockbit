@@ -3,5 +3,5 @@
     "id": "blockbit:chest",
     "max_stack_size": 64,
     "name": "Chest",
-    "texture": "chest"
+    "texture": "blockbit:chest"
 }

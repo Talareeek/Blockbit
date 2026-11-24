@@ -2,5 +2,5 @@
     "id": "blockbit:ruby",
     "max_stack_size": 64,
     "name": "Ruby",
-    "texture": "ruby"
+    "texture": "blockbit:ruby"
 }

@@ -3,5 +3,5 @@
     "id": "blockbit:gravel",
     "max_stack_size": 64,
     "name": "Gravel",
-    "texture": "gravel"
+    "texture": "blockbit:gravel"
 }

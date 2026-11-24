@@ -3,5 +3,5 @@
     "id": "blockbit:workbench",
     "max_stack_size": 64,
     "name": "Workbench",
-    "texture": "workbench"
+    "texture": "blockbit:workbench"
 }

@@ -3,5 +3,5 @@
     "id": "blockbit:birch_log",
     "max_stack_size": 64,
     "name": "Birch Log",
-    "texture": "birch_log"
+    "texture": "blockbit:birch_log"
 }

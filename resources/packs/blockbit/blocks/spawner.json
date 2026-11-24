@@ -1,0 +1,18 @@
+{
+    "drop": {
+        "always": true,
+        "item": "blockbit:spawner"
+    },
+    "hardness": 1.5,
+    "id": "blockbit:spawner",
+    "mining": {
+        "level": 1,
+        "resistance": 5,
+        "tool": "pickaxe"
+    },
+    "render": {
+        "texture": "blockbit:spawner"
+    },
+    "solid": true,
+    "transparent": false
+}

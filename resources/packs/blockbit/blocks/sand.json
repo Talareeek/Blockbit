@@ -19,7 +19,7 @@
         "tool": "shovel"
     },
     "render": {
-        "texture": "sand"
+        "texture": "blockbit:sand"
     },
     "solid": true,
     "transparent": false

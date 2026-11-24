@@ -3,5 +3,5 @@
     "id": "blockbit:ruby_ore",
     "max_stack_size": 64,
     "name": "Ruby Ore",
-    "texture": "ruby_ore"
+    "texture": "blockbit:ruby_ore"
 }

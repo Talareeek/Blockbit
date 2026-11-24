@@ -11,7 +11,7 @@
     },
     "render": {
         "profile": "furnace",
-        "texture": "furnace"
+        "texture": "blockbit:furnace"
     },
     "solid": true,
     "transparent": false

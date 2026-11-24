@@ -3,5 +3,5 @@
     "id": "blockbit:cobblestone",
     "max_stack_size": 64,
     "name": "Cobblestone",
-    "texture": "cobblestone"
+    "texture": "blockbit:cobblestone"
 }

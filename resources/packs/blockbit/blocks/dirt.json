@@ -11,7 +11,7 @@
         "tool": "shovel"
     },
     "render": {
-        "texture": "dirt"
+        "texture": "blockbit:dirt"
     },
     "solid": true,
     "transparent": false

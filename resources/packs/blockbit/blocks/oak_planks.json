@@ -11,7 +11,7 @@
         "tool": "axe"
     },
     "render": {
-        "texture": "oak_planks"
+        "texture": "blockbit:oak_planks"
     },
     "solid": true,
     "transparent": false

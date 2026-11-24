@@ -10,7 +10,7 @@ namespace
         e.weight   = 10;
         e.min_pack = 2;
         e.max_pack = 4;
-        e.surface.allowed_ground     = {"blockbit:grass"};
+        e.surface.allowed_ground     = {Blocks::Grass};
         e.surface.required_air_above = 2;
         e.surface.requires_sky       = true;
         e.day_allowed                = true;

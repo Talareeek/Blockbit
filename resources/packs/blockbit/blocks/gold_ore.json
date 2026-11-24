@@ -10,7 +10,7 @@
         "tool": "pickaxe"
     },
     "render": {
-        "texture": "gold_ore"
+        "texture": "blockbit:gold_ore"
     },
     "solid": true,
     "transparent": false

@@ -1,0 +1,7 @@
+{
+    "category": "block",
+    "id": "blockbit:spawner",
+    "max_stack_size": 64,
+    "name": "Spawner",
+    "texture": "blockbit:spawner"
+}

@@ -3,5 +3,5 @@
     "id": "blockbit:snow",
     "max_stack_size": 64,
     "name": "Snow",
-    "texture": "snow"
+    "texture": "blockbit:snow"
 }

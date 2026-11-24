@@ -16,6 +16,6 @@
     "liquid": true,
     "render": {
         "profile": "lava",
-        "texture": "lava"
+        "texture": "blockbit:lava"
     }
 }

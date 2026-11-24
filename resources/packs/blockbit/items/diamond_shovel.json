@@ -4,7 +4,7 @@
     "max_durability": 1561,
     "max_stack_size": 1,
     "name": "Diamond Shovel",
-    "texture": "diamond_shovel",
+    "texture": "blockbit:diamond_shovel",
     "tool": {
         "level": 5,
         "type": "shovel"

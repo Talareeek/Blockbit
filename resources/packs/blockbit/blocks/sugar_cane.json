@@ -1,0 +1,34 @@
+{
+    "behavior": {
+        "params": {
+            "grows_as": "blockbit:sugar_cane",
+            "max_height": 3
+        },
+        "type": "plant_growth"
+    },
+    "drop": {
+        "always": true,
+        "item": "blockbit:sugar_cane"
+    },
+    "hardness": 0.4000000059604645,
+    "id": "blockbit:sugar_cane",
+    "lets_light": true,
+    "light_opacity": 2,
+    "mining": {
+        "level": 0,
+        "resistance": 1,
+        "tool": "none"
+    },
+    "pp_accept_mask": 12,
+    "random_tickable": true,
+    "render": {
+        "texture": "blockbit:sugar_cane"
+    },
+    "solid": false,
+    "support_blocks_below": [
+        "blockbit:sand",
+        "blockbit:dirt",
+        "blockbit:grass_block",
+        "blockbit:sugar_cane"
+    ]
+}

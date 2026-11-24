@@ -13,7 +13,7 @@
 //   {
 //     "id": "ruby_mod:rubyling",
 //     "size":    [1.0, 0.75],
-//     "render":  {"texture": "pig", "rect": [0, 0, 16, 12], "size": [1.0, 0.75]},
+//     "render":  {"texture": "blockbit:pig", "rect": [0, 0, 16, 12], "size": [1.0, 0.75]},
 //     "physics": {"mass": 1.0, "gravity": true, "collide_world": true,
 //                 "collide_entities": false, "push_entities": true},
 //     "health":  {"max": 100, "invulnerable": false},

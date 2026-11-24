@@ -3,5 +3,5 @@
     "id": "blockbit:stone",
     "max_stack_size": 64,
     "name": "Stone",
-    "texture": "stone"
+    "texture": "blockbit:stone"
 }

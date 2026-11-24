@@ -13,7 +13,7 @@
     },
     "render": {
         "profile": "woodcutter",
-        "texture": "woodcutter"
+        "texture": "blockbit:woodcutter"
     },
     "solid": true,
     "transparent": false

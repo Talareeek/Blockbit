@@ -1,0 +1,7 @@
+{
+    "category": "block",
+    "id": "blockbit:grass_block",
+    "max_stack_size": 64,
+    "name": "Grass",
+    "texture": "blockbit:grass_block"
+}

@@ -9,6 +9,6 @@
         "tool": "axe"
     },
     "render": {
-        "texture": "fire"
+        "texture": "blockbit:fire"
     }
 }

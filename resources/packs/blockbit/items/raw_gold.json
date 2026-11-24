@@ -3,5 +3,5 @@
     "max_stack_size": 64,
     "name": "Raw Gold",
     "rarity": "rare",
-    "texture": "raw_gold"
+    "texture": "blockbit:raw_gold"
 }
