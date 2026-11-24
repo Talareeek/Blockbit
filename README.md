@@ -8,11 +8,17 @@
 
 A 2D sandbox game written in **C++20** with **SFML**, inspired by classic block-based games. Dig, build, craft, fight — survive your own world, or share it with friends over the network.
 
-![C++](https://img.shields.io/badge/C++-20-blue?logo=c%2B%2B)
+![C++](https://img.shields.io/badge/C++20-00599C?logo=cplusplus&logoColor=white)
 ![SFML](https://img.shields.io/badge/SFML-3.x-green?logo=sfml)
 ![License](https://img.shields.io/badge/license-MIT-brightgreen)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey)
-<a href="https://discord.gg/Ayt2abHuN">Discord</a>
+
+
+[
+
+![Discord](https://img.shields.io/badge/Discord-Join%20Us-5865F2?logo=discord&logoColor=white)
+
+](https://discord.gg/Ayt2abHuN)
 
 ---
 
