@@ -1,0 +1,16 @@
+{
+    "behavior": {
+        "params": {
+            "empty_variant": "blockbit:reinforced_bucket",
+            "filled_variant": "blockbit:reinforced_lava_bucket",
+            "fluid": "blockbit:lava",
+            "source_level_value": 5
+        },
+        "type": "fluid_bucket"
+    },
+    "id": "blockbit:reinforced_lava_bucket",
+    "max_stack_size": 1,
+    "name": "Reinforced Lava Bucket",
+    "rarity": "rare",
+    "texture": "blockbit:reinforced_lava_bucket"
+}

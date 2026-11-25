@@ -80,11 +80,10 @@ namespace blockbit_callbacks
     }
 
     // Delay between a water cell being disturbed and its flow logic firing.
-    // 30 server ticks @ 120 TPS = 0.25 s, which lets a vertical fall tick down
-    // at a visible pace instead of teleporting to the floor in a single frame.
+    // Keep this in sync with the default pack's water tick delay.
     // Used as the fallback when a fluid's CascadeFluid behavior doesn't set
     // tick_delay_ticks.
-    constexpr int WATER_TICK_DELAY = 30;
+    constexpr int WATER_TICK_DELAY = 5;
 
     // Reads tick_delay_ticks from a CascadeFluid behavior attached to the
     // block at `pos`. Returns `fallback` for non-fluid blocks or when the
@@ -285,10 +284,10 @@ namespace blockbit_callbacks
         ctx.world.setBlock(pos.x, pos.y, {Blocks::Air, 0});
     }
 
-    // Lava uses the same cascade as water but ticks three times slower and
+    // Lava uses the same cascade as water but ticks six times slower and
     // caps horizontal reach at ~3 cells (half of water's ~7). Levels follow
     // LavaState (FULL=4, SOURCE=5) instead of WaterState.
-    constexpr int LAVA_TICK_DELAY = 90;
+    constexpr int LAVA_TICK_DELAY = 30;
 
     bool lava_cell_passable(Block b)
     {

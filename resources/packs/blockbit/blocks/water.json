@@ -2,7 +2,7 @@
     "behavior": {
         "params": {
             "max_level": 9,
-            "tick_delay_ticks": 30
+            "tick_delay_ticks": 5
         },
         "type": "cascade_fluid"
     },
