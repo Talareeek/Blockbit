@@ -1241,6 +1241,8 @@ int main(int argc, char* argv[])
             next_tick += std::chrono::duration_cast<std::chrono::steady_clock::duration>(step_duration);
 
             server->update(tick_step);
+            while (server->consumeTickSprint() && g_running && !g_stop_requested && !server->isUnrecoverable())
+                server->update(tick_step);
 
             while (auto line = tryReadStdinLine())
             {

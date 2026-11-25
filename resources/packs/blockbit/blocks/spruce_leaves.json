@@ -1,7 +1,9 @@
 {
     "drop": {
         "always": true,
-        "item": "blockbit:spruce_leaves"
+        "item": "blockbit:spruce_leaves",
+        "alternative_item": "blockbit:spruce_sapling",
+        "alternative_chance": 0.05
     },
     "hardness": 0.20000000298023224,
     "id": "blockbit:spruce_leaves",

@@ -21,6 +21,7 @@ void lava_on_scheduled_tick(BlockUpdateContext&, sf::Vector2i);
 void cactus_on_post_placement(BlockUpdateContext&, sf::Vector2i, uint8_t);
 void cactus_on_random_tick(BlockUpdateContext&, sf::Vector2i);
 void leaves_on_random_tick(BlockUpdateContext&, sf::Vector2i);
+void sapling_on_random_tick(BlockUpdateContext&, sf::Vector2i);
 }
 
 namespace ContentProfiles
@@ -310,6 +311,11 @@ bool applyCallbackProfile(BlockUpdateCallbacks& out, std::string_view profile)
         out.onRandomTick = leaves_on_random_tick;
         return true;
     }
+    if (profile == "sapling")
+    {
+        out.onRandomTick = sapling_on_random_tick;
+        return true;
+    }
     return false;
 }
 
@@ -321,6 +327,7 @@ std::string callbackProfileOf(const BlockUpdateCallbacks& cb)
     if (cb.onPlace == falling_on_place)    return "falling";
     if (cb.onPostPlacement == cactus_on_post_placement) return "cactus";
     if (cb.onRandomTick == leaves_on_random_tick) return "leaves";
+    if (cb.onRandomTick == sapling_on_random_tick) return "sapling";
     return "none";
 }
 

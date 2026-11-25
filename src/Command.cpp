@@ -539,6 +539,23 @@ std::unordered_map<std::wstring, Command> commandDatabase =
     // ---- Administrative commands ----
     //
 
+    {L"tick", {false, false, true,
+        [](std::wstring command, CommandContext& context)
+        {
+            auto tokens = tokenize(command);
+            if (tokens.size() != 3 || tokens[1] != L"sprint")
+                throw CommandException{"Usage: /tick sprint <count>"};
+
+            uint32_t count = parseUInt(tokens[2], "count");
+            if (count == 0 || count > 1000000)
+                throw CommandException{"Tick sprint count must be between 1 and 1000000."};
+
+            GameServer& server = requireServer(context);
+            server.requestTickSprint(count);
+            context.reply(L"Queued " + std::to_wstring(count) + L" extra server ticks.");
+        }
+    }},
+
     {L"op", {false, false, true,
         [](std::wstring command, CommandContext& context)
         {

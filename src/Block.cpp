@@ -4,6 +4,7 @@
 #include "../include/Prefab.hpp"
 
 #include <algorithm>
+#include <random>
 
 // Vanilla block callbacks (named, not anonymous) so ContentProfiles can wire
 // them into pack-loaded blocks by name. See include/ContentProfiles.hpp.
@@ -260,6 +261,28 @@ namespace blockbit_callbacks
         ctx.pipeline.setBlockSuppressNC({pos.x, pos.y + 1}, {grown, CactusState{true}.pack()});
     }
 
+    void sapling_on_random_tick(BlockUpdateContext& ctx, sf::Vector2i pos)
+    {
+        const BlockKey sapling = ctx.world.getBlock(pos.x, pos.y).id;
+        BlockKey log, leaves;
+        if (sapling == "blockbit:oak_sapling") { log = Blocks::Oak_Log; leaves = Blocks::Oak_Leaves; }
+        else if (sapling == "blockbit:birch_sapling") { log = Blocks::Birch_Log; leaves = Blocks::Birch_Leaves; }
+        else if (sapling == "blockbit:spruce_sapling") { log = Blocks::Spruce_Log; leaves = Blocks::Spruce_Leaves; }
+        else return;
+        if (ctx.world.getBlock(pos.x, pos.y - 1).id != Blocks::Dirt &&
+            ctx.world.getBlock(pos.x, pos.y - 1).id != Blocks::Grass) return;
+        // The sapling occupies pos itself; only the three blocks above it
+        // need to be clear for this four-block-tall tree.
+        for (int y = 1; y <= 3; ++y)
+            if (ctx.world.getBlock(pos.x, pos.y + y).id != Blocks::Air) return;
+        ctx.pipeline.setBlockSuppressNC(pos, {log, 0});
+        for (int y = 1; y <= 3; ++y) ctx.pipeline.setBlockSuppressNC({pos.x, pos.y + y}, {log, 0});
+        for (int dx = -2; dx <= 2; ++dx)
+            for (int dy = 2; dy <= 4; ++dy)
+                if ((std::abs(dx) + std::abs(dy - 3) <= 3) && ctx.world.getBlock(pos.x + dx, pos.y + dy).id == Blocks::Air)
+                    ctx.pipeline.setBlockSuppressNC({pos.x + dx, pos.y + dy}, {leaves, 0});
+    }
+
     // Leaves stay alive while a matching trunk is within four blocks. Random
     // ticks make detached canopies decay over time without a separate sweep.
     void leaves_on_random_tick(BlockUpdateContext& ctx, sf::Vector2i pos)
@@ -279,8 +302,14 @@ namespace blockbit_callbacks
             }
         }
 
-        // Direct world edits from scheduled/random ticks do not create drops;
-        // propagating the removal also lets neighboring leaves decay naturally.
+        // Detached leaves occasionally leave a matching sapling behind.
+        auto data = blockDatabase.find(leaf);
+        std::mt19937 rng(std::random_device{}());
+        if (data != blockDatabase.end() && data->second.drop && data->second.drop->alternative_drop_chance > 0.0f &&
+            std::uniform_real_distribution<float>(0.0f, 1.0f)(rng) < data->second.drop->alternative_drop_chance)
+        {
+            spawnDroppedItem(ctx.world, {pos.x + 0.25, pos.y + 0.25}, ItemStack{data->second.drop->alternative_drop, 1});
+        }
         ctx.world.setBlock(pos.x, pos.y, {Blocks::Air, 0});
     }
 

@@ -1,7 +1,9 @@
 {
     "drop": {
         "always": true,
-        "item": "blockbit:birch_leaves"
+        "item": "blockbit:birch_leaves",
+        "alternative_item": "blockbit:birch_sapling",
+        "alternative_chance": 0.05
     },
     "hardness": 0.20000000298023224,
     "id": "blockbit:birch_leaves",

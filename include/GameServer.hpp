@@ -80,6 +80,7 @@ private:
     uint16_t tick_rate = 120;
     uint32_t max_ticks_per_frame = 10;
     uint64_t tick = 0;
+    uint32_t sprint_ticks_remaining = 0;
     sf::Clock update_clock;
 
     // Block updates run at a fixed 20 Hz regardless of server tick_rate. The
@@ -156,6 +157,8 @@ public:
     GameServer(std::filesystem::path server_root, std::string name, unsigned int seed, GenerationProperties generation_properties, std::unique_ptr<ServerTransport> transport);
 
     void update(float dt);
+    void requestTickSprint(uint32_t count) { sprint_ticks_remaining += count; }
+    bool consumeTickSprint() { if (sprint_ticks_remaining == 0) return false; --sprint_ticks_remaining; return true; }
 
     World& getWorld() { return world; }
 

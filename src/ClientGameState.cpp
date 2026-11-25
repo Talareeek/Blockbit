@@ -827,6 +827,8 @@ void ClientGameState::onTick(float tick_step)
     if (local_server)
     {
         local_server->update(tick_step);
+        while (local_server->consumeTickSprint() && !local_server->isUnrecoverable())
+            local_server->update(tick_step);
 
         if (local_server->isUnrecoverable())
         {

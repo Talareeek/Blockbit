@@ -1,0 +1,12 @@
+{
+    "callbacks": "sapling",
+    "drop": {"always": true, "item": "blockbit:birch_sapling"},
+    "id": "blockbit:birch_sapling",
+    "lets_light": true,
+    "light_opacity": 1,
+    "mining": {"level": 0, "resistance": 0, "tool": "none"},
+    "random_tickable": true,
+    "render": {"texture": "blockbit:birch_sapling"},
+    "solid": false,
+    "support_blocks_below": ["blockbit:dirt", "blockbit:grass_block"]
+}
