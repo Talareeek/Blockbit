@@ -562,6 +562,12 @@ void NormalWorldGenerator::generateFeatures(Chunk& chunk)
         generateFeature(chunk, grass);
     }
 
+    for (const FeatureType flower_type : {FeatureType::Dandelion, FeatureType::Poppy})
+    {
+        for (const FeaturePlacement& flower : getFlowerPlacements(chunk.chunk_position, flower_type))
+            generateFeature(chunk, flower);
+    }
+
     for (const FeaturePlacement& sugar_cane : getSugarCanePlacements(chunk.chunk_position))
     {
         generateFeature(chunk, sugar_cane);
@@ -604,6 +610,12 @@ void NormalWorldGenerator::generateFeature(Chunk& chunk, const FeaturePlacement&
     if (feature.type == FeatureType::Grass)
     {
         generateGrass(chunk, feature);
+        return;
+    }
+
+    if (feature.type == FeatureType::Dandelion || feature.type == FeatureType::Poppy)
+    {
+        generateFlower(chunk, feature);
         return;
     }
 
@@ -883,6 +895,44 @@ void NormalWorldGenerator::generateGrass(Chunk& chunk, const FeaturePlacement& f
     if (local_x < 0 || local_x >= CHUNK_WIDTH || feature.y < 0 || feature.y >= CHUNK_HEIGHT) return;
     if (!blockDatabase.contains(Blocks::Tall_Grass) || chunk.blocks[feature.y][local_x].id != Blocks::Air) return;
     chunk.blocks[feature.y][local_x] = {Blocks::Tall_Grass, 0};
+}
+
+std::vector<FeaturePlacement> NormalWorldGenerator::getFlowerPlacements(int chunk_position, FeatureType type) const
+{
+    std::vector<FeaturePlacement> result;
+    const int chunk_min = chunk_position * CHUNK_WIDTH;
+    const int chunk_max = chunk_min + CHUNK_WIDTH - 1;
+    constexpr int FLOWER_GRID = 7;
+    const int grid_min = floorDiv(chunk_min, FLOWER_GRID);
+    const int grid_max = floorDiv(chunk_max, FLOWER_GRID);
+
+    for (int grid_x = grid_min; grid_x <= grid_max; ++grid_x)
+    {
+        SmallRng rng(featureSeed(grid_x, 0, type));
+        const int world_x = grid_x * FLOWER_GRID + rng.range(FLOWER_GRID);
+        const double roll = rng.unit();
+        const uint32_t flower_seed = rng.next();
+        if (world_x < chunk_min || world_x > chunk_max || roll > 0.22) continue;
+
+        const ColumnData col = getColumn(world_x);
+        if (col.height <= SEA_LEVEL + 1 || col.height >= CHUNK_HEIGHT - 1) continue;
+        if (col.top_biome != Biome::Plains && col.top_biome != Biome::Forest &&
+            col.top_biome != Biome::Jungle && col.top_biome != Biome::Taiga &&
+            col.top_biome != Biome::Savanna) continue;
+        if (col.top_block.id != Blocks::Grass) continue;
+
+        result.push_back(FeaturePlacement{type, world_x, col.height, flower_seed});
+    }
+    return result;
+}
+
+void NormalWorldGenerator::generateFlower(Chunk& chunk, const FeaturePlacement& feature)
+{
+    const int local_x = feature.x - chunk.chunk_position * CHUNK_WIDTH;
+    if (local_x < 0 || local_x >= CHUNK_WIDTH || feature.y < 0 || feature.y >= CHUNK_HEIGHT) return;
+    const BlockKey& flower = feature.type == FeatureType::Dandelion ? Blocks::Dandelion : Blocks::Poppy;
+    if (!blockDatabase.contains(flower) || chunk.blocks[feature.y][local_x].id != Blocks::Air) return;
+    chunk.blocks[feature.y][local_x] = {flower, 0};
 }
 
 std::vector<FeaturePlacement> NormalWorldGenerator::getSugarCanePlacements(int chunk_position) const

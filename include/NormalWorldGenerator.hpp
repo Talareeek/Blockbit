@@ -61,7 +61,9 @@ enum class FeatureType
     Cactus,
     DeadBush,
     SugarCane,
-    CopperOre
+    CopperOre,
+    Dandelion,
+    Poppy
 };
 
 struct FeaturePlacement
@@ -110,6 +112,7 @@ private:
     std::vector<FeaturePlacement> getCactusPlacements(int chunk_position) const;
     std::vector<FeaturePlacement> getDeadBushPlacements(int chunk_position) const;
     std::vector<FeaturePlacement> getGrassPlacements(int chunk_position) const;
+    std::vector<FeaturePlacement> getFlowerPlacements(int chunk_position, FeatureType type) const;
     std::vector<FeaturePlacement> getSugarCanePlacements(int chunk_position) const;
 
     void generateFeatures(Chunk& chunk);
@@ -120,6 +123,7 @@ private:
     void generateCactus(Chunk& chunk, const FeaturePlacement& feature);
     void generateDeadBush(Chunk& chunk, const FeaturePlacement& feature);
     void generateGrass(Chunk& chunk, const FeaturePlacement& feature);
+    void generateFlower(Chunk& chunk, const FeaturePlacement& feature);
     void generateSugarCane(Chunk& chunk, const FeaturePlacement& feature);
 
     void generateTerrain(Chunk& chunk, std::array<int, CHUNK_WIDTH>& heights);

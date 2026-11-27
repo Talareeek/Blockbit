@@ -1,0 +1,10 @@
+{
+    "drop": {"always": true, "item": "blockbit:dandelion"},
+    "id": "blockbit:dandelion",
+    "lets_light": true,
+    "light_opacity": 1,
+    "mining": {"level": 0, "resistance": 0, "tool": "none"},
+    "render": {"texture": "blockbit:dandelion"},
+    "solid": false,
+    "support_blocks_below": ["blockbit:grass_block", "blockbit:dirt", "blockbit:coarse_dirt"]
+}
