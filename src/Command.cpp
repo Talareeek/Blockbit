@@ -14,6 +14,7 @@
 #include "../include/InventoryComponent.hpp"
 #include "../include/GameServer.hpp"
 #include "../include/Item.hpp"
+#include "../include/GameRegistries.hpp"
 #include "../include/ItemInstance.hpp"
 #include "../include/ItemDataComponents.hpp"
 #include "../include/Prefab.hpp"
@@ -342,7 +343,7 @@ std::unordered_map<std::wstring, Command> commandDatabase =
         [](std::wstring command, CommandContext& context)
         {
             auto tokens = tokenize(command);
-            requireArgs(tokens, 3, "Usage: /give <nickname> <item-name> [count]");
+            requireArgs(tokens, 3, "Usage: /give <nickname> <item-id|item-name> [count]");
 
             GameServer& server = requireServer(context);
             World& world = *context.world();
@@ -358,7 +359,13 @@ std::unordered_map<std::wstring, Command> commandDatabase =
                 throw CommandException{"Target has no inventory."};
 
             std::string item_name = wtoutf8(tokens[2]);
-            auto item_id = findItemIdByName(item_name);
+            // Pack items are keyed by their canonical namespaced ID. Keep the
+            // display-name lookup as a convenience for existing commands.
+            std::optional<ItemKey> item_id;
+            if (itemDatabase.find(item_name) != itemDatabase.end())
+                item_id = item_name;
+            else
+                item_id = findItemIdByName(item_name);
             if (!item_id.has_value())
                 throw CommandException{"Unknown item: " + item_name};
 
@@ -375,6 +382,29 @@ std::unordered_map<std::wstring, Command> commandDatabase =
                 << L" to " << utf8tow(target_nick);
             if (!fully_added) msg << L" (inventory full — some items dropped)";
             context.reply(msg.str());
+        }
+    }},
+
+    {L"spawn", {false, true, true,
+        [](std::wstring command, CommandContext& context)
+        {
+            auto tokens = tokenize(command);
+            requireArgs(tokens, 4, "Usage: /spawn <prefab-id> <x> <y>");
+
+            const std::string prefab_id = wtoutf8(tokens[1]);
+            auto& prefabs = gameRegistries().prefabs;
+            auto prefab = prefabs.find(prefab_id);
+            if (prefab == prefabs.end())
+                throw CommandException{"Unknown prefab ID: " + prefab_id};
+
+            const double x = parseFloat(tokens[2], "x");
+            const double y = parseFloat(tokens[3], "y");
+            Entity entity = prefab->second.cloneAs(generateUUID());
+            auto& transform = entity.getComponent<TransformComponent>();
+            transform.position = {x, y};
+            transform.previous_position = {x, y};
+            transform.render_position = {x, y};
+            context.world()->addEntity(std::move(entity));
         }
     }},
 
