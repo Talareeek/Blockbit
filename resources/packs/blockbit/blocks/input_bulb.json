@@ -1,0 +1,19 @@
+{
+    "drop": {
+        "always": true,
+        "item": "blockbit:input_bulb"
+    },
+    "hardness": 0.3,
+    "id": "blockbit:input_bulb",
+    "mining": {
+        "level": 1,
+        "resistance": 1,
+        "tool": "pickaxe"
+    },
+    "render": {
+        "profile": "output_bulb",
+        "texture": "blockbit:input_bulb"
+    },
+    "solid": true,
+    "transparent": false
+}

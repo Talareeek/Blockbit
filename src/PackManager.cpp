@@ -654,6 +654,33 @@ bool parseBlock(const std::filesystem::path& file, LoadedBlock& out, std::string
             err = file.string() + ": unknown render profile '" + profile + "'";
             return false;
         }
+        if (r.contains("connects_to"))
+        {
+            if (!r["connects_to"].is_array())
+            {
+                err = file.string() + ": render.connects_to must be an array of block IDs";
+                return false;
+            }
+            for (const auto& value : r["connects_to"])
+            {
+                if (!value.is_string())
+                {
+                    err = file.string() + ": render.connects_to entries must be block ID strings";
+                    return false;
+                }
+                const std::string key = value.get<std::string>();
+                if (!isValidRegistryKey(key))
+                {
+                    err = file.string() + ": invalid block ID in render.connects_to: '" + key + "'";
+                    return false;
+                }
+                props.connects_to.emplace_back(key);
+            }
+            if (profile == "connected")
+                props.rect = make_connected_render_rect(props.connects_to);
+            else if (profile == "ruby_wire")
+                props.rect = make_ruby_wire_render_rect(props.connects_to);
+        }
         b.render = props;
     }
 

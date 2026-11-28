@@ -1,0 +1,7 @@
+{
+    "category": "block",
+    "id": "blockbit:input_bulb",
+    "max_stack_size": 64,
+    "name": "Input Bulb",
+    "texture": "blockbit:input_bulb"
+}

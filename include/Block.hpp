@@ -68,6 +68,9 @@ struct BlockAnimation
 struct RenderProperties
 {
     RuntimeID texture;
+    // Blocks that should be treated like this block for connected-texture
+    // rendering. Populated from a pack's render.connects_to JSON property.
+    std::vector<BlockKey> connects_to;
     std::function<sf::FloatRect(Block block_instance)> render_bounds = [](Block block_instance) -> sf::FloatRect{return {{0.0f, 0.0f}, {0.0f, 0.0f}};};
     std::function<sf::IntRect(Block block_instance, const BlockNeighbors& neighbors)> rect = [](Block, const BlockNeighbors&) -> sf::IntRect{return {{0, 0}, {0, 0}};};
     std::function<BlockAnimation(Block block_instance)> animation = [](Block) -> BlockAnimation { return {}; };
@@ -271,6 +274,36 @@ inline auto connected_render_rect = [](Block block_instance, const BlockNeighbor
     return {{offset % 64, (offset / 64) * 16}, {16, 16}};
 };
 
+inline std::function<sf::IntRect(Block, const BlockNeighbors&)> make_connected_render_rect(std::vector<BlockKey> connects_to)
+{
+    return [connects_to = std::move(connects_to)](Block block_instance, const BlockNeighbors& neighbors)
+    {
+        const auto connects = [&](const BlockKey& neighbor)
+        {
+            return neighbor == block_instance.id
+                || std::find(connects_to.begin(), connects_to.end(), neighbor) != connects_to.end();
+        };
+        const int u = connects(neighbors.up) ? 1 : 0;
+        const int r = connects(neighbors.right) ? 1 : 0;
+        const int d = connects(neighbors.down) ? 1 : 0;
+        const int l = connects(neighbors.left) ? 1 : 0;
+        const int offset = (8 * u + 4 * l + 2 * d + r) * 16;
+        return sf::IntRect{{offset % 64, (offset / 64) * 16}, {16, 16}};
+    };
+}
+
+inline std::function<sf::IntRect(Block, const BlockNeighbors&)> make_ruby_wire_render_rect(std::vector<BlockKey> connects_to)
+{
+    auto connected_rect = make_connected_render_rect(std::move(connects_to));
+    return [connected_rect = std::move(connected_rect)](Block block_instance, const BlockNeighbors& neighbors)
+    {
+        sf::IntRect rect = connected_rect(block_instance, neighbors);
+        if (WireState::unpack(block_instance.metadata).powered)
+            rect.position.x += 64;
+        return rect;
+    };
+}
+
 inline auto woodcutter_animation = [](Block) -> BlockAnimation
 {
     return {2, 400};
@@ -297,11 +330,15 @@ inline auto coreheart_render_rect = [](Block block_instance, const BlockNeighbor
     return {{0, 0}, {16, 16}};
 };
 
-// Output_bulb texture is 32x16: frame 0 (x=0) = off, frame 1 (x=16) = on.
-// With no toggle logic yet the mesh always picks frame 0.
-inline auto output_bulb_render_rect = [](Block, const BlockNeighbors&) -> sf::IntRect
+// Bulb textures are 32x16: frame 0 (x=0) = off, frame 1 (x=16) = powered.
+inline auto output_bulb_render_rect = [](Block block_instance, const BlockNeighbors&) -> sf::IntRect
 {
-    return {{0, 0}, {16, 16}};
+    return {{BulbState::unpack(block_instance.metadata).powered ? 16 : 0, 0}, {16, 16}};
+};
+
+inline auto logic_gate_render_rect = [](Block block_instance, const BlockNeighbors&) -> sf::IntRect
+{
+    return {{GateState::unpack(block_instance.metadata).powered ? 16 : 0, 0}, {16, 16}};
 };
 
 extern ItemKey blockToItem(BlockKey block);

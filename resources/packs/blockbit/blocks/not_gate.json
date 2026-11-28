@@ -1,0 +1,9 @@
+{
+    "drop": {"always": true, "item": "blockbit:not_gate"},
+    "hardness": 0.3,
+    "id": "blockbit:not_gate",
+    "mining": {"level": 1, "resistance": 1, "tool": "pickaxe"},
+    "render": {"profile": "logic_gate", "texture": "blockbit:not_gate"},
+    "solid": true,
+    "transparent": false
+}

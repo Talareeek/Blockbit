@@ -68,4 +68,47 @@ struct LeafState
     static CactusState unpack(uint16_t v) { return { (v & 0x1) == 0 }; }
 };
 
+// Circuit blocks keep their dynamic state in the same metadata slot as other
+// blocks. Wire connections are N/E/S/W bits; powered is independent so a wire
+// can retain its shape while its signal changes.
+struct BulbState
+{
+    bool powered = false;
+
+    uint16_t pack() const { return powered ? uint16_t{1} : uint16_t{0}; }
+    static BulbState unpack(uint16_t v) { return { (v & 0x1) != 0 }; }
+};
+
+struct WireState
+{
+    static constexpr uint8_t NORTH = 0x1;
+    static constexpr uint8_t EAST  = 0x2;
+    static constexpr uint8_t SOUTH = 0x4;
+    static constexpr uint8_t WEST  = 0x8;
+    static constexpr uint8_t CONNECTION_MASK = 0x0F;
+    static constexpr uint8_t POWERED = 0x10;
+
+    uint8_t connections = 0;
+    bool powered = false;
+
+    uint16_t pack() const
+    {
+        return static_cast<uint16_t>((connections & CONNECTION_MASK) | (powered ? POWERED : 0));
+    }
+    static WireState unpack(uint16_t v)
+    {
+        return { static_cast<uint8_t>(v & CONNECTION_MASK), (v & POWERED) != 0 };
+    }
+};
+
+// Direction points from the gate toward its output: 0=east, 1=south,
+// 2=west, 3=north. The texture uses bit 2 as its powered frame.
+struct GateState
+{
+    uint8_t facing = 0;
+    bool powered = false;
+    uint16_t pack() const { return static_cast<uint16_t>((facing & 0x3) | (powered ? 0x4 : 0)); }
+    static GateState unpack(uint16_t v) { return {static_cast<uint8_t>(v & 0x3), (v & 0x4) != 0}; }
+};
+
 #endif // BLOCK_STATES_HPP

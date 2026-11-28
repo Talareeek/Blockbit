@@ -29,7 +29,7 @@ namespace
 {
     // Every built-in BlockKey the engine knows about. Air is included so the user can explicitly mark
     // "this cell MUST be air" via Overwrite mode.
-    const std::array<BlockKey, 49> BLOCK_OPTIONS
+    const std::array<BlockKey, 52> BLOCK_OPTIONS
     {
         Blocks::Air,
         Blocks::Stone,
@@ -74,6 +74,9 @@ namespace
         Blocks::Glass,
         Blocks::Output_Bulb,
         Blocks::Ruby_Wire,
+        Blocks::And_Gate,
+        Blocks::Or_Gate,
+        Blocks::Not_Gate,
         Blocks::Coreheart_Of_Blockbit,
         Blocks::Upgrade_Table,
         Blocks::Birch_Planks,
@@ -919,6 +922,36 @@ void StructureEditorGameState::drawLeftPanel()
             bool lit = FurnaceState::unpack(paint_metadata).lit;
             if (ImGui::Checkbox("Lit", &lit))
                 paint_metadata = FurnaceState{lit}.pack();
+    }
+    else if (selected_id == Blocks::Output_Bulb || selected_id == Blocks::Input_Bulb)
+    {
+            bool powered = BulbState::unpack(paint_metadata).powered;
+            if (ImGui::Checkbox("Powered", &powered))
+                paint_metadata = BulbState{powered}.pack();
+    }
+    else if (selected_id == Blocks::Ruby_Wire)
+    {
+            WireState state = WireState::unpack(paint_metadata);
+            int connections = state.connections;
+            bool powered = state.powered;
+            const bool connections_changed = ImGui::InputInt("Connections (N/E/S/W bits)", &connections);
+            const bool powered_changed = ImGui::Checkbox("Powered", &powered);
+            if (connections_changed || powered_changed)
+            {
+                state.connections = static_cast<uint8_t>(std::clamp(connections, 0, 15));
+                state.powered = powered;
+                paint_metadata = state.pack();
+            }
+    }
+    else if (selected_id == Blocks::And_Gate || selected_id == Blocks::Or_Gate || selected_id == Blocks::Not_Gate)
+    {
+            GateState state = GateState::unpack(paint_metadata);
+            int facing = state.facing;
+            bool powered = state.powered;
+            const bool facing_changed = ImGui::SliderInt("Facing (E/S/W/N)", &facing, 0, 3);
+            const bool powered_changed = ImGui::Checkbox("Powered", &powered);
+            if (facing_changed || powered_changed)
+                paint_metadata = GateState{static_cast<uint8_t>(facing), powered}.pack();
     }
     else if (selected_id == Blocks::Cactus)
     {

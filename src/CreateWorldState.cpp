@@ -30,7 +30,6 @@
 #include <imgui-SFML.h>
 
 #include <algorithm>
-#include <array>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
@@ -41,68 +40,21 @@
 
 namespace
 {
-    const std::array<BlockKey, 39> BLOCK_OPTIONS
+    std::vector<BlockKey> blockOptions()
     {
-        Blocks::Air,
-        Blocks::Bedrock,
-        Blocks::Stone,
-        Blocks::Smooth_Stone,
-        Blocks::Diorite,
-        Blocks::Granite,
-        Blocks::Dirt,
-        Blocks::Grass,
-        Blocks::Sand,
-        Blocks::Coarse_Dirt,
-        Blocks::Snow,
-        Blocks::Cobblestone,
-        Blocks::Obsidian,
-        Blocks::Gravel,
-        Blocks::Bricks,
-        Blocks::Glass,
-        Blocks::Oak_Log,
-        Blocks::Oak_Leaves,
-        Blocks::Oak_Planks,
-        Blocks::Cactus,
-        Blocks::Dead_Bush,
-        Blocks::Coal_Ore,
-        Blocks::Iron_Ore,
-        Blocks::Gold_Ore,
-        Blocks::Diamond_Ore,
-        Blocks::Ruby_Ore,
-        Blocks::Coal_Block,
-        Blocks::Iron_Block,
-        Blocks::Gold_Block,
-        Blocks::Ruby_Block,
-        Blocks::Water,
-        Blocks::Lava,
-        Blocks::Fire,
-        Blocks::Chest,
-        Blocks::Furnace,
-        Blocks::Workbench,
-        Blocks::Woodcutter,
-        Blocks::Output_Bulb,
-        Blocks::Ruby_Wire
-    };
-
-    int blockOptionIndex(BlockKey id)
-    {
-        for (size_t i = 0; i < BLOCK_OPTIONS.size(); ++i)
-        {
-            if (BLOCK_OPTIONS[i] == id) return static_cast<int>(i);
-        }
-        return 0;
+        std::vector<BlockKey> options;
+        const auto& entries = gameRegistries().blocks.all();
+        options.reserve(entries.size());
+        for (const auto& entry : entries)
+            if (!entry.key.empty()) options.push_back(entry.key);
+        std::sort(options.begin(), options.end());
+        return options;
     }
 
-    const char* blockName(BlockKey id)
+    int blockOptionIndex(const std::vector<BlockKey>& options, const BlockKey& id)
     {
-        if (id == Blocks::Air) return "Air";
-        if (id == Blocks::Water) return "Water";
-        if (id == Blocks::Lava) return "Lava";
-        if (id == Blocks::Fire) return "Fire";
-        auto item = blockToItem(id);
-        auto iter = itemDatabase.find(item);
-        if (iter == itemDatabase.end()) return "?";
-        return iter->second.name.c_str();
+        const auto it = std::find(options.begin(), options.end(), id);
+        return it == options.end() ? 0 : static_cast<int>(it - options.begin());
     }
 
     constexpr int      PREVIEW_CHUNK_RADIUS = 2;
@@ -448,6 +400,7 @@ void CreateWorldState::update(float dt)
         else
         {
             ImGui::TextUnformatted("Flat layers (top first)");
+            const std::vector<BlockKey> block_options = blockOptions();
 
             bool flat_changed = false;
             if (ImGui::Button("Reset to defaults"))
@@ -471,17 +424,18 @@ void CreateWorldState::update(float dt)
             {
                 ImGui::PushID(i);
 
-                int selected = blockOptionIndex(flat_layers[i].block);
+                int selected = blockOptionIndex(block_options, flat_layers[i].block);
+                const char* selected_name = block_options.empty() ? "(no registered blocks)" : block_options[selected].c_str();
 
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.45f);
-                if (ImGui::BeginCombo("##block", blockName(BLOCK_OPTIONS[selected])))
+                if (ImGui::BeginCombo("##block", selected_name))
                 {
-                    for (int option_i = 0; option_i < static_cast<int>(BLOCK_OPTIONS.size()); ++option_i)
+                    for (int option_i = 0; option_i < static_cast<int>(block_options.size()); ++option_i)
                     {
                         bool is_selected = (option_i == selected);
-                        if (ImGui::Selectable(blockName(BLOCK_OPTIONS[option_i]), is_selected))
+                        if (ImGui::Selectable(block_options[option_i].c_str(), is_selected))
                         {
-                            flat_layers[i].block = BLOCK_OPTIONS[option_i];
+                            flat_layers[i].block = block_options[option_i];
                             flat_changed = true;
                         }
                         if (is_selected) ImGui::SetItemDefaultFocus();

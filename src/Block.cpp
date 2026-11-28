@@ -449,6 +449,8 @@ ItemKey blockToItem(BlockKey block)
         {Blocks::Diorite, Items::Diorite}, {Blocks::Granite, Items::Granite},
         {Blocks::Glass, Items::Glass}, {Blocks::Output_Bulb, Items::Output_Bulb},
         {Blocks::Ruby_Wire, Items::Ruby_Wire},
+        {Blocks::And_Gate, Items::And_Gate}, {Blocks::Or_Gate, Items::Or_Gate},
+        {Blocks::Not_Gate, Items::Not_Gate},
         {Blocks::Coreheart_Of_Blockbit, Items::Coreheart_Of_Blockbit},
         {Blocks::Upgrade_Table, Items::Upgrade_Table}
     };
@@ -494,6 +496,8 @@ BlockKey itemToBlock(ItemKey item)
         {Items::Diorite, Blocks::Diorite}, {Items::Granite, Blocks::Granite},
         {Items::Glass, Blocks::Glass}, {Items::Output_Bulb, Blocks::Output_Bulb},
         {Items::Ruby_Wire, Blocks::Ruby_Wire},
+        {Items::And_Gate, Blocks::And_Gate}, {Items::Or_Gate, Blocks::Or_Gate},
+        {Items::Not_Gate, Blocks::Not_Gate},
         {Items::Coreheart_Of_Blockbit, Blocks::Coreheart_Of_Blockbit},
         {Items::Upgrade_Table, Blocks::Upgrade_Table}
     };

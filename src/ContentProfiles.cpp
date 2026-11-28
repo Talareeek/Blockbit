@@ -260,6 +260,20 @@ bool applyRenderProfile(RenderProperties& out, std::string_view profile)
         out.animation     = [](Block) -> BlockAnimation { return {}; };
         return true;
     }
+    if (profile == "logic_gate")
+    {
+        out.render_bounds = default_render_bounds;
+        out.rect = logic_gate_render_rect;
+        out.animation = [](Block) -> BlockAnimation { return {}; };
+        return true;
+    }
+    if (profile == "ruby_wire")
+    {
+        out.render_bounds = default_render_bounds;
+        out.rect          = make_ruby_wire_render_rect({});
+        out.animation     = [](Block) -> BlockAnimation { return {}; };
+        return true;
+    }
     return false;
 }
 

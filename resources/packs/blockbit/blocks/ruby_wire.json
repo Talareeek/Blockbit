@@ -13,7 +13,14 @@
         "tool": "none"
     },
     "render": {
-        "profile": "connected",
-        "texture": "blockbit:ruby_wire"
+        "profile": "ruby_wire",
+        "texture": "blockbit:ruby_wire",
+        "connects_to": [
+            "blockbit:input_bulb",
+            "blockbit:output_bulb",
+            "blockbit:and_gate",
+            "blockbit:or_gate",
+            "blockbit:not_gate"
+        ]
     }
 }
